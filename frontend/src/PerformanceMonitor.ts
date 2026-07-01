@@ -20,6 +20,8 @@ export interface PerformanceStats {
   quadtreeDepth?: number;
   quadtreeObjects?: number;
   qualityLevel?: string;
+  culledEntities?: number;
+  visibleEntities?: number;
 }
 
 export class PerformanceMonitor {
@@ -78,11 +80,11 @@ export class PerformanceMonitor {
 
     ctx.save();
 
-    // Panel background
+    // Panel background (increased height for more stats)
     const panelX = 10;
     const panelY = 10;
     const panelWidth = 280;
-    const panelHeight = 200;
+    const panelHeight = 240;
 
     ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
     ctx.fillRect(panelX, panelY, panelWidth, panelHeight);
@@ -174,6 +176,23 @@ export class PerformanceMonitor {
                            stats.qualityLevel === 'medium' ? '#ffff00' : '#ff0000';
       ctx.fillStyle = qualityColor;
       ctx.fillText(`Quality: ${stats.qualityLevel.toUpperCase()}`, panelX + 10, y);
+    }
+
+    // Entity culling stats (if available)
+    if (stats.visibleEntities !== undefined && stats.culledEntities !== undefined) {
+      y += 20;
+      ctx.fillStyle = '#00ffff';
+      ctx.fillText(`Culling:`, panelX + 10, y);
+
+      y += 18;
+      ctx.fillStyle = '#fff';
+      const total = stats.visibleEntities + stats.culledEntities;
+      const cullRate = total > 0 ? Math.round((stats.culledEntities / total) * 100) : 0;
+      ctx.fillText(`  Visible: ${stats.visibleEntities}/${total}`, panelX + 10, y);
+
+      y += 18;
+      ctx.fillStyle = cullRate > 0 ? '#00ff00' : '#888';
+      ctx.fillText(`  Culled: ${stats.culledEntities} (${cullRate}%)`, panelX + 10, y);
     }
 
     // Footer

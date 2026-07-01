@@ -18,6 +18,7 @@ import { ObjectPool } from './ObjectPool';
 import { Quadtree } from './Quadtree';
 import { PerformanceMonitor } from './PerformanceMonitor';
 import { QualityManager } from './QualityManager';
+import { EntityCuller } from './EntityCuller';
 
 export type GameState = 'menu' | 'playing' | 'shop' | 'paused' | 'gameover' | 'upgrades';
 
@@ -57,6 +58,9 @@ export class Game {
 
   // PERFORMANCE: Adaptive quality scaling (auto-adjusts based on FPS)
   private qualityManager: QualityManager;
+
+  // PERFORMANCE: Entity culling (don't render off-screen entities)
+  private entityCuller: EntityCuller;
 
   // GAME FEEL: Hit pause / time scale system
   timeScale: number = 1.0;
@@ -144,6 +148,9 @@ export class Game {
 
     // PERFORMANCE: Initialize quality manager (adaptive scaling)
     this.qualityManager = new QualityManager('high');
+
+    // PERFORMANCE: Initialize entity culler (off-screen culling)
+    this.entityCuller = new EntityCuller();
 
     // Connect input to game state
     this.input.setGameStateGetter(() => this.state);
@@ -1609,26 +1616,39 @@ export class Game {
 
     const ctx = this.renderer.getContext();
 
-    // Draw entities
+    // PERFORMANCE: Update entity culler viewport
+    this.entityCuller.updateViewport(0, 0, this.canvas.width, this.canvas.height, 100);
+
+    // Draw entities (with culling - only render visible entities)
     for (const particle of this.particles) {
-      particle.draw(ctx);
+      if (this.entityCuller.isVisible(particle)) {
+        particle.draw(ctx);
+      }
     }
 
     for (const projectile of this.projectiles) {
-      projectile.draw(ctx);
+      if (this.entityCuller.isVisible(projectile)) {
+        projectile.draw(ctx);
+      }
     }
 
     // Draw melee attacks
     for (const melee of this.meleeAttacks) {
-      melee.draw(ctx);
+      if (this.entityCuller.isVisible(melee)) {
+        melee.draw(ctx);
+      }
     }
 
     for (const enemy of this.enemies) {
-      enemy.draw(ctx);
+      if (this.entityCuller.isVisible(enemy)) {
+        enemy.draw(ctx);
+      }
     }
 
     for (const orb of this.healthOrbs) {
-      orb.draw(ctx);
+      if (this.entityCuller.isVisible(orb)) {
+        orb.draw(ctx);
+      }
     }
 
     this.player.draw(ctx);
@@ -1669,6 +1689,17 @@ export class Game {
 
     // PERFORMANCE: Draw performance monitor (F2 to toggle)
     const quadtreeStats = this.enemyQuadtree.getStats();
+    // Calculate culling stats (all entities except player)
+    const allEntities = [
+      ...this.enemies,
+      ...this.projectiles,
+      ...this.particles,
+      ...this.meleeAttacks,
+      ...this.healthOrbs
+    ];
+    const visibleCount = allEntities.filter(e => this.entityCuller.isVisible(e)).length;
+    const culledCount = allEntities.length - visibleCount;
+
     this.performanceMonitor.draw(ctx, {
       enemies: this.enemies.length,
       projectiles: this.projectiles.length,
@@ -1679,7 +1710,9 @@ export class Game {
       quadtreeNodes: quadtreeStats.nodeCount,
       quadtreeDepth: quadtreeStats.maxDepth,
       quadtreeObjects: quadtreeStats.totalObjects,
-      qualityLevel: this.qualityManager.getLevel()
+      qualityLevel: this.qualityManager.getLevel(),
+      visibleEntities: visibleCount,
+      culledEntities: culledCount
     });
   }
 
