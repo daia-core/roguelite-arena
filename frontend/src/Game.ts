@@ -1800,10 +1800,23 @@ export class Game {
     const invPanelY = isMobile ? 155 : 40;
 
     if (this.playerStats.items.length > 0) {
-      // Calculate actual height based on items
+      // Group items by ID and count duplicates
+      const itemCounts = new Map<string, { item: Item; count: number }>();
+      for (const item of this.playerStats.items) {
+        const existing = itemCounts.get(item.id);
+        if (existing) {
+          existing.count++;
+        } else {
+          itemCounts.set(item.id, { item, count: 1 });
+        }
+      }
+
+      const uniqueItems = Array.from(itemCounts.values());
+
+      // Calculate actual height based on unique items
       const iconSize = isMobile ? 28 : 24;
       const iconsPerRow = isMobile ? Math.floor((invPanelWidth - invPanelPadding * 2) / (iconSize + 4)) : 6;
-      const rows = Math.ceil(this.playerStats.items.length / iconsPerRow);
+      const rows = Math.ceil(uniqueItems.length / iconsPerRow);
       const invPanelHeight = Math.min(invPanelMaxHeight, rows * (iconSize + 4) + invPanelPadding * 2 + 18);
 
       // Inventory panel background
@@ -1826,12 +1839,12 @@ export class Game {
         color: '#a855f7'
       });
 
-      // Draw item icons in grid
+      // Draw item icons in grid with count badges
       const gridStartX = invPanelX + invPanelPadding;
       const gridStartY = invPanelY + 22;
 
-      for (let i = 0; i < this.playerStats.items.length; i++) {
-        const item = this.playerStats.items[i];
+      for (let i = 0; i < uniqueItems.length; i++) {
+        const { item, count } = uniqueItems[i];
         const col = i % iconsPerRow;
         const row = Math.floor(i / iconsPerRow);
         const x = gridStartX + col * (iconSize + 4);
@@ -1842,6 +1855,34 @@ export class Game {
           size: isMobile ? 20 : 18,
           align: 'center'
         });
+
+        // Count badge (only show if count > 1)
+        if (count > 1) {
+          const badgeSize = isMobile ? 14 : 12;
+          const badgeX = x + iconSize - badgeSize / 2 - 2;
+          const badgeY = y - badgeSize / 2 + 2;
+
+          // Badge circle background
+          ctx.save();
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+          ctx.beginPath();
+          ctx.arc(badgeX, badgeY, badgeSize / 2, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Badge border
+          ctx.strokeStyle = '#a855f7';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+
+          // Count text
+          ctx.restore();
+          this.renderer.drawText(`×${count}`, badgeX, badgeY, {
+            size: isMobile ? 10 : 8,
+            bold: true,
+            align: 'center',
+            color: '#ffffff'
+          });
+        }
       }
     }
 
@@ -1989,10 +2030,8 @@ export class Game {
         let indicatorText = '';
         let indicatorColor = '#00ff00';
 
-        if (isDuplicate) {
-          indicatorText = '🔄 DUPLICATE';
-          indicatorColor = '#0088ff';
-        } else if (hasTagMatch) {
+        // Don't show "DUPLICATE" text - just show synergy indicators
+        if (hasTagMatch) {
           // Show which tags match
           const tagIcons: Record<ItemTag, string> = {
             melee: '⚔️',
@@ -2010,12 +2049,14 @@ export class Game {
           indicatorColor = '#ffff00';
         }
 
-        this.renderer.drawText(indicatorText, x + itemWidth / 2, y + 8, {
-          size: isPortrait ? 13 : isMobile ? 18 : 12,
-          bold: true,
-          align: 'center',
-          color: indicatorColor
-        });
+        if (indicatorText) {
+          this.renderer.drawText(indicatorText, x + itemWidth / 2, y + 8, {
+            size: isPortrait ? 13 : isMobile ? 18 : 12,
+            bold: true,
+            align: 'center',
+            color: indicatorColor
+          });
+        }
       }
 
       // Icon with better positioning
