@@ -1,5 +1,7 @@
 // Advanced item and upgrade system with tiers, tags, and Brotato-inspired mechanics
 
+import { TransformationTracker } from './TransformationSystem';
+
 export const ItemTier = {
   Common: 1,
   Uncommon: 2,
@@ -1093,6 +1095,7 @@ export class ItemDatabase {
 export class PlayerStats {
   items: Item[] = [];
   affinityTags: ItemTag[] = []; // Character affinity (2 random tags at start)
+  transformations: TransformationTracker = new TransformationTracker(); // TRANSFORMATION SYSTEM
 
   // Base stats - BUFFED for better early game (Wave 1 too hard fix)
   baseDamage: number = 25; // Wave 1 balance: kill slimes quickly
@@ -1112,6 +1115,9 @@ export class PlayerStats {
 
   addItem(item: Item): void {
     this.items.push(item);
+    // Track for transformations
+    this.transformations.trackItemPickup(item.tags);
+    // Transformation unlocks will be checked by Game.ts to show UI
   }
 
   removeItem(itemId: string): Item | null {
@@ -1129,6 +1135,8 @@ export class PlayerStats {
       if (item.damageMultiplier) damage *= item.damageMultiplier;
     });
     damage *= this.getSpecializationBonus();
+    // TRANSFORMATION BONUS
+    damage *= this.transformations.getTotalBonuses().damageMultiplier;
     return damage;
   }
 
@@ -1137,6 +1145,8 @@ export class PlayerStats {
     this.items.forEach(item => {
       if (item.fireRateMultiplier) rate *= item.fireRateMultiplier;
     });
+    // TRANSFORMATION BONUS
+    rate *= this.transformations.getTotalBonuses().fireRateMultiplier;
     return rate;
   }
 
@@ -1145,6 +1155,8 @@ export class PlayerStats {
     this.items.forEach(item => {
       if (item.speedMultiplier) speed *= item.speedMultiplier;
     });
+    // TRANSFORMATION BONUS
+    speed *= this.transformations.getTotalBonuses().speedMultiplier;
     return speed;
   }
 
@@ -1153,6 +1165,8 @@ export class PlayerStats {
     this.items.forEach(item => {
       if (item.maxHealthBonus) health += item.maxHealthBonus;
     });
+    // TRANSFORMATION BONUS
+    health += this.transformations.getTotalBonuses().maxHealthBonus;
     return Math.max(1, health);
   }
 
@@ -1161,6 +1175,8 @@ export class PlayerStats {
     this.items.forEach(item => {
       if (item.critChance) chance += item.critChance;
     });
+    // TRANSFORMATION BONUS
+    chance += this.transformations.getTotalBonuses().critChance;
     return Math.min(1, chance);
   }
 
@@ -1169,6 +1185,8 @@ export class PlayerStats {
     this.items.forEach(item => {
       if (item.critDamageMultiplier) mult *= item.critDamageMultiplier;
     });
+    // TRANSFORMATION BONUS
+    mult *= this.transformations.getTotalBonuses().critDamageMultiplier;
     return mult;
   }
 
@@ -1185,6 +1203,8 @@ export class PlayerStats {
     this.items.forEach(item => {
       if (item.armor) armor += item.armor;
     });
+    // TRANSFORMATION BONUS
+    armor += this.transformations.getTotalBonuses().armor;
     return armor;
   }
 
@@ -1233,6 +1253,8 @@ export class PlayerStats {
     this.items.forEach(item => {
       if (item.xpMagnet) magnet *= item.xpMagnet;
     });
+    // TRANSFORMATION BONUS
+    magnet *= this.transformations.getTotalBonuses().xpMagnet;
     return magnet;
   }
 
@@ -1241,6 +1263,8 @@ export class PlayerStats {
     this.items.forEach(item => {
       if (item.goldBonus) bonus *= item.goldBonus;
     });
+    // TRANSFORMATION BONUS
+    bonus *= this.transformations.getTotalBonuses().goldBonus;
     return bonus;
   }
 
@@ -1282,6 +1306,8 @@ export class PlayerStats {
     this.items.forEach(item => {
       if (item.shopDiscount) discount += item.shopDiscount;
     });
+    // TRANSFORMATION BONUS
+    discount += this.transformations.getTotalBonuses().shopDiscount;
     return Math.min(0.5, discount); // Max 50% discount
   }
 
