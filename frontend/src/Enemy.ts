@@ -24,8 +24,8 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     damage: 8,
     radius: 14,
     color: '#4ade80',
-    xpValue: 12,
-    goldValue: 6,
+    xpValue: 18, // +50% XP
+    goldValue: 12, // +100% gold
     spriteName: 'slime'
   },
   goblin: {
@@ -34,8 +34,8 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     damage: 6,
     radius: 12,
     color: '#7cb342',
-    xpValue: 10,
-    goldValue: 5,
+    xpValue: 15, // +50% XP
+    goldValue: 10, // +100% gold
     shootRate: 0.4,
     spriteName: 'goblin'
   },
@@ -45,8 +45,8 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     damage: 10,
     radius: 12,
     color: '#e0e0e0',
-    xpValue: 15,
-    goldValue: 8,
+    xpValue: 23, // +50% XP (rounded)
+    goldValue: 16, // +100% gold
     shootRate: 0.8,
     spriteName: 'skeleton'
   },
@@ -56,8 +56,8 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     damage: 12,
     radius: 11,
     color: '#8b0000',
-    xpValue: 18,
-    goldValue: 10,
+    xpValue: 27, // +50% XP
+    goldValue: 20, // +100% gold
     spriteName: 'imp'
   },
   orc: {
@@ -66,8 +66,8 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     damage: 15,
     radius: 16,
     color: '#567d46',
-    xpValue: 20,
-    goldValue: 12,
+    xpValue: 30, // +50% XP
+    goldValue: 24, // +100% gold
     spriteName: 'orc'
   },
   wraith: {
@@ -76,8 +76,8 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     damage: 10,
     radius: 13,
     color: '#9370db',
-    xpValue: 25,
-    goldValue: 15,
+    xpValue: 38, // +50% XP (rounded)
+    goldValue: 30, // +100% gold
     spriteName: 'wraith'
   },
   necromancer: {
@@ -86,8 +86,8 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     damage: 8,
     radius: 12,
     color: '#2c2c54',
-    xpValue: 30,
-    goldValue: 18,
+    xpValue: 45, // +50% XP
+    goldValue: 36, // +100% gold
     shootRate: 0.5,
     spriteName: 'necromancer'
   },
@@ -97,8 +97,8 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     damage: 18,
     radius: 18,
     color: '#4a7c59',
-    xpValue: 35,
-    goldValue: 20,
+    xpValue: 53, // +50% XP (rounded)
+    goldValue: 40, // +100% gold
     spriteName: 'troll'
   },
   banshee: {
@@ -107,8 +107,8 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     damage: 12,
     radius: 13,
     color: '#e0e0e0',
-    xpValue: 28,
-    goldValue: 16,
+    xpValue: 42, // +50% XP
+    goldValue: 32, // +100% gold
     spriteName: 'banshee'
   },
   demon: {
@@ -117,8 +117,8 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     damage: 20,
     radius: 20,
     color: '#8b0000',
-    xpValue: 100,
-    goldValue: 50,
+    xpValue: 150, // +50% XP
+    goldValue: 100, // +100% gold
     shootRate: 1.5,
     spriteName: 'demon'
   }

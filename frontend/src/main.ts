@@ -45,15 +45,22 @@ requestAnimationFrame(gameLoop);
 
 // Handle window resize
 function resizeCanvas(): void {
-  const container = document.querySelector<HTMLDivElement>('#game-container')!;
-  const rect = container.getBoundingClientRect();
+  // Use visualViewport for mobile or fallback to window.inner*
+  const viewport = window.visualViewport || {
+    width: window.innerWidth,
+    height: window.innerHeight
+  };
+
+  const viewportWidth = viewport.width;
+  const viewportHeight = viewport.height;
 
   const aspectRatio = 1200 / 800;
-  let width = rect.width;
+  let width = viewportWidth;
   let height = width / aspectRatio;
 
-  if (height > rect.height) {
-    height = rect.height;
+  // If calculated height exceeds viewport, fit by height instead
+  if (height > viewportHeight) {
+    height = viewportHeight;
     width = height * aspectRatio;
   }
 

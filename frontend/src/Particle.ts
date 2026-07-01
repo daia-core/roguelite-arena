@@ -222,3 +222,22 @@ export function spawnExplosionParticles(x: number, y: number): Particle[] {
   }
   return particles;
 }
+
+export function spawnHealthOrbParticles(x: number, y: number, count: number = 12): Particle[] {
+  const particles: Particle[] = [];
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 80 + Math.random() * 60;
+    particles.push(new Particle({
+      x,
+      y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 40,
+      color: i % 2 === 0 ? '#ff4466' : '#ffaacc',
+      size: 5 + Math.random() * 4,
+      lifetime: 500 + Math.random() * 300,
+      gravity: 150
+    }));
+  }
+  return particles;
+}

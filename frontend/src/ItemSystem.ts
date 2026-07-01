@@ -64,7 +64,7 @@ export class ItemDatabase {
       name: 'Movement Speed',
       description: '+15% move speed',
       rarity: 'common',
-      cost: 40,
+      cost: 50,
       icon: '👟',
       unlocked: true,
       speedMultiplier: 1.15
@@ -74,7 +74,7 @@ export class ItemDatabase {
       name: 'Max HP',
       description: '+25 max health',
       rarity: 'common',
-      cost: 60,
+      cost: 50,
       icon: '❤️',
       unlocked: true,
       maxHealthBonus: 25
@@ -84,7 +84,7 @@ export class ItemDatabase {
       name: 'HP Regen',
       description: '+1 HP per second',
       rarity: 'common',
-      cost: 55,
+      cost: 50,
       icon: '💚',
       unlocked: true,
       healthRegen: 1
@@ -94,7 +94,7 @@ export class ItemDatabase {
       name: 'XP Magnet',
       description: '+50% XP pickup range',
       rarity: 'common',
-      cost: 45,
+      cost: 50,
       icon: '🧲',
       unlocked: true,
       xpMagnet: 1.5
@@ -106,7 +106,7 @@ export class ItemDatabase {
       name: 'Crit Chance',
       description: '+15% crit chance',
       rarity: 'rare',
-      cost: 80,
+      cost: 100,
       icon: '🎯',
       unlocked: true,
       critChance: 0.15
@@ -116,7 +116,7 @@ export class ItemDatabase {
       name: 'Crit Damage',
       description: 'Crits do +50% damage',
       rarity: 'rare',
-      cost: 80,
+      cost: 100,
       icon: '💥',
       unlocked: true,
       critDamageMultiplier: 1.5
@@ -126,7 +126,7 @@ export class ItemDatabase {
       name: 'Projectile Count',
       description: 'Fire +1 projectile',
       rarity: 'rare',
-      cost: 90,
+      cost: 100,
       icon: '🔱',
       unlocked: true,
       multishot: 1
@@ -136,7 +136,7 @@ export class ItemDatabase {
       name: 'Piercing',
       description: 'Bullets pierce +1 enemy',
       rarity: 'rare',
-      cost: 85,
+      cost: 100,
       icon: '🎯',
       unlocked: true,
       piercing: 1
@@ -146,7 +146,7 @@ export class ItemDatabase {
       name: 'Lifesteal',
       description: 'Heal 5% of damage dealt',
       rarity: 'rare',
-      cost: 90,
+      cost: 100,
       icon: '🩸',
       unlocked: true,
       lifesteal: 0.05
@@ -156,7 +156,7 @@ export class ItemDatabase {
       name: 'Thorns',
       description: 'Reflect 20% damage taken',
       rarity: 'rare',
-      cost: 75,
+      cost: 100,
       icon: '🌵',
       unlocked: true,
       thorns: 0.2
@@ -166,7 +166,7 @@ export class ItemDatabase {
       name: 'Gold Bonus',
       description: '+20% gold from kills',
       rarity: 'rare',
-      cost: 70,
+      cost: 100,
       icon: '💰',
       unlocked: true,
       goldBonus: 1.2
@@ -176,7 +176,7 @@ export class ItemDatabase {
       name: 'Dodge',
       description: '10% chance to evade damage',
       rarity: 'rare',
-      cost: 85,
+      cost: 100,
       icon: '💨',
       unlocked: true,
       dodge: 0.1
@@ -188,7 +188,7 @@ export class ItemDatabase {
       name: 'Homing',
       description: 'Bullets curve toward enemies',
       rarity: 'epic',
-      cost: 120,
+      cost: 200,
       icon: '🎯',
       unlocked: true,
       homing: true
@@ -198,7 +198,7 @@ export class ItemDatabase {
       name: 'Explosive',
       description: 'Bullets explode on hit',
       rarity: 'epic',
-      cost: 130,
+      cost: 200,
       icon: '💣',
       unlocked: true,
       explosionOnHit: true
@@ -208,7 +208,7 @@ export class ItemDatabase {
       name: 'Chain Lightning',
       description: '20% chance to chain to nearby enemy',
       rarity: 'epic',
-      cost: 140,
+      cost: 200,
       icon: '⚡',
       unlocked: true,
       chainLightning: 0.2
@@ -218,7 +218,7 @@ export class ItemDatabase {
       name: 'Shield',
       description: '50 HP shield (regenerates out of combat)',
       rarity: 'epic',
-      cost: 110,
+      cost: 200,
       icon: '🛡️',
       unlocked: true,
       shield: true
@@ -228,7 +228,7 @@ export class ItemDatabase {
       name: 'Poison',
       description: 'Attacks apply DoT (5 dmg/sec, 3s)',
       rarity: 'epic',
-      cost: 125,
+      cost: 200,
       icon: '☠️',
       unlocked: true,
       poison: true
@@ -238,7 +238,7 @@ export class ItemDatabase {
       name: 'Freeze',
       description: '10% chance to slow enemy 50% for 2s',
       rarity: 'epic',
-      cost: 115,
+      cost: 200,
       icon: '❄️',
       unlocked: true,
       freeze: 0.1
@@ -250,7 +250,7 @@ export class ItemDatabase {
       name: 'Berserker Rage',
       description: '+50% damage',
       rarity: 'legendary',
-      cost: 200,
+      cost: 400,
       icon: '⚔️',
       unlocked: true,
       damageMultiplier: 1.5
@@ -260,7 +260,7 @@ export class ItemDatabase {
       name: 'Rapid Fire',
       description: '+50% fire rate',
       rarity: 'legendary',
-      cost: 180,
+      cost: 400,
       icon: '🔫',
       unlocked: true,
       fireRateMultiplier: 1.5
@@ -270,7 +270,7 @@ export class ItemDatabase {
       name: 'Glass Cannon',
       description: '+100% damage, -50% health',
       rarity: 'legendary',
-      cost: 220,
+      cost: 400,
       icon: '💀',
       unlocked: true,
       damageMultiplier: 2.0,
@@ -281,7 +281,7 @@ export class ItemDatabase {
       name: 'Knockback',
       description: 'Massive knockback on hit',
       rarity: 'legendary',
-      cost: 160,
+      cost: 400,
       icon: '👊',
       unlocked: true,
       knockback: 300

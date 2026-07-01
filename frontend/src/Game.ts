@@ -3,7 +3,7 @@
 import { Player } from './Player';
 import { Enemy } from './Enemy';
 import { Projectile } from './Projectile';
-import { Particle, DamageNumber, spawnHitParticles, spawnKillParticles, spawnXPParticles } from './Particle';
+import { Particle, DamageNumber, spawnHitParticles, spawnKillParticles, spawnXPParticles, spawnHealthOrbParticles } from './Particle';
 import { WaveManager } from './WaveManager';
 import { PlayerStats, ItemDatabase, type Item } from './ItemSystem';
 import { SaveManager } from './SaveManager';
@@ -11,6 +11,7 @@ import { Input } from './Input';
 import { Renderer } from './Renderer';
 import { AudioManager } from './AudioManager';
 import { pointInRect } from './utils';
+import { HealthOrb } from './Pickup';
 
 export type GameState = 'menu' | 'playing' | 'shop' | 'paused' | 'gameover';
 
@@ -28,6 +29,7 @@ export class Game {
   projectiles: Projectile[] = [];
   particles: Particle[] = [];
   damageNumbers: DamageNumber[] = [];
+  healthOrbs: HealthOrb[] = [];
 
   // Systems
   waveManager: WaveManager;
@@ -84,6 +86,7 @@ export class Game {
     this.projectiles = [];
     this.particles = [];
     this.damageNumbers = [];
+    this.healthOrbs = [];
     this.kills = 0;
 
     this.waveManager.reset();
@@ -120,6 +123,7 @@ export class Game {
     this.projectiles = [];
     this.particles = [];
     this.damageNumbers = [];
+    this.healthOrbs = [];
     this.kills = 0;
 
     const wave = save.wave ?? 1;
@@ -287,11 +291,25 @@ export class Game {
       num.update(dt);
     }
 
+    // Health orbs
+    for (const orb of this.healthOrbs) {
+      orb.update(dt);
+
+      // Check pickup collision
+      if (orb.collidesWith(this.player.x, this.player.y, this.player.radius)) {
+        this.player.heal(orb.healAmount);
+        orb.dead = true;
+        this.particles.push(...spawnHealthOrbParticles(orb.x, orb.y));
+        this.audio.playHit(); // Reuse hit sound for pickup
+      }
+    }
+
     // Cleanup dead entities
     this.enemies = this.enemies.filter(e => !e.dead);
     this.projectiles = this.projectiles.filter(p => !p.dead);
     this.particles = this.particles.filter(p => !p.dead);
     this.damageNumbers = this.damageNumbers.filter(n => !n.dead);
+    this.healthOrbs = this.healthOrbs.filter(o => !o.dead);
 
     // Check wave completion
     if (this.waveManager.isWaveComplete()) {
@@ -340,13 +358,18 @@ export class Game {
     const shakeAmount = enemy.type === 'demon' || enemy.type === 'troll' ? 0.25 : 0.1;
     this.renderer.addScreenShake(shakeAmount);
 
-    // XP and gold
+    // XP and gold (all enemies drop gold now)
     const leveledUp = this.player.addXP(enemy.typeData.xpValue);
     this.player.addGold(enemy.typeData.goldValue);
 
     if (leveledUp) {
       this.audio.playLevelUp();
       this.renderer.addScreenShake(0.2);
+    }
+
+    // Health orb drop (18% chance)
+    if (Math.random() < 0.18) {
+      this.healthOrbs.push(new HealthOrb(enemy.x, enemy.y));
     }
 
     // Explosion on kill
@@ -369,7 +392,7 @@ export class Game {
   }
 
   private enterShop(): void {
-    this.shopItems = ItemDatabase.getRandomItems(3);
+    this.shopItems = ItemDatabase.getRandomItems(4);
     this.selectedShopItem = -1;
     this.state = 'shop';
     this.audio.playWaveComplete();
@@ -396,8 +419,8 @@ export class Game {
       startX = (this.canvas.width - itemWidth) / 2;
       startY = 150;
     } else {
-      // Horizontal row on desktop
-      startX = this.canvas.width / 2 - (itemWidth * 3 + gap * 2) / 2;
+      // Horizontal row on desktop (4 items)
+      startX = this.canvas.width / 2 - (itemWidth * 4 + gap * 3) / 2;
       startY = 200;
     }
 
@@ -565,6 +588,10 @@ export class Game {
       enemy.draw(ctx);
     }
 
+    for (const orb of this.healthOrbs) {
+      orb.draw(ctx);
+    }
+
     this.player.draw(ctx);
 
     for (const num of this.damageNumbers) {
@@ -688,8 +715,8 @@ export class Game {
       startX = (this.canvas.width - itemWidth) / 2;
       startY = 110;
     } else {
-      // Horizontal row on desktop
-      startX = this.canvas.width / 2 - (itemWidth * 3 + gap * 2) / 2;
+      // Horizontal row on desktop (4 items)
+      startX = this.canvas.width / 2 - (itemWidth * 4 + gap * 3) / 2;
       startY = 200;
     }
 
