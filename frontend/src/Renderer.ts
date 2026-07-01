@@ -1,6 +1,7 @@
 // Canvas rendering with effects
 
 import { UISprites } from './UISprites';
+import { OffscreenCanvasCache } from './OffscreenCanvasCache';
 
 export class Renderer {
   private canvas: HTMLCanvasElement;
@@ -29,6 +30,9 @@ export class Renderer {
   private cachedHeight: number = 0;
   private vignetteGradient: CanvasGradient | null = null;
 
+  // PERFORMANCE: Offscreen canvas cache for static UI elements
+  private offscreenCache: OffscreenCanvasCache;
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     const ctx = canvas.getContext('2d');
@@ -37,6 +41,9 @@ export class Renderer {
 
     // PIXEL ART: Disable image smoothing globally for crisp pixels
     this.ctx.imageSmoothingEnabled = false;
+
+    // PERFORMANCE: Initialize offscreen canvas cache
+    this.offscreenCache = new OffscreenCanvasCache();
 
     // Initialize layer canvases
     this.initializeLayers();
@@ -595,6 +602,13 @@ export class Renderer {
   getContext(): CanvasRenderingContext2D {
     // Return game layer for dynamic content
     return this.gameCtx || this.ctx;
+  }
+
+  /**
+   * Get the offscreen canvas cache for static UI elements
+   */
+  getOffscreenCache(): OffscreenCanvasCache {
+    return this.offscreenCache;
   }
 
   /**

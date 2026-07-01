@@ -1828,17 +1828,38 @@ export class Game {
     const statPanelX = isMobile ? 10 : 10;
     const statPanelY = isMobile ? 85 : 40;
 
-    // Stats panel background
-    ctx.save();
-    const statGradient = ctx.createLinearGradient(statPanelX, statPanelY, statPanelX, statPanelY + statPanelHeight);
-    statGradient.addColorStop(0, 'rgba(40, 40, 40, 0.9)');
-    statGradient.addColorStop(1, 'rgba(20, 20, 20, 0.9)');
-    this.renderer.drawRoundedRect(statPanelX, statPanelY, statPanelWidth, statPanelHeight, 6, statGradient);
-    ctx.strokeStyle = '#4a9eff';
-    ctx.lineWidth = 2;
-    this.renderer['drawRoundedRectPath'](statPanelX, statPanelY, statPanelWidth, statPanelHeight, 6);
-    ctx.stroke();
-    ctx.restore();
+    // PERFORMANCE: Stats panel background (cached offscreen canvas)
+    // This complex gradient+border is expensive to redraw every frame
+    const cache = this.renderer.getOffscreenCache();
+    const cacheKey = `shop-stats-panel-${isMobile ? 'mobile' : 'desktop'}`;
+    const cachedPanel = cache.renderCached(cacheKey, statPanelWidth, statPanelHeight, (cacheCtx) => {
+      const gradient = cacheCtx.createLinearGradient(0, 0, 0, statPanelHeight);
+      gradient.addColorStop(0, 'rgba(40, 40, 40, 0.9)');
+      gradient.addColorStop(1, 'rgba(20, 20, 20, 0.9)');
+
+      // Rounded rectangle
+      cacheCtx.fillStyle = gradient;
+      cacheCtx.beginPath();
+      cacheCtx.moveTo(6, 0);
+      cacheCtx.lineTo(statPanelWidth - 6, 0);
+      cacheCtx.quadraticCurveTo(statPanelWidth, 0, statPanelWidth, 6);
+      cacheCtx.lineTo(statPanelWidth, statPanelHeight - 6);
+      cacheCtx.quadraticCurveTo(statPanelWidth, statPanelHeight, statPanelWidth - 6, statPanelHeight);
+      cacheCtx.lineTo(6, statPanelHeight);
+      cacheCtx.quadraticCurveTo(0, statPanelHeight, 0, statPanelHeight - 6);
+      cacheCtx.lineTo(0, 6);
+      cacheCtx.quadraticCurveTo(0, 0, 6, 0);
+      cacheCtx.closePath();
+      cacheCtx.fill();
+
+      // Border
+      cacheCtx.strokeStyle = '#4a9eff';
+      cacheCtx.lineWidth = 2;
+      cacheCtx.stroke();
+    });
+
+    // Draw the cached panel
+    ctx.drawImage(cachedPanel, statPanelX, statPanelY);
 
     // Stats content - larger on mobile for readability
     const statSize = isMobile ? 16 : 13; // BALANCE: Increased from 14 to 16 for mobile readability
