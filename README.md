@@ -1,64 +1,69 @@
----
-type: work-project
-status: active
-created: 2026-07-01
-last_updated: 2026-07-01
----
+# Roguelite Arena
 
-# Browser Roguelite Game
+A complete mobile-friendly browser roguelite built with TypeScript + Canvas, featuring full game loop, wave-based survivor gameplay, item synergies, and save system.
 
-**Goal:** Build a complete mobile-friendly browser roguelite with full game loop, Laravel backend (auth + saves), deployed on Vercel (frontend) + Forge (backend). Iterate for 4 hours on gameplay, systems, and polish.
+## Features
 
-**Inspiration:** Balatro (build synergies + feedback), Brotato (tight pacing), Binding of Isaac (item depth)
+### Game
+- 20-wave roguelite runs (~15-20 minutes)
+- Auto-attacking combat with 2 active abilities
+- 15 items with multiplicative stat stacking
+- 4 enemy types with unique behaviors
+- XP leveling and gold economy
+- Shop between waves
+- Save/load system
 
-## Status
+### Tech
+- **Frontend**: TypeScript + Canvas, Vite build
+- **Backend**: Node.js/Express + SQLite
+- **Deploy**: Vercel (game) + Forge (API)
+- **Mobile**: Touch controls (virtual joystick + ability buttons)
 
-**Research complete** — patterns identified from successful roguelites.
+## Quick Start
 
-**Now building:**
-- Frontend: Canvas-based game with touch controls
-- Backend: Laravel API for auth + save states
-- Deploy: Vercel (game) + Forge (API)
+### Play Locally
 
-## Game Design (v1)
+**Frontend:**
+```bash
+cd frontend
+npm install
+npm run dev
+# Open http://localhost:5173
+```
 
-### Core Loop
-**Wave-based survivor roguelite** (Brotato model):
-- 20 waves per run, each 30-45 seconds
-- Player auto-attacks, manually triggers abilities
-- Shop between waves for upgrades
-- Permadeath with meta-progression (unlock new characters/items)
+**Backend:**
+```bash
+cd api
+npm install
+npm start
+# API runs on http://localhost:3000
+```
 
-### Mechanics
-1. **Character classes** (3-5 starting, more unlockable)
-   - Each has unique stat modifiers + ability
-2. **Item system** — combinable modifiers that stack
-   - Damage multipliers, fire rate, special effects
-   - Synergies emerge from combinations
-3. **Upgrade shop** — appear after each wave
-   - 3 random items, reroll costs gold
-4. **Save system** — persist unlocks + run states
-5. **Juicy feedback** — particles, screen shake, score pop-ups
+### Demo User
+- Username: `demo`
+- Password: `demo123`
 
-### Tech Stack
-- **Frontend:** HTML5 Canvas + TypeScript, Vite build
-- **Backend:** Laravel 12 API (auth, save states, unlocks)
-- **Deploy:** Vercel (static game) + Forge (Laravel)
-- **Touch:** Virtual joystick + ability buttons
+## Controls
 
-## Plan
+### Keyboard
+- WASD / Arrow Keys: Move
+- Space / Shift: Dash
+- E / Q: Blast
 
-- [x] Research roguelite patterns
-- [ ] Scaffold frontend (Vite + Canvas + TypeScript)
-- [ ] Build core game loop (player, enemies, waves)
-- [ ] Add item/upgrade system
-- [ ] Build shop UI
-- [ ] Add juicy feedback (particles, shake, audio)
-- [ ] Scaffold Laravel backend (auth + saves)
-- [ ] Deploy to Vercel + Forge
-- [ ] Create demo user
-- [ ] Iterate on balance + feel (remaining time)
+### Mobile
+- Touch left side: Virtual joystick
+- DASH/BLAST buttons: Abilities
 
-## Log
+## Deployment
 
-- **2026-07-01 18:40** — Project started. Researched Balatro/Brotato/BoI patterns. Key findings: short runs (20-30min), synergy depth, feedback > graphics, touch-first UI.
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for Vercel + Forge deployment instructions.
+
+## Architecture
+
+- `frontend/` - Canvas game (TypeScript/Vite)
+- `api/` - Auth + save states (Express/SQLite)
+- Full docs in `frontend/ARCHITECTURE.md` and `api/README.md`
+
+## License
+
+MIT
