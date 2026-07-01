@@ -121,52 +121,127 @@ export class Renderer {
     this.ctx.fill();
   }
 
+  drawSprite(
+    sprite: HTMLCanvasElement,
+    x: number,
+    y: number,
+    options: {
+      scale?: number;
+      shadowBlur?: number;
+      shadowColor?: string;
+      alpha?: number;
+    } = {}
+  ): void {
+    this.ctx.save();
+
+    if (options.shadowBlur !== undefined) {
+      this.ctx.shadowBlur = options.shadowBlur;
+    }
+    if (options.shadowColor !== undefined) {
+      this.ctx.shadowColor = options.shadowColor;
+    }
+    if (options.alpha !== undefined) {
+      this.ctx.globalAlpha = options.alpha;
+    }
+
+    const scale = options.scale ?? 1;
+    const width = sprite.width * scale;
+    const height = sprite.height * scale;
+
+    this.ctx.drawImage(
+      sprite,
+      x - width / 2,
+      y - height / 2,
+      width,
+      height
+    );
+
+    this.ctx.restore();
+  }
+
   drawHealthBar(x: number, y: number, width: number, height: number, current: number, max: number): void {
     this.ctx.save();
 
-    // Outer glow
-    this.ctx.shadowBlur = 10;
-    this.ctx.shadowColor = 'rgba(0, 255, 0, 0.5)';
-
-    // Background
-    this.ctx.fillStyle = '#330000';
-    this.ctx.fillRect(x, y, width, height);
-
-    // Health
     const percent = current / max;
     const color = percent > 0.5 ? '#00ff00' : percent > 0.25 ? '#ffff00' : '#ff0000';
-    this.ctx.fillStyle = color;
+
+    // Outer glow box
+    this.ctx.shadowBlur = 15;
+    this.ctx.shadowColor = color;
+
+    // Dark border (outer)
+    this.ctx.fillStyle = '#000000';
+    this.ctx.fillRect(x - 2, y - 2, width + 4, height + 4);
+
+    // Background
+    this.ctx.shadowBlur = 0;
+    this.ctx.fillStyle = '#1a0000';
+    this.ctx.fillRect(x, y, width, height);
+
+    // Health with gradient
+    const gradient = this.ctx.createLinearGradient(x, y, x, y + height);
+    gradient.addColorStop(0, this.lightenColor(color, 1.3));
+    gradient.addColorStop(1, color);
+    this.ctx.fillStyle = gradient;
+    this.ctx.shadowBlur = 12;
     this.ctx.shadowColor = color;
     this.ctx.fillRect(x, y, width * percent, height);
 
-    // Border
+    // Inner highlight
     this.ctx.shadowBlur = 0;
-    this.ctx.strokeStyle = '#ffffff';
+    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+    this.ctx.fillRect(x, y, width * percent, height * 0.3);
+
+    // Border (bright)
+    this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
     this.ctx.lineWidth = 2;
     this.ctx.strokeRect(x, y, width, height);
 
     this.ctx.restore();
   }
 
+  private lightenColor(color: string, factor: number): string {
+    // Simple color lightening for gradients
+    const hex = color.replace('#', '');
+    const r = Math.min(255, parseInt(hex.substring(0, 2), 16) * factor);
+    const g = Math.min(255, parseInt(hex.substring(2, 4), 16) * factor);
+    const b = Math.min(255, parseInt(hex.substring(4, 6), 16) * factor);
+    return `rgb(${r}, ${g}, ${b})`;
+  }
+
   drawProgressBar(x: number, y: number, width: number, height: number, percent: number, color: string): void {
     this.ctx.save();
 
-    // Outer glow
-    this.ctx.shadowBlur = 8;
+    // Outer glow box
+    this.ctx.shadowBlur = 12;
     this.ctx.shadowColor = color;
 
+    // Dark border (outer)
+    this.ctx.fillStyle = '#000000';
+    this.ctx.fillRect(x - 2, y - 2, width + 4, height + 4);
+
     // Background
-    this.ctx.fillStyle = '#333333';
+    this.ctx.shadowBlur = 0;
+    this.ctx.fillStyle = '#1a1a1a';
     this.ctx.fillRect(x, y, width, height);
 
-    // Progress
-    this.ctx.fillStyle = color;
+    // Progress with gradient
+    const gradient = this.ctx.createLinearGradient(x, y, x, y + height);
+    gradient.addColorStop(0, this.lightenColor(color, 1.3));
+    gradient.addColorStop(1, color);
+    this.ctx.fillStyle = gradient;
+    this.ctx.shadowBlur = 10;
+    this.ctx.shadowColor = color;
     this.ctx.fillRect(x, y, width * percent, height);
 
-    // Border
+    // Inner highlight
     this.ctx.shadowBlur = 0;
-    this.ctx.strokeStyle = '#ffffff';
-    this.ctx.lineWidth = 1;
+    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+    this.ctx.fillRect(x, y, width * percent, height * 0.3);
+
+    // Border (bright)
+    this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+    this.ctx.lineWidth = 2;
     this.ctx.strokeRect(x, y, width, height);
 
     this.ctx.restore();

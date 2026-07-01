@@ -104,16 +104,23 @@ export class DamageNumber {
     ctx.save();
 
     const alpha = this.lifetime / this.maxLifetime;
+    const scale = 1 + (1 - alpha) * 0.3; // Grows slightly as it fades
     ctx.globalAlpha = alpha;
 
-    // Glow effect for damage numbers
-    ctx.shadowBlur = 10;
+    // Stronger glow effect for damage numbers
+    ctx.shadowBlur = 15;
     ctx.shadowColor = this.color;
 
-    ctx.fillStyle = this.color;
-    ctx.font = 'bold 28px Arial';
+    // Draw outline for better visibility
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 3;
+    ctx.font = `bold ${36 * scale}px Arial`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
+    ctx.strokeText(this.text, this.x, this.y);
+
+    ctx.fillStyle = this.color;
+    ctx.font = `bold ${36 * scale}px Arial`;
     ctx.fillText(this.text, this.x, this.y);
 
     ctx.restore();
@@ -121,7 +128,7 @@ export class DamageNumber {
 }
 
 // Particle spawner utility functions
-export function spawnHitParticles(x: number, y: number, count: number = 16): Particle[] {
+export function spawnHitParticles(x: number, y: number, count: number = 24): Particle[] {
   const particles: Particle[] = [];
   for (let i = 0; i < count; i++) {
     const angle = (Math.PI * 2 * i) / count;
@@ -140,7 +147,7 @@ export function spawnHitParticles(x: number, y: number, count: number = 16): Par
   return particles;
 }
 
-export function spawnKillParticles(x: number, y: number, count: number = 32): Particle[] {
+export function spawnKillParticles(x: number, y: number, count: number = 48): Particle[] {
   const particles: Particle[] = [];
   for (let i = 0; i < count; i++) {
     const angle = Math.random() * Math.PI * 2;
@@ -159,20 +166,58 @@ export function spawnKillParticles(x: number, y: number, count: number = 32): Pa
   return particles;
 }
 
-export function spawnXPParticles(x: number, y: number, count: number = 5): Particle[] {
+export function spawnXPParticles(x: number, y: number, count: number = 8): Particle[] {
   const particles: Particle[] = [];
   for (let i = 0; i < count; i++) {
     const angle = Math.random() * Math.PI * 2;
-    const speed = 40 + Math.random() * 40;
+    const speed = 50 + Math.random() * 50;
     particles.push(new Particle({
       x,
       y,
       vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed - 50, // Float upward
-      color: '#00ff00',
-      size: 6,
+      vy: Math.sin(angle) * speed - 60,
+      color: i % 2 === 0 ? '#00ff00' : '#86efac',
+      size: 7 + Math.random() * 3,
+      lifetime: 700 + Math.random() * 400,
+      gravity: -60
+    }));
+  }
+  return particles;
+}
+
+export function spawnLevelUpParticles(x: number, y: number): Particle[] {
+  const particles: Particle[] = [];
+  for (let i = 0; i < 60; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 100 + Math.random() * 200;
+    particles.push(new Particle({
+      x,
+      y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 100,
+      color: i % 3 === 0 ? '#ffff00' : i % 3 === 1 ? '#00ffff' : '#ff00ff',
+      size: 8 + Math.random() * 6,
+      lifetime: 1000 + Math.random() * 500,
+      gravity: -80
+    }));
+  }
+  return particles;
+}
+
+export function spawnExplosionParticles(x: number, y: number): Particle[] {
+  const particles: Particle[] = [];
+  for (let i = 0; i < 40; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 180 + Math.random() * 220;
+    particles.push(new Particle({
+      x,
+      y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      color: i % 2 === 0 ? '#ff6600' : '#ff0000',
+      size: 7 + Math.random() * 8,
       lifetime: 600 + Math.random() * 400,
-      gravity: -50 // Negative gravity for upward float
+      gravity: 300
     }));
   }
   return particles;

@@ -181,7 +181,7 @@ export class Game {
       if (blast.success) {
         this.audio.playBlast();
         this.handleBlastDamage(blast.damage, blast.radius);
-        this.renderer.addScreenShake(0.3);
+        this.renderer.addScreenShake(0.5); // Bigger shake for blast ability
       }
     }
 
@@ -251,7 +251,8 @@ export class Game {
             this.audio.playHit();
             this.particles.push(...spawnHitParticles(enemy.x, enemy.y, 6));
             this.damageNumbers.push(new DamageNumber(enemy.x, enemy.y - 20, damage, isCrit));
-            this.renderer.addScreenShake(0.05);
+            // More shake on crit
+            this.renderer.addScreenShake(isCrit ? 0.12 : 0.05);
             this.renderer.addImpactFlash(enemy.x, enemy.y);
 
             if (enemy.dead) {
@@ -332,7 +333,9 @@ export class Game {
     this.audio.playKill();
     this.particles.push(...spawnKillParticles(enemy.x, enemy.y));
     this.particles.push(...spawnXPParticles(enemy.x, enemy.y));
-    this.renderer.addScreenShake(0.1);
+    // More shake for bigger enemies
+    const shakeAmount = enemy.type === 'demon' || enemy.type === 'troll' ? 0.25 : 0.1;
+    this.renderer.addScreenShake(shakeAmount);
 
     // XP and gold
     const leveledUp = this.player.addXP(enemy.typeData.xpValue);
@@ -576,12 +579,22 @@ export class Game {
     this.renderer.drawText(`Gold: ${this.player.gold}`, padding, padding + 60, { size: 16, bold: true, color: '#ffff00' });
 
     // Wave info
-    const waveText = `Wave ${this.waveManager.currentWave}`;
+    let waveText = `Wave ${this.waveManager.currentWave}`;
+    let waveColor = '#00ffff';
+
+    if (this.waveManager.isBossWave) {
+      waveText += ' - BOSS';
+      waveColor = '#ff0000';
+    } else if (this.waveManager.isHordeWave) {
+      waveText += ' - HORDE';
+      waveColor = '#ff6600';
+    }
+
     this.renderer.drawText(waveText, this.canvas.width - padding, padding, {
       size: 20,
       bold: true,
       align: 'right',
-      color: '#00ffff'
+      color: waveColor
     });
 
     this.renderer.drawText(`Enemies: ${this.enemies.length + this.waveManager.waveEnemiesRemaining}`, this.canvas.width - padding, padding + 30, {

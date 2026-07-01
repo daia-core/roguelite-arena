@@ -1,4 +1,4 @@
-// Item and upgrade system
+// Item and upgrade system with synergies
 
 export interface Item {
   id: string;
@@ -6,33 +6,52 @@ export interface Item {
   description: string;
   rarity: 'common' | 'rare' | 'epic' | 'legendary';
   cost: number;
-  icon: string; // Emoji for now
-  unlocked: boolean; // Meta-progression unlock
+  icon: string;
+  unlocked: boolean;
 
-  // Stat modifiers (multiplicative stacking)
+  // Stat modifiers
   damageMultiplier?: number;
   fireRateMultiplier?: number;
   critChance?: number; // Additive
-  critMultiplier?: number;
+  critDamageMultiplier?: number; // Multiplicative
   speedMultiplier?: number;
   maxHealthBonus?: number; // Additive
+  healthRegen?: number; // HP per second
 
   // Special effects
-  piercing?: boolean;
-  explosionOnKill?: boolean;
+  piercing?: number; // Number of enemies to pierce
+  explosionOnHit?: boolean;
+  chainLightning?: number; // Percentage chance
   lifesteal?: number; // Percentage
-  shield?: boolean; // One-hit shield
+  thorns?: number; // Percentage reflect
+  shield?: boolean;
   multishot?: number; // Extra projectiles
   projectileSpeed?: number;
   knockback?: number;
+  xpMagnet?: number; // Multiplier for pickup range
+  goldBonus?: number; // Multiplier
+  dodge?: number; // Percentage chance to evade
+  poison?: boolean; // DoT effect
+  freeze?: number; // Percentage chance to slow
+  homing?: boolean; // Bullets curve toward enemies
 }
 
 export class ItemDatabase {
   private static items: Item[] = [
-    // Common items
+    // === COMMON ITEMS ===
     {
-      id: 'damage_boost',
-      name: 'Damage Boost',
+      id: 'attack_speed',
+      name: 'Attack Speed',
+      description: '+20% fire rate',
+      rarity: 'common',
+      cost: 50,
+      icon: '⚡',
+      unlocked: true,
+      fireRateMultiplier: 1.2
+    },
+    {
+      id: 'damage',
+      name: 'Damage',
       description: '+20% damage',
       rarity: 'common',
       cost: 50,
@@ -41,40 +60,50 @@ export class ItemDatabase {
       damageMultiplier: 1.2
     },
     {
-      id: 'fire_rate',
-      name: 'Rapid Fire',
-      description: '+30% fire rate',
-      rarity: 'common',
-      cost: 50,
-      icon: '🔫',
-      unlocked: true,
-      fireRateMultiplier: 1.3
-    },
-    {
-      id: 'speed_boost',
-      name: 'Swift Steps',
-      description: '+25% movement speed',
+      id: 'movement_speed',
+      name: 'Movement Speed',
+      description: '+15% move speed',
       rarity: 'common',
       cost: 40,
       icon: '👟',
       unlocked: true,
-      speedMultiplier: 1.25
+      speedMultiplier: 1.15
     },
     {
-      id: 'health_boost',
-      name: 'Vitality',
-      description: '+20 max health',
+      id: 'max_hp',
+      name: 'Max HP',
+      description: '+25 max health',
       rarity: 'common',
       cost: 60,
       icon: '❤️',
       unlocked: true,
-      maxHealthBonus: 20
+      maxHealthBonus: 25
+    },
+    {
+      id: 'hp_regen',
+      name: 'HP Regen',
+      description: '+1 HP per second',
+      rarity: 'common',
+      cost: 55,
+      icon: '💚',
+      unlocked: true,
+      healthRegen: 1
+    },
+    {
+      id: 'xp_magnet',
+      name: 'XP Magnet',
+      description: '+50% XP pickup range',
+      rarity: 'common',
+      cost: 45,
+      icon: '🧲',
+      unlocked: true,
+      xpMagnet: 1.5
     },
 
-    // Rare items
+    // === RARE ITEMS ===
     {
       id: 'crit_chance',
-      name: 'Lucky Strike',
+      name: 'Crit Chance',
       description: '+15% crit chance',
       rarity: 'rare',
       cost: 80,
@@ -84,81 +113,141 @@ export class ItemDatabase {
     },
     {
       id: 'crit_damage',
-      name: 'Precision',
-      description: '+50% crit damage',
+      name: 'Crit Damage',
+      description: 'Crits do +50% damage',
       rarity: 'rare',
       cost: 80,
       icon: '💥',
       unlocked: true,
-      critMultiplier: 1.5
+      critDamageMultiplier: 1.5
+    },
+    {
+      id: 'projectile_count',
+      name: 'Projectile Count',
+      description: 'Fire +1 projectile',
+      rarity: 'rare',
+      cost: 90,
+      icon: '🔱',
+      unlocked: true,
+      multishot: 1
+    },
+    {
+      id: 'piercing',
+      name: 'Piercing',
+      description: 'Bullets pierce +1 enemy',
+      rarity: 'rare',
+      cost: 85,
+      icon: '🎯',
+      unlocked: true,
+      piercing: 1
     },
     {
       id: 'lifesteal',
-      name: 'Vampiric',
-      description: '10% lifesteal',
+      name: 'Lifesteal',
+      description: 'Heal 5% of damage dealt',
       rarity: 'rare',
       cost: 90,
       icon: '🩸',
       unlocked: true,
-      lifesteal: 0.1
+      lifesteal: 0.05
     },
     {
-      id: 'piercing',
-      name: 'Piercing Rounds',
-      description: 'Bullets pierce enemies',
+      id: 'thorns',
+      name: 'Thorns',
+      description: 'Reflect 20% damage taken',
       rarity: 'rare',
-      cost: 100,
-      icon: '🎯',
+      cost: 75,
+      icon: '🌵',
       unlocked: true,
-      piercing: true
+      thorns: 0.2
     },
     {
-      id: 'multishot',
-      name: 'Split Shot',
-      description: '+2 projectiles',
+      id: 'gold_bonus',
+      name: 'Gold Bonus',
+      description: '+20% gold from kills',
       rarity: 'rare',
-      cost: 100,
-      icon: '🔱',
+      cost: 70,
+      icon: '💰',
       unlocked: true,
-      multishot: 2
+      goldBonus: 1.2
+    },
+    {
+      id: 'dodge',
+      name: 'Dodge',
+      description: '10% chance to evade damage',
+      rarity: 'rare',
+      cost: 85,
+      icon: '💨',
+      unlocked: true,
+      dodge: 0.1
     },
 
-    // Epic items
+    // === EPIC ITEMS ===
     {
-      id: 'explosion',
-      name: 'Explosive Finale',
-      description: 'Enemies explode on death',
+      id: 'homing',
+      name: 'Homing',
+      description: 'Bullets curve toward enemies',
       rarity: 'epic',
-      cost: 150,
+      cost: 120,
+      icon: '🎯',
+      unlocked: true,
+      homing: true
+    },
+    {
+      id: 'explosive',
+      name: 'Explosive',
+      description: 'Bullets explode on hit',
+      rarity: 'epic',
+      cost: 130,
       icon: '💣',
       unlocked: true,
-      explosionOnKill: true
+      explosionOnHit: true
+    },
+    {
+      id: 'chain_lightning',
+      name: 'Chain Lightning',
+      description: '20% chance to chain to nearby enemy',
+      rarity: 'epic',
+      cost: 140,
+      icon: '⚡',
+      unlocked: true,
+      chainLightning: 0.2
     },
     {
       id: 'shield',
-      name: 'Energy Shield',
-      description: 'Absorb next hit',
+      name: 'Shield',
+      description: '50 HP shield (regenerates out of combat)',
       rarity: 'epic',
-      cost: 120,
+      cost: 110,
       icon: '🛡️',
       unlocked: true,
       shield: true
     },
     {
-      id: 'projectile_speed',
-      name: 'Railgun',
-      description: '+100% projectile speed',
+      id: 'poison',
+      name: 'Poison',
+      description: 'Attacks apply DoT (5 dmg/sec, 3s)',
       rarity: 'epic',
-      cost: 130,
-      icon: '⚡',
+      cost: 125,
+      icon: '☠️',
       unlocked: true,
-      projectileSpeed: 2.0
+      poison: true
+    },
+    {
+      id: 'freeze',
+      name: 'Freeze',
+      description: '10% chance to slow enemy 50% for 2s',
+      rarity: 'epic',
+      cost: 115,
+      icon: '❄️',
+      unlocked: true,
+      freeze: 0.1
     },
 
-    // Legendary items
+    // === LEGENDARY ITEMS ===
     {
       id: 'mega_damage',
-      name: 'Berserker',
+      name: 'Berserker Rage',
       description: '+50% damage',
       rarity: 'legendary',
       cost: 200,
@@ -167,25 +256,35 @@ export class ItemDatabase {
       damageMultiplier: 1.5
     },
     {
-      id: 'knockback',
-      name: 'Knockback',
-      description: 'Push enemies away on hit',
+      id: 'rapid_fire',
+      name: 'Rapid Fire',
+      description: '+50% fire rate',
       rarity: 'legendary',
       cost: 180,
-      icon: '👊',
+      icon: '🔫',
       unlocked: true,
-      knockback: 200
+      fireRateMultiplier: 1.5
     },
     {
       id: 'glass_cannon',
       name: 'Glass Cannon',
       description: '+100% damage, -50% health',
       rarity: 'legendary',
-      cost: 250,
+      cost: 220,
       icon: '💀',
       unlocked: true,
       damageMultiplier: 2.0,
       maxHealthBonus: -50
+    },
+    {
+      id: 'knockback',
+      name: 'Knockback',
+      description: 'Massive knockback on hit',
+      rarity: 'legendary',
+      cost: 160,
+      icon: '👊',
+      unlocked: true,
+      knockback: 300
     }
   ];
 
@@ -261,7 +360,7 @@ export class PlayerStats {
     this.items.forEach(item => {
       if (item.maxHealthBonus) health += item.maxHealthBonus;
     });
-    return Math.max(1, health); // At least 1 HP
+    return Math.max(1, health);
   }
 
   getCritChance(): number {
@@ -269,15 +368,23 @@ export class PlayerStats {
     this.items.forEach(item => {
       if (item.critChance) chance += item.critChance;
     });
-    return Math.min(1, chance); // Cap at 100%
+    return Math.min(1, chance);
   }
 
   getCritMultiplier(): number {
     let mult = this.baseCritMultiplier;
     this.items.forEach(item => {
-      if (item.critMultiplier) mult += item.critMultiplier;
+      if (item.critDamageMultiplier) mult *= item.critDamageMultiplier;
     });
     return mult;
+  }
+
+  getHealthRegen(): number {
+    let regen = 0;
+    this.items.forEach(item => {
+      if (item.healthRegen) regen += item.healthRegen;
+    });
+    return regen;
   }
 
   getLifesteal(): number {
@@ -286,6 +393,14 @@ export class PlayerStats {
       if (item.lifesteal) lifesteal += item.lifesteal;
     });
     return lifesteal;
+  }
+
+  getThorns(): number {
+    let thorns = 0;
+    this.items.forEach(item => {
+      if (item.thorns) thorns += item.thorns;
+    });
+    return thorns;
   }
 
   getProjectileSpeed(): number {
@@ -304,16 +419,76 @@ export class PlayerStats {
     return kb;
   }
 
+  getPiercing(): number {
+    let pierce = 0;
+    this.items.forEach(item => {
+      if (item.piercing) pierce += item.piercing;
+    });
+    return pierce;
+  }
+
+  getXPMagnet(): number {
+    let magnet = 1;
+    this.items.forEach(item => {
+      if (item.xpMagnet) magnet *= item.xpMagnet;
+    });
+    return magnet;
+  }
+
+  getGoldBonus(): number {
+    let bonus = 1;
+    this.items.forEach(item => {
+      if (item.goldBonus) bonus *= item.goldBonus;
+    });
+    return bonus;
+  }
+
+  getDodgeChance(): number {
+    let dodge = 0;
+    this.items.forEach(item => {
+      if (item.dodge) dodge += item.dodge;
+    });
+    return Math.min(0.75, dodge); // Cap at 75%
+  }
+
+  getChainLightningChance(): number {
+    let chance = 0;
+    this.items.forEach(item => {
+      if (item.chainLightning) chance += item.chainLightning;
+    });
+    return Math.min(1, chance);
+  }
+
+  getFreezeChance(): number {
+    let chance = 0;
+    this.items.forEach(item => {
+      if (item.freeze) chance += item.freeze;
+    });
+    return Math.min(1, chance);
+  }
+
   hasPiercing(): boolean {
-    return this.items.some(item => item.piercing);
+    return this.getPiercing() > 0;
   }
 
   hasExplosionOnKill(): boolean {
-    return this.items.some(item => item.explosionOnKill);
+    return this.items.some(item => item.explosionOnHit);
+  }
+
+  hasExplosionOnHit(): boolean {
+    return this.items.some(item => item.explosionOnHit);
   }
 
   hasShield(): boolean {
     return this.items.some(item => item.shield);
+  }
+
+  hasHoming(): boolean {
+    return this.items.some(item => item.homing);
+  }
+
+  hasPoison(): boolean {
+    return this.items.some(item => item.poison);
   }
 
   getMultishot(): number {

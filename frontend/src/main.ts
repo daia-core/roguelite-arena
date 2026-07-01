@@ -1,7 +1,11 @@
 // Main entry point - game loop and initialization
 
 import { Game } from './Game';
+import { SpriteSheet } from './sprites';
 import './style.css';
+
+// Initialize sprite system
+SpriteSheet.init();
 
 // Setup canvas
 const app = document.querySelector<HTMLDivElement>('#app')!;

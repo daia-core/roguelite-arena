@@ -1,8 +1,9 @@
 // Enemy entity with AI and different types
 
 import { circleCollision } from './utils';
+import { SpriteSheet } from './sprites';
 
-export type EnemyType = 'basic' | 'fast' | 'tank' | 'shooter';
+export type EnemyType = 'slime' | 'goblin' | 'skeleton' | 'imp' | 'orc' | 'wraith' | 'necromancer' | 'troll' | 'banshee' | 'demon';
 
 export interface EnemyTypeData {
   health: number;
@@ -12,46 +13,114 @@ export interface EnemyTypeData {
   color: string;
   xpValue: number;
   goldValue: number;
-  shootRate?: number; // Shots per second (for shooter type)
+  shootRate?: number; // Shots per second (for ranged types)
+  spriteName: string;
 }
 
 const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
-  basic: {
-    health: 30,
-    speed: 80,
-    damage: 10,
-    radius: 12,
-    color: '#ff0000',
-    xpValue: 10,
-    goldValue: 5
-  },
-  fast: {
-    health: 15,
-    speed: 150,
-    damage: 5,
-    radius: 10,
-    color: '#ff00ff',
-    xpValue: 8,
-    goldValue: 3
-  },
-  tank: {
-    health: 100,
-    speed: 50,
-    damage: 20,
-    radius: 18,
-    color: '#aa0000',
-    xpValue: 30,
-    goldValue: 15
-  },
-  shooter: {
-    health: 25,
+  slime: {
+    health: 150,
     speed: 60,
     damage: 8,
-    radius: 11,
-    color: '#ffaa00',
+    radius: 14,
+    color: '#4ade80',
+    xpValue: 12,
+    goldValue: 6,
+    spriteName: 'slime'
+  },
+  goblin: {
+    health: 60,
+    speed: 120,
+    damage: 6,
+    radius: 12,
+    color: '#7cb342',
+    xpValue: 10,
+    goldValue: 5,
+    shootRate: 0.4,
+    spriteName: 'goblin'
+  },
+  skeleton: {
+    health: 80,
+    speed: 70,
+    damage: 10,
+    radius: 12,
+    color: '#e0e0e0',
     xpValue: 15,
     goldValue: 8,
-    shootRate: 0.5
+    shootRate: 0.8,
+    spriteName: 'skeleton'
+  },
+  imp: {
+    health: 70,
+    speed: 90,
+    damage: 12,
+    radius: 11,
+    color: '#8b0000',
+    xpValue: 18,
+    goldValue: 10,
+    spriteName: 'imp'
+  },
+  orc: {
+    health: 120,
+    speed: 85,
+    damage: 15,
+    radius: 16,
+    color: '#567d46',
+    xpValue: 20,
+    goldValue: 12,
+    spriteName: 'orc'
+  },
+  wraith: {
+    health: 90,
+    speed: 80,
+    damage: 10,
+    radius: 13,
+    color: '#9370db',
+    xpValue: 25,
+    goldValue: 15,
+    spriteName: 'wraith'
+  },
+  necromancer: {
+    health: 100,
+    speed: 60,
+    damage: 8,
+    radius: 12,
+    color: '#2c2c54',
+    xpValue: 30,
+    goldValue: 18,
+    shootRate: 0.5,
+    spriteName: 'necromancer'
+  },
+  troll: {
+    health: 200,
+    speed: 55,
+    damage: 18,
+    radius: 18,
+    color: '#4a7c59',
+    xpValue: 35,
+    goldValue: 20,
+    spriteName: 'troll'
+  },
+  banshee: {
+    health: 75,
+    speed: 85,
+    damage: 12,
+    radius: 13,
+    color: '#e0e0e0',
+    xpValue: 28,
+    goldValue: 16,
+    spriteName: 'banshee'
+  },
+  demon: {
+    health: 500,
+    speed: 90,
+    damage: 20,
+    radius: 20,
+    color: '#8b0000',
+    xpValue: 100,
+    goldValue: 50,
+    shootRate: 1.5,
+    spriteName: 'demon'
   }
 };
 
@@ -70,12 +139,37 @@ export class Enemy {
   // Shooter specific
   shootCooldown: number = 0;
 
-  constructor(x: number, y: number, type: EnemyType, waveMultiplier: number = 1) {
+  // Imp specific (teleporter)
+  teleportCooldown: number = 0;
+
+  // Orc specific (charge)
+  charging: boolean = false;
+  chargeSpeed: number = 0;
+
+  // Wraith specific (phasing)
+  invulnerable: boolean = false;
+  invulnerableTimer: number = 0;
+  phaseCooldown: number = 0;
+
+  // Necromancer specific (summoner)
+  summonCooldown: number = 0;
+
+  // Troll specific (regeneration)
+  regenTimer: number = 0;
+
+  // Banshee specific (screamer)
+  screamCooldown: number = 0;
+
+  // Split tracking for slimes
+  canSplit: boolean = true;
+
+  constructor(x: number, y: number, type: EnemyType, waveMultiplier: number = 1, canSplit: boolean = true) {
     this.id = Enemy.nextId++;
     this.x = x;
     this.y = y;
     this.type = type;
     this.typeData = { ...ENEMY_TYPES[type] };
+    this.canSplit = canSplit;
 
     // Scale with wave
     this.typeData.health *= waveMultiplier;
@@ -86,85 +180,217 @@ export class Enemy {
     this.health = this.maxHealth;
   }
 
-  update(dt: number, playerX: number, playerY: number): { shouldShoot: boolean } {
-    // Move toward player (simple pathfinding)
+  update(dt: number, playerX: number, playerY: number): {
+    shouldShoot: boolean;
+    shouldTeleport?: boolean;
+    shouldSummon?: boolean;
+    shouldScream?: boolean;
+    splitInto?: Enemy[];
+  } {
     const dx = playerX - this.x;
     const dy = playerY - this.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
 
+    let shouldShoot = false;
+    let shouldTeleport = false;
+    let shouldSummon = false;
+    let shouldScream = false;
+    let splitInto: Enemy[] | undefined;
+
+    // Movement behavior based on type
     if (dist > 0) {
       const nx = dx / dist;
       const ny = dy / dist;
 
-      // Don't move if shooter and in range
-      const shouldMove = this.type !== 'shooter' || dist > 300;
+      let moveSpeed = this.typeData.speed;
+      let shouldMove = true;
+
+      // Type-specific movement
+      if (this.type === 'skeleton' || this.type === 'goblin' || this.type === 'necromancer') {
+        // Ranged units keep distance
+        if (dist < 250) {
+          // Move away if too close
+          this.x -= nx * moveSpeed * dt * 0.5;
+          this.y -= ny * moveSpeed * dt * 0.5;
+          shouldMove = false;
+        } else if (dist > 350) {
+          shouldMove = true;
+        } else {
+          shouldMove = false;
+        }
+      }
+
+      // Orc charge behavior
+      if (this.type === 'orc' && dist < 200 && !this.charging) {
+        this.charging = true;
+        this.chargeSpeed = moveSpeed * 2.5;
+      }
+
+      if (this.charging) {
+        moveSpeed = this.chargeSpeed;
+        this.chargeSpeed *= 0.95; // Slow down charge
+        if (this.chargeSpeed < this.typeData.speed) {
+          this.charging = false;
+        }
+      }
+
+      // Wraith phasing
+      if (this.type === 'wraith') {
+        this.phaseCooldown -= dt;
+        if (this.invulnerable) {
+          this.invulnerableTimer -= dt;
+          if (this.invulnerableTimer <= 0) {
+            this.invulnerable = false;
+          }
+        }
+      }
 
       if (shouldMove) {
-        this.x += nx * this.typeData.speed * dt;
-        this.y += ny * this.typeData.speed * dt;
+        this.x += nx * moveSpeed * dt;
+        this.y += ny * moveSpeed * dt;
       }
     }
 
-    // Shooter logic
-    let shouldShoot = false;
-    if (this.type === 'shooter' && this.typeData.shootRate) {
+    // Shooter logic (skeleton, goblin, necromancer, demon)
+    if (this.typeData.shootRate) {
       this.shootCooldown -= dt;
-      if (this.shootCooldown <= 0 && dist > 50 && dist < 400) {
+      if (this.shootCooldown <= 0 && dist > 50 && dist < 450) {
         shouldShoot = true;
         this.shootCooldown = 1 / this.typeData.shootRate;
       }
     }
 
-    return { shouldShoot };
+    // Imp teleport
+    if (this.type === 'imp') {
+      this.teleportCooldown -= dt;
+    }
+
+    // Necromancer summon
+    if (this.type === 'necromancer') {
+      this.summonCooldown -= dt;
+      if (this.summonCooldown <= 0) {
+        shouldSummon = true;
+        this.summonCooldown = 5;
+      }
+    }
+
+    // Troll regeneration
+    if (this.type === 'troll') {
+      this.regenTimer += dt;
+      if (this.regenTimer >= 0.5) {
+        this.health = Math.min(this.maxHealth, this.health + 2);
+        this.regenTimer = 0;
+      }
+    }
+
+    // Banshee scream
+    if (this.type === 'banshee') {
+      this.screamCooldown -= dt;
+      if (this.screamCooldown <= 0 && dist < 200) {
+        shouldScream = true;
+        this.screamCooldown = 6;
+      }
+    }
+
+    return { shouldShoot, shouldTeleport, shouldSummon, shouldScream, splitInto };
   }
 
-  takeDamage(amount: number): void {
+  takeDamage(amount: number): Enemy[] | null {
+    // Wraith invulnerability
+    if (this.invulnerable) {
+      return null;
+    }
+
     this.health -= amount;
+
+    // Imp teleport on hit
+    if (this.type === 'imp' && this.teleportCooldown <= 0 && Math.random() < 0.4) {
+      const angle = Math.random() * Math.PI * 2;
+      const distance = 100 + Math.random() * 50;
+      this.x += Math.cos(angle) * distance;
+      this.y += Math.sin(angle) * distance;
+      this.teleportCooldown = 2;
+    }
+
+    // Wraith phase on damage
+    if (this.type === 'wraith' && this.phaseCooldown <= 0 && Math.random() < 0.3) {
+      this.invulnerable = true;
+      this.invulnerableTimer = 1;
+      this.phaseCooldown = 4;
+    }
+
     if (this.health <= 0) {
       this.dead = true;
+
+      // Slime split mechanic
+      if (this.type === 'slime' && this.canSplit && this.typeData.radius > 8) {
+        const splits: Enemy[] = [];
+        for (let i = 0; i < 2; i++) {
+          const angle = (Math.PI * 2 * i) / 2;
+          const smallSlime = new Enemy(
+            this.x + Math.cos(angle) * 30,
+            this.y + Math.sin(angle) * 30,
+            'slime',
+            1,
+            false // Small slimes don't split again
+          );
+          // Make them smaller and weaker
+          smallSlime.typeData.health = this.maxHealth * 0.3;
+          smallSlime.typeData.radius = this.typeData.radius * 0.6;
+          smallSlime.typeData.damage = this.typeData.damage * 0.6;
+          smallSlime.maxHealth = smallSlime.typeData.health;
+          smallSlime.health = smallSlime.maxHealth;
+          splits.push(smallSlime);
+        }
+        return splits;
+      }
     }
+
+    return null;
   }
 
   draw(ctx: CanvasRenderingContext2D): void {
     ctx.save();
 
-    // Glow effect
-    ctx.shadowBlur = 12;
-    ctx.shadowColor = this.typeData.color;
+    const sprite = SpriteSheet.get(this.typeData.spriteName);
 
-    // Body with radial gradient
-    const gradient = ctx.createRadialGradient(
-      this.x - this.typeData.radius * 0.3,
-      this.y - this.typeData.radius * 0.3,
-      0,
-      this.x,
-      this.y,
-      this.typeData.radius
-    );
+    if (sprite) {
+      // Glow effect
+      ctx.shadowBlur = 12;
+      ctx.shadowColor = this.typeData.color;
 
-    // Different gradients per type
-    if (this.type === 'tank') {
-      gradient.addColorStop(0, '#ff6666');
-      gradient.addColorStop(0.5, '#cc0000');
-      gradient.addColorStop(1, '#660000');
-    } else if (this.type === 'fast') {
-      gradient.addColorStop(0, '#ff88ff');
-      gradient.addColorStop(0.5, '#ff00ff');
-      gradient.addColorStop(1, '#880088');
-    } else if (this.type === 'shooter') {
-      gradient.addColorStop(0, '#ffcc66');
-      gradient.addColorStop(0.5, '#ffaa00');
-      gradient.addColorStop(1, '#aa6600');
+      // Wraith phasing effect
+      if (this.invulnerable) {
+        ctx.globalAlpha = 0.3;
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = '#9370db';
+      }
+
+      // Draw sprite
+      ctx.drawImage(
+        sprite,
+        this.x - sprite.width / 2,
+        this.y - sprite.height / 2
+      );
     } else {
-      gradient.addColorStop(0, '#ff8888');
-      gradient.addColorStop(0.5, '#ff0000');
-      gradient.addColorStop(1, '#880000');
-    }
+      // Fallback to circle if sprite not found
+      const gradient = ctx.createRadialGradient(
+        this.x - this.typeData.radius * 0.3,
+        this.y - this.typeData.radius * 0.3,
+        0,
+        this.x,
+        this.y,
+        this.typeData.radius
+      );
+      gradient.addColorStop(0, this.typeData.color + 'aa');
+      gradient.addColorStop(0.5, this.typeData.color);
+      gradient.addColorStop(1, this.typeData.color + '66');
 
-    ctx.fillStyle = gradient;
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, this.typeData.radius, 0, Math.PI * 2);
-    ctx.fill();
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.typeData.radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     // Health bar (always show)
     const barWidth = this.typeData.radius * 2.4;
@@ -190,15 +416,6 @@ export class Enemy {
     ctx.lineWidth = 1;
     ctx.strokeRect(this.x - barWidth / 2, barY, barWidth, barHeight);
 
-    // Type indicator
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = '#ffffff';
-    ctx.font = `${this.typeData.radius}px Arial`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    const icon = this.type === 'shooter' ? '🔫' : this.type === 'tank' ? '🛡️' : this.type === 'fast' ? '⚡' : '👾';
-    ctx.fillText(icon, this.x, this.y);
-
     ctx.restore();
   }
 
@@ -211,5 +428,15 @@ export class Enemy {
       { x: this.x, y: this.y, radius: this.typeData.radius },
       { x, y, radius }
     );
+  }
+
+  // Create a skeleton minion for necromancer
+  static createSkeletonMinion(x: number, y: number): Enemy {
+    const minion = new Enemy(x, y, 'skeleton', 0.5);
+    minion.typeData.health = 40;
+    minion.typeData.damage = 5;
+    minion.maxHealth = minion.typeData.health;
+    minion.health = minion.maxHealth;
+    return minion;
   }
 }

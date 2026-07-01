@@ -4,6 +4,7 @@ import { PlayerStats } from './ItemSystem';
 import { Projectile } from './Projectile';
 import { Enemy } from './Enemy';
 import { circleCollision } from './utils';
+import { SpriteSheet } from './sprites';
 
 export class Player {
   x: number;
@@ -96,12 +97,14 @@ export class Player {
     const angle = Math.atan2(nearest.y - this.y, nearest.x - this.x);
     const damage = this.stats.getDamage();
     const speed = this.stats.getProjectileSpeed();
-    const piercing = this.stats.hasPiercing();
+    const piercingCount = this.stats.getPiercing();
 
     const projectiles: Projectile[] = [];
 
     // Main shot
-    projectiles.push(new Projectile(this.x, this.y, angle, damage, speed, true, piercing));
+    const mainProj = new Projectile(this.x, this.y, angle, damage, speed, true, piercingCount > 0);
+    mainProj.maxPierceCount = piercingCount;
+    projectiles.push(mainProj);
 
     // Multishot
     const multishot = this.stats.getMultishot();
@@ -109,7 +112,9 @@ export class Player {
       const spreadAngle = 0.3; // Radians between shots
       for (let i = 1; i <= multishot; i++) {
         const offset = i % 2 === 0 ? (i / 2) * spreadAngle : -(Math.ceil(i / 2)) * spreadAngle;
-        projectiles.push(new Projectile(this.x, this.y, angle + offset, damage, speed, true, piercing));
+        const multishotProj = new Projectile(this.x, this.y, angle + offset, damage, speed, true, piercingCount > 0);
+        multishotProj.maxPierceCount = piercingCount;
+        projectiles.push(multishotProj);
       }
     }
 
@@ -188,10 +193,12 @@ export class Player {
   draw(ctx: CanvasRenderingContext2D): void {
     ctx.save();
 
+    const sprite = SpriteSheet.get('player');
+
     // Outer glow effect (pulsing)
     const pulseOffset = Math.sin(Date.now() / 200) * 2;
     ctx.shadowBlur = 20 + pulseOffset;
-    ctx.shadowColor = '#00ff00';
+    ctx.shadowColor = '#4a90e2';
 
     // Dash effect
     if (this.dashDuration > 0) {
@@ -207,28 +214,28 @@ export class Player {
       ctx.shadowBlur = 15;
       ctx.shadowColor = '#00ffff';
       ctx.beginPath();
-      ctx.arc(this.x, this.y, this.radius + 5, 0, Math.PI * 2);
+      ctx.arc(this.x, this.y, this.radius + 8, 0, Math.PI * 2);
       ctx.stroke();
     }
 
-    // Player body with radial gradient
-    const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius);
-    gradient.addColorStop(0, '#88ff88');
-    gradient.addColorStop(0.6, '#00ff00');
-    gradient.addColorStop(1, '#008800');
-    ctx.fillStyle = gradient;
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Direction indicator (triangle)
-    ctx.fillStyle = '#ffffff';
-    ctx.shadowBlur = 0;
-    ctx.beginPath();
-    ctx.moveTo(this.x + this.radius * 0.8, this.y);
-    ctx.lineTo(this.x + this.radius * 0.3, this.y - 5);
-    ctx.lineTo(this.x + this.radius * 0.3, this.y + 5);
-    ctx.fill();
+    // Draw player sprite
+    if (sprite) {
+      ctx.drawImage(
+        sprite,
+        this.x - sprite.width / 2,
+        this.y - sprite.height / 2
+      );
+    } else {
+      // Fallback to circle
+      const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius);
+      gradient.addColorStop(0, '#88ff88');
+      gradient.addColorStop(0.6, '#00ff00');
+      gradient.addColorStop(1, '#008800');
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     ctx.restore();
   }
