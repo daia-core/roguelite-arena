@@ -16,6 +16,7 @@ import { HealthOrb } from './Pickup';
 import { MetaProgression } from './MetaProgression';
 import { ObjectPool } from './ObjectPool';
 import { Quadtree } from './Quadtree';
+import { PerformanceMonitor } from './PerformanceMonitor';
 
 export type GameState = 'menu' | 'playing' | 'shop' | 'paused' | 'gameover' | 'upgrades';
 
@@ -52,6 +53,9 @@ export class Game {
   // PERFORMANCE: Quadtree for collision detection (10-100x faster than spatial grid)
   private enemyQuadtree: Quadtree<any>;
   private projectileQuadtree: Quadtree<any>;
+
+  // PERFORMANCE: Performance monitor (F2 to toggle)
+  private performanceMonitor: PerformanceMonitor;
 
   // GAME FEEL: Hit pause / time scale system
   timeScale: number = 1.0;
@@ -133,6 +137,9 @@ export class Game {
     // PERFORMANCE: Initialize quadtrees
     this.enemyQuadtree = new Quadtree({ x: 0, y: 0, width: canvas.width, height: canvas.height });
     this.projectileQuadtree = new Quadtree({ x: 0, y: 0, width: canvas.width, height: canvas.height });
+
+    // PERFORMANCE: Initialize performance monitor (F2 to toggle)
+    this.performanceMonitor = new PerformanceMonitor();
 
     // Connect input to game state
     this.input.setGameStateGetter(() => this.state);
@@ -309,6 +316,7 @@ export class Game {
 
   update(dt: number): void {
     this.renderer.update(dt);
+    this.performanceMonitor.update(dt);
 
     switch (this.state) {
       case 'menu':
@@ -1638,6 +1646,20 @@ export class Game {
 
       ctx.restore();
     }
+
+    // PERFORMANCE: Draw performance monitor (F2 to toggle)
+    const quadtreeStats = this.enemyQuadtree.getStats();
+    this.performanceMonitor.draw(ctx, {
+      enemies: this.enemies.length,
+      projectiles: this.projectiles.length,
+      particles: this.particles.length,
+      damageNumbers: this.damageNumbers.length,
+      meleeAttacks: this.meleeAttacks.length,
+      healthOrbs: this.healthOrbs.length,
+      quadtreeNodes: quadtreeStats.nodeCount,
+      quadtreeDepth: quadtreeStats.maxDepth,
+      quadtreeObjects: quadtreeStats.totalObjects
+    });
   }
 
   private drawHUD(): void {
