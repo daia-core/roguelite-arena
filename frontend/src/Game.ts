@@ -3,6 +3,7 @@
 import { Player } from './Player';
 import { Enemy } from './Enemy';
 import { Projectile } from './Projectile';
+import { MeleeAttack } from './MeleeAttack';
 import { Particle, DamageNumber, spawnHitParticles, spawnKillParticles, spawnXPParticles, spawnHealthOrbParticles, spawnLevelUpParticles } from './Particle';
 import { WaveManager } from './WaveManager';
 import { PlayerStats, ItemDatabase, type Item } from './ItemSystem';
@@ -28,6 +29,7 @@ export class Game {
   player: Player | null = null;
   enemies: Enemy[] = [];
   projectiles: Projectile[] = [];
+  meleeAttacks: MeleeAttack[] = [];
   particles: Particle[] = [];
   damageNumbers: DamageNumber[] = [];
   healthOrbs: HealthOrb[] = [];
@@ -168,6 +170,7 @@ export class Game {
 
     this.enemies = [];
     this.projectiles = [];
+    this.meleeAttacks = [];
     this.particles = [];
     this.damageNumbers = [];
     this.healthOrbs = [];
@@ -208,6 +211,7 @@ export class Game {
 
     this.enemies = [];
     this.projectiles = [];
+    this.meleeAttacks = [];
     this.particles = [];
     this.damageNumbers = [];
     this.healthOrbs = [];
@@ -279,10 +283,21 @@ export class Game {
     this.player.update(scaledDt, movement.x, movement.y, this.canvas.width, this.canvas.height);
 
     // Player shooting
-    const newProjectiles = this.player.tryShoot(this.enemies);
-    if (newProjectiles.length > 0) {
-      this.projectiles.push(...newProjectiles);
-      this.audio.playShoot();
+    const weaponType = this.playerStats.getWeaponType();
+    if (weaponType === 'melee') {
+      // Melee attack
+      const meleeAttack = this.player.tryMeleeAttack(this.enemies);
+      if (meleeAttack) {
+        this.meleeAttacks.push(meleeAttack);
+        this.audio.playShoot();
+      }
+    } else {
+      // Ranged attack
+      const newProjectiles = this.player.tryShoot(this.enemies);
+      if (newProjectiles.length > 0) {
+        this.projectiles.push(...newProjectiles);
+        this.audio.playShoot();
+      }
     }
 
     // Abilities
@@ -520,6 +535,53 @@ export class Game {
       }
     }
 
+    // Melee attacks
+    for (const melee of this.meleeAttacks) {
+      if (!this.player) continue;
+      melee.update(scaledDt, this.player.x, this.player.y);
+
+      // Check hits on enemies
+      for (const enemy of this.enemies) {
+        if (melee.hasHit(enemy.id)) continue; // Already hit
+
+        if (melee.isPointInArc(enemy.x, enemy.y)) {
+          const isCrit = this.player.rollCrit();
+          let damage = isCrit ? this.player.getCritDamage(melee.damage) : melee.damage;
+
+          // Hit pause
+          this.hitPauseTimer = isCrit ? 0.08 : 0.05;
+
+          const splits = enemy.takeDamage(damage);
+          if (splits && splits.length > 0) {
+            this.enemies.push(...splits);
+          }
+          melee.markHit(enemy.id);
+
+          // Knockback
+          if (melee.knockback > 0 && enemy.type !== 'golem') {
+            const angle = Math.atan2(enemy.y - this.player.y, enemy.x - this.player.x);
+            enemy.applyKnockback(Math.cos(angle) * melee.knockback, Math.sin(angle) * melee.knockback);
+          }
+
+          // Lifesteal
+          const lifesteal = this.playerStats.getLifesteal();
+          if (lifesteal > 0) {
+            this.player.heal(damage * lifesteal);
+          }
+
+          this.audio.playHit();
+          this.particles.push(...spawnHitParticles(enemy.x, enemy.y, 8));
+          this.damageNumbers.push(new DamageNumber(enemy.x, enemy.y - 20, damage, isCrit));
+          this.renderer.addScreenShake(isCrit ? 0.25 : 0.15);
+          this.renderer.addImpactFlash(enemy.x, enemy.y);
+
+          if (enemy.dead) {
+            this.handleEnemyKill(enemy);
+          }
+        }
+      }
+    }
+
     // Particles
     for (const particle of this.particles) {
       particle.update(scaledDt);
@@ -546,6 +608,7 @@ export class Game {
     // Cleanup dead entities
     this.enemies = this.enemies.filter(e => !e.dead);
     this.projectiles = this.projectiles.filter(p => !p.dead);
+    this.meleeAttacks = this.meleeAttacks.filter(m => !m.dead);
     this.particles = this.particles.filter(p => !p.dead);
     this.damageNumbers = this.damageNumbers.filter(n => !n.dead);
     this.healthOrbs = this.healthOrbs.filter(o => !o.dead);
@@ -1170,6 +1233,11 @@ export class Game {
 
     for (const projectile of this.projectiles) {
       projectile.draw(ctx);
+    }
+
+    // Draw melee attacks
+    for (const melee of this.meleeAttacks) {
+      melee.draw(ctx);
     }
 
     for (const enemy of this.enemies) {

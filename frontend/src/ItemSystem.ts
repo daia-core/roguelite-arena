@@ -11,6 +11,14 @@ export type ItemTier = typeof ItemTier[keyof typeof ItemTier];
 
 export type ItemTag = 'melee' | 'ranged' | 'defensive' | 'economic' | 'elemental' | 'utility';
 
+// Weapon attack patterns (Brotato-inspired)
+export type WeaponType =
+  | 'auto-aim' // Default: auto-aim bullets
+  | 'shotgun' // Spread of projectiles
+  | 'laser' // Continuous beam
+  | 'orbital' // Rotating projectiles around player
+  | 'melee'; // Swing/slash around player
+
 export interface Item {
   id: string;
   name: string;
@@ -21,6 +29,11 @@ export interface Item {
   icon: string;
   unlocked: boolean;
   tags: ItemTag[]; // For synergy detection and affinity system
+
+  // Weapon system (Brotato-inspired)
+  weaponType?: WeaponType; // Changes attack behavior
+  weaponRange?: number; // For melee weapons
+  weaponArc?: number; // For melee sweep angle (radians)
 
   // Stat modifiers
   damageMultiplier?: number;
@@ -636,6 +649,87 @@ export class ItemDatabase {
       tags: ['economic'],
       goldBonus: 2.0,
       shopDiscount: 0.15
+    },
+
+    // ==================== WEAPON ITEMS (BROTATO-INSPIRED) ====================
+    // These items change your attack pattern entirely
+    {
+      id: 'shotgun_weapon_t2',
+      name: 'Scatter Gun',
+      description: 'Fires wide spread (5 pellets)',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 35,
+      icon: '🔫',
+      unlocked: true,
+      tags: ['ranged'],
+      weaponType: 'shotgun',
+      multishot: 4, // 1 main + 4 extra = 5 total
+      damageMultiplier: 0.8, // Lower damage per pellet
+      fireRateMultiplier: 0.7 // Slower fire rate
+    },
+    {
+      id: 'melee_sword_t2',
+      name: 'Crescent Blade',
+      description: 'Melee arc around player',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 32,
+      icon: '🗡️',
+      unlocked: true,
+      tags: ['melee'],
+      weaponType: 'melee',
+      weaponRange: 80,
+      weaponArc: Math.PI * 0.6, // 108 degrees
+      damageMultiplier: 1.5,
+      fireRateMultiplier: 1.3
+    },
+    {
+      id: 'orbital_weapon_t3',
+      name: 'Satellite Orbs',
+      description: 'Orbs orbit around you',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 65,
+      icon: '⭕',
+      unlocked: true,
+      tags: ['utility', 'ranged'],
+      weaponType: 'orbital',
+      multishot: 2, // 3 orbs total
+      damageMultiplier: 0.9
+    },
+    {
+      id: 'laser_weapon_t3',
+      name: 'Beam Rifle',
+      description: 'Continuous laser beam',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 70,
+      icon: '⚡',
+      unlocked: true,
+      tags: ['ranged', 'elemental'],
+      weaponType: 'laser',
+      piercing: 999, // Laser pierces everything
+      damageMultiplier: 0.6, // Lower base damage
+      fireRateMultiplier: 3.0, // Much faster ticks
+      projectileSpeed: 1200 // Very fast
+    },
+    {
+      id: 'hammer_weapon_t3',
+      name: 'Thunder Hammer',
+      description: 'Heavy melee strikes',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 62,
+      icon: '🔨',
+      unlocked: true,
+      tags: ['melee'],
+      weaponType: 'melee',
+      weaponRange: 100,
+      weaponArc: Math.PI * 0.8, // 144 degrees
+      damageMultiplier: 2.2,
+      fireRateMultiplier: 0.5, // Very slow but hard-hitting
+      knockback: 300
     }
   ];
 
@@ -1002,5 +1096,26 @@ export class PlayerStats {
     const baseValue = item.cost * 0.25;
     const bonus = this.getRecycleBonus();
     return Math.floor(baseValue * (1 + bonus));
+  }
+
+  // Weapon system
+  getWeaponType(): WeaponType {
+    // Find the first weapon-type item (only one weapon can be active at a time)
+    const weaponItem = this.items.find(item => item.weaponType);
+    return weaponItem?.weaponType ?? 'auto-aim';
+  }
+
+  getWeaponRange(): number {
+    const weaponItem = this.items.find(item => item.weaponType);
+    return weaponItem?.weaponRange ?? 0;
+  }
+
+  getWeaponArc(): number {
+    const weaponItem = this.items.find(item => item.weaponType);
+    return weaponItem?.weaponArc ?? 0;
+  }
+
+  hasWeapon(): boolean {
+    return this.items.some(item => item.weaponType);
   }
 }

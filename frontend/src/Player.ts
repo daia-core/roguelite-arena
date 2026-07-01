@@ -2,6 +2,7 @@
 
 import { PlayerStats } from './ItemSystem';
 import { Projectile } from './Projectile';
+import { MeleeAttack } from './MeleeAttack';
 import { Enemy } from './Enemy';
 import { circleCollision } from './utils';
 import { SpriteSheet } from './sprites';
@@ -78,7 +79,7 @@ export class Player {
     this.y = Math.max(this.radius, Math.min(canvasHeight - this.radius, this.y));
   }
 
-  // Auto-attack nearest enemy
+  // Auto-attack nearest enemy (supports different weapon types)
   tryShoot(enemies: Enemy[]): Projectile[] {
     if (this.shootCooldown > 0 || enemies.length === 0) return [];
 
@@ -98,7 +99,7 @@ export class Player {
 
     if (!nearest) return [];
 
-    // Shoot at nearest enemy
+    const weaponType = this.stats.getWeaponType();
     const angle = Math.atan2(nearest.y - this.y, nearest.x - this.x);
     const damage = this.stats.getDamage();
     const speed = this.stats.getProjectileSpeed();
@@ -106,20 +107,55 @@ export class Player {
 
     const projectiles: Projectile[] = [];
 
-    // Main shot
-    const mainProj = new Projectile(this.x, this.y, angle, damage, speed, true, piercingCount > 0);
-    mainProj.maxPierceCount = piercingCount;
-    projectiles.push(mainProj);
+    // Different attack patterns based on weapon type
+    if (weaponType === 'shotgun') {
+      // Shotgun: Wide spread of pellets
+      const pelletCount = 1 + this.stats.getMultishot();
+      const spreadAngle = 0.6; // Total spread in radians
+      const angleStep = spreadAngle / Math.max(1, pelletCount - 1);
+      const startAngle = angle - spreadAngle / 2;
 
-    // Multishot
-    const multishot = this.stats.getMultishot();
-    if (multishot > 0) {
-      const spreadAngle = 0.3; // Radians between shots
-      for (let i = 1; i <= multishot; i++) {
-        const offset = i % 2 === 0 ? (i / 2) * spreadAngle : -(Math.ceil(i / 2)) * spreadAngle;
-        const multishotProj = new Projectile(this.x, this.y, angle + offset, damage, speed, true, piercingCount > 0);
-        multishotProj.maxPierceCount = piercingCount;
-        projectiles.push(multishotProj);
+      for (let i = 0; i < pelletCount; i++) {
+        const pelletAngle = startAngle + i * angleStep;
+        const proj = new Projectile(this.x, this.y, pelletAngle, damage, speed, true, piercingCount > 0);
+        proj.maxPierceCount = piercingCount;
+        projectiles.push(proj);
+      }
+    } else if (weaponType === 'orbital') {
+      // Orbital: Rotating projectiles (handled differently - no projectiles, orbitals are persistent)
+      // For now, create fast-moving circular projectiles
+      const orbitCount = 1 + this.stats.getMultishot();
+      const angleStep = (Math.PI * 2) / orbitCount;
+
+      for (let i = 0; i < orbitCount; i++) {
+        const orbitAngle = i * angleStep + Date.now() * 0.003; // Rotate over time
+        const proj = new Projectile(this.x, this.y, orbitAngle, damage, speed * 0.5, true, piercingCount > 0);
+        proj.maxPierceCount = piercingCount;
+        projectiles.push(proj);
+      }
+    } else if (weaponType === 'laser') {
+      // Laser: Fast, piercing beam
+      const proj = new Projectile(this.x, this.y, angle, damage, speed, true, true);
+      proj.maxPierceCount = 999; // Laser pierces everything
+      proj.radius = 6; // Thinner
+      proj.color = '#00ffff';
+      projectiles.push(proj);
+    } else {
+      // Default: Auto-aim bullets
+      const mainProj = new Projectile(this.x, this.y, angle, damage, speed, true, piercingCount > 0);
+      mainProj.maxPierceCount = piercingCount;
+      projectiles.push(mainProj);
+
+      // Multishot
+      const multishot = this.stats.getMultishot();
+      if (multishot > 0) {
+        const spreadAngle = 0.3; // Radians between shots
+        for (let i = 1; i <= multishot; i++) {
+          const offset = i % 2 === 0 ? (i / 2) * spreadAngle : -(Math.ceil(i / 2)) * spreadAngle;
+          const multishotProj = new Projectile(this.x, this.y, angle + offset, damage, speed, true, piercingCount > 0);
+          multishotProj.maxPierceCount = piercingCount;
+          projectiles.push(multishotProj);
+        }
       }
     }
 
@@ -127,6 +163,41 @@ export class Player {
     this.shootCooldown = 1 / this.stats.getFireRate();
 
     return projectiles;
+  }
+
+  // Try melee attack (for melee weapons)
+  tryMeleeAttack(enemies: Enemy[]): MeleeAttack | null {
+    if (this.shootCooldown > 0 || enemies.length === 0) return null;
+
+    const weaponType = this.stats.getWeaponType();
+    if (weaponType !== 'melee') return null;
+
+    // Find nearest enemy
+    let nearest: Enemy | null = null;
+    let nearestDist = Infinity;
+
+    for (const enemy of enemies) {
+      const dist = Math.sqrt(
+        (enemy.x - this.x) ** 2 + (enemy.y - this.y) ** 2
+      );
+      if (dist < nearestDist) {
+        nearestDist = dist;
+        nearest = enemy;
+      }
+    }
+
+    if (!nearest) return null;
+
+    const angle = Math.atan2(nearest.y - this.y, nearest.x - this.x);
+    const damage = this.stats.getDamage();
+    const range = this.stats.getWeaponRange();
+    const arc = this.stats.getWeaponArc();
+    const knockback = this.stats.getKnockback();
+
+    // Reset cooldown
+    this.shootCooldown = 1 / this.stats.getFireRate();
+
+    return new MeleeAttack(this.x, this.y, angle, arc, range, damage, knockback);
   }
 
   // Dash ability
