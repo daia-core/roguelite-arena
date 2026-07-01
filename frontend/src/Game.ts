@@ -393,6 +393,9 @@ export class Game {
     for (const enemy of this.enemies) {
       const result = enemy.update(scaledDt, this.player.x, this.player.y);
 
+      // Skip further processing for dead enemies
+      if (enemy.dead) continue;
+
       // Enemy shooting
       if (result.shouldShoot) {
         const angle = enemy.getAngleToPlayer(this.player.x, this.player.y);
@@ -575,25 +578,26 @@ export class Game {
       }
     }
 
-    // PERFORMANCE: Rebuild spatial grids each frame - skip dead entities
+    // PERFORMANCE: Rebuild spatial grids each frame
+    // NOTE: Don't skip dead entities here - they need to be in the grid for collision
+    // detection during this frame. They'll be cleaned up at the end of the frame.
     this.enemySpatialGrid.clear();
     this.projectileSpatialGrid.clear();
 
     for (const enemy of this.enemies) {
-      if (!enemy.dead) {
-        this.enemySpatialGrid.insert(enemy);
-      }
+      this.enemySpatialGrid.insert(enemy);
     }
 
     for (const proj of this.projectiles) {
-      if (!proj.dead) {
-        this.projectileSpatialGrid.insert(proj);
-      }
+      this.projectileSpatialGrid.insert(proj);
     }
 
     // Projectiles
     for (const proj of this.projectiles) {
       proj.update(scaledDt, this.canvas.width, this.canvas.height);
+
+      // Skip collision detection for projectiles that are already dead
+      if (proj.dead) continue;
 
       if (proj.fromPlayer) {
         // PERFORMANCE: Only check nearby enemies using spatial grid
