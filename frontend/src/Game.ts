@@ -17,11 +17,9 @@ import { MetaProgression } from './MetaProgression';
 import { ObjectPool } from './ObjectPool';
 import { Quadtree } from './Quadtree';
 import { PerformanceMonitor } from './PerformanceMonitor';
+import { QualityManager } from './QualityManager';
 
 export type GameState = 'menu' | 'playing' | 'shop' | 'paused' | 'gameover' | 'upgrades';
-
-// PERFORMANCE: Particle limits for quality over quantity
-const MAX_PARTICLES_PER_EFFECT = 20;
 
 export class Game {
   private canvas: HTMLCanvasElement;
@@ -56,6 +54,9 @@ export class Game {
 
   // PERFORMANCE: Performance monitor (F2 to toggle)
   private performanceMonitor: PerformanceMonitor;
+
+  // PERFORMANCE: Adaptive quality scaling (auto-adjusts based on FPS)
+  private qualityManager: QualityManager;
 
   // GAME FEEL: Hit pause / time scale system
   timeScale: number = 1.0;
@@ -141,6 +142,9 @@ export class Game {
     // PERFORMANCE: Initialize performance monitor (F2 to toggle)
     this.performanceMonitor = new PerformanceMonitor();
 
+    // PERFORMANCE: Initialize quality manager (adaptive scaling)
+    this.qualityManager = new QualityManager('high');
+
     // Connect input to game state
     this.input.setGameStateGetter(() => this.state);
 
@@ -174,6 +178,13 @@ export class Game {
     const num = this.damageNumberPool.acquire();
     num.init(x, y, damage, isCrit);
     return num;
+  }
+
+  /**
+   * PERFORMANCE: Get particle count based on quality settings
+   */
+  private getParticleCount(baseCount: number): number {
+    return this.qualityManager.getParticleCount(baseCount);
   }
 
   /**
@@ -318,6 +329,9 @@ export class Game {
     this.renderer.update(dt);
     this.performanceMonitor.update(dt);
 
+    // PERFORMANCE: Feed FPS to quality manager for adaptive scaling
+    this.qualityManager.recordFrame(this.performanceMonitor.getFPS());
+
     switch (this.state) {
       case 'menu':
         this.updateMenu();
@@ -445,9 +459,10 @@ export class Game {
           if (damaged) {
             this.renderer.addScreenShake(0.6);
             this.renderer.addHitFlash(0.6);
-            // PERFORMANCE: Use pooled particles
-            for (let i = 0; i < 15; i++) {
-              const angle = (Math.PI * 2 * i) / 15;
+            // PERFORMANCE: Use pooled particles (quality-adjusted)
+            const particleCount = this.getParticleCount(15);
+            for (let i = 0; i < particleCount; i++) {
+              const angle = (Math.PI * 2 * i) / particleCount;
               const speed = 150 + Math.random() * 100;
               this.particles.push(this.createParticle({
                 x: this.player.x,
@@ -462,9 +477,10 @@ export class Game {
             }
           }
         }
-        // Visual effect - PERFORMANCE: Use pooled particles (capped)
-        for (let i = 0; i < MAX_PARTICLES_PER_EFFECT; i++) {
-          const angle = (Math.PI * 2 * i) / 25;
+        // Visual effect - PERFORMANCE: Use pooled particles (quality-adjusted)
+        const visualParticleCount = this.getParticleCount(20);
+        for (let i = 0; i < visualParticleCount; i++) {
+          const angle = (Math.PI * 2 * i) / visualParticleCount;
           const speed = 150 + Math.random() * 100;
           this.particles.push(this.createParticle({
             x: enemy.x,
@@ -494,11 +510,12 @@ export class Game {
         }));
       }
 
-      // Spore cloud (mushroom) - PERFORMANCE: Use pooled particles
+      // Spore cloud (mushroom) - PERFORMANCE: Use pooled particles (quality-adjusted)
       if (result.sporeCloud) {
         // Create damaging cloud particles
-        for (let i = 0; i < 12; i++) {
-          const angle = (Math.PI * 2 * i) / 12;
+        const sporeCount = this.getParticleCount(12);
+        for (let i = 0; i < sporeCount; i++) {
+          const angle = (Math.PI * 2 * i) / sporeCount;
           const speed = 40 + Math.random() * 30;
           this.particles.push(this.createParticle({
             x: result.sporeCloud.x,
@@ -561,9 +578,10 @@ export class Game {
         minion.maxHealth = minion.typeData.health;
         minion.health = minion.maxHealth;
         this.enemies.push(minion);
-        // Spawn particles - PERFORMANCE: Use pooled particles
-        for (let i = 0; i < 8; i++) {
-          const particleAngle = (Math.PI * 2 * i) / 8;
+        // Spawn particles - PERFORMANCE: Use pooled particles (quality-adjusted)
+        const minionParticleCount = this.getParticleCount(8);
+        for (let i = 0; i < minionParticleCount; i++) {
+          const particleAngle = (Math.PI * 2 * i) / minionParticleCount;
           this.particles.push(this.createParticle({
             x: minion.x,
             y: minion.y,
@@ -940,8 +958,9 @@ export class Game {
     }
 
     this.audio.playKill();
-    // PERFORMANCE: Use pooled particles for kill effect (capped)
-    for (let i = 0; i < MAX_PARTICLES_PER_EFFECT; i++) {
+    // PERFORMANCE: Use pooled particles for kill effect (quality-adjusted)
+    const killParticleCount = this.getParticleCount(20);
+    for (let i = 0; i < killParticleCount; i++) {
       const angle = Math.random() * Math.PI * 2;
       const speed = 120 + Math.random() * 180;
       this.particles.push(this.createParticle({
@@ -1005,9 +1024,10 @@ export class Game {
       // VAMPIRE SURVIVORS JUICE: Make level-ups feel MASSIVE
       this.renderer.addScreenShake(0.6); // Much bigger shake
       this.renderer.addHitFlash(0.4); // Screen flash
-      // Spawn huge particle explosion at player - PERFORMANCE: Use pooled particles (capped at MAX_PARTICLES_PER_EFFECT)
+      // Spawn huge particle explosion at player - PERFORMANCE: Use pooled particles (quality-adjusted)
       const colors = ['#ffff00', '#00ffff', '#ff00ff', '#ff6600', '#00ff00', '#ff0000', '#ffffff'];
-      for (let i = 0; i < MAX_PARTICLES_PER_EFFECT; i++) {
+      const levelUpParticleCount = this.getParticleCount(20);
+      for (let i = 0; i < levelUpParticleCount; i++) {
         const angle = Math.random() * Math.PI * 2;
         const speed = 150 + Math.random() * 300;
         this.particles.push(this.createParticle({
@@ -1658,7 +1678,8 @@ export class Game {
       healthOrbs: this.healthOrbs.length,
       quadtreeNodes: quadtreeStats.nodeCount,
       quadtreeDepth: quadtreeStats.maxDepth,
-      quadtreeObjects: quadtreeStats.totalObjects
+      quadtreeObjects: quadtreeStats.totalObjects,
+      qualityLevel: this.qualityManager.getLevel()
     });
   }
 

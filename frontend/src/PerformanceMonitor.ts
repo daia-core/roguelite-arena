@@ -19,6 +19,7 @@ export interface PerformanceStats {
   quadtreeNodes?: number;
   quadtreeDepth?: number;
   quadtreeObjects?: number;
+  qualityLevel?: string;
 }
 
 export class PerformanceMonitor {
@@ -44,6 +45,10 @@ export class PerformanceMonitor {
 
   isVisible(): boolean {
     return this.visible;
+  }
+
+  getFPS(): number {
+    return this.fps;
   }
 
   update(_dt: number): void {
@@ -160,6 +165,15 @@ export class PerformanceMonitor {
 
       y += 18;
       ctx.fillText(`  Depth: ${stats.quadtreeDepth}`, panelX + 10, y);
+    }
+
+    // Quality level (if available)
+    if (stats.qualityLevel) {
+      y += 20;
+      const qualityColor = stats.qualityLevel === 'high' ? '#00ff00' :
+                           stats.qualityLevel === 'medium' ? '#ffff00' : '#ff0000';
+      ctx.fillStyle = qualityColor;
+      ctx.fillText(`Quality: ${stats.qualityLevel.toUpperCase()}`, panelX + 10, y);
     }
 
     // Footer
