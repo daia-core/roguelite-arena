@@ -109,11 +109,6 @@ export class Renderer {
     this.ctx.restore();
   }
 
-  drawRect(x: number, y: number, width: number, height: number, color: string): void {
-    this.ctx.fillStyle = color;
-    this.ctx.fillRect(x, y, width, height);
-  }
-
   drawCircle(x: number, y: number, radius: number, color: string): void {
     this.ctx.fillStyle = color;
     this.ctx.beginPath();
@@ -281,6 +276,13 @@ export class Renderer {
       bold: true,
       color: enabled ? '#ffffff' : '#888888'
     });
+  }
+
+  drawRect(x: number, y: number, width: number, height: number, color: string): void {
+    this.ctx.save();
+    this.ctx.fillStyle = color;
+    this.ctx.fillRect(x, y, width, height);
+    this.ctx.restore();
   }
 
   getContext(): CanvasRenderingContext2D {

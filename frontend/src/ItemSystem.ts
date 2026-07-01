@@ -306,6 +306,10 @@ export class ItemDatabase {
     return shuffled.slice(0, count);
   }
 
+  static getItemsByRarity(rarity: 'common' | 'rare' | 'epic' | 'legendary'): Item[] {
+    return this.items.filter(item => item.rarity === rarity && item.unlocked);
+  }
+
   static unlockItem(id: string): void {
     const item = this.items.find(item => item.id === id);
     if (item) {

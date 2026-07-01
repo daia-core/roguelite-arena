@@ -25,17 +25,45 @@ export class WaveManager {
 
   startWave(waveNumber: number): void {
     this.currentWave = waveNumber;
-    this.isBossWave = waveNumber % 5 === 0; // Boss every 5 waves
-    this.isHordeWave = !this.isBossWave && waveNumber % 3 === 0; // Horde every 3 waves (when not boss)
+    this.isBossWave = waveNumber % 10 === 0; // Boss every 10 waves
+    this.isHordeWave = false;
+    this.waveModifier = 'none';
+    this.waveModifierText = '';
 
-    // Boss waves have fewer regular enemies
+    // Determine wave modifier (not on boss waves)
+    if (!this.isBossWave && waveNumber > 1) {
+      const roll = Math.random();
+      if (roll < 0.25) {
+        this.waveModifier = 'horde';
+        this.waveModifierText = 'HORDE WAVE - Swarm incoming!';
+        this.isHordeWave = true;
+      } else if (roll < 0.40) {
+        this.waveModifier = 'elite';
+        this.waveModifierText = 'ELITE WAVE - Tougher enemies!';
+      } else if (roll < 0.60) {
+        this.waveModifier = 'speed';
+        this.waveModifierText = 'SPEED WAVE - Fast enemies!';
+      } else if (roll < 0.80) {
+        this.waveModifier = 'tank';
+        this.waveModifierText = 'TANK WAVE - Heavily armored!';
+      } else if (roll < 0.90) {
+        this.waveModifier = 'chaos';
+        this.waveModifierText = 'CHAOS WAVE - Mixed threats!';
+      }
+    }
+
+    // Calculate enemy count based on modifier
+    let baseCount = 15 + waveNumber * 2;
+
     if (this.isBossWave) {
       this.totalEnemiesInWave = 10 + waveNumber;
-    } else if (this.isHordeWave) {
-      // Horde waves: 2x normal enemies
-      this.totalEnemiesInWave = (15 + waveNumber * 2) * 2;
+      this.waveModifierText = 'BOSS WAVE - BOSS APPROACHING';
+    } else if (this.waveModifier === 'horde') {
+      this.totalEnemiesInWave = baseCount * 2;
+    } else if (this.waveModifier === 'tank') {
+      this.totalEnemiesInWave = Math.floor(baseCount * 0.5);
     } else {
-      this.totalEnemiesInWave = 15 + waveNumber * 2;
+      this.totalEnemiesInWave = baseCount;
     }
 
     this.waveEnemiesRemaining = this.totalEnemiesInWave;
@@ -122,41 +150,76 @@ export class WaveManager {
     }
 
     // Wave multiplier for scaling difficulty
-    const waveMultiplier = 1 + (this.currentWave - 1) * 0.15;
+    let waveMultiplier = 1 + (this.currentWave - 1) * 0.15;
 
-    return new Enemy(x, y, type, waveMultiplier);
+    // Apply modifier effects
+    if (this.waveModifier === 'horde') {
+      waveMultiplier *= 0.5; // Half health/damage
+    } else if (this.waveModifier === 'elite') {
+      waveMultiplier *= 2; // Double health/damage
+    } else if (this.waveModifier === 'tank') {
+      waveMultiplier *= 3; // Triple health
+    }
+
+    const enemy = new Enemy(x, y, type, waveMultiplier);
+
+    // Apply speed modifier
+    if (this.waveModifier === 'speed') {
+      enemy.typeData.speed *= 1.5;
+    }
+
+    return enemy;
   }
 
   private chooseEnemyType(): EnemyType {
     const wave = this.currentWave;
 
-    // Wave 1-5: Only slimes and goblins
-    if (wave <= 5) {
-      return randomChoice(['slime', 'slime', 'goblin', 'goblin'] as EnemyType[]);
-    }
-    // Wave 6-10: Add skeletons, imps, orcs
-    else if (wave <= 10) {
-      return randomChoice(['slime', 'goblin', 'goblin', 'skeleton', 'skeleton', 'imp', 'orc'] as EnemyType[]);
-    }
-    // Wave 11-15: All enemy types, mixed waves
-    else if (wave <= 15) {
+    // Chaos wave: complete random mix
+    if (this.waveModifier === 'chaos') {
       return randomChoice([
-        'slime', 'goblin', 'skeleton', 'skeleton', 'imp', 'orc', 'orc',
-        'wraith', 'necromancer', 'troll', 'banshee'
+        'slime', 'goblin', 'skeleton', 'bat', 'imp', 'spider', 'orc', 'mimic',
+        'wraith', 'wizard', 'necromancer', 'troll', 'banshee', 'golem'
       ] as EnemyType[]);
     }
-    // Wave 16-20: Harder compositions, more enemies
+
+    // Wave 1-2: Only slimes and goblins
+    if (wave <= 2) {
+      return randomChoice(['slime', 'slime', 'goblin', 'goblin'] as EnemyType[]);
+    }
+    // Wave 3-4: Add bats
+    else if (wave <= 4) {
+      return randomChoice(['slime', 'slime', 'goblin', 'goblin', 'bat', 'bat'] as EnemyType[]);
+    }
+    // Wave 5-6: Add spiders and mimics
+    else if (wave <= 6) {
+      return randomChoice(['slime', 'goblin', 'bat', 'bat', 'spider', 'spider', 'mimic'] as EnemyType[]);
+    }
+    // Wave 7-10: Add skeletons, wizards, imps
+    else if (wave <= 10) {
+      return randomChoice([
+        'slime', 'goblin', 'bat', 'skeleton', 'skeleton', 'spider', 'spider',
+        'wizard', 'wizard', 'imp', 'mimic', 'orc'
+      ] as EnemyType[]);
+    }
+    // Wave 11-15: Add late-game enemies
+    else if (wave <= 15) {
+      return randomChoice([
+        'bat', 'goblin', 'skeleton', 'skeleton', 'spider', 'wizard', 'wizard',
+        'imp', 'orc', 'orc', 'mimic', 'wraith', 'necromancer', 'troll', 'banshee'
+      ] as EnemyType[]);
+    }
+    // Wave 16-20: Harder compositions
     else if (wave <= 20) {
       return randomChoice([
-        'goblin', 'skeleton', 'skeleton', 'imp', 'imp', 'orc', 'orc',
-        'wraith', 'wraith', 'necromancer', 'troll', 'troll', 'banshee', 'banshee'
+        'bat', 'skeleton', 'spider', 'wizard', 'imp', 'imp', 'orc', 'orc',
+        'wraith', 'wraith', 'necromancer', 'troll', 'troll', 'banshee', 'banshee', 'golem'
       ] as EnemyType[]);
     }
     // Wave 21+: Insane difficulty
     else {
       return randomChoice([
-        'skeleton', 'imp', 'orc', 'orc', 'wraith', 'wraith',
-        'necromancer', 'necromancer', 'troll', 'troll', 'banshee', 'banshee'
+        'skeleton', 'spider', 'wizard', 'imp', 'orc', 'wraith', 'wraith',
+        'necromancer', 'necromancer', 'troll', 'troll', 'banshee', 'banshee', 'golem', 'golem'
       ] as EnemyType[]);
     }
   }
