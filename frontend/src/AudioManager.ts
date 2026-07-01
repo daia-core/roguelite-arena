@@ -107,6 +107,184 @@ export class AudioManager {
     osc.stop(this.ctx.currentTime + 0.5);
   }
 
+  // NEW: Explosion sound
+  playExplosion(): void {
+    if (!this.enabled) return;
+
+    // Low boom
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(100, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(30, this.ctx.currentTime + 0.3);
+
+    gain.gain.value = 0.4;
+    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+
+    osc.start(this.ctx.currentTime);
+    osc.stop(this.ctx.currentTime + 0.3);
+
+    // White noise burst
+    const bufferSize = this.ctx.sampleRate * 0.1;
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = Math.random() * 2 - 1;
+    }
+
+    const noise = this.ctx.createBufferSource();
+    const noiseGain = this.ctx.createGain();
+    noise.buffer = buffer;
+    noise.connect(noiseGain);
+    noiseGain.connect(this.masterGain);
+
+    noiseGain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+    noiseGain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+
+    noise.start(this.ctx.currentTime);
+  }
+
+  // NEW: Shield hit/block sound
+  playShieldBlock(): void {
+    if (!this.enabled) return;
+
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(800, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(400, this.ctx.currentTime + 0.08);
+
+    gain.gain.value = 0.25;
+    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+
+    osc.start(this.ctx.currentTime);
+    osc.stop(this.ctx.currentTime + 0.08);
+  }
+
+  // NEW: Heal sound
+  playHeal(): void {
+    if (!this.enabled) return;
+
+    // Ascending shimmer
+    const notes = [523, 659, 784];
+    notes.forEach((freq, i) => {
+      setTimeout(() => this.playTone(freq, 0.15, 'sine', 0.15), i * 50);
+    });
+  }
+
+  // NEW: Freeze sound
+  playFreeze(): void {
+    if (!this.enabled) return;
+
+    // High pitched crystalline sound
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(2000, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(1500, this.ctx.currentTime + 0.2);
+
+    gain.gain.value = 0.15;
+    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+
+    osc.start(this.ctx.currentTime);
+    osc.stop(this.ctx.currentTime + 0.2);
+  }
+
+  // NEW: Poison sound
+  playPoison(): void {
+    if (!this.enabled) return;
+
+    // Bubbling low tone
+    this.playTone(180, 0.15, 'square', 0.12);
+  }
+
+  // NEW: Lightning/chain lightning sound
+  playLightning(): void {
+    if (!this.enabled) return;
+
+    // Crackling high frequency
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(1500, this.ctx.currentTime);
+    osc.frequency.linearRampToValueAtTime(2000, this.ctx.currentTime + 0.05);
+    osc.frequency.linearRampToValueAtTime(1800, this.ctx.currentTime + 0.1);
+
+    gain.gain.value = 0.2;
+    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+
+    osc.start(this.ctx.currentTime);
+    osc.stop(this.ctx.currentTime + 0.1);
+  }
+
+  // NEW: Critical hit sound
+  playCrit(): void {
+    if (!this.enabled) return;
+
+    // Sharp impactful tone
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(600, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(300, this.ctx.currentTime + 0.12);
+
+    gain.gain.value = 0.3;
+    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
+
+    osc.start(this.ctx.currentTime);
+    osc.stop(this.ctx.currentTime + 0.12);
+  }
+
+  // NEW: Transformation unlock sound
+  playTransformation(): void {
+    if (!this.enabled) return;
+
+    // Epic ascending fanfare
+    const notes = [261, 329, 392, 523, 659];
+    notes.forEach((freq, i) => {
+      setTimeout(() => this.playTone(freq, 0.3, 'sine', 0.25), i * 80);
+    });
+  }
+
+  // NEW: Duo combo unlock sound
+  playDuoUnlock(): void {
+    if (!this.enabled) return;
+
+    // Harmonious chord
+    const notes = [440, 554, 659]; // A major chord
+    notes.forEach((freq) => {
+      this.playTone(freq, 0.4, 'sine', 0.15);
+    });
+  }
+
+  // NEW: Item pickup sound
+  playItemPickup(): void {
+    if (!this.enabled) return;
+
+    this.playTone(880, 0.1, 'sine', 0.18);
+    setTimeout(() => this.playTone(1047, 0.1, 'sine', 0.15), 60);
+  }
+
   toggle(): void {
     this.enabled = !this.enabled;
   }
