@@ -19,6 +19,9 @@ import { Quadtree } from './Quadtree';
 
 export type GameState = 'menu' | 'playing' | 'shop' | 'paused' | 'gameover' | 'upgrades';
 
+// PERFORMANCE: Particle limits for quality over quantity
+const MAX_PARTICLES_PER_EFFECT = 20;
+
 export class Game {
   private canvas: HTMLCanvasElement;
   private renderer: Renderer;
@@ -451,8 +454,8 @@ export class Game {
             }
           }
         }
-        // Visual effect - PERFORMANCE: Use pooled particles
-        for (let i = 0; i < 25; i++) {
+        // Visual effect - PERFORMANCE: Use pooled particles (capped)
+        for (let i = 0; i < MAX_PARTICLES_PER_EFFECT; i++) {
           const angle = (Math.PI * 2 * i) / 25;
           const speed = 150 + Math.random() * 100;
           this.particles.push(this.createParticle({
@@ -929,8 +932,8 @@ export class Game {
     }
 
     this.audio.playKill();
-    // PERFORMANCE: Use pooled particles for kill effect
-    for (let i = 0; i < 48; i++) {
+    // PERFORMANCE: Use pooled particles for kill effect (capped)
+    for (let i = 0; i < MAX_PARTICLES_PER_EFFECT; i++) {
       const angle = Math.random() * Math.PI * 2;
       const speed = 120 + Math.random() * 180;
       this.particles.push(this.createParticle({
@@ -994,9 +997,9 @@ export class Game {
       // VAMPIRE SURVIVORS JUICE: Make level-ups feel MASSIVE
       this.renderer.addScreenShake(0.6); // Much bigger shake
       this.renderer.addHitFlash(0.4); // Screen flash
-      // Spawn huge particle explosion at player - PERFORMANCE: Use pooled particles
+      // Spawn huge particle explosion at player - PERFORMANCE: Use pooled particles (capped at MAX_PARTICLES_PER_EFFECT)
       const colors = ['#ffff00', '#00ffff', '#ff00ff', '#ff6600', '#00ff00', '#ff0000', '#ffffff'];
-      for (let i = 0; i < 120; i++) {
+      for (let i = 0; i < MAX_PARTICLES_PER_EFFECT; i++) {
         const angle = Math.random() * Math.PI * 2;
         const speed = 150 + Math.random() * 300;
         this.particles.push(this.createParticle({
