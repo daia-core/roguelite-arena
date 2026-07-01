@@ -2,10 +2,12 @@
 
 import { Game } from './Game';
 import { SpriteSheet } from './sprites';
+import { UISprites } from './UISprites';
 import './style.css';
 
-// Initialize sprite system
+// Initialize sprite systems
 SpriteSheet.init();
+UISprites.init();
 
 // Setup canvas
 const app = document.querySelector<HTMLDivElement>('#app')!;

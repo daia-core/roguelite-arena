@@ -1,5 +1,7 @@
 // Canvas rendering with effects
 
+import { UISprites } from './UISprites';
+
 export class Renderer {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -221,43 +223,59 @@ export class Renderer {
     this.ctx.save();
 
     const percent = current / max;
-    const color = percent > 0.5 ? '#22c55e' : percent > 0.25 ? '#eab308' : '#ef4444';
+    const healthBar = UISprites.getHealthBar();
 
-    // Adjust width for smaller screens
-    const adjustedWidth = Math.min(width, this.canvas.width * 0.35);
-    const radius = 3; // Rounded corners
+    if (healthBar) {
+      // Use pixel art health bar sprites
+      const adjustedWidth = Math.min(width, this.canvas.width * 0.35);
+      const scale = adjustedWidth / healthBar.width;
+      const scaledHeight = healthBar.height * scale;
 
-    // Outer glow
-    this.ctx.shadowBlur = 10;
-    this.ctx.shadowColor = color;
+      // Draw background
+      this.ctx.drawImage(healthBar.background, x, y, adjustedWidth, scaledHeight);
 
-    // Dark border (outer) - rounded
-    this.ctx.fillStyle = '#000000';
-    this.drawRoundedRect(x - 2, y - 2, adjustedWidth + 4, height + 4, radius + 1, '#000000');
+      // Draw fill (clipped to current health percentage)
+      if (percent > 0) {
+        this.ctx.save();
+        this.ctx.beginPath();
+        this.ctx.rect(x, y, adjustedWidth * percent, scaledHeight);
+        this.ctx.clip();
+        this.ctx.drawImage(healthBar.fill, x, y, adjustedWidth, scaledHeight);
+        this.ctx.restore();
+      }
 
-    // Background - rounded
-    this.ctx.shadowBlur = 0;
-    this.drawRoundedRect(x, y, adjustedWidth, height, radius, '#1a0000');
+      // Draw border on top
+      this.ctx.drawImage(healthBar.border, x, y, adjustedWidth, scaledHeight);
+    } else {
+      // Fallback to programmatic rendering if sprites not loaded
+      const color = percent > 0.5 ? '#22c55e' : percent > 0.25 ? '#eab308' : '#ef4444';
+      const adjustedWidth = Math.min(width, this.canvas.width * 0.35);
+      const radius = 3;
 
-    // Health with gradient - rounded
-    const gradient = this.ctx.createLinearGradient(x, y, x, y + height);
-    gradient.addColorStop(0, this.lightenColor(color, 1.2));
-    gradient.addColorStop(1, color);
-    this.ctx.fillStyle = gradient;
-    this.ctx.shadowBlur = 8;
-    this.ctx.shadowColor = color;
-    this.drawRoundedRect(x, y, adjustedWidth * percent, height, radius, gradient);
+      this.ctx.shadowBlur = 10;
+      this.ctx.shadowColor = color;
+      this.ctx.fillStyle = '#000000';
+      this.drawRoundedRect(x - 2, y - 2, adjustedWidth + 4, height + 4, radius + 1, '#000000');
+      this.ctx.shadowBlur = 0;
+      this.drawRoundedRect(x, y, adjustedWidth, height, radius, '#1a0000');
 
-    // Inner highlight
-    this.ctx.shadowBlur = 0;
-    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
-    this.drawRoundedRect(x, y, adjustedWidth * percent, height * 0.3, radius, 'rgba(255, 255, 255, 0.25)');
+      const gradient = this.ctx.createLinearGradient(x, y, x, y + height);
+      gradient.addColorStop(0, this.lightenColor(color, 1.2));
+      gradient.addColorStop(1, color);
+      this.ctx.fillStyle = gradient;
+      this.ctx.shadowBlur = 8;
+      this.ctx.shadowColor = color;
+      this.drawRoundedRect(x, y, adjustedWidth * percent, height, radius, gradient);
 
-    // Border (bright) - rounded path
-    this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
-    this.ctx.lineWidth = 2;
-    this.drawRoundedRectPath(x, y, adjustedWidth, height, radius);
-    this.ctx.stroke();
+      this.ctx.shadowBlur = 0;
+      this.ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+      this.drawRoundedRect(x, y, adjustedWidth * percent, height * 0.3, radius, 'rgba(255, 255, 255, 0.25)');
+
+      this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+      this.ctx.lineWidth = 2;
+      this.drawRoundedRectPath(x, y, adjustedWidth, height, radius);
+      this.ctx.stroke();
+    }
 
     this.ctx.restore();
   }
@@ -274,40 +292,58 @@ export class Renderer {
   drawProgressBar(x: number, y: number, width: number, height: number, percent: number, color: string): void {
     this.ctx.save();
 
-    // Adjust width for smaller screens
-    const adjustedWidth = Math.min(width, this.canvas.width * 0.35);
-    const radius = 3; // Rounded corners
+    const xpBar = UISprites.getXPBar();
 
-    // Outer glow
-    this.ctx.shadowBlur = 8;
-    this.ctx.shadowColor = color;
+    if (xpBar) {
+      // Use pixel art XP bar sprites
+      const adjustedWidth = Math.min(width, this.canvas.width * 0.35);
+      const scale = adjustedWidth / xpBar.width;
+      const scaledHeight = xpBar.height * scale;
 
-    // Dark border (outer) - rounded
-    this.drawRoundedRect(x - 2, y - 2, adjustedWidth + 4, height + 4, radius + 1, '#000000');
+      // Draw background
+      this.ctx.drawImage(xpBar.background, x, y, adjustedWidth, scaledHeight);
 
-    // Background - rounded
-    this.ctx.shadowBlur = 0;
-    this.drawRoundedRect(x, y, adjustedWidth, height, radius, '#1a1a1a');
+      // Draw fill (clipped to progress percentage)
+      if (percent > 0) {
+        this.ctx.save();
+        this.ctx.beginPath();
+        this.ctx.rect(x, y, adjustedWidth * percent, scaledHeight);
+        this.ctx.clip();
+        this.ctx.drawImage(xpBar.fill, x, y, adjustedWidth, scaledHeight);
+        this.ctx.restore();
+      }
 
-    // Progress with gradient - rounded
-    const gradient = this.ctx.createLinearGradient(x, y, x, y + height);
-    gradient.addColorStop(0, this.lightenColor(color, 1.2));
-    gradient.addColorStop(1, color);
-    this.ctx.fillStyle = gradient;
-    this.ctx.shadowBlur = 6;
-    this.ctx.shadowColor = color;
-    this.drawRoundedRect(x, y, adjustedWidth * percent, height, radius, gradient);
+      // Draw border on top
+      this.ctx.drawImage(xpBar.border, x, y, adjustedWidth, scaledHeight);
+    } else {
+      // Fallback to programmatic rendering
+      const adjustedWidth = Math.min(width, this.canvas.width * 0.35);
+      const radius = 3;
 
-    // Inner highlight
-    this.ctx.shadowBlur = 0;
-    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
-    this.drawRoundedRect(x, y, adjustedWidth * percent, height * 0.3, radius, 'rgba(255, 255, 255, 0.2)');
+      this.ctx.shadowBlur = 8;
+      this.ctx.shadowColor = color;
+      this.drawRoundedRect(x - 2, y - 2, adjustedWidth + 4, height + 4, radius + 1, '#000000');
 
-    // Border (bright) - rounded path
-    this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
-    this.ctx.lineWidth = 2;
-    this.drawRoundedRectPath(x, y, adjustedWidth, height, radius);
-    this.ctx.stroke();
+      this.ctx.shadowBlur = 0;
+      this.drawRoundedRect(x, y, adjustedWidth, height, radius, '#1a1a1a');
+
+      const gradient = this.ctx.createLinearGradient(x, y, x, y + height);
+      gradient.addColorStop(0, this.lightenColor(color, 1.2));
+      gradient.addColorStop(1, color);
+      this.ctx.fillStyle = gradient;
+      this.ctx.shadowBlur = 6;
+      this.ctx.shadowColor = color;
+      this.drawRoundedRect(x, y, adjustedWidth * percent, height, radius, gradient);
+
+      this.ctx.shadowBlur = 0;
+      this.ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+      this.drawRoundedRect(x, y, adjustedWidth * percent, height * 0.3, radius, 'rgba(255, 255, 255, 0.2)');
+
+      this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+      this.ctx.lineWidth = 2;
+      this.drawRoundedRectPath(x, y, adjustedWidth, height, radius);
+      this.ctx.stroke();
+    }
 
     this.ctx.restore();
   }
@@ -315,62 +351,73 @@ export class Renderer {
   drawButton(x: number, y: number, width: number, height: number, text: string, hovered: boolean = false, enabled: boolean = true, isMobile: boolean = false): void {
     this.ctx.save();
 
-    // Rounded corners - pixel art style (4px radius)
-    const radius = 4;
+    const button = UISprites.getButton('primary');
 
-    // Shadow/glow effect for enabled buttons
-    if (enabled) {
-      this.ctx.shadowBlur = hovered ? 25 : 15;
-      this.ctx.shadowColor = hovered ? 'rgba(74, 222, 128, 0.6)' : 'rgba(74, 222, 128, 0.3)';
-    }
+    if (button) {
+      // Use pixel art button sprites
+      const sprite = !enabled ? button.disabled : hovered ? button.hover : button.normal;
+      const scale = Math.min(width / button.width, height / button.height);
+      const scaledWidth = button.width * scale;
+      const scaledHeight = button.height * scale;
 
-    // Button background with gradient
-    const gradient = this.ctx.createLinearGradient(x, y, x, y + height);
-    if (enabled) {
-      if (hovered) {
-        gradient.addColorStop(0, '#4a4a4a');
-        gradient.addColorStop(1, '#2a2a2a');
+      // Center the button sprite
+      const drawX = x + (width - scaledWidth) / 2;
+      const drawY = y + (height - scaledHeight) / 2;
+
+      this.ctx.drawImage(sprite, drawX, drawY, scaledWidth, scaledHeight);
+    } else {
+      // Fallback to programmatic rendering
+      const radius = 4;
+
+      if (enabled) {
+        this.ctx.shadowBlur = hovered ? 25 : 15;
+        this.ctx.shadowColor = hovered ? 'rgba(74, 222, 128, 0.6)' : 'rgba(74, 222, 128, 0.3)';
+      }
+
+      const gradient = this.ctx.createLinearGradient(x, y, x, y + height);
+      if (enabled) {
+        if (hovered) {
+          gradient.addColorStop(0, '#4a4a4a');
+          gradient.addColorStop(1, '#2a2a2a');
+        } else {
+          gradient.addColorStop(0, '#3a3a3a');
+          gradient.addColorStop(1, '#1a1a1a');
+        }
       } else {
-        gradient.addColorStop(0, '#3a3a3a');
+        gradient.addColorStop(0, '#2a2a2a');
         gradient.addColorStop(1, '#1a1a1a');
       }
-    } else {
-      gradient.addColorStop(0, '#2a2a2a');
-      gradient.addColorStop(1, '#1a1a1a');
+      this.ctx.fillStyle = gradient;
+      this.drawRoundedRectPath(x, y, width, height, radius);
+      this.ctx.fill();
+
+      this.ctx.shadowBlur = 0;
+      const highlightGradient = this.ctx.createLinearGradient(x, y, x, y + height / 3);
+      highlightGradient.addColorStop(0, 'rgba(255, 255, 255, 0.15)');
+      highlightGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      this.ctx.fillStyle = highlightGradient;
+      this.drawRoundedRectPath(x, y, width, height / 3, radius);
+      this.ctx.fill();
+
+      if (enabled && !hovered) {
+        const pulseIntensity = Math.sin(Date.now() / 300) * 0.4 + 0.6;
+        this.ctx.strokeStyle = `rgba(74, 222, 128, ${pulseIntensity})`;
+        this.ctx.lineWidth = 4;
+      } else if (enabled && hovered) {
+        this.ctx.strokeStyle = '#4ade80';
+        this.ctx.lineWidth = 5;
+      } else {
+        this.ctx.strokeStyle = '#555555';
+        this.ctx.lineWidth = 3;
+      }
+      this.drawRoundedRectPath(x, y, width, height, radius);
+      this.ctx.stroke();
+
+      this.ctx.strokeStyle = enabled ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.05)';
+      this.ctx.lineWidth = 1;
+      this.drawRoundedRectPath(x + 2, y + 2, width - 4, height - 4, Math.max(0, radius - 2));
+      this.ctx.stroke();
     }
-    this.ctx.fillStyle = gradient;
-    this.drawRoundedRectPath(x, y, width, height, radius);
-    this.ctx.fill();
-
-    // Inner highlight for depth
-    this.ctx.shadowBlur = 0;
-    const highlightGradient = this.ctx.createLinearGradient(x, y, x, y + height / 3);
-    highlightGradient.addColorStop(0, 'rgba(255, 255, 255, 0.15)');
-    highlightGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-    this.ctx.fillStyle = highlightGradient;
-    this.drawRoundedRectPath(x, y, width, height / 3, radius);
-    this.ctx.fill();
-
-    // Border with pulse effect for enabled buttons
-    if (enabled && !hovered) {
-      const pulseIntensity = Math.sin(Date.now() / 300) * 0.4 + 0.6;
-      this.ctx.strokeStyle = `rgba(74, 222, 128, ${pulseIntensity})`;
-      this.ctx.lineWidth = 4;
-    } else if (enabled && hovered) {
-      this.ctx.strokeStyle = '#4ade80';
-      this.ctx.lineWidth = 5;
-    } else {
-      this.ctx.strokeStyle = '#555555';
-      this.ctx.lineWidth = 3;
-    }
-    this.drawRoundedRectPath(x, y, width, height, radius);
-    this.ctx.stroke();
-
-    // Inner border for depth
-    this.ctx.strokeStyle = enabled ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.05)';
-    this.ctx.lineWidth = 1;
-    this.drawRoundedRectPath(x + 2, y + 2, width - 4, height - 4, Math.max(0, radius - 2));
-    this.ctx.stroke();
 
     this.ctx.restore();
 
