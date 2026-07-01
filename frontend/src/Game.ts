@@ -1523,6 +1523,9 @@ export class Game {
         break;
     }
 
+    // LAYERED RENDERING: Composite all layers
+    this.renderer.compositeLayers();
+
     this.renderer.endFrame();
   }
 
