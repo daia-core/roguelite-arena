@@ -3,6 +3,8 @@
 import { Enemy, type EnemyType } from './Enemy';
 import { randomChoice, randomInt } from './utils';
 
+export type WaveModifier = 'none' | 'horde' | 'elite' | 'speed' | 'tank' | 'chaos';
+
 export class WaveManager {
   currentWave: number = 0;
   waveEnemiesRemaining: number = 0;
@@ -16,6 +18,8 @@ export class WaveManager {
   isBossWave: boolean = false;
   isHordeWave: boolean = false;
   bossSpawned: boolean = false;
+  waveModifier: WaveModifier = 'none';
+  waveModifierText: string = '';
 
   constructor() {}
 

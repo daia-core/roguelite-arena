@@ -104,6 +104,12 @@ export class SpriteSheet {
     this.createTrollSprite();
     // Banshee enemy
     this.createBansheeSprite();
+    // New enemies
+    this.createBatSprite();
+    this.createWizardSprite();
+    this.createMimicSprite();
+    this.createSpiderSprite();
+    this.createGolemSprite();
   }
 
   private static createSlimeSprite() {
@@ -742,4 +748,235 @@ export class SpriteSheet {
 
     this.sprites.set('banshee', canvas);
   }
+
+  private static createBatSprite() {
+    const size = 36;
+    const canvas = this.createCanvas(size, size);
+    const ctx = canvas.getContext('2d')!;
+
+    // Detailed bat with spread wings, small body, sharp ears
+    const pixels = [
+      [0,1,1,0,0,0,0,0,0,0,0,1,1,0],
+      [1,1,2,1,0,0,0,0,0,0,1,2,1,1],
+      [1,2,2,2,1,0,3,3,0,1,2,2,2,1],
+      [0,1,2,2,1,3,3,3,3,1,2,2,1,0],
+      [0,0,1,2,3,3,4,4,3,3,2,1,0,0],
+      [0,0,0,1,3,4,4,4,4,3,1,0,0,0],
+      [0,0,0,1,1,3,3,3,3,1,1,0,0,0],
+      [0,0,1,2,2,1,1,1,1,2,2,1,0,0],
+      [0,1,2,2,1,0,0,0,0,1,2,2,1,0],
+      [1,2,2,1,0,0,0,0,0,0,1,2,2,1],
+    ];
+
+    const colors = [
+      'transparent',
+      '#4a235a',     // 1 - wing dark purple
+      '#6a3d7c',     // 2 - wing membrane lighter
+      '#2c1b3d',     // 3 - body/head dark
+      '#ff0000',     // 4 - eyes red
+    ];
+
+    const scale = 3;
+    pixels.forEach((row, y) => {
+      row.forEach((pixel, x) => {
+        if (pixel > 0) {
+          ctx.fillStyle = colors[pixel];
+          ctx.fillRect(x * scale, y * scale, scale, scale);
+        }
+      });
+    });
+
+    this.sprites.set('bat', canvas);
+  }
+
+  private static createWizardSprite() {
+    const size = 48;
+    const canvas = this.createCanvas(size, size);
+    const ctx = canvas.getContext('2d')!;
+
+    // Detailed wizard with pointed hat, long beard, staff with crystal
+    const pixels = [
+      [0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0],
+      [0,0,0,0,0,1,1,2,2,1,1,0,0,0,0,0],
+      [0,0,0,0,1,1,2,2,2,2,1,1,0,0,0,0],
+      [0,0,0,1,1,2,2,2,2,2,2,1,1,0,0,0],
+      [0,0,1,1,2,2,2,2,2,2,2,2,1,1,0,0],
+      [0,1,1,2,2,2,3,3,3,3,2,2,2,1,1,0],
+      [0,1,2,2,2,3,3,3,3,3,3,2,2,2,1,0],
+      [0,1,2,2,3,3,4,3,3,4,3,3,2,2,1,0],
+      [0,0,1,2,2,3,3,3,3,3,3,2,2,1,0,0],
+      [0,0,0,1,2,2,3,3,3,3,2,2,1,0,0,0],
+      [0,0,0,0,1,2,2,5,5,2,2,1,0,0,0,0],
+      [0,5,0,0,0,1,2,2,2,2,1,0,0,0,0,0],
+      [5,5,5,0,0,0,1,1,1,1,0,0,0,0,0,0],
+      [5,6,5,0,0,0,0,1,1,0,0,0,0,0,0,0],
+    ];
+
+    const colors = [
+      'transparent',
+      '#1f618d',     // 1 - hat/robe blue
+      '#2980b9',     // 2 - robe lighter blue
+      '#ecf0f1',     // 3 - face/beard white
+      '#34495e',     // 4 - eyes dark
+      '#8b4513',     // 5 - staff brown
+      '#9b59b6',     // 6 - staff crystal purple
+    ];
+
+    const scale = 3;
+    pixels.forEach((row, y) => {
+      row.forEach((pixel, x) => {
+        if (pixel > 0) {
+          ctx.fillStyle = colors[pixel];
+          ctx.fillRect(x * scale, y * scale, scale, scale);
+        }
+      });
+    });
+
+    this.sprites.set('wizard', canvas);
+  }
+
+  private static createMimicSprite() {
+    const size = 48;
+    const canvas = this.createCanvas(size, size);
+    const ctx = canvas.getContext('2d')!;
+
+    // Detailed mimic chest with teeth, eye, and coin bait
+    const pixels = [
+      [0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0],
+      [0,1,1,2,2,2,2,2,2,2,2,2,2,1,1,0],
+      [1,1,2,2,3,3,3,3,3,3,3,3,2,2,1,1],
+      [1,2,2,3,3,3,3,3,3,3,3,3,3,2,2,1],
+      [1,2,3,3,4,4,4,4,4,4,4,4,3,3,2,1],
+      [1,2,3,4,4,5,5,5,5,5,5,4,4,3,2,1],
+      [1,2,3,4,4,4,4,4,4,4,4,4,4,3,2,1],
+      [1,2,3,3,6,6,6,6,6,6,6,6,3,3,2,1],
+      [1,2,2,3,6,7,6,6,6,6,7,6,3,2,2,1],
+      [1,1,2,2,6,7,7,6,6,7,7,6,2,2,1,1],
+      [0,1,1,2,2,6,6,6,6,6,6,2,2,1,1,0],
+      [0,0,1,1,2,2,8,8,8,8,2,2,1,1,0,0],
+      [0,0,0,1,1,2,2,2,2,2,2,1,1,0,0,0],
+    ];
+
+    const colors = [
+      'transparent',
+      '#654321',     // 1 - chest wood dark
+      '#8b6914',     // 2 - chest wood medium
+      '#daa520',     // 3 - chest trim gold
+      '#1a1a1a',     // 4 - mouth/darkness
+      '#ff0000',     // 5 - throat red
+      '#ffffff',     // 6 - teeth white
+      '#ffe135',     // 7 - coin bait gold
+      '#8b0000',     // 8 - tongue
+    ];
+
+    const scale = 3;
+    pixels.forEach((row, y) => {
+      row.forEach((pixel, x) => {
+        if (pixel > 0) {
+          ctx.fillStyle = colors[pixel];
+          ctx.fillRect(x * scale, y * scale, scale, scale);
+        }
+      });
+    });
+
+    this.sprites.set('mimic', canvas);
+  }
+
+  private static createSpiderSprite() {
+    const size = 48;
+    const canvas = this.createCanvas(size, size);
+    const ctx = canvas.getContext('2d')!;
+
+    // Detailed spider with 8 legs, multiple eyes, hairy body
+    const pixels = [
+      [1,1,0,0,0,0,0,0,0,0,0,0,1,1],
+      [0,1,1,0,0,0,0,0,0,0,0,1,1,0],
+      [0,0,1,1,0,2,2,2,2,0,1,1,0,0],
+      [0,0,0,1,2,2,2,2,2,2,1,0,0,0],
+      [0,0,0,2,2,3,2,2,3,2,2,0,0,0],
+      [0,0,2,2,2,3,2,2,3,2,2,2,0,0],
+      [0,0,2,2,2,2,2,2,2,2,2,2,0,0],
+      [0,2,2,4,2,2,2,2,2,2,4,2,2,0],
+      [0,2,2,4,2,2,2,2,2,2,4,2,2,0],
+      [0,0,2,2,2,2,2,2,2,2,2,2,0,0],
+      [0,0,0,2,2,2,2,2,2,2,2,0,0,0],
+      [0,0,1,1,0,2,2,2,2,0,1,1,0,0],
+      [0,1,1,0,0,0,0,0,0,0,0,1,1,0],
+      [1,1,0,0,0,0,0,0,0,0,0,0,1,1],
+    ];
+
+    const colors = [
+      'transparent',
+      '#1c1c1c',     // 1 - legs dark gray/black
+      '#2c2c2c',     // 2 - body dark
+      '#ff0000',     // 3 - eyes red
+      '#4a4a4a',     // 4 - body markings
+    ];
+
+    const scale = 3;
+    pixels.forEach((row, y) => {
+      row.forEach((pixel, x) => {
+        if (pixel > 0) {
+          ctx.fillStyle = colors[pixel];
+          ctx.fillRect(x * scale, y * scale, scale, scale);
+        }
+      });
+    });
+
+    this.sprites.set('spider', canvas);
+  }
+
+  private static createGolemSprite() {
+    const size = 72;
+    const canvas = this.createCanvas(size, size);
+    const ctx = canvas.getContext('2d')!;
+
+    // Detailed massive stone golem with cracks, glowing core, heavy build
+    const pixels = [
+      [0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0],
+      [0,0,0,1,1,2,2,2,2,2,2,2,2,2,2,1,1,0,0,0],
+      [0,0,1,1,2,2,2,2,2,2,2,2,2,2,2,2,1,1,0,0],
+      [0,1,1,2,2,3,3,3,2,2,2,2,3,3,3,2,2,1,1,0],
+      [0,1,2,2,2,3,4,3,2,2,2,2,3,4,3,2,2,2,1,0],
+      [0,1,2,2,2,3,3,3,2,2,2,2,3,3,3,2,2,2,1,0],
+      [0,1,2,2,2,2,2,2,2,5,5,2,2,2,2,2,2,2,1,0],
+      [1,1,2,2,2,2,2,2,5,5,5,5,2,2,2,2,2,2,1,1],
+      [1,2,2,2,6,6,2,2,2,5,5,2,2,2,6,6,2,2,2,1],
+      [1,2,2,6,6,6,6,2,2,2,2,2,2,6,6,6,6,2,2,1],
+      [1,2,2,2,6,6,2,2,2,2,2,2,2,2,6,6,2,2,2,1],
+      [1,2,2,2,2,2,2,2,7,7,7,7,2,2,2,2,2,2,2,1],
+      [1,1,2,2,2,2,2,7,7,7,7,7,7,2,2,2,2,2,1,1],
+      [0,1,2,2,2,2,2,2,7,7,7,7,2,2,2,2,2,2,1,0],
+      [0,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,0],
+      [0,0,1,1,2,2,2,8,8,0,0,8,8,2,2,2,1,1,0,0],
+      [0,0,0,1,1,2,8,8,8,0,0,8,8,8,2,1,1,0,0,0],
+      [0,0,0,0,1,1,1,8,0,0,0,0,8,1,1,1,0,0,0,0],
+    ];
+
+    const colors = [
+      'transparent',
+      '#546e7a',     // 1 - stone dark edges
+      '#78909c',     // 2 - stone body gray
+      '#000000',     // 3 - eyes darkness
+      '#ff6f00',     // 4 - eye glow orange
+      '#ff9800',     // 5 - chest core glow
+      '#3d3d3d',     // 6 - cracks dark
+      '#2c2c2c',     // 7 - body cracks
+      '#607d8b',     // 8 - legs/feet stone
+    ];
+
+    const scale = 3;
+    pixels.forEach((row, y) => {
+      row.forEach((pixel, x) => {
+        if (pixel > 0) {
+          ctx.fillStyle = colors[pixel];
+          ctx.fillRect(x * scale, y * scale, scale, scale);
+        }
+      });
+    });
+
+    this.sprites.set('golem', canvas);
+  }
 }
+

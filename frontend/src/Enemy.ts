@@ -3,7 +3,7 @@
 import { circleCollision } from './utils';
 import { SpriteSheet } from './sprites';
 
-export type EnemyType = 'slime' | 'goblin' | 'skeleton' | 'imp' | 'orc' | 'wraith' | 'necromancer' | 'troll' | 'banshee' | 'demon';
+export type EnemyType = 'slime' | 'goblin' | 'skeleton' | 'imp' | 'orc' | 'wraith' | 'necromancer' | 'troll' | 'banshee' | 'demon' | 'bat' | 'wizard' | 'mimic' | 'spider' | 'golem';
 
 export interface EnemyTypeData {
   health: number;
@@ -121,6 +121,57 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     goldValue: 100, // +100% gold
     shootRate: 1.5,
     spriteName: 'demon'
+  },
+  bat: {
+    health: 50,
+    speed: 180,
+    damage: 6,
+    radius: 10,
+    color: '#4a235a',
+    xpValue: 20,
+    goldValue: 12,
+    spriteName: 'bat'
+  },
+  wizard: {
+    health: 90,
+    speed: 50,
+    damage: 12,
+    radius: 12,
+    color: '#1f618d',
+    xpValue: 30,
+    goldValue: 24,
+    shootRate: 0.6,
+    spriteName: 'wizard'
+  },
+  mimic: {
+    health: 120,
+    speed: 0, // Disguised, speed changes when activated
+    damage: 14,
+    radius: 14,
+    color: '#b8860b',
+    xpValue: 35,
+    goldValue: 40, // 2x normal gold
+    spriteName: 'mimic'
+  },
+  spider: {
+    health: 70,
+    speed: 95,
+    damage: 8,
+    radius: 13,
+    color: '#1c1c1c',
+    xpValue: 25,
+    goldValue: 18,
+    spriteName: 'spider'
+  },
+  golem: {
+    health: 250,
+    speed: 35,
+    damage: 16,
+    radius: 22,
+    color: '#78909c',
+    xpValue: 60,
+    goldValue: 50,
+    spriteName: 'golem'
   }
 };
 
@@ -163,6 +214,24 @@ export class Enemy {
   // Split tracking for slimes
   canSplit: boolean = true;
 
+  // Bat specific (erratic movement)
+  batAngle: number = 0;
+  batTimer: number = 0;
+
+  // Wizard specific (teleport)
+  wizardTeleportCooldown: number = 0;
+
+  // Mimic specific (disguise)
+  mimicActivated: boolean = false;
+  mimicActivationDistance: number = 150;
+
+  // Spider specific (poison trail)
+  spiderTrailTimer: number = 0;
+
+  // Golem specific (stomp)
+  golemStompCooldown: number = 0;
+  golemCanKnockback: boolean = false; // Immune to knockback
+
   constructor(x: number, y: number, type: EnemyType, waveMultiplier: number = 1, canSplit: boolean = true) {
     this.id = Enemy.nextId++;
     this.x = x;
@@ -185,7 +254,9 @@ export class Enemy {
     shouldTeleport?: boolean;
     shouldSummon?: boolean;
     shouldScream?: boolean;
+    shouldStomp?: boolean;
     splitInto?: Enemy[];
+    poisonTrail?: { x: number; y: number };
   } {
     const dx = playerX - this.x;
     const dy = playerY - this.y;
@@ -195,7 +266,9 @@ export class Enemy {
     let shouldTeleport = false;
     let shouldSummon = false;
     let shouldScream = false;
+    let shouldStomp = false;
     let splitInto: Enemy[] | undefined;
+    let poisonTrail: { x: number; y: number } | undefined;
 
     // Movement behavior based on type
     if (dist > 0) {
@@ -242,6 +315,52 @@ export class Enemy {
           if (this.invulnerableTimer <= 0) {
             this.invulnerable = false;
           }
+        }
+      }
+
+      // Bat erratic movement (zigzag)
+      if (this.type === 'bat') {
+        this.batTimer += dt * 6;
+        this.batAngle = Math.sin(this.batTimer) * 0.5;
+        const perpX = -ny;
+        const perpY = nx;
+        this.x += (nx * moveSpeed + perpX * moveSpeed * this.batAngle) * dt;
+        this.y += (ny * moveSpeed + perpY * moveSpeed * this.batAngle) * dt;
+        shouldMove = false;
+      }
+
+      // Mimic activation
+      if (this.type === 'mimic') {
+        if (!this.mimicActivated && dist < this.mimicActivationDistance) {
+          this.mimicActivated = true;
+          this.typeData.speed = 140; // Fast lunge
+        }
+        // Only move when activated
+        if (!this.mimicActivated) {
+          shouldMove = false;
+        }
+      }
+
+      // Spider wall-crawling (moves toward edges)
+      if (this.type === 'spider') {
+        // Spider leaves poison trails
+        this.spiderTrailTimer += dt;
+        if (this.spiderTrailTimer >= 0.15) {
+          poisonTrail = { x: this.x, y: this.y };
+          this.spiderTrailTimer = 0;
+        }
+      }
+
+      // Wizard teleport away when player is too close
+      if (this.type === 'wizard') {
+        this.wizardTeleportCooldown -= dt;
+        if (dist < 180 && this.wizardTeleportCooldown <= 0) {
+          // Teleport away
+          const angle = Math.atan2(this.y - playerY, this.x - playerX);
+          const teleportDist = 150;
+          this.x += Math.cos(angle) * teleportDist;
+          this.y += Math.sin(angle) * teleportDist;
+          this.wizardTeleportCooldown = 3;
         }
       }
 
@@ -292,7 +411,25 @@ export class Enemy {
       }
     }
 
-    return { shouldShoot, shouldTeleport, shouldSummon, shouldScream, splitInto };
+    // Golem stomp attack
+    if (this.type === 'golem') {
+      this.golemStompCooldown -= dt;
+      if (this.golemStompCooldown <= 0 && dist < 120) {
+        shouldStomp = true;
+        this.golemStompCooldown = 4;
+      }
+    }
+
+    // Wizard homing projectiles (handled in Game.ts)
+    if (this.type === 'wizard' && this.typeData.shootRate) {
+      this.shootCooldown -= dt;
+      if (this.shootCooldown <= 0 && dist > 50 && dist < 500) {
+        shouldShoot = true;
+        this.shootCooldown = 1 / this.typeData.shootRate;
+      }
+    }
+
+    return { shouldShoot, shouldTeleport, shouldSummon, shouldScream, shouldStomp, splitInto, poisonTrail };
   }
 
   takeDamage(amount: number): Enemy[] | null {
