@@ -3,7 +3,7 @@
 import { Player } from './Player';
 import { Enemy } from './Enemy';
 import { Projectile } from './Projectile';
-import { Particle, DamageNumber, spawnHitParticles, spawnKillParticles, spawnXPParticles, spawnHealthOrbParticles } from './Particle';
+import { Particle, DamageNumber, spawnHitParticles, spawnKillParticles, spawnXPParticles, spawnHealthOrbParticles, spawnLevelUpParticles } from './Particle';
 import { WaveManager } from './WaveManager';
 import { PlayerStats, ItemDatabase, type Item } from './ItemSystem';
 import { SaveManager } from './SaveManager';
@@ -42,6 +42,7 @@ export class Game {
   selectedShopItem: number = -1;
   shopRerollCost: number = 2;
   shopRerolls: number = 0;
+  lockedShopItems: Set<number> = new Set(); // BROTATO-INSPIRED: Lock items between waves
 
   // Stats
   kills: number = 0;
@@ -517,7 +518,11 @@ export class Game {
 
     if (leveledUp) {
       this.audio.playLevelUp();
-      this.renderer.addScreenShake(0.2);
+      // VAMPIRE SURVIVORS JUICE: Make level-ups feel MASSIVE
+      this.renderer.addScreenShake(0.6); // Much bigger shake
+      this.renderer.addHitFlash(0.4); // Screen flash
+      // Spawn huge particle explosion at player
+      this.particles.push(...spawnLevelUpParticles(this.player.x, this.player.y));
     }
 
     // Health orb drop (18% chance)
@@ -545,7 +550,28 @@ export class Game {
   }
 
   private enterShop(): void {
-    this.shopItems = ItemDatabase.getRandomItems(4);
+    // BROTATO-INSPIRED: Preserve locked items from previous shop
+    const lockedItems: Item[] = [];
+    for (const index of this.lockedShopItems) {
+      if (this.shopItems[index]) {
+        lockedItems.push(this.shopItems[index]);
+      }
+    }
+
+    // Generate new items for unlocked slots
+    const newItems = ItemDatabase.getRandomItems(4 - lockedItems.length);
+    this.shopItems = [];
+
+    // Rebuild shop: locked items first, then new items
+    let lockedIndex = 0;
+    for (let i = 0; i < 4; i++) {
+      if (this.lockedShopItems.has(i) && lockedIndex < lockedItems.length) {
+        this.shopItems.push(lockedItems[lockedIndex++]);
+      } else {
+        this.shopItems.push(newItems.shift()!);
+      }
+    }
+
     this.selectedShopItem = -1;
 
     // Apply meta-progression reroll discount
@@ -590,7 +616,27 @@ export class Game {
       const x = isMobile ? startX : startX + i * (itemWidth + gap);
       const y = isMobile ? startY + i * (itemHeight + gap) : startY;
 
-      if (pointInRect(mouseX, mouseY, { x, y, width: itemWidth, height: itemHeight })) {
+      // BROTATO-INSPIRED: Lock button in top-right corner of item card
+      const lockButtonSize = isMobile ? 45 : 30;
+      const lockButtonX = x + itemWidth - lockButtonSize - 5;
+      const lockButtonY = y + 5;
+
+      if (pointInRect(mouseX, mouseY, { x: lockButtonX, y: lockButtonY, width: lockButtonSize, height: lockButtonSize })) {
+        // Lock button clicked
+        if (this.input.mouseDown && this.player) {
+          const lockCost = 5;
+          if (this.lockedShopItems.has(i)) {
+            // Unlock (free)
+            this.lockedShopItems.delete(i);
+          } else if (this.player.gold >= lockCost) {
+            // Lock (costs gold)
+            this.player.gold -= lockCost;
+            this.lockedShopItems.add(i);
+          }
+          this.audio.playPurchase();
+          this.input.mouseDown = false;
+        }
+      } else if (pointInRect(mouseX, mouseY, { x, y, width: itemWidth, height: itemHeight })) {
         this.selectedShopItem = i;
 
         // Purchase on click
@@ -612,6 +658,9 @@ export class Game {
             if (item.shield) {
               this.player.shield = true;
             }
+
+            // Clear lock on purchased item
+            this.lockedShopItems.delete(i);
 
             this.audio.playPurchase();
             this.input.mouseDown = false; // Prevent accidental double purchase
@@ -654,7 +703,19 @@ export class Game {
     if (pointInRect(mouseX, mouseY, rerollBtn) && this.input.mouseDown && this.player) {
       if (this.player.gold >= this.shopRerollCost) {
         this.player.gold -= this.shopRerollCost;
-        this.shopItems = ItemDatabase.getRandomItems(4);
+        // Generate new items for non-locked slots only
+        const unlockedSlots = [];
+        for (let i = 0; i < 4; i++) {
+          if (!this.lockedShopItems.has(i)) {
+            unlockedSlots.push(i);
+          }
+        }
+        const newItems = ItemDatabase.getRandomItems(unlockedSlots.length);
+        // Replace only unlocked slots
+        let newItemIndex = 0;
+        for (const slotIndex of unlockedSlots) {
+          this.shopItems[slotIndex] = newItems[newItemIndex++];
+        }
 
         // Apply reroll cost scaling with cap from meta-progression
         const rerollDiscount = this.metaProgression.getRerollDiscount();
@@ -1104,13 +1165,29 @@ export class Game {
     }
 
     // Shield indicator (center top, below HUD)
+    let statusY = topPadding + goldOffset + Math.round(10 * textScale);
     if (this.player.shield) {
       const shieldSize = Math.round(24 * textScale);
-      this.renderer.drawText('🛡️ SHIELD ACTIVE', this.canvas.width / 2, topPadding + goldOffset + Math.round(10 * textScale), {
+      this.renderer.drawText('🛡️ SHIELD ACTIVE', this.canvas.width / 2, statusY, {
         size: shieldSize,
         bold: true,
         align: 'center',
         color: '#4a9eff'
+      });
+      statusY += Math.round(30 * textScale);
+    }
+
+    // BROTATO-INSPIRED: Weapon specialization bonus indicator
+    const specialization = this.playerStats.getWeaponSpecialization();
+    if (specialization === 'melee' || specialization === 'ranged') {
+      const specSize = Math.round(20 * textScale);
+      const specIcon = specialization === 'melee' ? '⚔️' : '🏹';
+      const specColor = specialization === 'melee' ? '#ff6600' : '#00ffff';
+      this.renderer.drawText(`${specIcon} ${specialization.toUpperCase()} +20%`, this.canvas.width / 2, statusY, {
+        size: specSize,
+        bold: true,
+        align: 'center',
+        color: specColor
       });
     }
   }
@@ -1136,6 +1213,15 @@ export class Game {
       align: 'center',
       color: '#ffd700'
     });
+
+    // Lock feature hint
+    if (this.waveManager.currentWave <= 3) {
+      this.renderer.drawText('Tip: Lock items (5g) to keep them next wave!', this.canvas.width / 2, isMobile ? 105 : 125, {
+        size: isMobile ? 18 : 14,
+        align: 'center',
+        color: '#aaaaaa'
+      });
+    }
 
     // Draw shop items - responsive layout (MUST MATCH updateShop positions)
     const itemWidth = isPortrait ? Math.min(280, this.canvas.width - 40) : isMobile ? Math.min(380, this.canvas.width - 40) : 200;
@@ -1171,11 +1257,14 @@ export class Game {
       };
       const rarityColor = rarityColors[item.rarity] ?? '#ffffff';
 
-      // Card shadow/glow effect
-      if (hovered) {
+      // MODERN ROGUELIKE: Check for synergies with existing items
+      const hasSynergy = this.playerStats.hasSynergyWith(item);
+
+      // Card shadow/glow effect (brighter for synergies)
+      if (hovered || hasSynergy) {
         ctx.save();
-        ctx.shadowBlur = 20;
-        ctx.shadowColor = rarityColor;
+        ctx.shadowBlur = hasSynergy ? 30 : 20;
+        ctx.shadowColor = hasSynergy ? '#00ff00' : rarityColor;
         ctx.fillStyle = '#2a2a2a';
         ctx.fillRect(x - 2, y - 2, itemWidth + 4, itemHeight + 4);
         ctx.restore();
@@ -1197,6 +1286,37 @@ export class Game {
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
       ctx.lineWidth = 1;
       ctx.strokeRect(x + 2, y + 2, itemWidth - 4, itemHeight - 4);
+
+      // BROTATO-INSPIRED: Lock button in top-right corner
+      const lockButtonSize = isMobile ? 45 : 30;
+      const lockButtonX = x + itemWidth - lockButtonSize - 5;
+      const lockButtonY = y + 5;
+      const isLocked = this.lockedShopItems.has(i);
+
+      // Lock button background
+      ctx.save();
+      ctx.fillStyle = isLocked ? '#ffd700' : '#2a2a2a';
+      ctx.fillRect(lockButtonX, lockButtonY, lockButtonSize, lockButtonSize);
+      ctx.strokeStyle = isLocked ? '#ffff00' : '#666666';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(lockButtonX, lockButtonY, lockButtonSize, lockButtonSize);
+      ctx.restore();
+
+      // Lock icon
+      this.renderer.drawText(isLocked ? '🔒' : '🔓', lockButtonX + lockButtonSize / 2, lockButtonY + (isMobile ? 5 : 2), {
+        size: isMobile ? 32 : 20,
+        align: 'center'
+      });
+
+      // MODERN ROGUELIKE: Synergy indicator
+      if (hasSynergy) {
+        this.renderer.drawText('⚡SYNERGY', x + itemWidth / 2, y + 3, {
+          size: isPortrait ? 14 : isMobile ? 18 : 12,
+          bold: true,
+          align: 'center',
+          color: '#00ff00'
+        });
+      }
 
       // Icon with better positioning
       this.renderer.drawText(item.icon, x + itemWidth / 2, y + (isPortrait ? 15 : isMobile ? 20 : 15), {

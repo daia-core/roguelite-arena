@@ -340,6 +340,8 @@ export class PlayerStats {
     this.items.forEach(item => {
       if (item.damageMultiplier) damage *= item.damageMultiplier;
     });
+    // Apply weapon specialization bonus
+    damage *= this.getSpecializationBonus();
     return damage;
   }
 
@@ -501,5 +503,59 @@ export class PlayerStats {
       if (item.multishot) count += item.multishot;
     });
     return count;
+  }
+
+  // MODERN ROGUELIKE: Detect synergies for visual feedback
+  hasSynergyWith(item: Item): boolean {
+    // Crit synergies (crit chance + crit damage)
+    if (item.critChance && this.items.some(i => i.critDamageMultiplier)) return true;
+    if (item.critDamageMultiplier && this.items.some(i => i.critChance)) return true;
+
+    // Lifesteal synergies (damage + lifesteal, or attack speed + lifesteal)
+    if (item.lifesteal && this.items.some(i => i.damageMultiplier || i.fireRateMultiplier)) return true;
+    if ((item.damageMultiplier || item.fireRateMultiplier) && this.items.some(i => i.lifesteal)) return true;
+
+    // Multishot synergies (multishot + piercing)
+    if (item.multishot && this.items.some(i => i.piercing)) return true;
+    if (item.piercing && this.items.some(i => i.multishot)) return true;
+
+    // Fire rate synergies (fire rate + on-hit effects)
+    if (item.fireRateMultiplier && this.items.some(i => i.chainLightning || i.freeze || i.poison)) return true;
+    if ((item.chainLightning || item.freeze || item.poison) && this.items.some(i => i.fireRateMultiplier)) return true;
+
+    // Knockback synergies (knockback + damage)
+    if (item.knockback && this.items.some(i => i.damageMultiplier)) return true;
+    if (item.damageMultiplier && this.items.some(i => i.knockback)) return true;
+
+    return false;
+  }
+
+  // BROTATO-INSPIRED: Check weapon specialization (all melee or all ranged)
+  // For now, we'll track based on item themes (damage/attack speed = melee, projectile effects = ranged)
+  getWeaponSpecialization(): 'melee' | 'ranged' | 'mixed' | 'none' {
+    let meleeCount = 0;
+    let rangedCount = 0;
+
+    this.items.forEach(item => {
+      // Melee indicators: knockback, lifesteal, thorns, attack speed, raw damage
+      if (item.knockback || item.thorns || item.id === 'attack_speed' || item.id === 'damage') {
+        meleeCount++;
+      }
+      // Ranged indicators: piercing, multishot, homing, projectile speed
+      if (item.piercing || item.multishot || item.homing || item.projectileSpeed) {
+        rangedCount++;
+      }
+    });
+
+    if (meleeCount > 0 && rangedCount === 0) return 'melee';
+    if (rangedCount > 0 && meleeCount === 0) return 'ranged';
+    if (meleeCount > 0 && rangedCount > 0) return 'mixed';
+    return 'none';
+  }
+
+  // Get specialization damage bonus (+20% if specialized)
+  getSpecializationBonus(): number {
+    const spec = this.getWeaponSpecialization();
+    return (spec === 'melee' || spec === 'ranged') ? 1.2 : 1.0;
   }
 }

@@ -264,18 +264,22 @@ export function spawnXPParticles(x: number, y: number, count: number = 8): Parti
 
 export function spawnLevelUpParticles(x: number, y: number): Particle[] {
   const particles: Particle[] = [];
-  for (let i = 0; i < 60; i++) {
+  // VAMPIRE SURVIVORS JUICE: Make level-ups feel HUGE (100+ particles)
+  for (let i = 0; i < 120; i++) {
     const angle = Math.random() * Math.PI * 2;
-    const speed = 100 + Math.random() * 200;
+    const speed = 150 + Math.random() * 300;
+    // More color variety for rainbow effect
+    const colors = ['#ffff00', '#00ffff', '#ff00ff', '#ff6600', '#00ff00', '#ff0000', '#ffffff'];
+    const color = colors[i % colors.length];
     particles.push(new Particle({
       x,
       y,
       vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed - 100,
-      color: i % 3 === 0 ? '#ffff00' : i % 3 === 1 ? '#00ffff' : '#ff00ff',
-      size: 8 + Math.random() * 6,
-      lifetime: 1000 + Math.random() * 500,
-      gravity: -80
+      vy: Math.sin(angle) * speed - 120,
+      color: color,
+      size: 10 + Math.random() * 8, // Bigger particles
+      lifetime: 1200 + Math.random() * 600, // Longer lifetime
+      gravity: -100
     }));
   }
   return particles;

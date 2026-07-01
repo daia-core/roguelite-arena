@@ -181,7 +181,14 @@ export class Player {
   private levelUp(): void {
     this.level++;
     this.xp -= this.xpToNextLevel;
-    this.xpToNextLevel = Math.floor(this.xpToNextLevel * 1.5);
+
+    // MODERN ROGUELIKE: Faster early progression (inspired by Vampire Survivors)
+    // First 5 levels are 30% faster to get players hooked quickly
+    if (this.level <= 5) {
+      this.xpToNextLevel = Math.floor(this.xpToNextLevel * 1.35); // 1.5 * 0.7 = ~1.35
+    } else {
+      this.xpToNextLevel = Math.floor(this.xpToNextLevel * 1.5);
+    }
 
     // Stat boosts on level up
     this.stats.baseDamage += 2;
