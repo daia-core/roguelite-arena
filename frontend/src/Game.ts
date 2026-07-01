@@ -210,7 +210,8 @@ export class Game {
       if (enemy.collidesWith(this.player.x, this.player.y, this.player.radius)) {
         const damaged = this.player.takeDamage(enemy.typeData.damage);
         if (damaged) {
-          this.renderer.addScreenShake(0.2);
+          this.renderer.addScreenShake(0.3);
+          this.renderer.addHitFlash(0.5);
           this.particles.push(...spawnHitParticles(this.player.x, this.player.y, 12));
         }
         enemy.dead = true; // Enemy dies on contact
@@ -251,6 +252,7 @@ export class Game {
             this.particles.push(...spawnHitParticles(enemy.x, enemy.y, 6));
             this.damageNumbers.push(new DamageNumber(enemy.x, enemy.y - 20, damage, isCrit));
             this.renderer.addScreenShake(0.05);
+            this.renderer.addImpactFlash(enemy.x, enemy.y);
 
             if (enemy.dead) {
               this.handleEnemyKill(enemy);
@@ -262,7 +264,8 @@ export class Game {
         if (this.player.collidesWith(proj.x, proj.y, proj.radius)) {
           const damaged = this.player.takeDamage(proj.damage);
           if (damaged) {
-            this.renderer.addScreenShake(0.15);
+            this.renderer.addScreenShake(0.25);
+            this.renderer.addHitFlash(0.4);
             this.particles.push(...spawnHitParticles(this.player.x, this.player.y, 10));
           }
           proj.dead = true;

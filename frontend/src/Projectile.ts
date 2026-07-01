@@ -29,7 +29,7 @@ export class Projectile {
     this.speed = speed;
     this.vx = Math.cos(angle) * speed;
     this.vy = Math.sin(angle) * speed;
-    this.radius = fromPlayer ? 3 : 4;
+    this.radius = fromPlayer ? 9 : 10;
     this.damage = damage;
     this.color = fromPlayer ? '#00ffff' : '#ff0000';
     this.fromPlayer = fromPlayer;
@@ -56,11 +56,27 @@ export class Projectile {
   draw(ctx: CanvasRenderingContext2D): void {
     ctx.save();
 
-    // Glow effect
-    ctx.shadowBlur = 10;
+    // Strong glow effect
+    ctx.shadowBlur = 20;
     ctx.shadowColor = this.color;
+    ctx.globalCompositeOperation = 'lighter';
 
-    ctx.fillStyle = this.color;
+    // Outer glow
+    const outerGradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius * 1.5);
+    outerGradient.addColorStop(0, this.color);
+    outerGradient.addColorStop(0.5, this.color + '88');
+    outerGradient.addColorStop(1, this.color + '00');
+    ctx.fillStyle = outerGradient;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius * 1.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Core
+    const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius);
+    gradient.addColorStop(0, '#ffffff');
+    gradient.addColorStop(0.3, this.color);
+    gradient.addColorStop(1, this.color);
+    ctx.fillStyle = gradient;
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
     ctx.fill();

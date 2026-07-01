@@ -188,10 +188,15 @@ export class Player {
   draw(ctx: CanvasRenderingContext2D): void {
     ctx.save();
 
+    // Outer glow effect (pulsing)
+    const pulseOffset = Math.sin(Date.now() / 200) * 2;
+    ctx.shadowBlur = 20 + pulseOffset;
+    ctx.shadowColor = '#00ff00';
+
     // Dash effect
     if (this.dashDuration > 0) {
-      ctx.globalAlpha = 0.5;
-      ctx.shadowBlur = 20;
+      ctx.globalAlpha = 0.7;
+      ctx.shadowBlur = 30;
       ctx.shadowColor = '#00ffff';
     }
 
@@ -199,19 +204,26 @@ export class Player {
     if (this.shield) {
       ctx.strokeStyle = '#00ffff';
       ctx.lineWidth = 3;
+      ctx.shadowBlur = 15;
+      ctx.shadowColor = '#00ffff';
       ctx.beginPath();
       ctx.arc(this.x, this.y, this.radius + 5, 0, Math.PI * 2);
       ctx.stroke();
     }
 
-    // Player body
-    ctx.fillStyle = '#00ff00';
+    // Player body with radial gradient
+    const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius);
+    gradient.addColorStop(0, '#88ff88');
+    gradient.addColorStop(0.6, '#00ff00');
+    gradient.addColorStop(1, '#008800');
+    ctx.fillStyle = gradient;
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
     ctx.fill();
 
     // Direction indicator (triangle)
     ctx.fillStyle = '#ffffff';
+    ctx.shadowBlur = 0;
     ctx.beginPath();
     ctx.moveTo(this.x + this.radius * 0.8, this.y);
     ctx.lineTo(this.x + this.radius * 0.3, this.y - 5);

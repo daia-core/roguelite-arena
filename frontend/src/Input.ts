@@ -114,7 +114,7 @@ export class Input {
           // Calculate delta
           const dx = this.joystick.currentX - this.joystick.startX;
           const dy = this.joystick.currentY - this.joystick.startY;
-          const maxRadius = 50;
+          const maxRadius = 70;
           const dist = Math.sqrt(dx * dx + dy * dy);
 
           if (dist > maxRadius) {
@@ -177,7 +177,7 @@ export class Input {
 
     // Touch joystick
     if (this.joystick.active) {
-      const maxRadius = 50;
+      const maxRadius = 70;
       x = this.joystick.deltaX / maxRadius;
       y = this.joystick.deltaY / maxRadius;
     }
@@ -195,13 +195,25 @@ export class Input {
   consumeDash(): boolean {
     const pressed = this.dashPressed;
     this.dashPressed = false;
+    if (pressed) {
+      this.triggerHaptic(20);
+    }
     return pressed;
   }
 
   consumeBlast(): boolean {
     const pressed = this.blastPressed;
     this.blastPressed = false;
+    if (pressed) {
+      this.triggerHaptic(40);
+    }
     return pressed;
+  }
+
+  private triggerHaptic(duration: number): void {
+    if (navigator.vibrate) {
+      navigator.vibrate(duration);
+    }
   }
 
   drawJoystick(ctx: CanvasRenderingContext2D): void {
@@ -209,21 +221,31 @@ export class Input {
 
     ctx.save();
 
+    // Draw base outer ring
+    ctx.globalAlpha = 0.2;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(this.joystick.startX, this.joystick.startY, 70, 0, Math.PI * 2);
+    ctx.stroke();
+
     // Draw base
     ctx.globalAlpha = 0.3;
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
-    ctx.arc(this.joystick.startX, this.joystick.startY, 50, 0, Math.PI * 2);
+    ctx.arc(this.joystick.startX, this.joystick.startY, 65, 0, Math.PI * 2);
     ctx.fill();
 
-    // Draw stick
-    ctx.globalAlpha = 0.6;
+    // Draw stick with glow
+    ctx.globalAlpha = 0.8;
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = '#00ffff';
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
     ctx.arc(
       this.joystick.startX + this.joystick.deltaX,
       this.joystick.startY + this.joystick.deltaY,
-      20,
+      30,
       0,
       Math.PI * 2
     );

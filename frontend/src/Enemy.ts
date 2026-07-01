@@ -128,31 +128,70 @@ export class Enemy {
   draw(ctx: CanvasRenderingContext2D): void {
     ctx.save();
 
-    // Shadow
-    ctx.shadowBlur = 8;
+    // Glow effect
+    ctx.shadowBlur = 12;
     ctx.shadowColor = this.typeData.color;
 
-    // Body
-    ctx.fillStyle = this.typeData.color;
+    // Body with radial gradient
+    const gradient = ctx.createRadialGradient(
+      this.x - this.typeData.radius * 0.3,
+      this.y - this.typeData.radius * 0.3,
+      0,
+      this.x,
+      this.y,
+      this.typeData.radius
+    );
+
+    // Different gradients per type
+    if (this.type === 'tank') {
+      gradient.addColorStop(0, '#ff6666');
+      gradient.addColorStop(0.5, '#cc0000');
+      gradient.addColorStop(1, '#660000');
+    } else if (this.type === 'fast') {
+      gradient.addColorStop(0, '#ff88ff');
+      gradient.addColorStop(0.5, '#ff00ff');
+      gradient.addColorStop(1, '#880088');
+    } else if (this.type === 'shooter') {
+      gradient.addColorStop(0, '#ffcc66');
+      gradient.addColorStop(0.5, '#ffaa00');
+      gradient.addColorStop(1, '#aa6600');
+    } else {
+      gradient.addColorStop(0, '#ff8888');
+      gradient.addColorStop(0.5, '#ff0000');
+      gradient.addColorStop(1, '#880000');
+    }
+
+    ctx.fillStyle = gradient;
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.typeData.radius, 0, Math.PI * 2);
     ctx.fill();
 
-    // Health bar
-    if (this.health < this.maxHealth) {
-      const barWidth = this.typeData.radius * 2;
-      const barHeight = 4;
-      const barY = this.y - this.typeData.radius - 8;
+    // Health bar (always show)
+    const barWidth = this.typeData.radius * 2.4;
+    const barHeight = 5;
+    const barY = this.y - this.typeData.radius - 12;
 
-      ctx.fillStyle = '#000000';
-      ctx.fillRect(this.x - barWidth / 2, barY, barWidth, barHeight);
+    // Background
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillRect(this.x - barWidth / 2, barY, barWidth, barHeight);
 
-      const healthPercent = this.health / this.maxHealth;
-      ctx.fillStyle = '#00ff00';
-      ctx.fillRect(this.x - barWidth / 2, barY, barWidth * healthPercent, barHeight);
-    }
+    // Health
+    const healthPercent = this.health / this.maxHealth;
+    const healthColor = healthPercent > 0.6 ? '#00ff00' : healthPercent > 0.3 ? '#ffff00' : '#ff0000';
+    ctx.fillStyle = healthColor;
+    ctx.shadowBlur = 5;
+    ctx.shadowColor = healthColor;
+    ctx.fillRect(this.x - barWidth / 2, barY, barWidth * healthPercent, barHeight);
+
+    // Border
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(this.x - barWidth / 2, barY, barWidth, barHeight);
 
     // Type indicator
+    ctx.shadowBlur = 0;
     ctx.fillStyle = '#ffffff';
     ctx.font = `${this.typeData.radius}px Arial`;
     ctx.textAlign = 'center';

@@ -97,11 +97,11 @@
         border: 3px solid rgba(255, 255, 255, 0.3);
         border-radius: 50%;
         color: white;
-        font-size: 12px;
+        font-size: 14px;
         font-weight: bold;
         cursor: pointer;
         box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-        transition: transform 0.1s, opacity 0.1s;
+        transition: transform 0.1s, opacity 0.1s, box-shadow 0.3s;
       }
 
       .ability-btn:active {
@@ -110,6 +110,48 @@
 
       .ability-btn:disabled {
         opacity: 0.4;
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+      }
+
+      .ability-btn:not(:disabled) {
+        animation: glow-pulse 2s ease-in-out infinite;
+      }
+
+      @keyframes glow-pulse {
+        0%, 100% {
+          box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4), 0 0 10px rgba(102, 126, 234, 0.3);
+        }
+        50% {
+          box-shadow: 0 4px 25px rgba(102, 126, 234, 0.8), 0 0 20px rgba(102, 126, 234, 0.6);
+        }
+      }
+
+      /* Mobile optimizations */
+      @media (max-width: 768px) {
+        .ability-btn {
+          width: 90px;
+          height: 90px;
+          font-size: 16px;
+        }
+
+        #touch-controls {
+          bottom: 20px;
+          right: 20px;
+          gap: 20px;
+        }
+
+        .menu-btn {
+          font-size: 18px;
+          padding: 18px 40px;
+          min-width: 250px;
+        }
+      }
+
+      @media (max-width: 375px) {
+        .ability-btn {
+          width: 75px;
+          height: 75px;
+        }
       }
     </style>
   </head>
