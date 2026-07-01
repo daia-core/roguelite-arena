@@ -688,6 +688,92 @@ export class Enemy {
         }
       }
 
+      // NEW AI: Dasher - quick burst dashes toward player
+      if (this.type === 'dasher') {
+        this.dashCooldown -= dt;
+
+        if (this.dashing) {
+          this.dashTimer -= dt;
+          this.x += this.dashVelocity.x * dt;
+          this.y += this.dashVelocity.y * dt;
+
+          if (this.dashTimer <= 0) {
+            this.dashing = false;
+          }
+          shouldMove = false;
+        } else if (dist > 100 && dist < 350 && this.dashCooldown <= 0) {
+          // Initiate dash
+          this.dashing = true;
+          this.dashTimer = 0.3; // 300ms dash
+          this.dashVelocity = { x: nx * moveSpeed * 4, y: ny * moveSpeed * 4 };
+          this.dashCooldown = 2.5;
+        }
+      }
+
+      // NEW AI: Evader - dodges projectiles (needs projectile positions passed in future)
+      // For now, implements evasive zigzag movement
+      if (this.type === 'evader') {
+        this.dodgeCooldown -= dt;
+
+        if (this.dodging) {
+          this.dodgeTimer -= dt;
+          this.x += this.dodgeDirection.x * dt;
+          this.y += this.dodgeDirection.y * dt;
+
+          if (this.dodgeTimer <= 0) {
+            this.dodging = false;
+          }
+          shouldMove = false;
+        } else if (dist < 300 && this.dodgeCooldown <= 0 && Math.random() < 0.5) {
+          // Random dodge perpendicular to player direction
+          const perpX = -ny;
+          const perpY = nx;
+          const dodgeDir = Math.random() < 0.5 ? 1 : -1;
+
+          this.dodging = true;
+          this.dodgeTimer = 0.25; // 250ms dodge
+          this.dodgeDirection = { x: perpX * moveSpeed * 3 * dodgeDir, y: perpY * moveSpeed * 3 * dodgeDir };
+          this.dodgeCooldown = 1.5;
+        }
+      }
+
+      // NEW AI: Orbiter - circles around player at fixed distance
+      if (this.type === 'orbiter') {
+        this.circleAngle += dt * 2; // Rotate around player
+
+        const targetX = playerX + Math.cos(this.circleAngle) * this.circleDistance;
+        const targetY = playerY + Math.sin(this.circleAngle) * this.circleDistance;
+
+        const toDx = targetX - this.x;
+        const toDy = targetY - this.y;
+        const toDist = Math.sqrt(toDx * toDx + toDy * toDy);
+
+        if (toDist > 10) {
+          this.x += (toDx / toDist) * moveSpeed * dt;
+          this.y += (toDy / toDist) * moveSpeed * dt;
+        }
+        shouldMove = false;
+      }
+
+      // NEW AI: Spiraler - spirals inward toward player
+      if (this.type === 'spiraler') {
+        this.spiralAngle += dt * 2.5; // Rotate
+        this.spiralDistance = Math.max(50, this.spiralDistance - dt * 30); // Spiral inward
+
+        const targetX = playerX + Math.cos(this.spiralAngle) * this.spiralDistance;
+        const targetY = playerY + Math.sin(this.spiralAngle) * this.spiralDistance;
+
+        const toDx = targetX - this.x;
+        const toDy = targetY - this.y;
+        const toDist = Math.sqrt(toDx * toDx + toDy * toDy);
+
+        if (toDist > 10) {
+          this.x += (toDx / toDist) * moveSpeed * dt;
+          this.y += (toDy / toDist) * moveSpeed * dt;
+        }
+        shouldMove = false;
+      }
+
       if (shouldMove) {
         this.x += nx * moveSpeed * dt;
         this.y += ny * moveSpeed * dt;

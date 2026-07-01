@@ -181,7 +181,8 @@ export class WaveManager {
       return randomChoice([
         'slime', 'goblin', 'skeleton', 'bat', 'imp', 'spider', 'orc', 'mimic',
         'wraith', 'wizard', 'necromancer', 'troll', 'banshee', 'golem',
-        'ghost', 'mushroom', 'gargoyle', 'blob', 'necroegg', 'cyclops', 'phantom', 'druid', 'construct', 'swarm'
+        'ghost', 'mushroom', 'gargoyle', 'blob', 'necroegg', 'cyclops', 'phantom', 'druid', 'construct', 'swarm',
+        'dasher', 'evader', 'orbiter', 'spiraler'
       ] as EnemyType[]);
     }
 
@@ -189,43 +190,47 @@ export class WaveManager {
     if (wave <= 2) {
       return randomChoice(['slime', 'slime', 'goblin', 'goblin'] as EnemyType[]);
     }
-    // Wave 3-4: Add bats, ghosts, swarms
+    // Wave 3-4: Add bats, ghosts, swarms, dashers
     else if (wave <= 4) {
-      return randomChoice(['slime', 'slime', 'goblin', 'goblin', 'bat', 'bat', 'ghost', 'swarm'] as EnemyType[]);
+      return randomChoice(['slime', 'slime', 'goblin', 'goblin', 'bat', 'bat', 'ghost', 'swarm', 'dasher'] as EnemyType[]);
     }
-    // Wave 5-6: Add spiders, mimics, mushrooms, blobs
+    // Wave 5-6: Add spiders, mimics, mushrooms, blobs, evaders
     else if (wave <= 6) {
-      return randomChoice(['slime', 'goblin', 'bat', 'bat', 'spider', 'spider', 'mimic', 'ghost', 'mushroom', 'blob', 'swarm'] as EnemyType[]);
+      return randomChoice(['slime', 'goblin', 'bat', 'bat', 'spider', 'spider', 'mimic', 'ghost', 'mushroom', 'blob', 'swarm', 'dasher', 'evader'] as EnemyType[]);
     }
-    // Wave 7-10: Add skeletons, wizards, imps, phantoms, druids
+    // Wave 7-10: Add skeletons, wizards, imps, phantoms, druids, orbiters
     else if (wave <= 10) {
       return randomChoice([
         'slime', 'goblin', 'bat', 'skeleton', 'skeleton', 'spider', 'spider',
-        'wizard', 'wizard', 'imp', 'mimic', 'orc', 'ghost', 'mushroom', 'blob', 'phantom', 'druid', 'swarm'
+        'wizard', 'wizard', 'imp', 'mimic', 'orc', 'ghost', 'mushroom', 'blob', 'phantom', 'druid', 'swarm',
+        'dasher', 'evader', 'orbiter'
       ] as EnemyType[]);
     }
-    // Wave 11-15: Add late-game enemies, gargoyles, necroeggs, constructs
+    // Wave 11-15: Add late-game enemies, gargoyles, necroeggs, constructs, spiralers
     else if (wave <= 15) {
       return randomChoice([
         'bat', 'goblin', 'skeleton', 'skeleton', 'spider', 'wizard', 'wizard',
         'imp', 'orc', 'orc', 'mimic', 'wraith', 'necromancer', 'troll', 'banshee',
-        'ghost', 'mushroom', 'gargoyle', 'blob', 'necroegg', 'phantom', 'druid', 'construct', 'swarm'
+        'ghost', 'mushroom', 'gargoyle', 'blob', 'necroegg', 'phantom', 'druid', 'construct', 'swarm',
+        'dasher', 'evader', 'orbiter', 'spiraler'
       ] as EnemyType[]);
     }
-    // Wave 16-20: Harder compositions with cyclops
+    // Wave 16-20: Harder compositions with cyclops and advanced AI
     else if (wave <= 20) {
       return randomChoice([
         'bat', 'skeleton', 'spider', 'wizard', 'imp', 'imp', 'orc', 'orc',
         'wraith', 'wraith', 'necromancer', 'troll', 'troll', 'banshee', 'banshee', 'golem',
-        'ghost', 'mushroom', 'gargoyle', 'blob', 'necroegg', 'cyclops', 'phantom', 'druid', 'construct', 'swarm'
+        'ghost', 'mushroom', 'gargoyle', 'blob', 'necroegg', 'cyclops', 'phantom', 'druid', 'construct', 'swarm',
+        'dasher', 'dasher', 'evader', 'evader', 'orbiter', 'orbiter', 'spiraler', 'spiraler'
       ] as EnemyType[]);
     }
-    // Wave 21+: Insane difficulty
+    // Wave 21+: Insane difficulty with heavy advanced AI presence
     else {
       return randomChoice([
         'skeleton', 'spider', 'wizard', 'imp', 'orc', 'wraith', 'wraith',
         'necromancer', 'necromancer', 'troll', 'troll', 'banshee', 'banshee', 'golem', 'golem',
-        'ghost', 'mushroom', 'gargoyle', 'gargoyle', 'blob', 'necroegg', 'cyclops', 'cyclops', 'phantom', 'druid', 'construct', 'construct', 'swarm'
+        'ghost', 'mushroom', 'gargoyle', 'gargoyle', 'blob', 'necroegg', 'cyclops', 'cyclops', 'phantom', 'druid', 'construct', 'construct', 'swarm',
+        'dasher', 'dasher', 'evader', 'evader', 'orbiter', 'orbiter', 'spiraler', 'spiraler'
       ] as EnemyType[]);
     }
   }
