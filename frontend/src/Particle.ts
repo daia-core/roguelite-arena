@@ -25,7 +25,7 @@ export class Particle {
   fadeOut: boolean;
   dead: boolean = false;
 
-  constructor(config: ParticleConfig) {
+  constructor(config: ParticleConfig = { x: 0, y: 0 }) {
     this.x = config.x;
     this.y = config.y;
     this.vx = config.vx ?? (Math.random() - 0.5) * 4;
@@ -36,6 +36,23 @@ export class Particle {
     this.maxLifetime = this.lifetime;
     this.gravity = config.gravity ?? 0;
     this.fadeOut = config.fadeOut ?? true;
+  }
+
+  /**
+   * Initialize/reinitialize particle (for object pooling)
+   */
+  init(config: ParticleConfig): void {
+    this.x = config.x;
+    this.y = config.y;
+    this.vx = config.vx ?? (Math.random() - 0.5) * 4;
+    this.vy = config.vy ?? (Math.random() - 0.5) * 4;
+    this.color = config.color ?? '#ffff00';
+    this.size = config.size ?? 3;
+    this.lifetime = config.lifetime ?? 1000;
+    this.maxLifetime = this.lifetime;
+    this.gravity = config.gravity ?? 0;
+    this.fadeOut = config.fadeOut ?? true;
+    this.dead = false;
   }
 
   update(dt: number): void {
@@ -126,7 +143,7 @@ export class DamageNumber {
   rotation: number = 0;
   dead: boolean = false;
 
-  constructor(x: number, y: number, damage: number, isCrit: boolean = false) {
+  constructor(x: number = 0, y: number = 0, damage: number = 0, isCrit: boolean = false) {
     this.x = x;
     this.y = y;
     this.text = Math.round(damage).toString();
@@ -141,6 +158,25 @@ export class DamageNumber {
     // Start large for crits
     this.scale = isCrit ? 1.6 : 1.2;
     this.rotation = isCrit ? (Math.random() - 0.5) * 0.3 : 0;
+  }
+
+  /**
+   * Initialize/reinitialize damage number (for object pooling)
+   */
+  init(x: number, y: number, damage: number, isCrit: boolean = false): void {
+    this.x = x;
+    this.y = y;
+    this.text = Math.round(damage).toString();
+    this.lifetime = 1000;
+    this.maxLifetime = this.lifetime;
+    this.vx = (Math.random() - 0.5) * 40;
+    this.vy = -80 - Math.random() * 20;
+    this.gravity = 150;
+    this.isCrit = isCrit;
+    this.color = isCrit ? '#ff0000' : '#ffffff';
+    this.scale = isCrit ? 1.6 : 1.2;
+    this.rotation = isCrit ? (Math.random() - 0.5) * 0.3 : 0;
+    this.dead = false;
   }
 
   update(dt: number): void {

@@ -4,7 +4,7 @@ import { Player } from './Player';
 import { Enemy } from './Enemy';
 import { Projectile } from './Projectile';
 import { MeleeAttack } from './MeleeAttack';
-import { Particle, DamageNumber, spawnHitParticles, spawnKillParticles, spawnXPParticles, spawnHealthOrbParticles, spawnLevelUpParticles } from './Particle';
+import { Particle, DamageNumber } from './Particle';
 import { WaveManager } from './WaveManager';
 import { PlayerStats, ItemDatabase, type Item, type ItemTag } from './ItemSystem';
 import { SaveManager } from './SaveManager';
@@ -14,6 +14,8 @@ import { AudioManager } from './AudioManager';
 import { pointInRect } from './utils';
 import { HealthOrb } from './Pickup';
 import { MetaProgression } from './MetaProgression';
+import { ObjectPool } from './ObjectPool';
+import { SpatialGrid } from './SpatialGrid';
 
 export type GameState = 'menu' | 'playing' | 'shop' | 'paused' | 'gameover' | 'upgrades';
 
@@ -38,6 +40,15 @@ export class Game {
   waveManager: WaveManager;
   playerStats: PlayerStats;
   metaProgression: MetaProgression;
+
+  // PERFORMANCE: Object pools
+  private projectilePool: ObjectPool<Projectile>;
+  private particlePool: ObjectPool<Particle>;
+  private damageNumberPool: ObjectPool<DamageNumber>;
+
+  // PERFORMANCE: Spatial grid for collision detection (using any due to complex entity types)
+  private enemySpatialGrid: SpatialGrid<any>;
+  private projectileSpatialGrid: SpatialGrid<any>;
 
   // GAME FEEL: Hit pause / time scale system
   timeScale: number = 1.0;
@@ -86,6 +97,40 @@ export class Game {
     this.playerStats = new PlayerStats();
     this.metaProgression = new MetaProgression();
 
+    // PERFORMANCE: Initialize object pools
+    this.projectilePool = new ObjectPool(
+      () => new Projectile(),
+      (proj) => {
+        proj.dead = false;
+        proj.hitEnemies.clear();
+        proj.trail = [];
+      },
+      50, // Pre-allocate 50 projectiles
+      200 // Max pool size
+    );
+
+    this.particlePool = new ObjectPool(
+      () => new Particle(),
+      (particle) => {
+        particle.dead = false;
+      },
+      100, // Pre-allocate 100 particles
+      500 // Max pool size
+    );
+
+    this.damageNumberPool = new ObjectPool(
+      () => new DamageNumber(),
+      (num) => {
+        num.dead = false;
+      },
+      20, // Pre-allocate 20 damage numbers
+      100 // Max pool size
+    );
+
+    // PERFORMANCE: Initialize spatial grids
+    this.enemySpatialGrid = new SpatialGrid(canvas.width, canvas.height, 100);
+    this.projectileSpatialGrid = new SpatialGrid(canvas.width, canvas.height, 100);
+
     // Connect input to game state
     this.input.setGameStateGetter(() => this.state);
 
@@ -101,6 +146,24 @@ export class Game {
     });
 
     this.setupUI();
+  }
+
+  /**
+   * PERFORMANCE: Create particle using pool
+   */
+  private createParticle(config: { x: number; y: number; vx?: number; vy?: number; color?: string; size?: number; lifetime?: number; gravity?: number; fadeOut?: boolean }): Particle {
+    const particle = this.particlePool.acquire();
+    particle.init(config);
+    return particle;
+  }
+
+  /**
+   * PERFORMANCE: Create damage number using pool
+   */
+  private createDamageNumber(x: number, y: number, damage: number, isCrit: boolean): DamageNumber {
+    const num = this.damageNumberPool.acquire();
+    num.init(x, y, damage, isCrit);
+    return num;
   }
 
   private setupUI(): void {
@@ -295,7 +358,13 @@ export class Game {
       // Ranged attack
       const newProjectiles = this.player.tryShoot(this.enemies);
       if (newProjectiles.length > 0) {
-        this.projectiles.push(...newProjectiles);
+        // PERFORMANCE: Use pooled projectiles instead of new ones
+        for (const proj of newProjectiles) {
+          const pooled = this.projectilePool.acquire();
+          pooled.init(proj.x, proj.y, Math.atan2(proj.vy, proj.vx), proj.damage, proj.speed, proj.fromPlayer, proj.piercing);
+          pooled.maxPierceCount = proj.maxPierceCount;
+          this.projectiles.push(pooled);
+        }
         this.audio.playShoot();
       }
     }
@@ -328,14 +397,10 @@ export class Game {
       if (result.shouldShoot) {
         const angle = enemy.getAngleToPlayer(this.player.x, this.player.y);
         // Wizard fires homing projectiles (slightly curved toward player - handled in projectile update)
-        this.projectiles.push(new Projectile(
-          enemy.x,
-          enemy.y,
-          angle,
-          enemy.typeData.damage,
-          enemy.type === 'wizard' ? 250 : 300,
-          false
-        ));
+        // PERFORMANCE: Use pooled projectile
+        const proj = this.projectilePool.acquire();
+        proj.init(enemy.x, enemy.y, angle, enemy.typeData.damage, enemy.type === 'wizard' ? 250 : 300, false);
+        this.projectiles.push(proj);
         this.audio.playShoot();
       }
 
@@ -350,42 +415,69 @@ export class Game {
           if (damaged) {
             this.renderer.addScreenShake(0.6);
             this.renderer.addHitFlash(0.6);
-            this.particles.push(...spawnHitParticles(this.player.x, this.player.y, 15));
+            // PERFORMANCE: Use pooled particles
+            for (let i = 0; i < 15; i++) {
+              const angle = (Math.PI * 2 * i) / 15;
+              const speed = 150 + Math.random() * 100;
+              this.particles.push(this.createParticle({
+                x: this.player.x,
+                y: this.player.y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                color: i % 2 === 0 ? '#ffaa00' : '#ffff00',
+                size: 4 + Math.random() * 4,
+                lifetime: 400 + Math.random() * 300,
+                gravity: 200
+              }));
+            }
           }
         }
-        // Visual effect
-        this.particles.push(...spawnHitParticles(enemy.x, enemy.y, 25));
+        // Visual effect - PERFORMANCE: Use pooled particles
+        for (let i = 0; i < 25; i++) {
+          const angle = (Math.PI * 2 * i) / 25;
+          const speed = 150 + Math.random() * 100;
+          this.particles.push(this.createParticle({
+            x: enemy.x,
+            y: enemy.y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            color: i % 2 === 0 ? '#ffaa00' : '#ffff00',
+            size: 4 + Math.random() * 4,
+            lifetime: 400 + Math.random() * 300,
+            gravity: 200
+          }));
+        }
         this.renderer.addScreenShake(0.4);
       }
 
-      // Poison trail
+      // Poison trail - PERFORMANCE: Use pooled particle
       if (result.poisonTrail) {
-        this.particles.push(new Particle({
+        this.particles.push(this.createParticle({
           x: result.poisonTrail.x,
           y: result.poisonTrail.y,
           vx: 0,
           vy: 0,
           color: '#00ff00',
           size: 6,
-          lifetime: 2,
+          lifetime: 2000,
           fadeOut: true
         }));
       }
 
-      // Spore cloud (mushroom)
+      // Spore cloud (mushroom) - PERFORMANCE: Use pooled particles
       if (result.sporeCloud) {
         // Create damaging cloud particles
         for (let i = 0; i < 12; i++) {
           const angle = (Math.PI * 2 * i) / 12;
           const speed = 40 + Math.random() * 30;
-          this.particles.push(new Particle({
+          this.particles.push(this.createParticle({
             x: result.sporeCloud.x,
             y: result.sporeCloud.y,
             vx: Math.cos(angle) * speed,
             vy: Math.sin(angle) * speed,
             color: '#9b59b6',
             size: 5,
-            lifetime: 1.5,
+            lifetime: 1500,
             fadeOut: true
           }));
         }
@@ -411,15 +503,15 @@ export class Game {
           );
           if (dist < 150) {
             otherEnemy.health = Math.min(otherEnemy.maxHealth, otherEnemy.health + 15);
-            // Healing particles
-            this.particles.push(new Particle({
+            // Healing particles - PERFORMANCE: Use pooled particle
+            this.particles.push(this.createParticle({
               x: otherEnemy.x,
               y: otherEnemy.y,
               vx: 0,
               vy: -50,
               color: '#27ae60',
               size: 6,
-              lifetime: 0.8,
+              lifetime: 800,
               fadeOut: true
             }));
           }
@@ -441,17 +533,17 @@ export class Game {
         minion.maxHealth = minion.typeData.health;
         minion.health = minion.maxHealth;
         this.enemies.push(minion);
-        // Spawn particles
+        // Spawn particles - PERFORMANCE: Use pooled particles
         for (let i = 0; i < 8; i++) {
           const particleAngle = (Math.PI * 2 * i) / 8;
-          this.particles.push(new Particle({
+          this.particles.push(this.createParticle({
             x: minion.x,
             y: minion.y,
             vx: Math.cos(particleAngle) * 60,
             vy: Math.sin(particleAngle) * 60,
             color: '#00ff00',
             size: 4,
-            lifetime: 0.6,
+            lifetime: 600,
             fadeOut: true
           }));
         }
@@ -466,10 +558,36 @@ export class Game {
         if (damaged) {
           this.renderer.addScreenShake(0.3);
           this.renderer.addHitFlash(0.5);
-          this.particles.push(...spawnHitParticles(this.player.x, this.player.y, 12));
+          // PERFORMANCE: Use pooled particles
+          for (let i = 0; i < 12; i++) {
+            const angle = (Math.PI * 2 * i) / 12;
+            const speed = 150 + Math.random() * 100;
+            this.particles.push(this.createParticle({
+              x: this.player.x,
+              y: this.player.y,
+              vx: Math.cos(angle) * speed,
+              vy: Math.sin(angle) * speed,
+              color: i % 2 === 0 ? '#ffaa00' : '#ffff00',
+              size: 4 + Math.random() * 4,
+              lifetime: 400 + Math.random() * 300,
+              gravity: 200
+            }));
+          }
         }
         enemy.dead = true; // Enemy dies on contact
       }
+    }
+
+    // PERFORMANCE: Rebuild spatial grids each frame
+    this.enemySpatialGrid.clear();
+    this.projectileSpatialGrid.clear();
+
+    for (const enemy of this.enemies) {
+      this.enemySpatialGrid.insert(enemy);
+    }
+
+    for (const proj of this.projectiles) {
+      this.projectileSpatialGrid.insert(proj);
     }
 
     // Projectiles
@@ -477,8 +595,10 @@ export class Game {
       proj.update(scaledDt, this.canvas.width, this.canvas.height);
 
       if (proj.fromPlayer) {
-        // Player projectile hits enemies
-        for (const enemy of this.enemies) {
+        // PERFORMANCE: Only check nearby enemies using spatial grid
+        const nearbyEnemies = this.enemySpatialGrid.getNearby(proj.x, proj.y, proj.radius + 30);
+
+        for (const enemy of nearbyEnemies) {
           if (proj.hasHit(enemy.id)) continue; // Already hit (piercing)
 
           if (enemy.collidesWith(proj.x, proj.y, proj.radius)) {
@@ -511,8 +631,22 @@ export class Game {
 
             this.audio.playHit();
             // GAME FEEL: More particles on every hit
-            this.particles.push(...spawnHitParticles(enemy.x, enemy.y, 8));
-            this.damageNumbers.push(new DamageNumber(enemy.x, enemy.y - 20, damage, isCrit));
+            // PERFORMANCE: Use pooled particles
+            for (let i = 0; i < 8; i++) {
+              const angle = (Math.PI * 2 * i) / 8;
+              const speed = 150 + Math.random() * 100;
+              this.particles.push(this.createParticle({
+                x: enemy.x,
+                y: enemy.y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                color: i % 2 === 0 ? '#ffaa00' : '#ffff00',
+                size: 4 + Math.random() * 4,
+                lifetime: 400 + Math.random() * 300,
+                gravity: 200
+              }));
+            }
+            this.damageNumbers.push(this.createDamageNumber(enemy.x, enemy.y - 20, damage, isCrit));
             // GAME FEEL: More shake on all hits
             this.renderer.addScreenShake(isCrit ? 0.25 : 0.15);
             this.renderer.addImpactFlash(enemy.x, enemy.y);
@@ -529,7 +663,21 @@ export class Game {
           if (damaged) {
             this.renderer.addScreenShake(0.25);
             this.renderer.addHitFlash(0.4);
-            this.particles.push(...spawnHitParticles(this.player.x, this.player.y, 10));
+            // PERFORMANCE: Use pooled particles
+            for (let i = 0; i < 10; i++) {
+              const angle = (Math.PI * 2 * i) / 10;
+              const speed = 150 + Math.random() * 100;
+              this.particles.push(this.createParticle({
+                x: this.player.x,
+                y: this.player.y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                color: i % 2 === 0 ? '#ffaa00' : '#ffff00',
+                size: 4 + Math.random() * 4,
+                lifetime: 400 + Math.random() * 300,
+                gravity: 200
+              }));
+            }
           }
           proj.dead = true;
         }
@@ -541,8 +689,10 @@ export class Game {
       if (!this.player) continue;
       melee.update(scaledDt, this.player.x, this.player.y);
 
-      // Check hits on enemies
-      for (const enemy of this.enemies) {
+      // PERFORMANCE: Only check nearby enemies using spatial grid
+      const nearbyEnemies = this.enemySpatialGrid.getNearby(this.player.x, this.player.y, melee.range + 30);
+
+      for (const enemy of nearbyEnemies) {
         if (melee.hasHit(enemy.id)) continue; // Already hit
 
         if (melee.isPointInArc(enemy.x, enemy.y)) {
@@ -571,8 +721,22 @@ export class Game {
           }
 
           this.audio.playHit();
-          this.particles.push(...spawnHitParticles(enemy.x, enemy.y, 8));
-          this.damageNumbers.push(new DamageNumber(enemy.x, enemy.y - 20, damage, isCrit));
+          // PERFORMANCE: Use pooled particles
+          for (let i = 0; i < 8; i++) {
+            const angle = (Math.PI * 2 * i) / 8;
+            const speed = 150 + Math.random() * 100;
+            this.particles.push(this.createParticle({
+              x: enemy.x,
+              y: enemy.y,
+              vx: Math.cos(angle) * speed,
+              vy: Math.sin(angle) * speed,
+              color: i % 2 === 0 ? '#ffaa00' : '#ffff00',
+              size: 4 + Math.random() * 4,
+              lifetime: 400 + Math.random() * 300,
+              gravity: 200
+            }));
+          }
+          this.damageNumbers.push(this.createDamageNumber(enemy.x, enemy.y - 20, damage, isCrit));
           this.renderer.addScreenShake(isCrit ? 0.25 : 0.15);
           this.renderer.addImpactFlash(enemy.x, enemy.y);
 
@@ -601,17 +765,40 @@ export class Game {
       if (orb.collidesWith(this.player.x, this.player.y, this.player.radius)) {
         this.player.heal(orb.healAmount);
         orb.dead = true;
-        this.particles.push(...spawnHealthOrbParticles(orb.x, orb.y));
+        // PERFORMANCE: Use pooled particles
+        for (let i = 0; i < 12; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = 80 + Math.random() * 60;
+          this.particles.push(this.createParticle({
+            x: orb.x,
+            y: orb.y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed - 40,
+            color: i % 2 === 0 ? '#ff4466' : '#ffaacc',
+            size: 5 + Math.random() * 4,
+            lifetime: 500 + Math.random() * 300,
+            gravity: 150
+          }));
+        }
         this.audio.playHit(); // Reuse hit sound for pickup
       }
     }
 
-    // Cleanup dead entities
-    this.enemies = this.enemies.filter(e => !e.dead);
+    // PERFORMANCE: Cleanup dead entities and return to pools
+    const deadProjectiles = this.projectiles.filter(p => p.dead);
+    this.projectilePool.releaseMany(deadProjectiles);
     this.projectiles = this.projectiles.filter(p => !p.dead);
-    this.meleeAttacks = this.meleeAttacks.filter(m => !m.dead);
+
+    const deadParticles = this.particles.filter(p => p.dead);
+    this.particlePool.releaseMany(deadParticles);
     this.particles = this.particles.filter(p => !p.dead);
+
+    const deadDamageNumbers = this.damageNumbers.filter(n => n.dead);
+    this.damageNumberPool.releaseMany(deadDamageNumbers);
     this.damageNumbers = this.damageNumbers.filter(n => !n.dead);
+
+    this.enemies = this.enemies.filter(e => !e.dead);
+    this.meleeAttacks = this.meleeAttacks.filter(m => !m.dead);
     this.healthOrbs = this.healthOrbs.filter(o => !o.dead);
 
     // Check wave completion
@@ -677,8 +864,36 @@ export class Game {
     }
 
     this.audio.playKill();
-    this.particles.push(...spawnKillParticles(enemy.x, enemy.y));
-    this.particles.push(...spawnXPParticles(enemy.x, enemy.y));
+    // PERFORMANCE: Use pooled particles for kill effect
+    for (let i = 0; i < 48; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 120 + Math.random() * 180;
+      this.particles.push(this.createParticle({
+        x: enemy.x,
+        y: enemy.y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        color: Math.random() > 0.5 ? '#ff0000' : Math.random() > 0.5 ? '#ffff00' : '#ff6600',
+        size: 5 + Math.random() * 6,
+        lifetime: 600 + Math.random() * 400,
+        gravity: 300
+      }));
+    }
+    // XP particles
+    for (let i = 0; i < 8; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 50 + Math.random() * 50;
+      this.particles.push(this.createParticle({
+        x: enemy.x,
+        y: enemy.y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 60,
+        color: i % 2 === 0 ? '#00ff00' : '#86efac',
+        size: 7 + Math.random() * 3,
+        lifetime: 700 + Math.random() * 400,
+        gravity: -60
+      }));
+    }
 
     // GAME FEEL: Enhanced shake on all kills (bigger than just hits)
     const shakeAmount = enemy.type === 'demon' ? 0.8 :
@@ -714,24 +929,38 @@ export class Game {
       // VAMPIRE SURVIVORS JUICE: Make level-ups feel MASSIVE
       this.renderer.addScreenShake(0.6); // Much bigger shake
       this.renderer.addHitFlash(0.4); // Screen flash
-      // Spawn huge particle explosion at player
-      this.particles.push(...spawnLevelUpParticles(this.player.x, this.player.y));
+      // Spawn huge particle explosion at player - PERFORMANCE: Use pooled particles
+      const colors = ['#ffff00', '#00ffff', '#ff00ff', '#ff6600', '#00ff00', '#ff0000', '#ffffff'];
+      for (let i = 0; i < 120; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 150 + Math.random() * 300;
+        this.particles.push(this.createParticle({
+          x: this.player.x,
+          y: this.player.y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed - 120,
+          color: colors[i % colors.length],
+          size: 10 + Math.random() * 8,
+          lifetime: 1200 + Math.random() * 600,
+          gravity: -100
+        }));
+      }
     }
 
-    // Mushroom explodes on death
+    // Mushroom explodes on death - PERFORMANCE: Use pooled particles
     if (enemy.type === 'mushroom') {
       // Large spore explosion
       for (let i = 0; i < 20; i++) {
         const angle = (Math.PI * 2 * i) / 20;
         const speed = 80 + Math.random() * 40;
-        this.particles.push(new Particle({
+        this.particles.push(this.createParticle({
           x: enemy.x,
           y: enemy.y,
           vx: Math.cos(angle) * speed,
           vy: Math.sin(angle) * speed,
           color: '#9b59b6',
           size: 6,
-          lifetime: 1.8,
+          lifetime: 1800,
           fadeOut: true
         }));
       }
@@ -764,10 +993,38 @@ export class Game {
 
         if (dist < explosionRadius) {
           otherEnemy.takeDamage(this.playerStats.getDamage() * 2);
-          this.particles.push(...spawnHitParticles(otherEnemy.x, otherEnemy.y));
+          // PERFORMANCE: Use pooled particles
+          for (let i = 0; i < 8; i++) {
+            const angle = (Math.PI * 2 * i) / 8;
+            const speed = 150 + Math.random() * 100;
+            this.particles.push(this.createParticle({
+              x: otherEnemy.x,
+              y: otherEnemy.y,
+              vx: Math.cos(angle) * speed,
+              vy: Math.sin(angle) * speed,
+              color: i % 2 === 0 ? '#ffaa00' : '#ffff00',
+              size: 4 + Math.random() * 4,
+              lifetime: 400 + Math.random() * 300,
+              gravity: 200
+            }));
+          }
         }
       }
-      this.particles.push(...spawnHitParticles(enemy.x, enemy.y, 20));
+      // Explosion center particles
+      for (let i = 0; i < 20; i++) {
+        const angle = (Math.PI * 2 * i) / 20;
+        const speed = 150 + Math.random() * 100;
+        this.particles.push(this.createParticle({
+          x: enemy.x,
+          y: enemy.y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          color: i % 2 === 0 ? '#ffaa00' : '#ffff00',
+          size: 4 + Math.random() * 4,
+          lifetime: 400 + Math.random() * 300,
+          gravity: 200
+        }));
+      }
     }
   }
 

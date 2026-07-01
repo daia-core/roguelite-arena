@@ -21,12 +21,12 @@ export class Projectile {
   pierceCount: number = 0;
 
   constructor(
-    x: number,
-    y: number,
-    angle: number,
-    damage: number,
-    speed: number,
-    fromPlayer: boolean,
+    x: number = 0,
+    y: number = 0,
+    angle: number = 0,
+    damage: number = 0,
+    speed: number = 0,
+    fromPlayer: boolean = true,
     piercing: boolean = false
   ) {
     this.x = x;
@@ -40,6 +40,36 @@ export class Projectile {
     this.fromPlayer = fromPlayer;
     this.piercing = piercing;
     this.lifetime = 3000; // 3 seconds max
+  }
+
+  /**
+   * Initialize/reinitialize projectile (for object pooling)
+   */
+  init(
+    x: number,
+    y: number,
+    angle: number,
+    damage: number,
+    speed: number,
+    fromPlayer: boolean,
+    piercing: boolean = false
+  ): void {
+    this.x = x;
+    this.y = y;
+    this.speed = speed;
+    this.vx = Math.cos(angle) * speed;
+    this.vy = Math.sin(angle) * speed;
+    this.radius = fromPlayer ? 9 : 10;
+    this.damage = damage;
+    this.color = fromPlayer ? '#00ffff' : '#ff0000';
+    this.fromPlayer = fromPlayer;
+    this.piercing = piercing;
+    this.lifetime = 3000;
+    this.dead = false;
+    this.hitEnemies.clear();
+    this.trail = [];
+    this.maxPierceCount = 0;
+    this.pierceCount = 0;
   }
 
   update(dt: number, canvasWidth: number, canvasHeight: number): void {

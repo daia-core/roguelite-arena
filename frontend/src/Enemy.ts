@@ -327,6 +327,11 @@ export class Enemy {
   maxHealth: number;
   dead: boolean = false;
 
+  // GridEntity interface compliance
+  get radius(): number {
+    return this.typeData.radius;
+  }
+
   // GAME FEEL: Knockback physics
   knockbackVelocityX: number = 0;
   knockbackVelocityY: number = 0;
