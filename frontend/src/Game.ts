@@ -19,6 +19,7 @@ import { Quadtree } from './Quadtree';
 import { PerformanceMonitor } from './PerformanceMonitor';
 import { QualityManager } from './QualityManager';
 import { EntityCuller } from './EntityCuller';
+import { PathfindingSystem } from './PathfindingSystem';
 
 export type GameState = 'menu' | 'playing' | 'shop' | 'paused' | 'gameover' | 'upgrades';
 
@@ -61,6 +62,9 @@ export class Game {
 
   // PERFORMANCE: Entity culling (don't render off-screen entities)
   private entityCuller: EntityCuller;
+
+  // PATHFINDING: Smart navigation for intelligent enemies
+  private pathfindingSystem: PathfindingSystem;
 
   // GAME FEEL: Hit pause / time scale system
   timeScale: number = 1.0;
@@ -151,6 +155,9 @@ export class Game {
 
     // PERFORMANCE: Initialize entity culler (off-screen culling)
     this.entityCuller = new EntityCuller();
+
+    // PATHFINDING: Initialize pathfinding system (32px cells for navigation grid)
+    this.pathfindingSystem = new PathfindingSystem(canvas.width, canvas.height, 32);
 
     // Connect input to game state
     this.input.setGameStateGetter(() => this.state);
@@ -440,6 +447,16 @@ export class Game {
 
     // Enemies
     for (const enemy of this.enemies) {
+      // PATHFINDING: Update paths for smart enemies (mimic, wizard, necromancer, etc.)
+      if (enemy.usePathfinding) {
+        enemy.updatePath(
+          this.player.x,
+          this.player.y,
+          this.pathfindingSystem,
+          scaledDt
+        );
+      }
+
       const result = enemy.update(scaledDt, this.player.x, this.player.y);
 
       // Skip further processing for dead enemies

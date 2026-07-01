@@ -2,6 +2,7 @@
 
 import { circleCollision } from './utils';
 import { SpriteSheet } from './sprites';
+import { PathfindingSystem, type PathNode } from './PathfindingSystem';
 
 export type EnemyType = 'slime' | 'goblin' | 'skeleton' | 'imp' | 'orc' | 'wraith' | 'necromancer' | 'troll' | 'banshee' | 'demon' | 'bat' | 'wizard' | 'mimic' | 'spider' | 'golem' | 'ghost' | 'mushroom' | 'gargoyle' | 'blob' | 'necroegg' | 'cyclops' | 'phantom' | 'druid' | 'construct' | 'swarm' | 'dasher' | 'evader' | 'orbiter' | 'spiraler';
 
@@ -446,6 +447,12 @@ export class Enemy {
   spiralAngle: number = 0;
   spiralDistance: number = 250;
 
+  // PATHFINDING: Smart navigation
+  path: PathNode[] = [];
+  pathUpdateTimer: number = 0;
+  pathUpdateInterval: number = 0.5; // Recalculate path every 500ms
+  usePathfinding: boolean = false;
+
   constructor(x: number, y: number, type: EnemyType, waveMultiplier: number = 1, canSplit: boolean = true) {
     this.id = Enemy.nextId++;
     this.x = x;
@@ -461,6 +468,11 @@ export class Enemy {
 
     this.maxHealth = this.typeData.health;
     this.health = this.maxHealth;
+
+    // PATHFINDING: Enable for smart enemy types
+    // These enemies use smarter navigation instead of direct chase
+    const smartEnemies: EnemyType[] = ['mimic', 'wizard', 'necromancer', 'druid', 'phantom', 'ghost'];
+    this.usePathfinding = smartEnemies.includes(type);
   }
 
   update(dt: number, playerX: number, playerY: number): {
@@ -780,8 +792,40 @@ export class Enemy {
       }
 
       if (shouldMove) {
-        this.x += nx * moveSpeed * dt;
-        this.y += ny * moveSpeed * dt;
+        // PATHFINDING: Use waypoint-based movement for smart enemies
+        if (this.usePathfinding && this.path.length > 0) {
+          // Get next waypoint
+          const waypoint = this.path[0];
+          const wpDx = waypoint.x - this.x;
+          const wpDy = waypoint.y - this.y;
+          const wpDist = Math.sqrt(wpDx * wpDx + wpDy * wpDy);
+
+          // Check if we've reached the waypoint
+          if (wpDist < 15) {
+            // Remove reached waypoint
+            this.path.shift();
+
+            // If more waypoints exist, move to next one
+            if (this.path.length > 0) {
+              const nextWaypoint = this.path[0];
+              const nextDx = nextWaypoint.x - this.x;
+              const nextDy = nextWaypoint.y - this.y;
+              const nextDist = Math.sqrt(nextDx * nextDx + nextDy * nextDy);
+              if (nextDist > 0) {
+                this.x += (nextDx / nextDist) * moveSpeed * dt;
+                this.y += (nextDy / nextDist) * moveSpeed * dt;
+              }
+            }
+          } else if (wpDist > 0) {
+            // Move toward current waypoint
+            this.x += (wpDx / wpDist) * moveSpeed * dt;
+            this.y += (wpDy / wpDist) * moveSpeed * dt;
+          }
+        } else {
+          // Standard direct movement (no pathfinding)
+          this.x += nx * moveSpeed * dt;
+          this.y += ny * moveSpeed * dt;
+        }
       }
     }
 
@@ -1149,5 +1193,55 @@ export class Enemy {
     minion.maxHealth = minion.typeData.health;
     minion.health = minion.maxHealth;
     return minion;
+  }
+
+  /**
+   * PATHFINDING: Update path to target using pathfinding system
+   * Called periodically by Game class for smart enemies
+   */
+  updatePath(
+    targetX: number,
+    targetY: number,
+    pathfindingSystem: PathfindingSystem,
+    dt: number,
+    obstacleCheck?: (x: number, y: number) => boolean
+  ): void {
+    if (!this.usePathfinding) return;
+
+    // Update timer
+    this.pathUpdateTimer -= dt;
+
+    // Only recalculate path every pathUpdateInterval seconds
+    if (this.pathUpdateTimer <= 0) {
+      this.pathUpdateTimer = this.pathUpdateInterval;
+
+      // Calculate new path
+      const newPath = pathfindingSystem.findPath(
+        this.x,
+        this.y,
+        targetX,
+        targetY,
+        obstacleCheck,
+        Date.now()
+      );
+
+      // If path found, use it
+      if (newPath && newPath.length > 1) {
+        this.path = newPath;
+        // Remove first waypoint if it's too close (we're already there)
+        if (this.path.length > 0) {
+          const firstWp = this.path[0];
+          const dx = firstWp.x - this.x;
+          const dy = firstWp.y - this.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 20) {
+            this.path.shift();
+          }
+        }
+      } else {
+        // No path found - clear path and fall back to direct movement
+        this.path = [];
+      }
+    }
   }
 }

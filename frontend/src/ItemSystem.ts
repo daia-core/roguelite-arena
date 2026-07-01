@@ -1,6 +1,7 @@
 // Advanced item and upgrade system with tiers, tags, and Brotato-inspired mechanics
 
 import { TransformationTracker } from './TransformationSystem';
+import { DuoTracker } from './DuoSystem';
 
 export const ItemTier = {
   Common: 1,
@@ -1096,6 +1097,7 @@ export class PlayerStats {
   items: Item[] = [];
   affinityTags: ItemTag[] = []; // Character affinity (2 random tags at start)
   transformations: TransformationTracker = new TransformationTracker(); // TRANSFORMATION SYSTEM
+  duos: DuoTracker = new DuoTracker(); // DUO COMBO SYSTEM
 
   // Base stats - BUFFED for better early game (Wave 1 too hard fix)
   baseDamage: number = 25; // Wave 1 balance: kill slimes quickly
@@ -1117,6 +1119,8 @@ export class PlayerStats {
     this.items.push(item);
     // Track for transformations
     this.transformations.trackItemPickup(item.tags);
+    // Track for duo combos
+    this.duos.updateDuos(this.items);
     // Transformation unlocks will be checked by Game.ts to show UI
   }
 
@@ -1137,6 +1141,8 @@ export class PlayerStats {
     damage *= this.getSpecializationBonus();
     // TRANSFORMATION BONUS
     damage *= this.transformations.getTotalBonuses().damageMultiplier;
+    // DUO COMBO BONUS
+    damage *= this.duos.getTotalBonuses().damageMultiplier;
     return damage;
   }
 
@@ -1147,6 +1153,8 @@ export class PlayerStats {
     });
     // TRANSFORMATION BONUS
     rate *= this.transformations.getTotalBonuses().fireRateMultiplier;
+    // DUO COMBO BONUS
+    rate *= this.duos.getTotalBonuses().fireRateMultiplier;
     return rate;
   }
 
@@ -1157,6 +1165,8 @@ export class PlayerStats {
     });
     // TRANSFORMATION BONUS
     speed *= this.transformations.getTotalBonuses().speedMultiplier;
+    // DUO COMBO BONUS
+    speed *= this.duos.getTotalBonuses().speedMultiplier;
     return speed;
   }
 
@@ -1177,6 +1187,8 @@ export class PlayerStats {
     });
     // TRANSFORMATION BONUS
     chance += this.transformations.getTotalBonuses().critChance;
+    // DUO COMBO BONUS
+    chance += this.duos.getTotalBonuses().critChance;
     return Math.min(1, chance);
   }
 
@@ -1213,6 +1225,8 @@ export class PlayerStats {
     this.items.forEach(item => {
       if (item.lifesteal) lifesteal += item.lifesteal;
     });
+    // DUO COMBO BONUS
+    lifesteal += this.duos.getTotalBonuses().lifesteal;
     return lifesteal;
   }
 
@@ -1245,6 +1259,8 @@ export class PlayerStats {
     this.items.forEach(item => {
       if (item.piercing) pierce += item.piercing;
     });
+    // DUO COMBO BONUS
+    pierce += this.duos.getTotalBonuses().piercing;
     return pierce;
   }
 
@@ -1281,6 +1297,8 @@ export class PlayerStats {
     this.items.forEach(item => {
       if (item.chainLightning) chance += item.chainLightning;
     });
+    // DUO COMBO BONUS
+    chance += this.duos.getTotalBonuses().chainLightning;
     return Math.min(1, chance);
   }
 
@@ -1289,6 +1307,8 @@ export class PlayerStats {
     this.items.forEach(item => {
       if (item.freeze) chance += item.freeze;
     });
+    // DUO COMBO BONUS
+    chance += this.duos.getTotalBonuses().freeze;
     return Math.min(1, chance);
   }
 
