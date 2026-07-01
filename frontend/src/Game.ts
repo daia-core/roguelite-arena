@@ -863,6 +863,9 @@ export class Game {
             // Clear lock on purchased item
             this.lockedShopItems.delete(i);
 
+            // REMOVE PURCHASED ITEM FROM SHOP
+            this.shopItems.splice(i, 1);
+
             this.audio.playPurchase();
             this.input.mouseDown = false;
           }
@@ -1332,10 +1335,11 @@ export class Game {
   private drawShop(): void {
     const isPortrait = this.canvas.width < this.canvas.height;
     const isMobile = this.canvas.width < 800;
+    const ctx = this.renderer.getContext();
 
     // Shop title with fancy styling
-    this.renderer.drawText('SHOP', this.canvas.width / 2, isMobile ? 25 : 50, {
-      size: isMobile ? 56 : 48, // Reduced from 64 to 56 for mobile
+    this.renderer.drawText('SHOP', this.canvas.width / 2, isMobile ? 20 : 40, {
+      size: isMobile ? 48 : 40,
       bold: true,
       align: 'center',
       color: '#ffd700'
@@ -1344,45 +1348,177 @@ export class Game {
     if (!this.player) return;
 
     // Gold display with icon
-    this.renderer.drawText(`Gold: ${this.player.gold}`, this.canvas.width / 2, isMobile ? 70 : 100, {
-      size: isMobile ? 28 : 24, // Reduced from 32 to 28
+    this.renderer.drawText(`💰 ${this.player.gold}`, this.canvas.width / 2, isMobile ? 55 : 75, {
+      size: isMobile ? 24 : 20,
       bold: true,
       align: 'center',
       color: '#ffd700'
     });
 
-    // Lock feature hint
-    if (this.waveManager.currentWave <= 3) {
-      this.renderer.drawText('Tip: Lock items (5g) to keep them next wave!', this.canvas.width / 2, isMobile ? 100 : 125, {
-        size: isMobile ? 16 : 14, // Reduced from 18 to 16
-        align: 'center',
-        color: '#aaaaaa'
+    // PLAYER STATS PANEL - compact display on the left side (desktop) or top (mobile)
+    const statPanelPadding = 8;
+    const statPanelWidth = isMobile ? this.canvas.width - 20 : 220;
+    const statPanelHeight = isMobile ? 65 : 140;
+    const statPanelX = isMobile ? 10 : 10;
+    const statPanelY = isMobile ? 85 : 40;
+
+    // Stats panel background
+    ctx.save();
+    const statGradient = ctx.createLinearGradient(statPanelX, statPanelY, statPanelX, statPanelY + statPanelHeight);
+    statGradient.addColorStop(0, 'rgba(40, 40, 40, 0.9)');
+    statGradient.addColorStop(1, 'rgba(20, 20, 20, 0.9)');
+    this.renderer.drawRoundedRect(statPanelX, statPanelY, statPanelWidth, statPanelHeight, 6, statGradient);
+    ctx.strokeStyle = '#4a9eff';
+    ctx.lineWidth = 2;
+    this.renderer['drawRoundedRectPath'](statPanelX, statPanelY, statPanelWidth, statPanelHeight, 6);
+    ctx.stroke();
+    ctx.restore();
+
+    // Stats content - compact format
+    const statSize = isMobile ? 11 : 13;
+    const statLineHeight = isMobile ? 16 : 18;
+    const statStartY = statPanelY + statPanelPadding + statLineHeight;
+
+    if (isMobile) {
+      // Mobile: horizontal layout, 2 rows
+      const col1X = statPanelX + statPanelPadding;
+      const col2X = statPanelX + statPanelWidth / 3 + statPanelPadding;
+      const col3X = statPanelX + (statPanelWidth * 2 / 3) + statPanelPadding;
+
+      this.renderer.drawText(`❤️${Math.floor(this.player.health)}/${this.playerStats.getMaxHealth()}`, col1X, statStartY, {
+        size: statSize, color: '#ff6b6b', align: 'left'
+      });
+      this.renderer.drawText(`⚔️${Math.floor(this.playerStats.getDamage())}`, col2X, statStartY, {
+        size: statSize, color: '#ffa500', align: 'left'
+      });
+      this.renderer.drawText(`🔥${this.playerStats.getFireRate().toFixed(1)}/s`, col3X, statStartY, {
+        size: statSize, color: '#ff4444', align: 'left'
+      });
+
+      this.renderer.drawText(`💨${Math.floor(this.playerStats.getSpeed())}`, col1X, statStartY + statLineHeight, {
+        size: statSize, color: '#88ffff', align: 'left'
+      });
+      this.renderer.drawText(`💥${Math.floor(this.playerStats.getCritChance() * 100)}%`, col2X, statStartY + statLineHeight, {
+        size: statSize, color: '#ffff00', align: 'left'
+      });
+      this.renderer.drawText(`🎯${this.playerStats.getMultishot()}x`, col3X, statStartY + statLineHeight, {
+        size: statSize, color: '#00ff00', align: 'left'
+      });
+    } else {
+      // Desktop: vertical layout
+      const statX = statPanelX + statPanelPadding;
+      let currentY = statStartY;
+
+      this.renderer.drawText(`❤️ HP: ${Math.floor(this.player.health)}/${this.playerStats.getMaxHealth()}`, statX, currentY, {
+        size: statSize, color: '#ff6b6b', align: 'left'
+      });
+      currentY += statLineHeight;
+
+      this.renderer.drawText(`⚔️ DMG: ${Math.floor(this.playerStats.getDamage())}`, statX, currentY, {
+        size: statSize, color: '#ffa500', align: 'left'
+      });
+      currentY += statLineHeight;
+
+      this.renderer.drawText(`🔥 Fire: ${this.playerStats.getFireRate().toFixed(1)}/s`, statX, currentY, {
+        size: statSize, color: '#ff4444', align: 'left'
+      });
+      currentY += statLineHeight;
+
+      this.renderer.drawText(`💨 Speed: ${Math.floor(this.playerStats.getSpeed())}`, statX, currentY, {
+        size: statSize, color: '#88ffff', align: 'left'
+      });
+      currentY += statLineHeight;
+
+      this.renderer.drawText(`💥 Crit: ${Math.floor(this.playerStats.getCritChance() * 100)}%`, statX, currentY, {
+        size: statSize, color: '#ffff00', align: 'left'
+      });
+      currentY += statLineHeight;
+
+      this.renderer.drawText(`🎯 Multi: ${this.playerStats.getMultishot()}`, statX, currentY, {
+        size: statSize, color: '#00ff00', align: 'left'
       });
     }
 
+    // INVENTORY PANEL - show current items as tiny icons on the right side (desktop) or below stats (mobile)
+    const invPanelPadding = 6;
+    const invPanelWidth = isMobile ? this.canvas.width - 20 : 220;
+    const invPanelMaxHeight = isMobile ? 80 : 200;
+    const invPanelX = isMobile ? 10 : this.canvas.width - 230;
+    const invPanelY = isMobile ? 155 : 40;
+
+    if (this.playerStats.items.length > 0) {
+      // Calculate actual height based on items
+      const iconSize = isMobile ? 28 : 24;
+      const iconsPerRow = isMobile ? Math.floor((invPanelWidth - invPanelPadding * 2) / (iconSize + 4)) : 6;
+      const rows = Math.ceil(this.playerStats.items.length / iconsPerRow);
+      const invPanelHeight = Math.min(invPanelMaxHeight, rows * (iconSize + 4) + invPanelPadding * 2 + 18);
+
+      // Inventory panel background
+      ctx.save();
+      const invGradient = ctx.createLinearGradient(invPanelX, invPanelY, invPanelX, invPanelY + invPanelHeight);
+      invGradient.addColorStop(0, 'rgba(40, 40, 40, 0.9)');
+      invGradient.addColorStop(1, 'rgba(20, 20, 20, 0.9)');
+      this.renderer.drawRoundedRect(invPanelX, invPanelY, invPanelWidth, invPanelHeight, 6, invGradient);
+      ctx.strokeStyle = '#a855f7';
+      ctx.lineWidth = 2;
+      this.renderer['drawRoundedRectPath'](invPanelX, invPanelY, invPanelWidth, invPanelHeight, 6);
+      ctx.stroke();
+      ctx.restore();
+
+      // Title
+      this.renderer.drawText('Inventory', invPanelX + invPanelWidth / 2, invPanelY + 12, {
+        size: isMobile ? 12 : 11,
+        bold: true,
+        align: 'center',
+        color: '#a855f7'
+      });
+
+      // Draw item icons in grid
+      const gridStartX = invPanelX + invPanelPadding;
+      const gridStartY = invPanelY + 22;
+
+      for (let i = 0; i < this.playerStats.items.length; i++) {
+        const item = this.playerStats.items[i];
+        const col = i % iconsPerRow;
+        const row = Math.floor(i / iconsPerRow);
+        const x = gridStartX + col * (iconSize + 4);
+        const y = gridStartY + row * (iconSize + 4);
+
+        // Item icon
+        this.renderer.drawText(item.icon, x + iconSize / 2, y + 2, {
+          size: isMobile ? 20 : 18,
+          align: 'center'
+        });
+      }
+    }
+
     // Draw shop items - responsive layout (MUST MATCH updateShop positions)
-    const itemWidth = isPortrait ? Math.min(280, this.canvas.width - 40) : isMobile ? Math.min(380, this.canvas.width - 40) : 200;
-    const itemHeight = isPortrait ? 165 : isMobile ? 200 : 120; // Increased from 140 to 165 for portrait
-    const gap = isPortrait ? 12 : isMobile ? 18 : 20; // Increased from 8 to 12
+    const itemWidth = isPortrait ? Math.min(280, this.canvas.width - 40) : isMobile ? Math.min(360, this.canvas.width - 40) : 180;
+    const itemHeight = isPortrait ? 185 : isMobile ? 210 : 140;
+    const gap = isPortrait ? 10 : isMobile ? 16 : 18;
 
     let startX: number, startY: number;
 
     if (isMobile) {
-      // Vertical stack on mobile
+      // Vertical stack on mobile - adjust for stats/inventory panels
       startX = (this.canvas.width - itemWidth) / 2;
-      startY = isPortrait ? 125 : 135; // Adjusted from 100 to 125 to account for smaller header
+      startY = isPortrait ? 245 : 145; // Adjusted to account for stats and inventory panels
     } else {
-      // Horizontal row on desktop (4 items)
-      startX = this.canvas.width / 2 - (itemWidth * 4 + gap * 3) / 2;
+      // Desktop: 3x2 grid for 6 items
+      const gridCols = 3;
+      startX = this.canvas.width / 2 - (itemWidth * gridCols + gap * (gridCols - 1)) / 2;
       startY = 200;
     }
 
-    const ctx = this.renderer.getContext();
-
     for (let i = 0; i < this.shopItems.length; i++) {
       const item = this.shopItems[i];
-      const x = isMobile ? startX : startX + i * (itemWidth + gap);
-      const y = isMobile ? startY + i * (itemHeight + gap) : startY;
+
+      // Desktop: 3x2 grid layout
+      const gridCol = isMobile ? 0 : i % 3;
+      const gridRow = isMobile ? i : Math.floor(i / 3);
+
+      const x = isMobile ? startX : startX + gridCol * (itemWidth + gap);
+      const y = isMobile ? startY + i * (itemHeight + gap) : startY + gridRow * (itemHeight + gap);
       const hovered = this.selectedShopItem === i;
 
       // Rarity colors with better palette
@@ -1426,12 +1562,12 @@ export class Game {
       this.renderer['drawRoundedRectPath'](x + 2, y + 2, itemWidth - 4, itemHeight - 4, Math.max(0, cardRadius - 2));
       ctx.stroke();
 
-      // BROTATO-INSPIRED: Lock button in top-right corner
-      const lockButtonSize = isMobile ? 54 : 30; // Increased from 45 to 54 for easier tapping
+      // Lock button in top-right corner
+      const lockButtonSize = isMobile ? 50 : 28;
       const lockButtonX = x + itemWidth - lockButtonSize - 5;
       const lockButtonY = y + 5;
       const isLocked = this.lockedShopItems.has(i);
-      const lockRadius = 6; // Increased from 4 to 6 for more rounded look
+      const lockRadius = 6;
 
       // Lock button background - rounded
       ctx.save();
@@ -1444,9 +1580,32 @@ export class Game {
 
       // Lock icon
       this.renderer.drawText(isLocked ? '🔒' : '🔓', lockButtonX + lockButtonSize / 2, lockButtonY + (isMobile ? 8 : 2), {
-        size: isMobile ? 36 : 20, // Increased from 32 to 36 for better visibility
+        size: isMobile ? 32 : 20,
         align: 'center'
       });
+
+      // Recycle button in bottom-left corner (if player owns this item)
+      const ownsItem = this.playerStats.items.some(owned => owned.id === item.id);
+      if (ownsItem) {
+        const recycleButtonSize = isMobile ? 50 : 28;
+        const recycleButtonX = x + 5;
+        const recycleButtonY = y + itemHeight - recycleButtonSize - 5;
+
+        // Recycle button background
+        ctx.save();
+        this.renderer.drawRoundedRect(recycleButtonX, recycleButtonY, recycleButtonSize, recycleButtonSize, lockRadius, '#2a2a2a');
+        ctx.strokeStyle = '#ff8800';
+        ctx.lineWidth = 2;
+        this.renderer['drawRoundedRectPath'](recycleButtonX, recycleButtonY, recycleButtonSize, recycleButtonSize, lockRadius);
+        ctx.stroke();
+        ctx.restore();
+
+        // Recycle icon
+        this.renderer.drawText('♻️', recycleButtonX + recycleButtonSize / 2, recycleButtonY + (isMobile ? 8 : 2), {
+          size: isMobile ? 28 : 18,
+          align: 'center'
+        });
+      }
 
       // MODERN ROGUELIKE: Synergy indicator (top, compact)
       if (hasSynergy) {
@@ -1480,9 +1639,10 @@ export class Game {
       });
 
       // Cost with better styling (bottom, prominent)
-      const canAfford = this.player.gold >= item.cost;
-      this.renderer.drawText(`💰 ${item.cost}`, x + itemWidth / 2, y + (isPortrait ? 138 : isMobile ? 165 : 100), {
-        size: isPortrait ? 20 : isMobile ? 28 : 14, // Increased from 18 to 20 for portrait
+      const finalPrice = this.playerStats.getItemPrice(item, this.waveManager.currentWave);
+      const canAfford = this.player.gold >= finalPrice;
+      this.renderer.drawText(`💰 ${finalPrice}`, x + itemWidth / 2, y + (isPortrait ? 160 : isMobile ? 180 : 115), {
+        size: isPortrait ? 20 : isMobile ? 28 : 16,
         bold: true,
         align: 'center',
         color: canAfford ? '#ffd700' : '#ef4444'
@@ -1490,13 +1650,14 @@ export class Game {
     }
 
     // Button dimensions and positioning - MUST MATCH updateShop
-    const buttonWidth = isMobile ? 340 : 200;
-    const buttonHeight = isMobile ? 80 : 50; // Reduced from 90 to 80 for better fit
-    const buttonSpacing = 16; // Reduced from 20 to 16 for tighter layout
+    const buttonWidth = isMobile ? 320 : 200;
+    const buttonHeight = isMobile ? 70 : 50;
+    const buttonSpacing = 14;
 
     // Calculate button Y positions - ensure they fit on screen
-    const itemsEndY = isMobile ? startY + this.shopItems.length * (itemHeight + gap) : 320;
-    const continueY = isMobile ? Math.min(itemsEndY + 20, this.canvas.height - buttonHeight * 2 - buttonSpacing - 20) : 400; // Reduced from 25 to 20
+    const gridRows = isMobile ? this.shopItems.length : 2; // Desktop: 2 rows for 6 items
+    const itemsEndY = isMobile ? startY + this.shopItems.length * (itemHeight + gap) : startY + gridRows * (itemHeight + gap);
+    const continueY = isMobile ? Math.min(itemsEndY + 15, this.canvas.height - buttonHeight * 2 - buttonSpacing - 20) : itemsEndY + 25;
     const rerollY = continueY + buttonHeight + buttonSpacing;
 
     // Continue button (Next Wave) - ALWAYS FIRST
@@ -1512,13 +1673,15 @@ export class Game {
     );
 
     // Reroll button - ALWAYS SECOND (below continue)
-    const canAffordReroll = this.player.gold >= this.shopRerollCost;
+    const freeReroll = this.itemsPurchasedThisWave >= 6;
+    const effectiveRerollCost = freeReroll ? 0 : this.shopRerollCost;
+    const canAffordReroll = this.player.gold >= effectiveRerollCost;
     this.renderer.drawButton(
       this.canvas.width / 2 - buttonWidth / 2,
       rerollY,
       buttonWidth,
       buttonHeight,
-      `Reroll (${this.shopRerollCost}g)`,
+      freeReroll ? 'Reroll (FREE)' : `Reroll (${this.shopRerollCost}g)`,
       false,
       canAffordReroll,
       isMobile

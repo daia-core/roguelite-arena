@@ -43,17 +43,19 @@ export class Projectile {
   }
 
   update(dt: number, canvasWidth: number, canvasHeight: number): void {
-    // Add current position to trail
-    this.trail.push({ x: this.x, y: this.y, age: 0 });
+    // PERFORMANCE: Only add trail points every 2nd frame to reduce rendering load
+    if (Math.random() > 0.5) {
+      this.trail.push({ x: this.x, y: this.y, age: 0 });
+    }
 
     // Update trail ages and remove old ones
     this.trail = this.trail.filter(point => {
       point.age += dt;
-      return point.age < 0.15; // Keep trail for 150ms
+      return point.age < 0.12; // Shorter trail (150ms → 120ms) for performance
     });
 
-    // Limit trail length
-    if (this.trail.length > 8) {
+    // PERFORMANCE: Limit trail to 4 points instead of 8
+    if (this.trail.length > 4) {
       this.trail.shift();
     }
 
@@ -75,16 +77,15 @@ export class Projectile {
   draw(ctx: CanvasRenderingContext2D): void {
     ctx.save();
 
-    // Draw trail
+    // PERFORMANCE: Simplified trail rendering (no shadow blur per point)
     ctx.globalCompositeOperation = 'lighter';
+    ctx.shadowBlur = 0; // Disable shadow blur for trail points
     for (let i = 0; i < this.trail.length; i++) {
       const point = this.trail[i];
-      const alpha = 1 - (point.age / 0.15);
-      const size = this.radius * (0.4 + alpha * 0.6);
+      const alpha = 1 - (point.age / 0.12);
+      const size = this.radius * (0.5 + alpha * 0.5);
 
-      ctx.shadowBlur = 10 * alpha;
-      ctx.shadowColor = this.color;
-      ctx.fillStyle = this.color + Math.floor(alpha * 100).toString(16).padStart(2, '0');
+      ctx.fillStyle = this.color + Math.floor(alpha * 80).toString(16).padStart(2, '0');
       ctx.beginPath();
       ctx.arc(point.x, point.y, size, 0, Math.PI * 2);
       ctx.fill();
@@ -94,8 +95,8 @@ export class Projectile {
     const sprite = SpriteSheet.get(spriteName);
 
     if (sprite) {
-      // Strong glow effect
-      ctx.shadowBlur = 15;
+      // PERFORMANCE: Reduced shadow blur (15 → 8)
+      ctx.shadowBlur = 8;
       ctx.shadowColor = this.color;
       ctx.globalCompositeOperation = 'lighter';
 
@@ -106,26 +107,16 @@ export class Projectile {
         this.y - sprite.height / 2
       );
     } else {
-      // Fallback to original rendering
-      ctx.shadowBlur = 20;
+      // PERFORMANCE: Simplified fallback (single gradient, reduced shadow blur)
+      ctx.shadowBlur = 10;
       ctx.shadowColor = this.color;
       ctx.globalCompositeOperation = 'lighter';
 
-      // Outer glow
-      const outerGradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius * 1.5);
-      outerGradient.addColorStop(0, this.color);
-      outerGradient.addColorStop(0.5, this.color + '88');
-      outerGradient.addColorStop(1, this.color + '00');
-      ctx.fillStyle = outerGradient;
-      ctx.beginPath();
-      ctx.arc(this.x, this.y, this.radius * 1.5, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Core
+      // Single gradient (no outer glow)
       const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius);
       gradient.addColorStop(0, '#ffffff');
-      gradient.addColorStop(0.3, this.color);
-      gradient.addColorStop(1, this.color);
+      gradient.addColorStop(0.4, this.color);
+      gradient.addColorStop(1, this.color + '88');
       ctx.fillStyle = gradient;
       ctx.beginPath();
       ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);

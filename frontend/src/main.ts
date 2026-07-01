@@ -54,7 +54,7 @@ function resizeCanvas(): void {
   };
 
   // ZOOM OUT: Render at higher resolution, scale down via CSS for zoomed-out effect
-  const zoomFactor = 1.6; // 60% more game area visible
+  const zoomFactor = 3.2; // 2x more zoom (was 1.6x, now 3.2x = 220% more game area)
   canvas.width = viewport.width * zoomFactor;
   canvas.height = viewport.height * zoomFactor;
 
