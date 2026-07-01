@@ -147,8 +147,28 @@ export class WaveManager {
     const x = canvasWidth / 2;
     const y = -40;
 
-    const waveMultiplier = 1 + (this.currentWave - 1) * 0.2;
-    const boss = new Enemy(x, y, 'demon', waveMultiplier * 2); // Bosses are 2x stronger
+    const waveMultiplier = 1 + (this.currentWave - 1) * 0.15;
+
+    // Choose boss type based on wave number
+    let bossType: EnemyType;
+    if (this.currentWave === 10) {
+      bossType = 'boss_necrolord';
+    } else if (this.currentWave === 20) {
+      bossType = 'boss_flamefiend';
+    } else if (this.currentWave === 30) {
+      bossType = 'boss_voidbeast';
+    } else if (this.currentWave === 40) {
+      bossType = 'boss_stormking';
+    } else if (this.currentWave >= 50) {
+      bossType = 'boss_ancientgolem';
+    } else {
+      // Fallback for waves 10, 20, 30, etc.
+      const bossPool: EnemyType[] = ['boss_necrolord', 'boss_flamefiend', 'boss_voidbeast', 'boss_stormking', 'boss_ancientgolem'];
+      const bossIndex = Math.floor((this.currentWave / 10) % bossPool.length);
+      bossType = bossPool[bossIndex];
+    }
+
+    const boss = new Enemy(x, y, bossType, waveMultiplier);
 
     return boss;
   }

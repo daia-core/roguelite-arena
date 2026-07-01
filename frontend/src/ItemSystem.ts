@@ -981,6 +981,321 @@ export class ItemDatabase {
       unlocked: true,
       tags: ['utility'],
       xpMagnet: 1.5
+    },
+
+    // ==================== NEW ITEMS (20+ additions for build variety) ====================
+
+    // Damage scaling items
+    {
+      id: 'crit_synergy_t3',
+      name: 'Critical Synergy',
+      description: '+15% crit, +50% crit dmg',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 70,
+      icon: '💥',
+      unlocked: true,
+      tags: ['melee', 'ranged'],
+      critChance: 0.15,
+      critDamageMultiplier: 1.5
+    },
+    {
+      id: 'glass_blade_t2',
+      name: 'Glass Blade',
+      description: '+50% dmg, -20 HP',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 30,
+      icon: '🔪',
+      unlocked: true,
+      tags: ['melee'],
+      damageMultiplier: 1.5,
+      maxHealthBonus: -20
+    },
+    {
+      id: 'heavy_strike_t2',
+      name: 'Heavy Strike',
+      description: '+30% dmg, -15% speed',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 28,
+      icon: '⚒️',
+      unlocked: true,
+      tags: ['melee'],
+      damageMultiplier: 1.3,
+      speedMultiplier: 0.85
+    },
+    {
+      id: 'swift_blade_t2',
+      name: 'Swift Blade',
+      description: '+30% speed, +15% fire rate',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 32,
+      icon: '⚡',
+      unlocked: true,
+      tags: ['melee', 'utility'],
+      speedMultiplier: 1.3,
+      fireRateMultiplier: 1.15
+    },
+
+    // Elemental combos
+    {
+      id: 'frostfire_t3',
+      name: 'Frostfire',
+      description: 'Poison + Freeze combo',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 65,
+      icon: '🔥❄️',
+      unlocked: true,
+      tags: ['elemental'],
+      poison: true,
+      freeze: 0.2
+    },
+    {
+      id: 'storm_essence_t3',
+      name: 'Storm Essence',
+      description: '35% chain + explosions',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 72,
+      icon: '⛈️',
+      unlocked: true,
+      tags: ['elemental', 'ranged'],
+      chainLightning: 0.35,
+      explosionOnHit: true
+    },
+    {
+      id: 'toxic_explosion_t3',
+      name: 'Toxic Explosion',
+      description: 'Explosions poison nearby',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 68,
+      icon: '💀',
+      unlocked: true,
+      tags: ['elemental', 'ranged'],
+      explosionOnHit: true,
+      poison: true
+    },
+
+    // Defensive combos
+    {
+      id: 'guardian_aura_t3',
+      name: 'Guardian Aura',
+      description: '+12 armor, +50 HP',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 75,
+      icon: '🛡️',
+      unlocked: true,
+      tags: ['defensive'],
+      armor: 12,
+      maxHealthBonus: 50
+    },
+    {
+      id: 'vampire_armor_t3',
+      name: 'Vampire Armor',
+      description: '15% lifesteal, +8 armor',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 70,
+      icon: '🦇',
+      unlocked: true,
+      tags: ['defensive', 'utility'],
+      lifesteal: 0.15,
+      armor: 8
+    },
+    {
+      id: 'regenerative_shield_t3',
+      name: 'Regenerative Shield',
+      description: 'Shield + 5 HP/s regen',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 78,
+      icon: '💚',
+      unlocked: true,
+      tags: ['defensive'],
+      shield: true,
+      healthRegen: 5
+    },
+    {
+      id: 'evasive_armor_t3',
+      name: 'Evasive Armor',
+      description: '15% dodge, +25% speed',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 62,
+      icon: '👤',
+      unlocked: true,
+      tags: ['defensive', 'utility'],
+      dodge: 0.15,
+      speedMultiplier: 1.25
+    },
+
+    // Projectile modifiers
+    {
+      id: 'scattershot_t2',
+      name: 'Scattershot',
+      description: '+3 projectiles, -10% dmg',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 38,
+      icon: '🎯',
+      unlocked: true,
+      tags: ['ranged'],
+      multishot: 3,
+      damageMultiplier: 0.9
+    },
+    {
+      id: 'piercing_rounds_t2',
+      name: 'Piercing Rounds',
+      description: 'Pierce +3 enemies',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 35,
+      icon: '🏹',
+      unlocked: true,
+      tags: ['ranged'],
+      piercing: 3
+    },
+    {
+      id: 'seeking_shots_t2',
+      name: 'Seeking Shots',
+      description: 'Homing + faster bullets',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 42,
+      icon: '🎯',
+      unlocked: true,
+      tags: ['ranged', 'utility'],
+      homing: true,
+      projectileSpeed: 1.3
+    },
+    {
+      id: 'explosive_pierce_t3',
+      name: 'Explosive Pierce',
+      description: 'Pierce +2, explosions',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 68,
+      icon: '💥',
+      unlocked: true,
+      tags: ['ranged', 'elemental'],
+      piercing: 2,
+      explosionOnHit: true
+    },
+
+    // Economic/utility
+    {
+      id: 'lucky_charm_t2',
+      name: 'Lucky Charm',
+      description: '+30% gold, +10% crit',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 32,
+      icon: '🍀',
+      unlocked: true,
+      tags: ['economic', 'utility'],
+      goldBonus: 1.3,
+      critChance: 0.1
+    },
+    {
+      id: 'merchants_ring_t3',
+      name: 'Merchant\'s Ring',
+      description: '+50% gold, -20% prices',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 58,
+      icon: '💍',
+      unlocked: true,
+      tags: ['economic'],
+      goldBonus: 1.5,
+      shopDiscount: 0.2
+    },
+    {
+      id: 'experience_gem_t2',
+      name: 'Experience Gem',
+      description: '+60% XP range',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 28,
+      icon: '💎',
+      unlocked: true,
+      tags: ['utility'],
+      xpMagnet: 1.6
+    },
+
+    // Legendary unique effects
+    {
+      id: 'necromantic_power_t4',
+      name: 'Necromantic Power',
+      description: 'Kills spawn skeleton ally',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 160,
+      icon: '💀',
+      unlocked: true,
+      tags: ['utility', 'elemental'],
+      damageMultiplier: 1.2,
+      lifesteal: 0.1
+    },
+    {
+      id: 'berserker_soul_t4',
+      name: 'Berserker Soul',
+      description: 'Lower HP = more damage',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 145,
+      icon: '😈',
+      unlocked: true,
+      tags: ['melee'],
+      damageMultiplier: 1.4,
+      speedMultiplier: 1.3
+    },
+    {
+      id: 'elemental_mastery_t4',
+      name: 'Elemental Mastery',
+      description: 'All elemental effects',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 175,
+      icon: '🌟',
+      unlocked: true,
+      tags: ['elemental'],
+      poison: true,
+      freeze: 0.25,
+      chainLightning: 0.3,
+      explosionOnHit: true
+    },
+    {
+      id: 'divine_protection_t4',
+      name: 'Divine Protection',
+      description: 'Shield + 30% dodge',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 152,
+      icon: '✨',
+      unlocked: true,
+      tags: ['defensive'],
+      shield: true,
+      dodge: 0.3,
+      armor: 10
+    },
+    {
+      id: 'infinity_core_t4',
+      name: 'Infinity Core',
+      description: 'Pierce all + multishot 5',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 180,
+      icon: '♾️',
+      unlocked: true,
+      tags: ['ranged'],
+      piercing: 999,
+      multishot: 5,
+      homing: true
     }
   ];
 

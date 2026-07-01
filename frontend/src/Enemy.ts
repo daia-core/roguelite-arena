@@ -4,7 +4,7 @@ import { circleCollision } from './utils';
 import { SpriteSheet } from './sprites';
 import { PathfindingSystem, type PathNode } from './PathfindingSystem';
 
-export type EnemyType = 'slime' | 'goblin' | 'skeleton' | 'imp' | 'orc' | 'wraith' | 'necromancer' | 'troll' | 'banshee' | 'demon' | 'bat' | 'wizard' | 'mimic' | 'spider' | 'golem' | 'ghost' | 'mushroom' | 'gargoyle' | 'blob' | 'necroegg' | 'cyclops' | 'phantom' | 'druid' | 'construct' | 'swarm' | 'dasher' | 'evader' | 'orbiter' | 'spiraler' | 'shielder' | 'exploder' | 'healer' | 'summoner' | 'phaser';
+export type EnemyType = 'slime' | 'goblin' | 'skeleton' | 'imp' | 'orc' | 'wraith' | 'necromancer' | 'troll' | 'banshee' | 'demon' | 'bat' | 'wizard' | 'mimic' | 'spider' | 'golem' | 'ghost' | 'mushroom' | 'gargoyle' | 'blob' | 'necroegg' | 'cyclops' | 'phantom' | 'druid' | 'construct' | 'swarm' | 'dasher' | 'evader' | 'orbiter' | 'spiraler' | 'shielder' | 'exploder' | 'healer' | 'summoner' | 'phaser' | 'boss_necrolord' | 'boss_flamefiend' | 'boss_voidbeast' | 'boss_stormking' | 'boss_ancientgolem';
 
 export interface EnemyTypeData {
   health: number;
@@ -16,6 +16,7 @@ export interface EnemyTypeData {
   goldValue: number;
   shootRate?: number; // Shots per second (for ranged types)
   spriteName: string;
+  isBoss?: boolean; // Mark as boss enemy
 }
 
 const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
@@ -368,6 +369,79 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     xpValue: 22,
     goldValue: 6,
     spriteName: 'phaser'
+  },
+
+  // ==================== BOSS ENEMIES ====================
+  // Bosses appear every 10 waves and have 3-phase mechanics
+
+  // Wave 10 Boss: Necro Lord - Summons undead minions, shoots dark bolts
+  boss_necrolord: {
+    health: 2000,
+    speed: 50,
+    damage: 15,
+    radius: 30,
+    color: '#2c2c54',
+    xpValue: 200,
+    goldValue: 100,
+    shootRate: 2.0, // Fast shooter
+    spriteName: 'demon', // Reuse demon sprite
+    isBoss: true
+  },
+
+  // Wave 20 Boss: Flame Fiend - Fire attacks, leaves burning ground
+  boss_flamefiend: {
+    health: 4000,
+    speed: 65,
+    damage: 20,
+    radius: 32,
+    color: '#e74c3c',
+    xpValue: 400,
+    goldValue: 200,
+    shootRate: 1.5,
+    spriteName: 'demon',
+    isBoss: true
+  },
+
+  // Wave 30 Boss: Void Beast - Teleports, summons void rifts
+  boss_voidbeast: {
+    health: 6500,
+    speed: 80,
+    damage: 25,
+    radius: 34,
+    color: '#8e44ad',
+    xpValue: 600,
+    goldValue: 300,
+    shootRate: 1.8,
+    spriteName: 'demon',
+    isBoss: true
+  },
+
+  // Wave 40 Boss: Storm King - Lightning attacks, dash attacks
+  boss_stormking: {
+    health: 9000,
+    speed: 90,
+    damage: 30,
+    radius: 36,
+    color: '#3498db',
+    xpValue: 800,
+    goldValue: 400,
+    shootRate: 2.5,
+    spriteName: 'demon',
+    isBoss: true
+  },
+
+  // Wave 50+ Boss: Ancient Golem - Massive tank, stomp attacks
+  boss_ancientgolem: {
+    health: 12000,
+    speed: 35,
+    damage: 35,
+    radius: 38,
+    color: '#95a5a6',
+    xpValue: 1000,
+    goldValue: 500,
+    shootRate: 1.0,
+    spriteName: 'demon',
+    isBoss: true
   }
 };
 
@@ -530,6 +604,10 @@ export class Enemy {
   phaserInvincible: boolean = false;
   phaserInvincibleTimer: number = 0;
   phaserPhaseOnHitChance: number = 0.5; // 50% chance to phase on hit
+
+  // BOSS: Multi-phase system (behavior changes at 66% and 33% HP)
+  bossPhase: number = 1; // 1, 2, or 3
+  bossSpecialAttackCooldown: number = 0;
 
   constructor(x: number, y: number, type: EnemyType, waveMultiplier: number = 1, canSplit: boolean = true) {
     this.id = Enemy.nextId++;
@@ -941,6 +1019,108 @@ export class Enemy {
           }
         }
         // Phasing behavior handled in takeDamage method
+      }
+
+      // ==================== BOSS AI ====================
+      // Bosses have 3-phase mechanics (behavior changes at 66% and 33% HP)
+      if (this.typeData.isBoss) {
+        const healthPercent = this.health / this.maxHealth;
+
+        // Update phase based on health
+        if (healthPercent > 0.66) {
+          this.bossPhase = 1;
+        } else if (healthPercent > 0.33) {
+          this.bossPhase = 2;
+        } else {
+          this.bossPhase = 3;
+        }
+
+        this.bossSpecialAttackCooldown -= dt;
+
+        // Necro Lord - Summons more minions as HP drops
+        if (this.type === 'boss_necrolord') {
+          // Phase 1: Normal summons
+          // Phase 2: Faster summons + circle movement
+          // Phase 3: Even faster summons + teleport dashes
+          if (this.bossPhase >= 2) {
+            // Circle around player
+            this.circleAngle += dt * 1.5;
+            const targetX = playerX + Math.cos(this.circleAngle) * 200;
+            const targetY = playerY + Math.sin(this.circleAngle) * 200;
+            const toDx = targetX - this.x;
+            const toDy = targetY - this.y;
+            const toDist = Math.sqrt(toDx * toDx + toDy * toDy);
+            if (toDist > 10) {
+              this.x += (toDx / toDist) * moveSpeed * dt;
+              this.y += (toDy / toDist) * moveSpeed * dt;
+            }
+            shouldMove = false;
+          }
+
+          if (this.bossPhase === 3 && this.bossSpecialAttackCooldown <= 0 && Math.random() < 0.3) {
+            // Teleport dash
+            const angle = Math.atan2(playerY - this.y, playerX - this.x);
+            this.x += Math.cos(angle) * 150;
+            this.y += Math.sin(angle) * 150;
+            this.bossSpecialAttackCooldown = 2.0;
+          }
+        }
+
+        // Flame Fiend - Faster and more aggressive each phase
+        if (this.type === 'boss_flamefiend') {
+          // Speed increases per phase
+          if (this.bossPhase === 2) {
+            this.typeData.speed = 80;
+            this.typeData.shootRate = 2.0;
+          } else if (this.bossPhase === 3) {
+            this.typeData.speed = 95;
+            this.typeData.shootRate = 2.8;
+          }
+        }
+
+        // Void Beast - Teleports and creates void zones
+        if (this.type === 'boss_voidbeast') {
+          if (this.bossPhase >= 2 && this.bossSpecialAttackCooldown <= 0) {
+            // Random teleport
+            const angle = Math.random() * Math.PI * 2;
+            const teleportDist = 200 + Math.random() * 100;
+            this.x = playerX + Math.cos(angle) * teleportDist;
+            this.y = playerY + Math.sin(angle) * teleportDist;
+            this.bossSpecialAttackCooldown = 3.0;
+          }
+        }
+
+        // Storm King - Dash attacks and lightning bolts
+        if (this.type === 'boss_stormking') {
+          if (this.bossPhase >= 2 && !this.dashing && this.dashCooldown <= 0 && dist < 400) {
+            // Lightning dash toward player
+            this.dashing = true;
+            this.dashTimer = 0.4;
+            this.dashVelocity = { x: nx * moveSpeed * 5, y: ny * moveSpeed * 5 };
+            this.dashCooldown = 2.0;
+          }
+
+          if (this.dashing) {
+            this.dashTimer -= dt;
+            this.x += this.dashVelocity.x * dt;
+            this.y += this.dashVelocity.y * dt;
+            if (this.dashTimer <= 0) {
+              this.dashing = false;
+            }
+            shouldMove = false;
+          }
+        }
+
+        // Ancient Golem - Stomps and ground slams
+        if (this.type === 'boss_ancientgolem') {
+          // Phase 2+: Frequent stomps
+          if (this.bossPhase >= 2) {
+            if (this.bossSpecialAttackCooldown <= 0 && dist < 180) {
+              shouldStomp = true;
+              this.bossSpecialAttackCooldown = 3.0;
+            }
+          }
+        }
       }
 
       if (shouldMove) {
