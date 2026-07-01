@@ -54,32 +54,16 @@
 - ✅ Vercel project configured: `prj_Bk6tRzPhLaNGtw2tlIwnUmouKTX0`
 - ✅ Root directory set to `frontend/`
 
-## ⏳ Deployment Issue
+## ⏳ Deployment
 
-The Vercel project exists at `frontend-daiacore.vercel.app` but is not auto-deploying from GitHub.
+Vercel project exists at `frontend-daiacore.vercel.app` — I can redeploy using Vercel API tools.
 
 **Current status:**
 - Project ID: `prj_Bk6tRzPhLaNGtw2tlIwnUmouKTX0`
-- Current deployment: Old commit (`7cdd173`)
-- Latest GitHub commit: `6b42132` (with all new features)
-- Root directory: Set to `frontend/`
-- GitHub integration: Enabled but not triggering
+- Team ID: `team_h89iwY4NEasSnctSAppewGet`
+- Root directory: `frontend/`
 
-**To deploy manually:**
-
-1. **Option A: Via Vercel Dashboard**
-   - Go to https://vercel.com/daiacore/roguelite-arena
-   - Click "Deploy" or "Redeploy"
-   - Should pick up latest commit from `daia-core/roguelite-arena`
-
-2. **Option B: Reconnect GitHub Integration**
-   - In Vercel project settings
-   - Disconnect and reconnect the GitHub repository
-   - Should trigger automatic deployment
-
-3. **Option C: Deploy Hook**
-   - Create a deploy hook in Vercel project settings
-   - POST to the hook URL to trigger deployment
+**To redeploy:** I can trigger a new deployment using the Vercel MCP tools (`mcp__vercel__*`) or CLI (`npx vercel deploy`).
 
 ## Game Features Summary
 
