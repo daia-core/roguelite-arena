@@ -38,6 +38,8 @@ export class Game {
   // Shop state
   shopItems: Item[] = [];
   selectedShopItem: number = -1;
+  shopRerollCost: number = 2;
+  shopRerolls: number = 0;
 
   // Stats
   kills: number = 0;
@@ -394,6 +396,8 @@ export class Game {
   private enterShop(): void {
     this.shopItems = ItemDatabase.getRandomItems(4);
     this.selectedShopItem = -1;
+    this.shopRerollCost = 2; // Reset reroll cost to 2 gold
+    this.shopRerolls = 0;
     this.state = 'shop';
     this.audio.playWaveComplete();
 
@@ -408,8 +412,8 @@ export class Game {
 
     // Responsive layout
     const isMobile = this.canvas.width < 800;
-    const itemWidth = isMobile ? Math.min(280, this.canvas.width - 40) : 200;
-    const itemHeight = isMobile ? 140 : 120;
+    const itemWidth = isMobile ? Math.min(320, this.canvas.width - 40) : 200;
+    const itemHeight = isMobile ? 160 : 120;
     const gap = isMobile ? 15 : 20;
 
     let startX: number, startY: number;
@@ -460,9 +464,37 @@ export class Game {
       }
     }
 
-    // Continue button - position based on layout
+    // Reroll button - position based on layout
+    const buttonWidth = isMobile ? 280 : 200;
+    const buttonHeight = isMobile ? 70 : 50;
     const continueY = isMobile ? startY + this.shopItems.length * (itemHeight + gap) + 20 : 400;
-    const continueBtn = { x: this.canvas.width / 2 - 100, y: continueY, width: 200, height: 50 };
+    const rerollY = continueY + buttonHeight + 15;
+
+    const rerollBtn = {
+      x: this.canvas.width / 2 - buttonWidth / 2,
+      y: isMobile ? continueY : rerollY,
+      width: buttonWidth,
+      height: buttonHeight
+    };
+
+    if (pointInRect(mouseX, mouseY, rerollBtn) && this.input.mouseDown && this.player) {
+      if (this.player.gold >= this.shopRerollCost) {
+        this.player.gold -= this.shopRerollCost;
+        this.shopItems = ItemDatabase.getRandomItems(4);
+        this.shopRerollCost *= 2; // Double the cost
+        this.shopRerolls++;
+        this.audio.playPurchase();
+        this.input.mouseDown = false;
+      }
+    }
+
+    // Continue button - position based on layout
+    const continueBtn = {
+      x: this.canvas.width / 2 - buttonWidth / 2,
+      y: isMobile ? rerollY : continueY,
+      width: buttonWidth,
+      height: buttonHeight
+    };
 
     if (pointInRect(mouseX, mouseY, continueBtn) && this.input.mouseDown) {
       this.startNextWave();
@@ -608,25 +640,39 @@ export class Game {
   private drawHUD(): void {
     if (!this.player) return;
 
+    // Detect mobile
+    const isMobile = this.canvas.width < this.canvas.height;
+
     // Calculate safe area padding
     const basePadding = 10;
     const topPadding = Math.max(basePadding, 20); // Account for notches
     const sidePadding = Math.max(basePadding, 15);
 
+    // Mobile scaling factors
+    const textScale = isMobile ? 2.0 : 1;
+    const barHeightScale = isMobile ? 2.2 : 1; // More prominent bars on mobile
+
     // Health bar
-    this.renderer.drawText('HP', sidePadding, topPadding, { size: 14, bold: true });
-    this.renderer.drawHealthBar(sidePadding + 30, topPadding, 200, 20, this.player.health, this.player.maxHealth);
+    const hpLabelSize = Math.round(14 * textScale);
+    const barHeight = Math.round(20 * barHeightScale);
+    this.renderer.drawText('HP', sidePadding, topPadding, { size: hpLabelSize, bold: true });
+    this.renderer.drawHealthBar(sidePadding + 30, topPadding, 200, barHeight, this.player.health, this.player.maxHealth);
 
     const barWidth = Math.min(200, this.canvas.width * 0.35);
-    this.renderer.drawText(`${Math.ceil(this.player.health)}/${this.player.maxHealth}`, sidePadding + 30 + barWidth + 10, topPadding + 2, { size: 14 });
+    const hpValueSize = Math.round(14 * textScale);
+    this.renderer.drawText(`${Math.ceil(this.player.health)}/${this.player.maxHealth}`, sidePadding + 30 + barWidth + 10, topPadding + 2, { size: hpValueSize });
 
     // XP bar
-    this.renderer.drawText('XP', sidePadding, topPadding + 30, { size: 14, bold: true });
-    this.renderer.drawProgressBar(sidePadding + 30, topPadding + 30, 200, 20, this.player.xp / this.player.xpToNextLevel, '#00ff00');
-    this.renderer.drawText(`Level ${this.player.level}`, sidePadding + 30 + barWidth + 10, topPadding + 32, { size: 14 });
+    const xpOffset = Math.round(30 * textScale);
+    this.renderer.drawText('XP', sidePadding, topPadding + xpOffset, { size: hpLabelSize, bold: true });
+    this.renderer.drawProgressBar(sidePadding + 30, topPadding + xpOffset, 200, barHeight, this.player.xp / this.player.xpToNextLevel, '#00ff00');
+    const levelSize = Math.round(14 * textScale);
+    this.renderer.drawText(`Level ${this.player.level}`, sidePadding + 30 + barWidth + 10, topPadding + xpOffset + 2, { size: levelSize });
 
     // Gold
-    this.renderer.drawText(`Gold: ${this.player.gold}`, sidePadding, topPadding + 60, { size: 16, bold: true, color: '#ffff00' });
+    const goldOffset = Math.round(60 * textScale);
+    const goldSize = Math.round(16 * textScale);
+    this.renderer.drawText(`Gold: ${this.player.gold}`, sidePadding, topPadding + goldOffset, { size: goldSize, bold: true, color: '#ffff00' });
 
     // Wave info (top right)
     let waveText = `Wave ${this.waveManager.currentWave}`;
@@ -640,15 +686,17 @@ export class Game {
       waveColor = '#ff6600';
     }
 
+    const waveSize = Math.round(20 * textScale);
     this.renderer.drawText(waveText, this.canvas.width - sidePadding, topPadding, {
-      size: 20,
+      size: waveSize,
       bold: true,
       align: 'right',
       color: waveColor
     });
 
-    this.renderer.drawText(`Enemies: ${this.enemies.length + this.waveManager.waveEnemiesRemaining}`, this.canvas.width - sidePadding, topPadding + 30, {
-      size: 16,
+    const enemySize = Math.round(16 * textScale);
+    this.renderer.drawText(`Enemies: ${this.enemies.length + this.waveManager.waveEnemiesRemaining}`, this.canvas.width - sidePadding, topPadding + xpOffset, {
+      size: enemySize,
       align: 'right'
     });
 
@@ -658,31 +706,34 @@ export class Game {
     // Dash
     const dashCD = this.player.dashCooldown;
     const dashReady = dashCD <= 0;
+    const abilityTextSize = Math.round(14 * textScale);
+    const abilityCDSize = Math.round(12 * textScale);
     this.renderer.drawText('DASH', sidePadding, abilityY, {
-      size: 14,
+      size: abilityTextSize,
       bold: true,
       color: dashReady ? '#00ff00' : '#888888'
     });
     if (!dashReady) {
-      this.renderer.drawText(`${dashCD.toFixed(1)}s`, sidePadding, abilityY + 18, { size: 12 });
+      this.renderer.drawText(`${dashCD.toFixed(1)}s`, sidePadding, abilityY + 18, { size: abilityCDSize });
     }
 
     // Blast
     const blastCD = this.player.blastCooldown;
     const blastReady = blastCD <= 0;
     this.renderer.drawText('BLAST', sidePadding + 100, abilityY, {
-      size: 14,
+      size: abilityTextSize,
       bold: true,
       color: blastReady ? '#00ff00' : '#888888'
     });
     if (!blastReady) {
-      this.renderer.drawText(`${blastCD.toFixed(1)}s`, sidePadding + 100, abilityY + 18, { size: 12 });
+      this.renderer.drawText(`${blastCD.toFixed(1)}s`, sidePadding + 100, abilityY + 18, { size: abilityCDSize });
     }
 
     // Shield indicator
     if (this.player.shield) {
+      const shieldSize = Math.round(20 * textScale);
       this.renderer.drawText('🛡️ SHIELD ACTIVE', this.canvas.width / 2, topPadding, {
-        size: 20,
+        size: shieldSize,
         bold: true,
         align: 'center',
         color: '#00ffff'
@@ -693,8 +744,8 @@ export class Game {
   private drawShop(): void {
     const isMobile = this.canvas.width < 800;
 
-    this.renderer.drawText('SHOP', this.canvas.width / 2, isMobile ? 30 : 50, {
-      size: isMobile ? 28 : 36,
+    this.renderer.drawText('SHOP', this.canvas.width / 2, isMobile ? 35 : 50, {
+      size: isMobile ? 56 : 36,
       bold: true,
       align: 'center',
       color: '#ffff00'
@@ -702,23 +753,25 @@ export class Game {
 
     if (!this.player) return;
 
-    this.renderer.drawText(`Gold: ${this.player.gold}`, this.canvas.width / 2, isMobile ? 70 : 100, {
-      size: isMobile ? 16 : 20,
+    this.renderer.drawText(`Gold: ${this.player.gold}`, this.canvas.width / 2, isMobile ? 95 : 100, {
+      size: isMobile ? 32 : 20,
       align: 'center',
       color: '#ffff00'
     });
 
     // Draw shop items - responsive layout
-    const itemWidth = isMobile ? Math.min(280, this.canvas.width - 40) : 200;
-    const itemHeight = isMobile ? 140 : 120;
-    const gap = isMobile ? 15 : 20;
+    const itemWidth = isMobile ? Math.min(380, this.canvas.width - 40) : 200;
+    const itemHeight = isMobile ? 200 : 120;
+    const gap = isMobile ? 18 : 20;
 
     let startX: number, startY: number;
 
     if (isMobile) {
-      // Vertical stack on mobile
+      // Vertical stack on mobile - center vertically in viewport
       startX = (this.canvas.width - itemWidth) / 2;
-      startY = 110;
+      // Calculate total content height and center it
+      const totalHeight = this.shopItems.length * (itemHeight + gap) - gap + 240; // 240 for header + buttons
+      startY = Math.max(135, (this.canvas.height - totalHeight) / 2 + 80);
     } else {
       // Horizontal row on desktop (4 items)
       startX = this.canvas.width / 2 - (itemWidth * 4 + gap * 3) / 2;
@@ -749,43 +802,66 @@ export class Game {
       ctx.strokeRect(x, y, itemWidth, itemHeight);
 
       // Icon
-      this.renderer.drawText(item.icon, x + itemWidth / 2, y + 15, {
-        size: 32,
+      this.renderer.drawText(item.icon, x + itemWidth / 2, y + (isMobile ? 20 : 15), {
+        size: isMobile ? 68 : 32,
         align: 'center'
       });
 
       // Name
-      this.renderer.drawText(item.name, x + itemWidth / 2, y + 55, {
-        size: 14,
+      this.renderer.drawText(item.name, x + itemWidth / 2, y + (isMobile ? 95 : 55), {
+        size: isMobile ? 26 : 14,
         bold: true,
         align: 'center'
       });
 
       // Description
-      this.renderer.drawText(item.description, x + itemWidth / 2, y + 75, {
-        size: 11,
+      this.renderer.drawText(item.description, x + itemWidth / 2, y + (isMobile ? 125 : 75), {
+        size: isMobile ? 20 : 11,
         align: 'center'
       });
 
       // Cost
       const canAfford = this.player.gold >= item.cost;
-      this.renderer.drawText(`${item.cost} gold`, x + itemWidth / 2, y + 95, {
-        size: 12,
+      this.renderer.drawText(`${item.cost} gold`, x + itemWidth / 2, y + (isMobile ? 155 : 95), {
+        size: isMobile ? 24 : 12,
         bold: true,
         align: 'center',
         color: canAfford ? '#ffff00' : '#ff0000'
       });
     }
 
-    // Continue button - position based on layout
-    const continueY = isMobile ? startY + this.shopItems.length * (itemHeight + gap) + 20 : 400;
+    // Button dimensions
+    const buttonWidth = isMobile ? 340 : 200;
+    const buttonHeight = isMobile ? 90 : 50;
+    const continueY = isMobile ? startY + this.shopItems.length * (itemHeight + gap) + 25 : 400;
+    const rerollY = continueY + buttonHeight + 20;
+
+    // Reroll button
+    const canAffordReroll = this.player.gold >= this.shopRerollCost;
+    const rerollButtonY = isMobile ? continueY : rerollY;
+
     this.renderer.drawButton(
-      this.canvas.width / 2 - 100,
-      continueY,
-      200,
-      50,
+      this.canvas.width / 2 - buttonWidth / 2,
+      rerollButtonY,
+      buttonWidth,
+      buttonHeight,
+      `Reroll (${this.shopRerollCost}g)`,
+      false,
+      canAffordReroll,
+      isMobile
+    );
+
+    // Continue button
+    const continueButtonY = isMobile ? rerollY : continueY;
+    this.renderer.drawButton(
+      this.canvas.width / 2 - buttonWidth / 2,
+      continueButtonY,
+      buttonWidth,
+      buttonHeight,
       'Next Wave',
-      false
+      false,
+      true,
+      isMobile
     );
   }
 

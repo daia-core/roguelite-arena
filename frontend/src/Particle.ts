@@ -57,6 +57,10 @@ export class Particle {
       ctx.globalAlpha = alpha;
     }
 
+    // Detect mobile and scale particle size
+    const isMobile = ctx.canvas.width < ctx.canvas.height;
+    const sizeScale = isMobile ? 1.5 : 1;
+
     // Glow effect
     ctx.shadowBlur = 15;
     ctx.shadowColor = this.color;
@@ -64,7 +68,7 @@ export class Particle {
 
     ctx.fillStyle = this.color;
     ctx.beginPath();
-    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+    ctx.arc(this.x, this.y, this.size * sizeScale, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.restore();
@@ -107,6 +111,12 @@ export class DamageNumber {
     const scale = 1 + (1 - alpha) * 0.3; // Grows slightly as it fades
     ctx.globalAlpha = alpha;
 
+    // Detect mobile based on canvas orientation
+    const isMobile = ctx.canvas.width < ctx.canvas.height;
+    const baseFontSize = isMobile ? 48 : 36;
+    const critFontSize = isMobile ? 72 : 54;
+    const fontSize = this.color === '#ff0000' ? critFontSize : baseFontSize;
+
     // Stronger glow effect for damage numbers
     ctx.shadowBlur = 15;
     ctx.shadowColor = this.color;
@@ -114,13 +124,13 @@ export class DamageNumber {
     // Draw outline for better visibility
     ctx.strokeStyle = '#000000';
     ctx.lineWidth = 3;
-    ctx.font = `bold ${36 * scale}px Arial`;
+    ctx.font = `bold ${fontSize * scale}px Arial`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.strokeText(this.text, this.x, this.y);
 
     ctx.fillStyle = this.color;
-    ctx.font = `bold ${36 * scale}px Arial`;
+    ctx.font = `bold ${fontSize * scale}px Arial`;
     ctx.fillText(this.text, this.x, this.y);
 
     ctx.restore();

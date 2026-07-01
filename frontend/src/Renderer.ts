@@ -253,22 +253,33 @@ export class Renderer {
     this.ctx.restore();
   }
 
-  drawButton(x: number, y: number, width: number, height: number, text: string, hovered: boolean = false): void {
+  drawButton(x: number, y: number, width: number, height: number, text: string, hovered: boolean = false, enabled: boolean = true, isMobile: boolean = false): void {
     // Button background
-    this.ctx.fillStyle = hovered ? '#555555' : '#333333';
+    if (enabled) {
+      this.ctx.fillStyle = hovered ? '#555555' : '#333333';
+    } else {
+      this.ctx.fillStyle = '#222222';
+    }
     this.ctx.fillRect(x, y, width, height);
 
-    // Border
-    this.ctx.strokeStyle = hovered ? '#ffffff' : '#888888';
+    // Border with pulse effect for affordable buttons
+    if (enabled && !hovered) {
+      const pulseIntensity = Math.sin(Date.now() / 200) * 0.3 + 0.7;
+      this.ctx.strokeStyle = `rgba(0, 255, 0, ${pulseIntensity})`;
+    } else {
+      this.ctx.strokeStyle = enabled ? (hovered ? '#ffffff' : '#888888') : '#555555';
+    }
     this.ctx.lineWidth = 2;
     this.ctx.strokeRect(x, y, width, height);
 
     // Text
+    const fontSize = isMobile ? 32 : 18;
     this.drawText(text, x + width / 2, y + height / 2, {
       align: 'center',
       baseline: 'middle',
-      size: 18,
-      bold: true
+      size: fontSize,
+      bold: true,
+      color: enabled ? '#ffffff' : '#888888'
     });
   }
 
