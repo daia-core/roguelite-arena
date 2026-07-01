@@ -178,7 +178,8 @@ export class WaveManager {
     if (this.waveModifier === 'chaos') {
       return randomChoice([
         'slime', 'goblin', 'skeleton', 'bat', 'imp', 'spider', 'orc', 'mimic',
-        'wraith', 'wizard', 'necromancer', 'troll', 'banshee', 'golem'
+        'wraith', 'wizard', 'necromancer', 'troll', 'banshee', 'golem',
+        'ghost', 'mushroom', 'gargoyle', 'blob', 'necroegg', 'cyclops', 'phantom', 'druid', 'construct', 'swarm'
       ] as EnemyType[]);
     }
 
@@ -186,40 +187,43 @@ export class WaveManager {
     if (wave <= 2) {
       return randomChoice(['slime', 'slime', 'goblin', 'goblin'] as EnemyType[]);
     }
-    // Wave 3-4: Add bats
+    // Wave 3-4: Add bats, ghosts, swarms
     else if (wave <= 4) {
-      return randomChoice(['slime', 'slime', 'goblin', 'goblin', 'bat', 'bat'] as EnemyType[]);
+      return randomChoice(['slime', 'slime', 'goblin', 'goblin', 'bat', 'bat', 'ghost', 'swarm'] as EnemyType[]);
     }
-    // Wave 5-6: Add spiders and mimics
+    // Wave 5-6: Add spiders, mimics, mushrooms, blobs
     else if (wave <= 6) {
-      return randomChoice(['slime', 'goblin', 'bat', 'bat', 'spider', 'spider', 'mimic'] as EnemyType[]);
+      return randomChoice(['slime', 'goblin', 'bat', 'bat', 'spider', 'spider', 'mimic', 'ghost', 'mushroom', 'blob', 'swarm'] as EnemyType[]);
     }
-    // Wave 7-10: Add skeletons, wizards, imps
+    // Wave 7-10: Add skeletons, wizards, imps, phantoms, druids
     else if (wave <= 10) {
       return randomChoice([
         'slime', 'goblin', 'bat', 'skeleton', 'skeleton', 'spider', 'spider',
-        'wizard', 'wizard', 'imp', 'mimic', 'orc'
+        'wizard', 'wizard', 'imp', 'mimic', 'orc', 'ghost', 'mushroom', 'blob', 'phantom', 'druid', 'swarm'
       ] as EnemyType[]);
     }
-    // Wave 11-15: Add late-game enemies
+    // Wave 11-15: Add late-game enemies, gargoyles, necroeggs, constructs
     else if (wave <= 15) {
       return randomChoice([
         'bat', 'goblin', 'skeleton', 'skeleton', 'spider', 'wizard', 'wizard',
-        'imp', 'orc', 'orc', 'mimic', 'wraith', 'necromancer', 'troll', 'banshee'
+        'imp', 'orc', 'orc', 'mimic', 'wraith', 'necromancer', 'troll', 'banshee',
+        'ghost', 'mushroom', 'gargoyle', 'blob', 'necroegg', 'phantom', 'druid', 'construct', 'swarm'
       ] as EnemyType[]);
     }
-    // Wave 16-20: Harder compositions
+    // Wave 16-20: Harder compositions with cyclops
     else if (wave <= 20) {
       return randomChoice([
         'bat', 'skeleton', 'spider', 'wizard', 'imp', 'imp', 'orc', 'orc',
-        'wraith', 'wraith', 'necromancer', 'troll', 'troll', 'banshee', 'banshee', 'golem'
+        'wraith', 'wraith', 'necromancer', 'troll', 'troll', 'banshee', 'banshee', 'golem',
+        'ghost', 'mushroom', 'gargoyle', 'blob', 'necroegg', 'cyclops', 'phantom', 'druid', 'construct', 'swarm'
       ] as EnemyType[]);
     }
     // Wave 21+: Insane difficulty
     else {
       return randomChoice([
         'skeleton', 'spider', 'wizard', 'imp', 'orc', 'wraith', 'wraith',
-        'necromancer', 'necromancer', 'troll', 'troll', 'banshee', 'banshee', 'golem', 'golem'
+        'necromancer', 'necromancer', 'troll', 'troll', 'banshee', 'banshee', 'golem', 'golem',
+        'ghost', 'mushroom', 'gargoyle', 'gargoyle', 'blob', 'necroegg', 'cyclops', 'cyclops', 'phantom', 'druid', 'construct', 'construct', 'swarm'
       ] as EnemyType[]);
     }
   }

@@ -3,7 +3,7 @@
 import { circleCollision } from './utils';
 import { SpriteSheet } from './sprites';
 
-export type EnemyType = 'slime' | 'goblin' | 'skeleton' | 'imp' | 'orc' | 'wraith' | 'necromancer' | 'troll' | 'banshee' | 'demon' | 'bat' | 'wizard' | 'mimic' | 'spider' | 'golem';
+export type EnemyType = 'slime' | 'goblin' | 'skeleton' | 'imp' | 'orc' | 'wraith' | 'necromancer' | 'troll' | 'banshee' | 'demon' | 'bat' | 'wizard' | 'mimic' | 'spider' | 'golem' | 'ghost' | 'mushroom' | 'gargoyle' | 'blob' | 'necroegg' | 'cyclops' | 'phantom' | 'druid' | 'construct' | 'swarm';
 
 export interface EnemyTypeData {
   health: number;
@@ -172,6 +172,106 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     xpValue: 60,
     goldValue: 50,
     spriteName: 'golem'
+  },
+  ghost: {
+    health: 60,
+    speed: 70,
+    damage: 8,
+    radius: 12,
+    color: '#e0f7fa',
+    xpValue: 20,
+    goldValue: 15,
+    spriteName: 'ghost'
+  },
+  mushroom: {
+    health: 100,
+    speed: 0, // Stationary
+    damage: 10,
+    radius: 14,
+    color: '#8e44ad',
+    xpValue: 25,
+    goldValue: 18,
+    spriteName: 'mushroom'
+  },
+  gargoyle: {
+    health: 180,
+    speed: 45,
+    damage: 12,
+    radius: 16,
+    color: '#5d6d7e',
+    xpValue: 35,
+    goldValue: 28,
+    spriteName: 'gargoyle'
+  },
+  blob: {
+    health: 80,
+    speed: 50,
+    damage: 7,
+    radius: 13,
+    color: '#e74c3c',
+    xpValue: 18,
+    goldValue: 14,
+    spriteName: 'blob'
+  },
+  necroegg: {
+    health: 50,
+    speed: 20,
+    damage: 5,
+    radius: 12,
+    color: '#8b0000',
+    xpValue: 30,
+    goldValue: 25,
+    spriteName: 'necroegg'
+  },
+  cyclops: {
+    health: 150,
+    speed: 40,
+    damage: 15,
+    radius: 18,
+    color: '#d68910',
+    xpValue: 28,
+    goldValue: 22,
+    spriteName: 'cyclops'
+  },
+  phantom: {
+    health: 45,
+    speed: 140,
+    damage: 10,
+    radius: 11,
+    color: '#a569bd',
+    xpValue: 22,
+    goldValue: 16,
+    spriteName: 'phantom'
+  },
+  druid: {
+    health: 70,
+    speed: 65,
+    damage: 6,
+    radius: 12,
+    color: '#27ae60',
+    xpValue: 24,
+    goldValue: 20,
+    spriteName: 'druid'
+  },
+  construct: {
+    health: 130,
+    speed: 55,
+    damage: 11,
+    radius: 15,
+    color: '#95a5a6',
+    xpValue: 26,
+    goldValue: 20,
+    spriteName: 'construct'
+  },
+  swarm: {
+    health: 90, // Shared health pool
+    speed: 150,
+    damage: 6,
+    radius: 8,
+    color: '#f39c12',
+    xpValue: 20,
+    goldValue: 15,
+    spriteName: 'swarm'
   }
 };
 
@@ -242,6 +342,45 @@ export class Enemy {
   golemStompCooldown: number = 0;
   golemCanKnockback: boolean = false; // Immune to knockback
 
+  // Ghost specific (phasing)
+  ghostPhaseThrough: boolean = true; // Phases through walls
+  ghostWaveOffset: number = 0;
+
+  // Mushroom specific (spore clouds)
+  mushroomSporeTimer: number = 0;
+  mushroomExplodeOnDeath: boolean = true;
+
+  // Gargoyle specific (stone form)
+  gargoyleStoneForm: boolean = false;
+  gargoyleStoneTimer: number = 0;
+  gargoyleMovementTimer: number = 0;
+
+  // Blob specific (split)
+  blobSplitLevel: number = 0; // 0=large, 1=medium, 2=small
+  blobCanSplit: boolean = true;
+
+  // NecroEgg specific (spawner)
+  necroEggSpawnTimer: number = 0;
+  necroEggSpawnsCreated: number = 0;
+
+  // Cyclops specific (charge)
+  cyclopsCharging: boolean = false;
+  cyclopsChargeDirection: { x: number; y: number } = { x: 0, y: 0 };
+  cyclopsStunned: boolean = false;
+  cyclopsStunTimer: number = 0;
+  cyclopsChargeCooldown: number = 0;
+
+  // Phantom specific (invisibility)
+  phantomInvisible: boolean = true;
+  phantomRevealDistance: number = 120;
+
+  // Druid specific (healer)
+  druidHealCooldown: number = 0;
+  druidFleeDistance: number = 180;
+
+  // Construct specific (reflection)
+  constructReflectChance: number = 0.3;
+
   constructor(x: number, y: number, type: EnemyType, waveMultiplier: number = 1, canSplit: boolean = true) {
     this.id = Enemy.nextId++;
     this.x = x;
@@ -267,6 +406,9 @@ export class Enemy {
     shouldStomp?: boolean;
     splitInto?: Enemy[];
     poisonTrail?: { x: number; y: number };
+    sporeCloud?: { x: number; y: number };
+    shouldHeal?: boolean;
+    shouldSpawnMinion?: boolean;
   } {
     // GAME FEEL: Update timers
     this.hitstunTimer = Math.max(0, this.hitstunTimer - dt);
@@ -309,6 +451,9 @@ export class Enemy {
     let shouldStomp = false;
     let splitInto: Enemy[] | undefined;
     let poisonTrail: { x: number; y: number } | undefined;
+    let sporeCloud: { x: number; y: number } | undefined;
+    let shouldHeal = false;
+    let shouldSpawnMinion = false;
 
     // Movement behavior based on type
     if (dist > 0) {
@@ -404,6 +549,85 @@ export class Enemy {
         }
       }
 
+      // Ghost wavy movement (phases through everything, can't be knocked back)
+      if (this.type === 'ghost') {
+        this.ghostWaveOffset += dt * 4;
+        const waveX = Math.sin(this.ghostWaveOffset) * 60;
+        const waveY = Math.cos(this.ghostWaveOffset * 0.7) * 60;
+        this.x += (nx * moveSpeed + waveX * 0.3) * dt;
+        this.y += (ny * moveSpeed + waveY * 0.3) * dt;
+        shouldMove = false;
+      }
+
+      // Gargoyle stone form (invincible when stationary)
+      if (this.type === 'gargoyle') {
+        this.gargoyleMovementTimer += dt;
+
+        if (this.gargoyleStoneForm) {
+          this.gargoyleStoneTimer -= dt;
+          if (this.gargoyleStoneTimer <= 0) {
+            this.gargoyleStoneForm = false;
+            this.gargoyleMovementTimer = 0;
+          }
+          shouldMove = false;
+        } else {
+          // Move for 3 seconds, then stone form for 2 seconds
+          if (this.gargoyleMovementTimer >= 3) {
+            this.gargoyleStoneForm = true;
+            this.gargoyleStoneTimer = 2;
+          }
+        }
+      }
+
+      // Cyclops charge behavior
+      if (this.type === 'cyclops') {
+        this.cyclopsChargeCooldown -= dt;
+
+        if (this.cyclopsStunned) {
+          this.cyclopsStunTimer -= dt;
+          if (this.cyclopsStunTimer <= 0) {
+            this.cyclopsStunned = false;
+          }
+          shouldMove = false;
+        } else if (this.cyclopsCharging) {
+          // Continue charge in same direction
+          this.x += this.cyclopsChargeDirection.x * moveSpeed * 3 * dt;
+          this.y += this.cyclopsChargeDirection.y * moveSpeed * 3 * dt;
+          shouldMove = false;
+        } else if (dist < 250 && this.cyclopsChargeCooldown <= 0) {
+          // Start charge
+          this.cyclopsCharging = true;
+          this.cyclopsChargeDirection = { x: nx, y: ny };
+          this.cyclopsChargeCooldown = 5;
+        }
+      }
+
+      // Phantom invisibility (reveals when close)
+      if (this.type === 'phantom') {
+        if (dist < this.phantomRevealDistance) {
+          this.phantomInvisible = false;
+        } else {
+          this.phantomInvisible = true;
+        }
+      }
+
+      // Druid healer (heals nearby enemies, flees from player)
+      if (this.type === 'druid') {
+        this.druidHealCooldown -= dt;
+
+        if (dist < this.druidFleeDistance) {
+          // Flee from player
+          this.x -= nx * moveSpeed * dt * 1.5;
+          this.y -= ny * moveSpeed * dt * 1.5;
+          shouldMove = false;
+        }
+
+        if (this.druidHealCooldown <= 0) {
+          shouldHeal = true;
+          this.druidHealCooldown = 3;
+        }
+      }
+
       if (shouldMove) {
         this.x += nx * moveSpeed * dt;
         this.y += ny * moveSpeed * dt;
@@ -469,12 +693,36 @@ export class Enemy {
       }
     }
 
-    return { shouldShoot, shouldTeleport, shouldSummon, shouldScream, shouldStomp, splitInto, poisonTrail };
+    // Mushroom stationary spore clouds
+    if (this.type === 'mushroom') {
+      this.mushroomSporeTimer += dt;
+      if (this.mushroomSporeTimer >= 2.5) {
+        sporeCloud = { x: this.x, y: this.y };
+        this.mushroomSporeTimer = 0;
+      }
+    }
+
+    // NecroEgg spawner
+    if (this.type === 'necroegg') {
+      this.necroEggSpawnTimer += dt;
+      if (this.necroEggSpawnTimer >= 4 && this.necroEggSpawnsCreated < 3) {
+        shouldSpawnMinion = true;
+        this.necroEggSpawnTimer = 0;
+        this.necroEggSpawnsCreated++;
+      }
+    }
+
+    return { shouldShoot, shouldTeleport, shouldSummon, shouldScream, shouldStomp, splitInto, poisonTrail, sporeCloud, shouldHeal, shouldSpawnMinion };
   }
 
   takeDamage(amount: number): Enemy[] | null {
     // Wraith invulnerability
     if (this.invulnerable) {
+      return null;
+    }
+
+    // Gargoyle stone form invulnerability
+    if (this.type === 'gargoyle' && this.gargoyleStoneForm) {
       return null;
     }
 
@@ -525,6 +773,36 @@ export class Enemy {
         }
         return splits;
       }
+
+      // Blob split mechanic (splits into smaller blobs)
+      if (this.type === 'blob' && this.blobCanSplit && this.blobSplitLevel < 2) {
+        const splits: Enemy[] = [];
+        const numSplits = 2;
+        for (let i = 0; i < numSplits; i++) {
+          const angle = (Math.PI * 2 * i) / numSplits;
+          const smallBlob = new Enemy(
+            this.x + Math.cos(angle) * 25,
+            this.y + Math.sin(angle) * 25,
+            'blob',
+            1,
+            false
+          );
+          smallBlob.blobSplitLevel = this.blobSplitLevel + 1;
+          smallBlob.blobCanSplit = this.blobSplitLevel < 1; // Only split once more
+          // Smaller and faster
+          const scaleFactor = 1 - (this.blobSplitLevel + 1) * 0.3;
+          smallBlob.typeData.health = this.maxHealth * scaleFactor;
+          smallBlob.typeData.radius = this.typeData.radius * 0.7;
+          smallBlob.typeData.damage = this.typeData.damage * 0.7;
+          smallBlob.typeData.speed = this.typeData.speed * 1.3; // Faster when smaller
+          smallBlob.maxHealth = smallBlob.typeData.health;
+          smallBlob.health = smallBlob.maxHealth;
+          splits.push(smallBlob);
+        }
+        return splits;
+      }
+
+      // Mushroom explodes on death (handled in Game.ts via spore cloud)
     }
 
     return null;
@@ -532,11 +810,27 @@ export class Enemy {
 
   // GAME FEEL: Apply knockback velocity
   applyKnockback(vx: number, vy: number): void {
-    // Golem is immune to knockback
-    if (this.type === 'golem') return;
+    // Golem and Construct are immune to knockback
+    if (this.type === 'golem' || this.type === 'construct') return;
+
+    // Ghost can't be knocked back
+    if (this.type === 'ghost') return;
 
     this.knockbackVelocityX = vx;
     this.knockbackVelocityY = vy;
+  }
+
+  // Cyclops wall collision (stuns self)
+  checkWallCollision(canvasWidth: number, canvasHeight: number): void {
+    if (this.type === 'cyclops' && this.cyclopsCharging) {
+      const margin = this.typeData.radius;
+      if (this.x < margin || this.x > canvasWidth - margin ||
+          this.y < margin || this.y > canvasHeight - margin) {
+        this.cyclopsCharging = false;
+        this.cyclopsStunned = true;
+        this.cyclopsStunTimer = 1.5;
+      }
+    }
   }
 
   draw(ctx: CanvasRenderingContext2D): void {
@@ -554,6 +848,30 @@ export class Enemy {
         ctx.globalAlpha = 0.3;
         ctx.shadowBlur = 20;
         ctx.shadowColor = '#9370db';
+      }
+
+      // Ghost translucent effect
+      if (this.type === 'ghost') {
+        ctx.globalAlpha = 0.6;
+        ctx.shadowBlur = 18;
+        ctx.shadowColor = '#e0f7fa';
+      }
+
+      // Gargoyle stone form (darker, no glow)
+      if (this.type === 'gargoyle' && this.gargoyleStoneForm) {
+        ctx.shadowBlur = 0;
+        ctx.filter = 'brightness(0.6)';
+      }
+
+      // Phantom invisibility
+      if (this.type === 'phantom' && this.phantomInvisible) {
+        ctx.globalAlpha = 0.2;
+        ctx.filter = 'blur(2px)';
+      }
+
+      // Cyclops stunned (grayed out)
+      if (this.type === 'cyclops' && this.cyclopsStunned) {
+        ctx.filter = 'grayscale(0.7)';
       }
 
       // GAME FEEL: White flash on hit

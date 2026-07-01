@@ -352,6 +352,94 @@ export class Game {
         }));
       }
 
+      // Spore cloud (mushroom)
+      if (result.sporeCloud) {
+        // Create damaging cloud particles
+        for (let i = 0; i < 12; i++) {
+          const angle = (Math.PI * 2 * i) / 12;
+          const speed = 40 + Math.random() * 30;
+          this.particles.push(new Particle({
+            x: result.sporeCloud.x,
+            y: result.sporeCloud.y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            color: '#9b59b6',
+            size: 5,
+            lifetime: 1.5,
+            fadeOut: true
+          }));
+        }
+        // Check if player is in range of spore cloud
+        const dist = Math.sqrt(
+          (this.player.x - result.sporeCloud.x) ** 2 + (this.player.y - result.sporeCloud.y) ** 2
+        );
+        if (dist < 80) {
+          const damaged = this.player.takeDamage(enemy.typeData.damage * 0.5);
+          if (damaged) {
+            this.renderer.addHitFlash(0.3);
+          }
+        }
+      }
+
+      // Druid healing
+      if (result.shouldHeal) {
+        // Find nearby enemies to heal
+        for (const otherEnemy of this.enemies) {
+          if (otherEnemy.id === enemy.id) continue;
+          const dist = Math.sqrt(
+            (otherEnemy.x - enemy.x) ** 2 + (otherEnemy.y - enemy.y) ** 2
+          );
+          if (dist < 150) {
+            otherEnemy.health = Math.min(otherEnemy.maxHealth, otherEnemy.health + 15);
+            // Healing particles
+            this.particles.push(new Particle({
+              x: otherEnemy.x,
+              y: otherEnemy.y,
+              vx: 0,
+              vy: -50,
+              color: '#27ae60',
+              size: 6,
+              lifetime: 0.8,
+              fadeOut: true
+            }));
+          }
+        }
+      }
+
+      // NecroEgg spawning
+      if (result.shouldSpawnMinion) {
+        const angle = Math.random() * Math.PI * 2;
+        const dist = 40;
+        const minion = new Enemy(
+          enemy.x + Math.cos(angle) * dist,
+          enemy.y + Math.sin(angle) * dist,
+          'skeleton',
+          0.4
+        );
+        minion.typeData.health = 30;
+        minion.typeData.damage = 4;
+        minion.maxHealth = minion.typeData.health;
+        minion.health = minion.maxHealth;
+        this.enemies.push(minion);
+        // Spawn particles
+        for (let i = 0; i < 8; i++) {
+          const particleAngle = (Math.PI * 2 * i) / 8;
+          this.particles.push(new Particle({
+            x: minion.x,
+            y: minion.y,
+            vx: Math.cos(particleAngle) * 60,
+            vy: Math.sin(particleAngle) * 60,
+            color: '#00ff00',
+            size: 4,
+            lifetime: 0.6,
+            fadeOut: true
+          }));
+        }
+      }
+
+      // Check wall collision for cyclops
+      enemy.checkWallCollision(this.canvas.width, this.canvas.height);
+
       // Enemy-player collision
       if (enemy.collidesWith(this.player.x, this.player.y, this.player.radius)) {
         const damaged = this.player.takeDamage(enemy.typeData.damage);
@@ -380,7 +468,10 @@ export class Game {
             // GAME FEEL: Trigger hit pause on player damage to enemy
             this.hitPauseTimer = isCrit ? 0.08 : 0.05; // Longer pause on crit
 
-            enemy.takeDamage(damage);
+            const splits = enemy.takeDamage(damage);
+            if (splits && splits.length > 0) {
+              this.enemies.push(...splits);
+            }
             proj.markHit(enemy.id);
 
             // GAME FEEL: Enhanced knockback physics
@@ -479,7 +570,10 @@ export class Game {
       );
 
       if (dist < radius + enemy.typeData.radius) {
-        enemy.takeDamage(damage);
+        const splits = enemy.takeDamage(damage);
+        if (splits && splits.length > 0) {
+          this.enemies.push(...splits);
+        }
         this.particles.push(...spawnHitParticles(enemy.x, enemy.y, 8));
         hitCount++;
 
@@ -553,6 +647,35 @@ export class Game {
       this.renderer.addHitFlash(0.4); // Screen flash
       // Spawn huge particle explosion at player
       this.particles.push(...spawnLevelUpParticles(this.player.x, this.player.y));
+    }
+
+    // Mushroom explodes on death
+    if (enemy.type === 'mushroom') {
+      // Large spore explosion
+      for (let i = 0; i < 20; i++) {
+        const angle = (Math.PI * 2 * i) / 20;
+        const speed = 80 + Math.random() * 40;
+        this.particles.push(new Particle({
+          x: enemy.x,
+          y: enemy.y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          color: '#9b59b6',
+          size: 6,
+          lifetime: 1.8,
+          fadeOut: true
+        }));
+      }
+      // Damage player if close
+      const dist = Math.sqrt(
+        (this.player.x - enemy.x) ** 2 + (this.player.y - enemy.y) ** 2
+      );
+      if (dist < 120) {
+        const damaged = this.player.takeDamage(enemy.typeData.damage * 0.8);
+        if (damaged) {
+          this.renderer.addHitFlash(0.4);
+        }
+      }
     }
 
     // Health orb drop (18% chance)

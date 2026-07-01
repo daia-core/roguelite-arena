@@ -121,6 +121,17 @@ export class SpriteSheet {
     this.createMimicSprite();
     this.createSpiderSprite();
     this.createGolemSprite();
+    // Wave 2 new enemies
+    this.createGhostSprite();
+    this.createMushroomSprite();
+    this.createGargoyleSprite();
+    this.createBlobSprite();
+    this.createNecroEggSprite();
+    this.createCyclopsSprite();
+    this.createPhantomSprite();
+    this.createDruidSprite();
+    this.createConstructSprite();
+    this.createSwarmSprite();
   }
 
   private static createSlimeSprite() {
@@ -1011,6 +1022,467 @@ export class SpriteSheet {
     });
 
     this.sprites.set('golem', canvas);
+  }
+
+  private static createGhostSprite() {
+    const size = 48;
+    const canvas = this.createCanvas(size, size);
+    const ctx = canvas.getContext('2d')!;
+
+    // Translucent ghost with flowing ethereal form
+    const pixels = [
+      [0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0],
+      [0,0,0,0,1,1,2,2,2,2,2,2,1,1,0,0,0,0],
+      [0,0,0,1,1,2,2,2,2,2,2,2,2,1,1,0,0,0],
+      [0,0,1,1,2,2,3,3,2,2,3,3,2,2,1,1,0,0],
+      [0,1,1,2,2,3,4,3,2,2,3,4,3,2,2,1,1,0],
+      [0,1,2,2,2,3,3,3,2,2,3,3,3,2,2,2,1,0],
+      [0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0],
+      [0,0,1,2,2,2,5,5,5,5,5,5,2,2,2,1,0,0],
+      [0,0,1,2,2,2,2,5,5,5,5,2,2,2,2,1,0,0],
+      [0,0,0,1,2,2,2,2,5,5,2,2,2,2,1,0,0,0],
+      [0,0,0,0,1,2,2,2,2,2,2,2,2,1,0,0,0,0],
+      [0,0,0,1,1,1,2,2,2,2,2,2,1,1,1,0,0,0],
+      [0,0,1,2,2,1,1,1,0,0,1,1,1,2,2,1,0,0],
+      [0,1,2,2,2,1,0,0,0,0,0,0,1,2,2,2,1,0],
+      [0,1,2,1,1,0,0,0,0,0,0,0,0,1,1,2,1,0],
+      [1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],
+    ];
+
+    const colors = [
+      'transparent',
+      '#b0e0e6',     // 1 - ghost outline light cyan
+      '#e0f7fa',     // 2 - ghost body pale cyan
+      '#000000',     // 3 - eye sockets
+      '#00ffff',     // 4 - eye glow cyan
+      '#add8e6',     // 5 - mouth/ethereal wisp
+    ];
+
+    const scale = 3;
+    pixels.forEach((row, y) => {
+      row.forEach((pixel, x) => {
+        if (pixel > 0) {
+          ctx.fillStyle = colors[pixel];
+          ctx.fillRect(x * scale, y * scale, scale, scale);
+        }
+      });
+    });
+
+    this.sprites.set('ghost', canvas);
+  }
+
+  private static createMushroomSprite() {
+    const size = 48;
+    const canvas = this.createCanvas(size, size);
+    const ctx = canvas.getContext('2d')!;
+
+    // Poisonous mushroom with spots
+    const pixels = [
+      [0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0],
+      [0,0,0,1,1,1,2,2,2,2,2,2,1,1,1,0,0,0],
+      [0,0,1,1,2,2,2,3,2,2,3,2,2,2,1,1,0,0],
+      [0,1,1,2,2,2,2,2,2,2,2,2,2,2,2,1,1,0],
+      [0,1,2,2,3,2,2,2,4,2,2,2,2,3,2,2,1,0],
+      [0,1,2,2,2,2,2,4,4,4,2,2,2,2,2,2,1,0],
+      [1,1,2,2,2,2,2,2,4,2,2,2,2,2,2,2,1,1],
+      [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+      [1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1],
+      [0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0],
+      [0,0,0,0,0,5,5,5,5,5,5,5,5,0,0,0,0,0],
+      [0,0,0,0,0,5,6,6,6,6,6,6,5,0,0,0,0,0],
+      [0,0,0,0,0,5,6,6,6,6,6,6,5,0,0,0,0,0],
+      [0,0,0,0,0,5,6,6,6,6,6,6,5,0,0,0,0,0],
+      [0,0,0,0,0,5,5,5,5,5,5,5,5,0,0,0,0,0],
+    ];
+
+    const colors = [
+      'transparent',
+      '#6b2c91',     // 1 - cap outline purple
+      '#8e44ad',     // 2 - cap purple
+      '#ffffff',     // 3 - white spots
+      '#d7bde2',     // 4 - light purple spots
+      '#654321',     // 5 - stem outline brown
+      '#8b7355',     // 6 - stem beige
+    ];
+
+    const scale = 3;
+    pixels.forEach((row, y) => {
+      row.forEach((pixel, x) => {
+        if (pixel > 0) {
+          ctx.fillStyle = colors[pixel];
+          ctx.fillRect(x * scale, y * scale, scale, scale);
+        }
+      });
+    });
+
+    this.sprites.set('mushroom', canvas);
+  }
+
+  private static createGargoyleSprite() {
+    const size = 56;
+    const canvas = this.createCanvas(size, size);
+    const ctx = canvas.getContext('2d')!;
+
+    // Stone gargoyle with wings
+    const pixels = [
+      [0,1,1,0,0,0,0,0,0,0,0,0,0,1,1,0],
+      [1,1,2,1,0,0,0,0,0,0,0,0,1,2,1,1],
+      [1,2,2,2,1,0,0,3,3,0,0,1,2,2,2,1],
+      [0,1,2,2,1,3,3,3,3,3,3,1,2,2,1,0],
+      [0,0,1,2,3,3,4,3,3,4,3,3,2,1,0,0],
+      [0,0,0,1,3,3,3,3,3,3,3,3,1,0,0,0],
+      [0,0,0,1,3,3,3,5,5,3,3,3,1,0,0,0],
+      [0,0,0,1,3,3,5,5,5,5,3,3,1,0,0,0],
+      [0,0,0,1,1,3,3,5,5,3,3,1,1,0,0,0],
+      [0,0,1,2,1,1,3,3,3,3,1,1,2,1,0,0],
+      [0,1,2,2,2,1,1,1,1,1,1,2,2,2,1,0],
+      [0,1,2,2,2,2,1,0,0,1,2,2,2,2,1,0],
+      [0,0,1,2,2,2,1,0,0,1,2,2,2,1,0,0],
+      [0,0,0,1,2,1,0,0,0,0,1,2,1,0,0,0],
+    ];
+
+    const colors = [
+      'transparent',
+      '#37474f',     // 1 - stone outline dark
+      '#5d6d7e',     // 2 - wing/body stone gray
+      '#78909c',     // 3 - body lighter gray
+      '#000000',     // 4 - eyes darkness
+      '#2c3e50',     // 5 - mouth/fangs
+    ];
+
+    const scale = 3;
+    pixels.forEach((row, y) => {
+      row.forEach((pixel, x) => {
+        if (pixel > 0) {
+          ctx.fillStyle = colors[pixel];
+          ctx.fillRect(x * scale, y * scale, scale, scale);
+        }
+      });
+    });
+
+    this.sprites.set('gargoyle', canvas);
+  }
+
+  private static createBlobSprite() {
+    const size = 48;
+    const canvas = this.createCanvas(size, size);
+    const ctx = canvas.getContext('2d')!;
+
+    // Amorphous blob
+    const pixels = [
+      [0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0],
+      [0,0,0,1,1,1,2,2,2,2,2,2,1,1,1,0,0,0],
+      [0,0,1,1,2,2,2,2,2,2,2,2,2,2,1,1,0,0],
+      [0,1,1,2,2,2,3,3,2,2,3,3,2,2,2,1,1,0],
+      [0,1,2,2,2,3,3,3,2,2,3,3,3,2,2,2,1,0],
+      [1,1,2,2,2,2,3,3,2,2,3,3,2,2,2,2,1,1],
+      [1,2,2,2,2,2,2,2,4,4,2,2,2,2,2,2,2,1],
+      [1,2,2,2,2,2,2,4,4,4,4,2,2,2,2,2,2,1],
+      [1,2,2,2,2,2,2,2,4,4,2,2,2,2,2,2,2,1],
+      [1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1],
+      [0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0],
+      [0,1,1,2,2,2,2,2,2,2,2,2,2,2,2,1,1,0],
+      [0,0,1,1,2,2,2,2,2,2,2,2,2,2,1,1,0,0],
+      [0,0,0,1,1,1,2,2,2,2,2,2,1,1,1,0,0,0],
+      [0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0],
+    ];
+
+    const colors = [
+      'transparent',
+      '#c0392b',     // 1 - blob outline dark red
+      '#e74c3c',     // 2 - blob body red
+      '#000000',     // 3 - eyes
+      '#d68910',     // 4 - nucleus/core
+    ];
+
+    const scale = 3;
+    pixels.forEach((row, y) => {
+      row.forEach((pixel, x) => {
+        if (pixel > 0) {
+          ctx.fillStyle = colors[pixel];
+          ctx.fillRect(x * scale, y * scale, scale, scale);
+        }
+      });
+    });
+
+    this.sprites.set('blob', canvas);
+  }
+
+  private static createNecroEggSprite() {
+    const size = 48;
+    const canvas = this.createCanvas(size, size);
+    const ctx = canvas.getContext('2d')!;
+
+    // Dark egg with necromantic runes
+    const pixels = [
+      [0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0],
+      [0,0,0,1,1,1,2,2,2,2,2,2,1,1,1,0,0,0],
+      [0,0,1,1,2,2,2,2,2,2,2,2,2,2,1,1,0,0],
+      [0,1,1,2,2,2,2,3,2,2,3,2,2,2,2,1,1,0],
+      [0,1,2,2,2,2,3,3,3,3,3,3,2,2,2,2,1,0],
+      [1,1,2,2,2,2,2,3,3,3,3,2,2,2,2,2,1,1],
+      [1,2,2,2,2,2,2,2,3,3,2,2,2,2,2,2,2,1],
+      [1,2,2,4,2,2,2,2,2,2,2,2,2,4,2,2,2,1],
+      [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+      [1,2,2,2,4,4,2,2,2,2,2,2,4,4,2,2,2,1],
+      [1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1],
+      [0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0],
+      [0,1,1,2,2,2,2,2,2,2,2,2,2,2,2,1,1,0],
+      [0,0,1,1,2,2,2,2,2,2,2,2,2,2,1,1,0,0],
+      [0,0,0,1,1,1,2,2,2,2,2,2,1,1,1,0,0,0],
+      [0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0],
+    ];
+
+    const colors = [
+      'transparent',
+      '#5a0a0a',     // 1 - egg outline dark red
+      '#8b0000',     // 2 - egg body dark red
+      '#00ff00',     // 3 - necromantic glow green
+      '#006400',     // 4 - darker runes
+    ];
+
+    const scale = 3;
+    pixels.forEach((row, y) => {
+      row.forEach((pixel, x) => {
+        if (pixel > 0) {
+          ctx.fillStyle = colors[pixel];
+          ctx.fillRect(x * scale, y * scale, scale, scale);
+        }
+      });
+    });
+
+    this.sprites.set('necroegg', canvas);
+  }
+
+  private static createCyclopsSprite() {
+    const size = 60;
+    const canvas = this.createCanvas(size, size);
+    const ctx = canvas.getContext('2d')!;
+
+    // Large cyclops with one eye
+    const pixels = [
+      [0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0],
+      [0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0],
+      [0,0,0,1,1,2,2,2,2,2,2,2,2,1,1,0,0,0],
+      [0,0,1,1,2,2,2,2,2,2,2,2,2,2,1,1,0,0],
+      [0,1,1,2,2,2,2,3,3,3,3,2,2,2,2,1,1,0],
+      [0,1,2,2,2,2,3,3,3,3,3,3,2,2,2,2,1,0],
+      [0,1,2,2,2,3,3,4,4,4,4,3,3,2,2,2,1,0],
+      [0,1,2,2,2,3,4,4,5,5,4,4,3,2,2,2,1,0],
+      [0,1,2,2,2,3,4,5,5,5,5,4,3,2,2,2,1,0],
+      [0,1,2,2,2,3,4,4,5,5,4,4,3,2,2,2,1,0],
+      [0,1,2,2,2,3,3,4,4,4,4,3,3,2,2,2,1,0],
+      [0,0,1,2,2,2,3,3,3,3,3,3,2,2,2,1,0,0],
+      [0,0,1,1,2,2,2,6,6,6,6,2,2,2,1,1,0,0],
+      [0,0,0,1,2,2,2,2,6,6,2,2,2,2,1,0,0,0],
+      [0,0,0,1,1,2,2,2,2,2,2,2,2,1,1,0,0,0],
+      [0,0,0,0,1,1,1,2,2,2,2,1,1,1,0,0,0,0],
+      [0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0],
+    ];
+
+    const colors = [
+      'transparent',
+      '#9c6b20',     // 1 - skin outline brown
+      '#d68910',     // 2 - skin tan
+      '#000000',     // 3 - eye socket darkness
+      '#ffffff',     // 4 - eye white
+      '#ff0000',     // 5 - pupil red
+      '#654321',     // 6 - mouth/teeth brown
+    ];
+
+    const scale = 3;
+    pixels.forEach((row, y) => {
+      row.forEach((pixel, x) => {
+        if (pixel > 0) {
+          ctx.fillStyle = colors[pixel];
+          ctx.fillRect(x * scale, y * scale, scale, scale);
+        }
+      });
+    });
+
+    this.sprites.set('cyclops', canvas);
+  }
+
+  private static createPhantomSprite() {
+    const size = 42;
+    const canvas = this.createCanvas(size, size);
+    const ctx = canvas.getContext('2d')!;
+
+    // Wispy phantom (similar to ghost but darker purple)
+    const pixels = [
+      [0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0],
+      [0,0,0,0,1,1,2,2,2,2,2,2,1,1,0,0,0,0],
+      [0,0,0,1,1,2,2,2,2,2,2,2,2,1,1,0,0,0],
+      [0,0,1,1,2,3,3,3,2,2,3,3,3,2,1,1,0,0],
+      [0,1,1,2,2,3,4,3,2,2,3,4,3,2,2,1,1,0],
+      [0,1,2,2,2,3,3,3,2,2,3,3,3,2,2,2,1,0],
+      [0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0],
+      [0,0,1,2,2,2,5,5,5,5,5,5,2,2,2,1,0,0],
+      [0,0,0,1,2,2,2,2,5,5,2,2,2,2,1,0,0,0],
+      [0,0,0,0,1,2,2,2,2,2,2,2,2,1,0,0,0,0],
+      [0,0,0,1,1,1,2,2,2,2,2,2,1,1,1,0,0,0],
+      [0,0,1,2,2,1,1,0,0,0,0,1,1,2,2,1,0,0],
+      [0,1,2,2,1,0,0,0,0,0,0,0,0,1,2,2,1,0],
+      [1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],
+    ];
+
+    const colors = [
+      'transparent',
+      '#7d3c98',     // 1 - phantom outline purple
+      '#a569bd',     // 2 - phantom body light purple
+      '#000000',     // 3 - eyes darkness
+      '#8e44ad',     // 4 - eye glow purple
+      '#6c3483',     // 5 - mouth wisp
+    ];
+
+    const scale = 3;
+    pixels.forEach((row, y) => {
+      row.forEach((pixel, x) => {
+        if (pixel > 0) {
+          ctx.fillStyle = colors[pixel];
+          ctx.fillRect(x * scale, y * scale, scale, scale);
+        }
+      });
+    });
+
+    this.sprites.set('phantom', canvas);
+  }
+
+  private static createDruidSprite() {
+    const size = 48;
+    const canvas = this.createCanvas(size, size);
+    const ctx = canvas.getContext('2d')!;
+
+    // Nature druid with leaf motif
+    const pixels = [
+      [0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0],
+      [0,0,0,0,1,1,2,2,2,2,2,2,1,1,0,0,0,0],
+      [0,0,0,1,1,2,2,2,2,2,2,2,2,1,1,0,0,0],
+      [0,0,1,1,2,2,3,3,2,2,3,3,2,2,1,1,0,0],
+      [0,1,1,2,2,3,3,3,2,2,3,3,3,2,2,1,1,0],
+      [0,1,2,2,2,2,3,3,2,2,3,3,2,2,2,2,1,0],
+      [0,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,0],
+      [0,0,1,2,2,4,4,4,4,4,4,4,4,2,2,1,0,0],
+      [0,0,0,1,2,2,4,4,4,4,4,4,2,2,1,0,0,0],
+      [0,0,5,5,1,2,2,2,2,2,2,2,2,1,5,5,0,0],
+      [0,5,5,6,6,1,1,1,1,1,1,1,1,6,6,5,5,0],
+      [0,5,6,6,6,5,5,5,7,7,5,5,5,6,6,6,5,0],
+      [0,5,6,6,6,5,0,0,0,0,0,0,5,6,6,6,5,0],
+      [0,0,5,6,5,0,0,0,0,0,0,0,0,5,6,5,0,0],
+      [0,0,0,5,0,0,0,0,0,0,0,0,0,0,5,0,0,0],
+    ];
+
+    const colors = [
+      'transparent',
+      '#1e8449',     // 1 - hood outline green
+      '#27ae60',     // 2 - face/hood green
+      '#654321',     // 3 - eyes brown
+      '#8b4513',     // 4 - beard brown
+      '#145a32',     // 5 - robe dark green
+      '#27ae60',     // 6 - robe light green
+      '#f1c40f',     // 7 - golden leaves/nature magic
+    ];
+
+    const scale = 3;
+    pixels.forEach((row, y) => {
+      row.forEach((pixel, x) => {
+        if (pixel > 0) {
+          ctx.fillStyle = colors[pixel];
+          ctx.fillRect(x * scale, y * scale, scale, scale);
+        }
+      });
+    });
+
+    this.sprites.set('druid', canvas);
+  }
+
+  private static createConstructSprite() {
+    const size = 52;
+    const canvas = this.createCanvas(size, size);
+    const ctx = canvas.getContext('2d')!;
+
+    // Mechanical construct
+    const pixels = [
+      [0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0],
+      [0,0,0,1,1,2,2,2,2,2,2,2,2,1,1,0,0,0],
+      [0,0,1,1,2,2,3,3,2,2,3,3,2,2,1,1,0,0],
+      [0,1,1,2,2,3,4,3,2,2,3,4,3,2,2,1,1,0],
+      [0,1,2,2,2,3,3,3,2,2,3,3,3,2,2,2,1,0],
+      [0,1,2,2,2,2,2,2,5,5,2,2,2,2,2,2,1,0],
+      [1,1,2,2,2,2,2,5,5,5,5,2,2,2,2,2,1,1],
+      [1,2,2,2,2,2,2,2,5,5,2,2,2,2,2,2,2,1],
+      [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+      [1,2,2,6,6,2,2,2,2,2,2,2,2,6,6,2,2,1],
+      [1,1,2,6,6,6,2,2,2,2,2,2,6,6,6,2,1,1],
+      [0,1,2,2,6,6,2,2,2,2,2,2,6,6,2,2,1,0],
+      [0,1,1,2,2,2,2,2,2,2,2,2,2,2,2,1,1,0],
+      [0,0,1,1,2,2,2,7,7,7,7,2,2,2,1,1,0,0],
+      [0,0,0,1,1,2,7,7,7,7,7,7,2,1,1,0,0,0],
+      [0,0,0,0,1,1,1,7,7,7,7,1,1,1,0,0,0,0],
+    ];
+
+    const colors = [
+      'transparent',
+      '#616161',     // 1 - construct outline dark
+      '#95a5a6',     // 2 - body gray metal
+      '#000000',     // 3 - eyes darkness
+      '#3498db',     // 4 - eye glow blue
+      '#e67e22',     // 5 - core glow orange
+      '#5d6d7e',     // 6 - armor plates
+      '#34495e',     // 7 - legs/feet dark
+    ];
+
+    const scale = 3;
+    pixels.forEach((row, y) => {
+      row.forEach((pixel, x) => {
+        if (pixel > 0) {
+          ctx.fillStyle = colors[pixel];
+          ctx.fillRect(x * scale, y * scale, scale, scale);
+        }
+      });
+    });
+
+    this.sprites.set('construct', canvas);
+  }
+
+  private static createSwarmSprite() {
+    const size = 30;
+    const canvas = this.createCanvas(size, size);
+    const ctx = canvas.getContext('2d')!;
+
+    // Small swarm creature (like a hornet/wasp)
+    const pixels = [
+      [0,0,0,1,1,1,1,0,0,0],
+      [0,0,1,1,2,2,1,1,0,0],
+      [0,1,1,2,2,2,2,1,1,0],
+      [1,1,2,2,3,3,2,2,1,1],
+      [1,2,2,2,2,2,2,2,2,1],
+      [1,2,2,4,2,2,4,2,2,1],
+      [1,1,2,2,2,2,2,2,1,1],
+      [0,1,1,2,2,2,2,1,1,0],
+      [0,0,1,1,1,1,1,1,0,0],
+      [0,0,0,1,1,1,1,0,0,0],
+    ];
+
+    const colors = [
+      'transparent',
+      '#d68910',     // 1 - outline gold
+      '#f39c12',     // 2 - body gold/yellow
+      '#000000',     // 3 - eyes
+      '#c0392b',     // 4 - red stripes
+    ];
+
+    const scale = 3;
+    pixels.forEach((row, y) => {
+      row.forEach((pixel, x) => {
+        if (pixel > 0) {
+          ctx.fillStyle = colors[pixel];
+          ctx.fillRect(x * scale, y * scale, scale, scale);
+        }
+      });
+    });
+
+    this.sprites.set('swarm', canvas);
   }
 }
 
