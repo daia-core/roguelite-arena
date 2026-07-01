@@ -92,31 +92,33 @@
 
       #touch-controls {
         position: fixed;
-        bottom: env(safe-area-inset-bottom, 20px);
-        right: env(safe-area-inset-right, 15px);
+        bottom: env(safe-area-inset-bottom, 12px);
+        right: env(safe-area-inset-right, 12px);
         display: none;
         flex-direction: column;
-        gap: 12px;
+        gap: 10px;
         z-index: 50;
+        pointer-events: none;
       }
 
       .ability-btn {
-        width: 70px;
-        height: 70px;
+        width: 64px;
+        height: 64px;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border: 2px solid rgba(255, 255, 255, 0.4);
-        border-radius: 15px;
+        border: 3px solid rgba(255, 255, 255, 0.5);
+        border-radius: 8px;
         color: white;
-        font-size: 12px;
+        font-size: 11px;
         font-weight: bold;
         cursor: pointer;
-        box-shadow: 0 4px 20px rgba(102, 126, 234, 0.6), inset 0 -2px 0 rgba(0,0,0,0.2);
+        box-shadow: 0 4px 16px rgba(102, 126, 234, 0.7), inset 0 -2px 0 rgba(0,0,0,0.25);
         transition: transform 0.1s, opacity 0.1s, box-shadow 0.3s;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 4px;
+        gap: 3px;
+        pointer-events: auto;
       }
 
       .ability-btn:active {
@@ -125,7 +127,7 @@
       }
 
       .ability-btn:disabled {
-        opacity: 0.35;
+        opacity: 0.4;
         box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
         animation: none;
       }
@@ -136,25 +138,25 @@
 
       @keyframes glow-pulse {
         0%, 100% {
-          box-shadow: 0 4px 20px rgba(102, 126, 234, 0.6), inset 0 -2px 0 rgba(0,0,0,0.2);
+          box-shadow: 0 4px 16px rgba(102, 126, 234, 0.7), inset 0 -2px 0 rgba(0,0,0,0.25);
         }
         50% {
-          box-shadow: 0 6px 30px rgba(102, 126, 234, 1), 0 0 20px rgba(102, 126, 234, 0.8), inset 0 -2px 0 rgba(0,0,0,0.2);
+          box-shadow: 0 6px 26px rgba(102, 126, 234, 1), 0 0 18px rgba(102, 126, 234, 0.9), inset 0 -2px 0 rgba(0,0,0,0.25);
         }
       }
 
       /* Mobile optimizations */
       @media (max-width: 768px) {
         .ability-btn {
-          width: 95px;
-          height: 95px;
-          font-size: 16px;
+          width: 68px;
+          height: 68px;
+          font-size: 12px;
         }
 
         #touch-controls {
-          bottom: calc(20px + env(safe-area-inset-bottom, 0px));
-          right: calc(15px + env(safe-area-inset-right, 0px));
-          gap: 18px;
+          bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+          right: calc(12px + env(safe-area-inset-right, 0px));
+          gap: 12px;
         }
 
         .menu-btn {
@@ -166,23 +168,23 @@
 
       @media (max-width: 375px) {
         .ability-btn {
-          width: 85px;
-          height: 85px;
-          font-size: 14px;
+          width: 62px;
+          height: 62px;
+          font-size: 11px;
         }
 
         #touch-controls {
-          bottom: calc(18px + env(safe-area-inset-bottom, 0px));
-          right: calc(12px + env(safe-area-inset-right, 0px));
-          gap: 15px;
+          bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+          right: calc(10px + env(safe-area-inset-right, 0px));
+          gap: 10px;
         }
       }
 
       @media (min-height: 800px) {
         .ability-btn {
-          width: 105px;
-          height: 105px;
-          font-size: 18px;
+          width: 72px;
+          height: 72px;
+          font-size: 13px;
         }
       }
     </style>

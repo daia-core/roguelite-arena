@@ -221,42 +221,43 @@ export class Renderer {
     this.ctx.save();
 
     const percent = current / max;
-    const color = percent > 0.5 ? '#00ff00' : percent > 0.25 ? '#ffff00' : '#ff0000';
+    const color = percent > 0.5 ? '#22c55e' : percent > 0.25 ? '#eab308' : '#ef4444';
 
     // Adjust width for smaller screens
     const adjustedWidth = Math.min(width, this.canvas.width * 0.35);
+    const radius = 3; // Rounded corners
 
-    // Outer glow box
-    this.ctx.shadowBlur = 15;
+    // Outer glow
+    this.ctx.shadowBlur = 10;
     this.ctx.shadowColor = color;
 
-    // Dark border (outer)
+    // Dark border (outer) - rounded
     this.ctx.fillStyle = '#000000';
-    this.ctx.fillRect(x - 2, y - 2, adjustedWidth + 4, height + 4);
+    this.drawRoundedRect(x - 2, y - 2, adjustedWidth + 4, height + 4, radius + 1, '#000000');
 
-    // Background
+    // Background - rounded
     this.ctx.shadowBlur = 0;
-    this.ctx.fillStyle = '#1a0000';
-    this.ctx.fillRect(x, y, adjustedWidth, height);
+    this.drawRoundedRect(x, y, adjustedWidth, height, radius, '#1a0000');
 
-    // Health with gradient
+    // Health with gradient - rounded
     const gradient = this.ctx.createLinearGradient(x, y, x, y + height);
-    gradient.addColorStop(0, this.lightenColor(color, 1.3));
+    gradient.addColorStop(0, this.lightenColor(color, 1.2));
     gradient.addColorStop(1, color);
     this.ctx.fillStyle = gradient;
-    this.ctx.shadowBlur = 12;
+    this.ctx.shadowBlur = 8;
     this.ctx.shadowColor = color;
-    this.ctx.fillRect(x, y, adjustedWidth * percent, height);
+    this.drawRoundedRect(x, y, adjustedWidth * percent, height, radius, gradient);
 
     // Inner highlight
     this.ctx.shadowBlur = 0;
-    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-    this.ctx.fillRect(x, y, adjustedWidth * percent, height * 0.3);
+    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+    this.drawRoundedRect(x, y, adjustedWidth * percent, height * 0.3, radius, 'rgba(255, 255, 255, 0.25)');
 
-    // Border (bright)
-    this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+    // Border (bright) - rounded path
+    this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
     this.ctx.lineWidth = 2;
-    this.ctx.strokeRect(x, y, adjustedWidth, height);
+    this.drawRoundedRectPath(x, y, adjustedWidth, height, radius);
+    this.ctx.stroke();
 
     this.ctx.restore();
   }
@@ -275,44 +276,47 @@ export class Renderer {
 
     // Adjust width for smaller screens
     const adjustedWidth = Math.min(width, this.canvas.width * 0.35);
+    const radius = 3; // Rounded corners
 
-    // Outer glow box
-    this.ctx.shadowBlur = 12;
+    // Outer glow
+    this.ctx.shadowBlur = 8;
     this.ctx.shadowColor = color;
 
-    // Dark border (outer)
-    this.ctx.fillStyle = '#000000';
-    this.ctx.fillRect(x - 2, y - 2, adjustedWidth + 4, height + 4);
+    // Dark border (outer) - rounded
+    this.drawRoundedRect(x - 2, y - 2, adjustedWidth + 4, height + 4, radius + 1, '#000000');
 
-    // Background
+    // Background - rounded
     this.ctx.shadowBlur = 0;
-    this.ctx.fillStyle = '#1a1a1a';
-    this.ctx.fillRect(x, y, adjustedWidth, height);
+    this.drawRoundedRect(x, y, adjustedWidth, height, radius, '#1a1a1a');
 
-    // Progress with gradient
+    // Progress with gradient - rounded
     const gradient = this.ctx.createLinearGradient(x, y, x, y + height);
-    gradient.addColorStop(0, this.lightenColor(color, 1.3));
+    gradient.addColorStop(0, this.lightenColor(color, 1.2));
     gradient.addColorStop(1, color);
     this.ctx.fillStyle = gradient;
-    this.ctx.shadowBlur = 10;
+    this.ctx.shadowBlur = 6;
     this.ctx.shadowColor = color;
-    this.ctx.fillRect(x, y, adjustedWidth * percent, height);
+    this.drawRoundedRect(x, y, adjustedWidth * percent, height, radius, gradient);
 
     // Inner highlight
     this.ctx.shadowBlur = 0;
-    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
-    this.ctx.fillRect(x, y, adjustedWidth * percent, height * 0.3);
+    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+    this.drawRoundedRect(x, y, adjustedWidth * percent, height * 0.3, radius, 'rgba(255, 255, 255, 0.2)');
 
-    // Border (bright)
-    this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+    // Border (bright) - rounded path
+    this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
     this.ctx.lineWidth = 2;
-    this.ctx.strokeRect(x, y, adjustedWidth, height);
+    this.drawRoundedRectPath(x, y, adjustedWidth, height, radius);
+    this.ctx.stroke();
 
     this.ctx.restore();
   }
 
   drawButton(x: number, y: number, width: number, height: number, text: string, hovered: boolean = false, enabled: boolean = true, isMobile: boolean = false): void {
     this.ctx.save();
+
+    // Rounded corners - pixel art style (4px radius)
+    const radius = 4;
 
     // Shadow/glow effect for enabled buttons
     if (enabled) {
@@ -335,7 +339,8 @@ export class Renderer {
       gradient.addColorStop(1, '#1a1a1a');
     }
     this.ctx.fillStyle = gradient;
-    this.ctx.fillRect(x, y, width, height);
+    this.drawRoundedRectPath(x, y, width, height, radius);
+    this.ctx.fill();
 
     // Inner highlight for depth
     this.ctx.shadowBlur = 0;
@@ -343,7 +348,8 @@ export class Renderer {
     highlightGradient.addColorStop(0, 'rgba(255, 255, 255, 0.15)');
     highlightGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
     this.ctx.fillStyle = highlightGradient;
-    this.ctx.fillRect(x, y, width, height / 3);
+    this.drawRoundedRectPath(x, y, width, height / 3, radius);
+    this.ctx.fill();
 
     // Border with pulse effect for enabled buttons
     if (enabled && !hovered) {
@@ -357,12 +363,14 @@ export class Renderer {
       this.ctx.strokeStyle = '#555555';
       this.ctx.lineWidth = 3;
     }
-    this.ctx.strokeRect(x, y, width, height);
+    this.drawRoundedRectPath(x, y, width, height, radius);
+    this.ctx.stroke();
 
     // Inner border for depth
     this.ctx.strokeStyle = enabled ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.05)';
     this.ctx.lineWidth = 1;
-    this.ctx.strokeRect(x + 2, y + 2, width - 4, height - 4);
+    this.drawRoundedRectPath(x + 2, y + 2, width - 4, height - 4, Math.max(0, radius - 2));
+    this.ctx.stroke();
 
     this.ctx.restore();
 
@@ -386,10 +394,52 @@ export class Renderer {
     this.ctx.restore();
   }
 
+  private drawRoundedRectPath(x: number, y: number, width: number, height: number, radius: number): void {
+    const r = Math.min(radius, Math.floor(Math.min(width, height) / 2));
+    this.ctx.beginPath();
+    this.ctx.moveTo(x + r, y);
+    this.ctx.lineTo(x + width - r, y);
+    this.ctx.lineTo(x + width, y + r);
+    this.ctx.lineTo(x + width, y + height - r);
+    this.ctx.lineTo(x + width - r, y + height);
+    this.ctx.lineTo(x + r, y + height);
+    this.ctx.lineTo(x, y + height - r);
+    this.ctx.lineTo(x, y + r);
+    this.ctx.closePath();
+  }
+
   drawRect(x: number, y: number, width: number, height: number, color: string): void {
     this.ctx.save();
     this.ctx.fillStyle = color;
     this.ctx.fillRect(x, y, width, height);
+    this.ctx.restore();
+  }
+
+  drawRoundedRect(x: number, y: number, width: number, height: number, radius: number, color: string | CanvasGradient): void {
+    this.ctx.save();
+    this.ctx.fillStyle = color;
+
+    if (radius === 0) {
+      this.ctx.fillRect(x, y, width, height);
+    } else {
+      // Pixel-perfect rounded corners (not smooth arcs)
+      const r = Math.min(radius, Math.floor(Math.min(width, height) / 2));
+
+      // Draw main body
+      this.ctx.fillRect(x + r, y, width - r * 2, height);
+      this.ctx.fillRect(x, y + r, r, height - r * 2);
+      this.ctx.fillRect(x + width - r, y + r, r, height - r * 2);
+
+      // Draw corner pixels (pixel art style, not smooth)
+      for (let i = 0; i < r; i++) {
+        const cornerWidth = r - i;
+        this.ctx.fillRect(x + i, y + r - cornerWidth, 1, cornerWidth);
+        this.ctx.fillRect(x + width - i - 1, y + r - cornerWidth, 1, cornerWidth);
+        this.ctx.fillRect(x + i, y + height - r, 1, cornerWidth);
+        this.ctx.fillRect(x + width - i - 1, y + height - r, 1, cornerWidth);
+      }
+    }
+
     this.ctx.restore();
   }
 

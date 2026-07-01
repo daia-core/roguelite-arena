@@ -1039,184 +1039,112 @@ export class Game {
     if (!this.player) return;
 
     const ctx = this.renderer.getContext();
-
-    // Detect mobile
     const isMobile = this.canvas.width < this.canvas.height;
 
-    // Calculate safe area padding
-    const basePadding = 10;
-    const topPadding = Math.max(basePadding, 20); // Account for notches
-    const sidePadding = Math.max(basePadding, 15);
+    // Refined padding - tighter, cleaner
+    const topPadding = isMobile ? 12 : 10;
+    const sidePadding = isMobile ? 12 : 10;
 
-    // Mobile scaling factors
-    const textScale = isMobile ? 2.0 : 1;
-    const barHeightScale = isMobile ? 2.2 : 1;
+    // Modern indie game HUD - compact bar sizes
+    const barHeight = isMobile ? 16 : 12;
+    const barWidth = isMobile ? Math.min(160, this.canvas.width * 0.4) : 180;
 
-    // Draw HUD background panel (semi-transparent)
-    const hudBgHeight = Math.round(95 * textScale);
+    // Top bar background - single clean panel
+    const hudBgHeight = isMobile ? 72 : 56;
+    this.renderer.drawRoundedRect(0, 0, this.canvas.width, hudBgHeight, 0, 'rgba(0, 0, 0, 0.65)');
     ctx.save();
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-    ctx.fillRect(0, 0, this.canvas.width, hudBgHeight);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
     ctx.lineWidth = 1;
-    ctx.strokeRect(0, 0, this.canvas.width, hudBgHeight);
+    ctx.strokeRect(0, hudBgHeight - 1, this.canvas.width, 1);
     ctx.restore();
 
-    // Health bar with icon
-    const hpLabelSize = Math.round(16 * textScale);
-    const barHeight = Math.round(24 * barHeightScale);
-    this.renderer.drawText('❤', sidePadding, topPadding, { size: hpLabelSize, bold: true, color: '#ef4444' });
-    this.renderer.drawHealthBar(sidePadding + Math.round(25 * textScale), topPadding, 200, barHeight, this.player.health, this.player.maxHealth);
+    // Health bar - clean, small
+    const iconSize = isMobile ? 18 : 14;
+    this.renderer.drawText('❤', sidePadding + 2, topPadding, { size: iconSize, bold: true, color: '#ef4444' });
+    this.renderer.drawHealthBar(sidePadding + (isMobile ? 24 : 20), topPadding + 1, barWidth, barHeight, this.player.health, this.player.maxHealth);
 
-    const barWidth = Math.min(200, this.canvas.width * 0.35);
-    const hpValueSize = Math.round(14 * textScale);
-    this.renderer.drawText(`${Math.ceil(this.player.health)}/${this.player.maxHealth}`, sidePadding + Math.round(25 * textScale) + barWidth + 10, topPadding + 4, {
+    const hpValueSize = isMobile ? 13 : 11;
+    this.renderer.drawText(`${Math.ceil(this.player.health)}/${this.player.maxHealth}`, sidePadding + (isMobile ? 24 : 20) + barWidth + 6, topPadding + 2, {
       size: hpValueSize,
       bold: true,
       color: '#ffffff'
     });
 
-    // XP bar
-    const xpOffset = Math.round(32 * textScale);
-    this.renderer.drawText('⭐', sidePadding, topPadding + xpOffset, { size: hpLabelSize, bold: true, color: '#ffd700' });
-    this.renderer.drawProgressBar(sidePadding + Math.round(25 * textScale), topPadding + xpOffset, 200, barHeight, this.player.xp / this.player.xpToNextLevel, '#4ade80');
-    const levelSize = Math.round(14 * textScale);
-    this.renderer.drawText(`Lv ${this.player.level}`, sidePadding + Math.round(25 * textScale) + barWidth + 10, topPadding + xpOffset + 4, {
+    // XP bar - directly below health
+    const xpOffset = isMobile ? 24 : 20;
+    this.renderer.drawText('⭐', sidePadding + 2, topPadding + xpOffset, { size: iconSize, bold: true, color: '#ffd700' });
+    this.renderer.drawProgressBar(sidePadding + (isMobile ? 24 : 20), topPadding + xpOffset + 1, barWidth, barHeight, this.player.xp / this.player.xpToNextLevel, '#4ade80');
+
+    const levelSize = isMobile ? 13 : 11;
+    this.renderer.drawText(`Lv ${this.player.level}`, sidePadding + (isMobile ? 24 : 20) + barWidth + 6, topPadding + xpOffset + 2, {
       size: levelSize,
       bold: true,
       color: '#ffd700'
     });
 
-    // Gold with icon
-    const goldOffset = Math.round(64 * textScale);
-    const goldSize = Math.round(18 * textScale);
-    this.renderer.drawText(`💰 ${this.player.gold}`, sidePadding, topPadding + goldOffset, {
+    // Gold - compact, below XP
+    const goldOffset = isMobile ? 48 : 40;
+    const goldSize = isMobile ? 15 : 13;
+    this.renderer.drawText(`💰 ${this.player.gold}`, sidePadding + 2, topPadding + goldOffset, {
       size: goldSize,
       bold: true,
       color: '#ffd700'
     });
 
-    // Wave info (top right) with icon
-    let waveText = `🌊 Wave ${this.waveManager.currentWave}`;
+    // Wave info (top right) - clean, compact
+    let waveText = `Wave ${this.waveManager.currentWave}`;
     let waveColor = '#4a9eff';
+    let waveIcon = '🌊';
 
     if (this.waveManager.isBossWave) {
-      waveText = `👹 Wave ${this.waveManager.currentWave} - BOSS`;
+      waveText = `Wave ${this.waveManager.currentWave} BOSS`;
       waveColor = '#ef4444';
+      waveIcon = '👹';
     } else if (this.waveManager.isHordeWave) {
-      waveText = `⚡ Wave ${this.waveManager.currentWave} - HORDE`;
+      waveText = `Wave ${this.waveManager.currentWave} HORDE`;
       waveColor = '#f97316';
+      waveIcon = '⚡';
     }
 
-    const waveSize = Math.round(24 * textScale);
-    this.renderer.drawText(waveText, this.canvas.width - sidePadding, topPadding, {
+    const waveSize = isMobile ? 18 : 16;
+    this.renderer.drawText(`${waveIcon} ${waveText}`, this.canvas.width - sidePadding, topPadding + 2, {
       size: waveSize,
       bold: true,
       align: 'right',
       color: waveColor
     });
 
-    const enemySize = Math.round(16 * textScale);
-    this.renderer.drawText(`Enemies: ${this.enemies.length + this.waveManager.waveEnemiesRemaining}`, this.canvas.width - sidePadding, topPadding + xpOffset + 4, {
+    const enemySize = isMobile ? 14 : 12;
+    this.renderer.drawText(`Enemies: ${this.enemies.length + this.waveManager.waveEnemiesRemaining}`, this.canvas.width - sidePadding, topPadding + xpOffset + 2, {
       size: enemySize,
       align: 'right',
       color: '#cccccc'
     });
 
-    // Ability cooldowns (bottom left, above joystick zone)
-    const abilityY = this.canvas.height - Math.round(180 * textScale);
-    const abilityBoxSize = Math.round(80 * textScale);
-    const abilitySpacing = Math.round(90 * textScale);
+    // Ability cooldowns - NO LONGER SHOWN IN HUD (buttons handle this)
+    // Removed the large ability boxes from bottom-left
 
-    // Draw ability boxes
-    const dashCD = this.player.dashCooldown;
-    const dashReady = dashCD <= 0;
-    const blastCD = this.player.blastCooldown;
-    const blastReady = blastCD <= 0;
-
-    // Dash ability box
-    ctx.save();
-    ctx.fillStyle = dashReady ? 'rgba(74, 222, 128, 0.2)' : 'rgba(0, 0, 0, 0.6)';
-    ctx.fillRect(sidePadding, abilityY, abilityBoxSize, abilityBoxSize);
-    ctx.strokeStyle = dashReady ? '#4ade80' : '#666666';
-    ctx.lineWidth = 3;
-    ctx.strokeRect(sidePadding, abilityY, abilityBoxSize, abilityBoxSize);
-    ctx.restore();
-
-    const abilityTextSize = Math.round(16 * textScale);
-    const abilityCDSize = Math.round(20 * textScale);
-    this.renderer.drawText('DASH', sidePadding + abilityBoxSize / 2, abilityY + Math.round(20 * textScale), {
-      size: abilityTextSize,
-      bold: true,
-      align: 'center',
-      color: dashReady ? '#4ade80' : '#888888'
-    });
-    if (!dashReady) {
-      this.renderer.drawText(`${dashCD.toFixed(1)}`, sidePadding + abilityBoxSize / 2, abilityY + Math.round(45 * textScale), {
-        size: abilityCDSize,
-        bold: true,
-        align: 'center',
-        color: '#ffffff'
-      });
-    } else {
-      this.renderer.drawText('⚡', sidePadding + abilityBoxSize / 2, abilityY + Math.round(40 * textScale), {
-        size: Math.round(24 * textScale),
-        align: 'center'
-      });
-    }
-
-    // Blast ability box
-    ctx.save();
-    ctx.fillStyle = blastReady ? 'rgba(239, 68, 68, 0.2)' : 'rgba(0, 0, 0, 0.6)';
-    ctx.fillRect(sidePadding + abilitySpacing, abilityY, abilityBoxSize, abilityBoxSize);
-    ctx.strokeStyle = blastReady ? '#ef4444' : '#666666';
-    ctx.lineWidth = 3;
-    ctx.strokeRect(sidePadding + abilitySpacing, abilityY, abilityBoxSize, abilityBoxSize);
-    ctx.restore();
-
-    this.renderer.drawText('BLAST', sidePadding + abilitySpacing + abilityBoxSize / 2, abilityY + Math.round(20 * textScale), {
-      size: abilityTextSize,
-      bold: true,
-      align: 'center',
-      color: blastReady ? '#ef4444' : '#888888'
-    });
-    if (!blastReady) {
-      this.renderer.drawText(`${blastCD.toFixed(1)}`, sidePadding + abilitySpacing + abilityBoxSize / 2, abilityY + Math.round(45 * textScale), {
-        size: abilityCDSize,
-        bold: true,
-        align: 'center',
-        color: '#ffffff'
-      });
-    } else {
-      this.renderer.drawText('💥', sidePadding + abilitySpacing + abilityBoxSize / 2, abilityY + Math.round(40 * textScale), {
-        size: Math.round(24 * textScale),
-        align: 'center'
-      });
-    }
-
-    // Shield indicator (center top, below HUD)
-    let statusY = topPadding + goldOffset + Math.round(10 * textScale);
+    // Shield indicator (center, compact)
     if (this.player.shield) {
-      const shieldSize = Math.round(24 * textScale);
-      this.renderer.drawText('🛡️ SHIELD ACTIVE', this.canvas.width / 2, statusY, {
+      const shieldSize = isMobile ? 16 : 14;
+      this.renderer.drawText('🛡️ SHIELD', this.canvas.width / 2, topPadding + goldOffset, {
         size: shieldSize,
         bold: true,
         align: 'center',
         color: '#4a9eff'
       });
-      statusY += Math.round(30 * textScale);
     }
 
-    // BROTATO-INSPIRED: Weapon specialization bonus indicator
+    // Weapon specialization (if active, show below wave on right side)
     const specialization = this.playerStats.getWeaponSpecialization();
     if (specialization === 'melee' || specialization === 'ranged') {
-      const specSize = Math.round(20 * textScale);
+      const specSize = isMobile ? 13 : 11;
       const specIcon = specialization === 'melee' ? '⚔️' : '🏹';
       const specColor = specialization === 'melee' ? '#ff6600' : '#00ffff';
-      this.renderer.drawText(`${specIcon} ${specialization.toUpperCase()} +20%`, this.canvas.width / 2, statusY, {
+      this.renderer.drawText(`${specIcon} ${specialization.toUpperCase()} +20%`, this.canvas.width - sidePadding, topPadding + goldOffset, {
         size: specSize,
         bold: true,
-        align: 'center',
+        align: 'right',
         color: specColor
       });
     }
@@ -1291,45 +1219,48 @@ export class Game {
       const hasSynergy = this.playerStats.hasSynergyWith(item);
 
       // Card shadow/glow effect (brighter for synergies)
+      const cardRadius = 6; // Rounded corners for cards
       if (hovered || hasSynergy) {
         ctx.save();
         ctx.shadowBlur = hasSynergy ? 30 : 20;
         ctx.shadowColor = hasSynergy ? '#00ff00' : rarityColor;
-        ctx.fillStyle = '#2a2a2a';
-        ctx.fillRect(x - 2, y - 2, itemWidth + 4, itemHeight + 4);
+        this.renderer.drawRoundedRect(x - 2, y - 2, itemWidth + 4, itemHeight + 4, cardRadius + 2, '#2a2a2a');
         ctx.restore();
       }
 
-      // Background with gradient
+      // Background with gradient - rounded
       const gradient = ctx.createLinearGradient(x, y, x, y + itemHeight);
       gradient.addColorStop(0, hovered ? '#3a3a3a' : '#222222');
       gradient.addColorStop(1, hovered ? '#2a2a2a' : '#1a1a1a');
       ctx.fillStyle = gradient;
-      ctx.fillRect(x, y, itemWidth, itemHeight);
+      this.renderer.drawRoundedRect(x, y, itemWidth, itemHeight, cardRadius, gradient);
 
-      // Border with rarity color (thicker for better visibility)
+      // Border with rarity color (thicker for better visibility) - rounded
       ctx.strokeStyle = rarityColor;
       ctx.lineWidth = hovered ? 5 : 4;
-      ctx.strokeRect(x, y, itemWidth, itemHeight);
+      this.renderer['drawRoundedRectPath'](x, y, itemWidth, itemHeight, cardRadius);
+      ctx.stroke();
 
-      // Inner shadow for depth
+      // Inner shadow for depth - rounded
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
       ctx.lineWidth = 1;
-      ctx.strokeRect(x + 2, y + 2, itemWidth - 4, itemHeight - 4);
+      this.renderer['drawRoundedRectPath'](x + 2, y + 2, itemWidth - 4, itemHeight - 4, Math.max(0, cardRadius - 2));
+      ctx.stroke();
 
       // BROTATO-INSPIRED: Lock button in top-right corner
       const lockButtonSize = isMobile ? 45 : 30;
       const lockButtonX = x + itemWidth - lockButtonSize - 5;
       const lockButtonY = y + 5;
       const isLocked = this.lockedShopItems.has(i);
+      const lockRadius = 4;
 
-      // Lock button background
+      // Lock button background - rounded
       ctx.save();
-      ctx.fillStyle = isLocked ? '#ffd700' : '#2a2a2a';
-      ctx.fillRect(lockButtonX, lockButtonY, lockButtonSize, lockButtonSize);
+      this.renderer.drawRoundedRect(lockButtonX, lockButtonY, lockButtonSize, lockButtonSize, lockRadius, isLocked ? '#ffd700' : '#2a2a2a');
       ctx.strokeStyle = isLocked ? '#ffff00' : '#666666';
       ctx.lineWidth = 2;
-      ctx.strokeRect(lockButtonX, lockButtonY, lockButtonSize, lockButtonSize);
+      this.renderer['drawRoundedRectPath'](lockButtonX, lockButtonY, lockButtonSize, lockButtonSize, lockRadius);
+      ctx.stroke();
       ctx.restore();
 
       // Lock icon

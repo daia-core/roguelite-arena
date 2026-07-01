@@ -79,8 +79,23 @@ setInterval(() => {
 
   // Show/hide touch controls based on state
   const touchControls = document.querySelector<HTMLDivElement>('#touch-controls')!;
+  const dashBtn = document.querySelector<HTMLButtonElement>('#dashBtn')!;
+  const blastBtn = document.querySelector<HTMLButtonElement>('#blastBtn')!;
+
   if (game.state === 'playing') {
     touchControls.style.display = 'flex';
+
+    // Update button states based on cooldowns
+    if (game.player) {
+      const dashCD = game.player.dashCooldown;
+      const blastCD = game.player.blastCooldown;
+
+      dashBtn.disabled = dashCD > 0;
+      dashBtn.textContent = dashCD > 0 ? dashCD.toFixed(1) : 'DASH';
+
+      blastBtn.disabled = blastCD > 0;
+      blastBtn.textContent = blastCD > 0 ? blastCD.toFixed(1) : 'BLAST';
+    }
   } else {
     touchControls.style.display = 'none';
   }
