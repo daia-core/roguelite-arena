@@ -608,22 +608,27 @@ export class Game {
   private drawHUD(): void {
     if (!this.player) return;
 
-    const padding = 10;
+    // Calculate safe area padding
+    const basePadding = 10;
+    const topPadding = Math.max(basePadding, 20); // Account for notches
+    const sidePadding = Math.max(basePadding, 15);
 
     // Health bar
-    this.renderer.drawText('HP', padding, padding, { size: 14, bold: true });
-    this.renderer.drawHealthBar(padding + 30, padding, 200, 20, this.player.health, this.player.maxHealth);
-    this.renderer.drawText(`${Math.ceil(this.player.health)}/${this.player.maxHealth}`, padding + 240, padding + 2, { size: 14 });
+    this.renderer.drawText('HP', sidePadding, topPadding, { size: 14, bold: true });
+    this.renderer.drawHealthBar(sidePadding + 30, topPadding, 200, 20, this.player.health, this.player.maxHealth);
+
+    const barWidth = Math.min(200, this.canvas.width * 0.35);
+    this.renderer.drawText(`${Math.ceil(this.player.health)}/${this.player.maxHealth}`, sidePadding + 30 + barWidth + 10, topPadding + 2, { size: 14 });
 
     // XP bar
-    this.renderer.drawText('XP', padding, padding + 30, { size: 14, bold: true });
-    this.renderer.drawProgressBar(padding + 30, padding + 30, 200, 20, this.player.xp / this.player.xpToNextLevel, '#00ff00');
-    this.renderer.drawText(`Level ${this.player.level}`, padding + 240, padding + 32, { size: 14 });
+    this.renderer.drawText('XP', sidePadding, topPadding + 30, { size: 14, bold: true });
+    this.renderer.drawProgressBar(sidePadding + 30, topPadding + 30, 200, 20, this.player.xp / this.player.xpToNextLevel, '#00ff00');
+    this.renderer.drawText(`Level ${this.player.level}`, sidePadding + 30 + barWidth + 10, topPadding + 32, { size: 14 });
 
     // Gold
-    this.renderer.drawText(`Gold: ${this.player.gold}`, padding, padding + 60, { size: 16, bold: true, color: '#ffff00' });
+    this.renderer.drawText(`Gold: ${this.player.gold}`, sidePadding, topPadding + 60, { size: 16, bold: true, color: '#ffff00' });
 
-    // Wave info
+    // Wave info (top right)
     let waveText = `Wave ${this.waveManager.currentWave}`;
     let waveColor = '#00ffff';
 
@@ -635,48 +640,48 @@ export class Game {
       waveColor = '#ff6600';
     }
 
-    this.renderer.drawText(waveText, this.canvas.width - padding, padding, {
+    this.renderer.drawText(waveText, this.canvas.width - sidePadding, topPadding, {
       size: 20,
       bold: true,
       align: 'right',
       color: waveColor
     });
 
-    this.renderer.drawText(`Enemies: ${this.enemies.length + this.waveManager.waveEnemiesRemaining}`, this.canvas.width - padding, padding + 30, {
+    this.renderer.drawText(`Enemies: ${this.enemies.length + this.waveManager.waveEnemiesRemaining}`, this.canvas.width - sidePadding, topPadding + 30, {
       size: 16,
       align: 'right'
     });
 
-    // Ability cooldowns
-    const abilityY = this.canvas.height - 60;
+    // Ability cooldowns (bottom left, above joystick zone)
+    const abilityY = this.canvas.height - 180;
 
     // Dash
     const dashCD = this.player.dashCooldown;
     const dashReady = dashCD <= 0;
-    this.renderer.drawText('DASH', padding, abilityY, {
+    this.renderer.drawText('DASH', sidePadding, abilityY, {
       size: 14,
       bold: true,
       color: dashReady ? '#00ff00' : '#888888'
     });
     if (!dashReady) {
-      this.renderer.drawText(`${dashCD.toFixed(1)}s`, padding, abilityY + 18, { size: 12 });
+      this.renderer.drawText(`${dashCD.toFixed(1)}s`, sidePadding, abilityY + 18, { size: 12 });
     }
 
     // Blast
     const blastCD = this.player.blastCooldown;
     const blastReady = blastCD <= 0;
-    this.renderer.drawText('BLAST', padding + 100, abilityY, {
+    this.renderer.drawText('BLAST', sidePadding + 100, abilityY, {
       size: 14,
       bold: true,
       color: blastReady ? '#00ff00' : '#888888'
     });
     if (!blastReady) {
-      this.renderer.drawText(`${blastCD.toFixed(1)}s`, padding + 100, abilityY + 18, { size: 12 });
+      this.renderer.drawText(`${blastCD.toFixed(1)}s`, sidePadding + 100, abilityY + 18, { size: 12 });
     }
 
     // Shield indicator
     if (this.player.shield) {
-      this.renderer.drawText('🛡️ SHIELD ACTIVE', this.canvas.width / 2, padding, {
+      this.renderer.drawText('🛡️ SHIELD ACTIVE', this.canvas.width / 2, topPadding, {
         size: 20,
         bold: true,
         align: 'center',

@@ -165,18 +165,21 @@ export class Renderer {
     const percent = current / max;
     const color = percent > 0.5 ? '#00ff00' : percent > 0.25 ? '#ffff00' : '#ff0000';
 
+    // Adjust width for smaller screens
+    const adjustedWidth = Math.min(width, this.canvas.width * 0.35);
+
     // Outer glow box
     this.ctx.shadowBlur = 15;
     this.ctx.shadowColor = color;
 
     // Dark border (outer)
     this.ctx.fillStyle = '#000000';
-    this.ctx.fillRect(x - 2, y - 2, width + 4, height + 4);
+    this.ctx.fillRect(x - 2, y - 2, adjustedWidth + 4, height + 4);
 
     // Background
     this.ctx.shadowBlur = 0;
     this.ctx.fillStyle = '#1a0000';
-    this.ctx.fillRect(x, y, width, height);
+    this.ctx.fillRect(x, y, adjustedWidth, height);
 
     // Health with gradient
     const gradient = this.ctx.createLinearGradient(x, y, x, y + height);
@@ -185,17 +188,17 @@ export class Renderer {
     this.ctx.fillStyle = gradient;
     this.ctx.shadowBlur = 12;
     this.ctx.shadowColor = color;
-    this.ctx.fillRect(x, y, width * percent, height);
+    this.ctx.fillRect(x, y, adjustedWidth * percent, height);
 
     // Inner highlight
     this.ctx.shadowBlur = 0;
     this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-    this.ctx.fillRect(x, y, width * percent, height * 0.3);
+    this.ctx.fillRect(x, y, adjustedWidth * percent, height * 0.3);
 
     // Border (bright)
     this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
     this.ctx.lineWidth = 2;
-    this.ctx.strokeRect(x, y, width, height);
+    this.ctx.strokeRect(x, y, adjustedWidth, height);
 
     this.ctx.restore();
   }
@@ -212,18 +215,21 @@ export class Renderer {
   drawProgressBar(x: number, y: number, width: number, height: number, percent: number, color: string): void {
     this.ctx.save();
 
+    // Adjust width for smaller screens
+    const adjustedWidth = Math.min(width, this.canvas.width * 0.35);
+
     // Outer glow box
     this.ctx.shadowBlur = 12;
     this.ctx.shadowColor = color;
 
     // Dark border (outer)
     this.ctx.fillStyle = '#000000';
-    this.ctx.fillRect(x - 2, y - 2, width + 4, height + 4);
+    this.ctx.fillRect(x - 2, y - 2, adjustedWidth + 4, height + 4);
 
     // Background
     this.ctx.shadowBlur = 0;
     this.ctx.fillStyle = '#1a1a1a';
-    this.ctx.fillRect(x, y, width, height);
+    this.ctx.fillRect(x, y, adjustedWidth, height);
 
     // Progress with gradient
     const gradient = this.ctx.createLinearGradient(x, y, x, y + height);
@@ -232,17 +238,17 @@ export class Renderer {
     this.ctx.fillStyle = gradient;
     this.ctx.shadowBlur = 10;
     this.ctx.shadowColor = color;
-    this.ctx.fillRect(x, y, width * percent, height);
+    this.ctx.fillRect(x, y, adjustedWidth * percent, height);
 
     // Inner highlight
     this.ctx.shadowBlur = 0;
     this.ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
-    this.ctx.fillRect(x, y, width * percent, height * 0.3);
+    this.ctx.fillRect(x, y, adjustedWidth * percent, height * 0.3);
 
     // Border (bright)
     this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
     this.ctx.lineWidth = 2;
-    this.ctx.strokeRect(x, y, width, height);
+    this.ctx.strokeRect(x, y, adjustedWidth, height);
 
     this.ctx.restore();
   }

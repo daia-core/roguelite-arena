@@ -12,11 +12,12 @@ const app = document.querySelector<HTMLDivElement>('#app')!;
 
 app.innerHTML = `
   <div id="game-container">
-    <canvas id="gameCanvas" width="1200" height="800"></canvas>
+    <canvas id="gameCanvas"></canvas>
     <div id="menu-ui">
       <button id="startBtn" class="menu-btn">New Game</button>
       <button id="continueBtn" class="menu-btn" style="display: none;">Continue</button>
     </div>
+    <div id="joystick-zone"></div>
     <div id="touch-controls">
       <button id="dashBtn" class="ability-btn">DASH</button>
       <button id="blastBtn" class="ability-btn">BLAST</button>
@@ -51,24 +52,19 @@ function resizeCanvas(): void {
     height: window.innerHeight
   };
 
-  const viewportWidth = viewport.width;
-  const viewportHeight = viewport.height;
+  // Set canvas to FULL viewport dimensions
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
 
-  const aspectRatio = 1200 / 800;
-  let width = viewportWidth;
-  let height = width / aspectRatio;
-
-  // If calculated height exceeds viewport, fit by height instead
-  if (height > viewportHeight) {
-    height = viewportHeight;
-    width = height * aspectRatio;
-  }
-
-  canvas.style.width = `${width}px`;
-  canvas.style.height = `${height}px`;
+  // CSS already sets to 100vw x 100vh, but ensure it matches
+  canvas.style.width = '100%';
+  canvas.style.height = '100%';
 }
 
 window.addEventListener('resize', resizeCanvas);
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', resizeCanvas);
+}
 resizeCanvas();
 
 // Hide menu UI when playing

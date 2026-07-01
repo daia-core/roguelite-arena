@@ -28,17 +28,17 @@
       #app {
         width: 100%;
         height: 100%;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
         position: relative;
       }
 
       #gameCanvas {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
         display: block;
         background: #0f0f1e;
-        box-shadow: 0 0 40px rgba(0, 0, 0, 0.8);
         touch-action: none;
       }
 
@@ -46,9 +46,6 @@
         position: relative;
         width: 100%;
         height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
       }
 
       #menu-ui {
@@ -81,17 +78,26 @@
         transform: scale(0.98);
       }
 
+      #joystick-zone {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 160px;
+        height: 160px;
+        z-index: 50;
+        padding-bottom: env(safe-area-inset-bottom, 20px);
+        padding-left: env(safe-area-inset-left, 20px);
+        pointer-events: none;
+      }
+
       #touch-controls {
         position: fixed;
-        bottom: 20px;
-        right: 15px;
+        bottom: env(safe-area-inset-bottom, 20px);
+        right: env(safe-area-inset-right, 15px);
         display: none;
         flex-direction: column;
         gap: 12px;
         z-index: 50;
-        padding: 10px;
-        padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
-        padding-right: calc(10px + env(safe-area-inset-right, 0px));
       }
 
       .ability-btn {
@@ -146,11 +152,9 @@
         }
 
         #touch-controls {
-          bottom: 15px;
-          right: 12px;
+          bottom: calc(15px + env(safe-area-inset-bottom, 0px));
+          right: calc(12px + env(safe-area-inset-right, 0px));
           gap: 14px;
-          padding-bottom: calc(15px + env(safe-area-inset-bottom, 0px));
-          padding-right: calc(12px + env(safe-area-inset-right, 0px));
         }
 
         .menu-btn {
@@ -168,11 +172,9 @@
         }
 
         #touch-controls {
-          bottom: 12px;
-          right: 10px;
+          bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+          right: calc(10px + env(safe-area-inset-right, 0px));
           gap: 10px;
-          padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
-          padding-right: calc(10px + env(safe-area-inset-right, 0px));
         }
       }
 

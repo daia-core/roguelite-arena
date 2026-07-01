@@ -100,11 +100,11 @@ export class Input {
         this.mouseY = y;
         this.mouseDown = true;
 
-        // Left side of screen = joystick (ONLY during gameplay, not in shop/menu/gameover)
+        // Left 40% of screen = joystick (ONLY during gameplay, not in shop/menu/gameover)
         const gameState = this.gameStateGetter ? this.gameStateGetter() : 'menu';
         const canActivateJoystick = gameState === 'playing';
 
-        if (canActivateJoystick && x < this.canvas.width / 2 && !this.joystick.active) {
+        if (canActivateJoystick && x < this.canvas.width * 0.4 && !this.joystick.active) {
           this.joystick.active = true;
           this.joystick.identifier = touch.identifier;
           this.joystick.startX = x;
