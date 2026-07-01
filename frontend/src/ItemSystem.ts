@@ -793,8 +793,8 @@ export class PlayerStats {
   affinityTags: ItemTag[] = []; // Character affinity (2 random tags at start)
 
   // Base stats - BUFFED for better early game (Wave 1 too hard fix)
-  baseDamage: number = 15; // Was 10 - 50% increase
-  baseFireRate: number = 2.5; // Was 2 - 25% increase (Shots per second)
+  baseDamage: number = 25; // Wave 1 balance: kill slimes quickly
+  baseFireRate: number = 3.0; // Faster shooting for better feel (shots per second)
   baseSpeed: number = 200;
   baseMaxHealth: number = 100;
   baseCritChance: number = 0.05;

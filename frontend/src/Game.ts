@@ -1291,16 +1291,16 @@ export class Game {
     const ctx = this.renderer.getContext();
     const isMobile = this.canvas.width < this.canvas.height;
 
-    // Refined padding - tighter, cleaner
-    const topPadding = isMobile ? 12 : 10;
-    const sidePadding = isMobile ? 12 : 10;
+    // Mobile-optimized padding and sizing
+    const topPadding = isMobile ? 16 : 10;
+    const sidePadding = isMobile ? 16 : 10;
 
-    // Modern indie game HUD - compact bar sizes
-    const barHeight = isMobile ? 16 : 12;
-    const barWidth = isMobile ? Math.min(160, this.canvas.width * 0.4) : 180;
+    // Larger HUD elements for mobile readability
+    const barHeight = isMobile ? 22 : 12;
+    const barWidth = isMobile ? Math.min(200, this.canvas.width * 0.45) : 180;
 
-    // Top bar background - single clean panel
-    const hudBgHeight = isMobile ? 72 : 56;
+    // Top bar background - larger on mobile
+    const hudBgHeight = isMobile ? 90 : 56;
     this.renderer.drawRoundedRect(0, 0, this.canvas.width, hudBgHeight, 0, 'rgba(0, 0, 0, 0.65)');
     ctx.save();
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
@@ -1308,33 +1308,33 @@ export class Game {
     ctx.strokeRect(0, hudBgHeight - 1, this.canvas.width, 1);
     ctx.restore();
 
-    // Health bar - clean, small
-    const iconSize = isMobile ? 18 : 14;
+    // Health bar - larger icons and text on mobile
+    const iconSize = isMobile ? 24 : 14;
     this.renderer.drawText('❤', sidePadding + 2, topPadding, { size: iconSize, bold: true, color: '#ef4444' });
-    this.renderer.drawHealthBar(sidePadding + (isMobile ? 24 : 20), topPadding + 1, barWidth, barHeight, this.player.health, this.player.maxHealth);
+    this.renderer.drawHealthBar(sidePadding + (isMobile ? 30 : 20), topPadding + 1, barWidth, barHeight, this.player.health, this.player.maxHealth);
 
-    const hpValueSize = isMobile ? 13 : 11;
-    this.renderer.drawText(`${Math.ceil(this.player.health)}/${this.player.maxHealth}`, sidePadding + (isMobile ? 24 : 20) + barWidth + 6, topPadding + 2, {
+    const hpValueSize = isMobile ? 16 : 11;
+    this.renderer.drawText(`${Math.ceil(this.player.health)}/${this.player.maxHealth}`, sidePadding + (isMobile ? 30 : 20) + barWidth + 6, topPadding + 2, {
       size: hpValueSize,
       bold: true,
       color: '#ffffff'
     });
 
     // XP bar - directly below health
-    const xpOffset = isMobile ? 24 : 20;
+    const xpOffset = isMobile ? 30 : 20;
     this.renderer.drawText('⭐', sidePadding + 2, topPadding + xpOffset, { size: iconSize, bold: true, color: '#ffd700' });
-    this.renderer.drawProgressBar(sidePadding + (isMobile ? 24 : 20), topPadding + xpOffset + 1, barWidth, barHeight, this.player.xp / this.player.xpToNextLevel, '#4ade80');
+    this.renderer.drawProgressBar(sidePadding + (isMobile ? 30 : 20), topPadding + xpOffset + 1, barWidth, barHeight, this.player.xp / this.player.xpToNextLevel, '#4ade80');
 
-    const levelSize = isMobile ? 13 : 11;
-    this.renderer.drawText(`Lv ${this.player.level}`, sidePadding + (isMobile ? 24 : 20) + barWidth + 6, topPadding + xpOffset + 2, {
+    const levelSize = isMobile ? 16 : 11;
+    this.renderer.drawText(`Lv ${this.player.level}`, sidePadding + (isMobile ? 30 : 20) + barWidth + 6, topPadding + xpOffset + 2, {
       size: levelSize,
       bold: true,
       color: '#ffd700'
     });
 
     // Gold - compact, below XP
-    const goldOffset = isMobile ? 48 : 40;
-    const goldSize = isMobile ? 15 : 13;
+    const goldOffset = isMobile ? 60 : 40;
+    const goldSize = isMobile ? 18 : 13;
     this.renderer.drawText(`💰 ${this.player.gold}`, sidePadding + 2, topPadding + goldOffset, {
       size: goldSize,
       bold: true,
@@ -1356,7 +1356,7 @@ export class Game {
       waveIcon = '⚡';
     }
 
-    const waveSize = isMobile ? 18 : 16;
+    const waveSize = isMobile ? 20 : 16;
     this.renderer.drawText(`${waveIcon} ${waveText}`, this.canvas.width - sidePadding, topPadding + 2, {
       size: waveSize,
       bold: true,
@@ -1364,7 +1364,7 @@ export class Game {
       color: waveColor
     });
 
-    const enemySize = isMobile ? 14 : 12;
+    const enemySize = isMobile ? 16 : 12;
     this.renderer.drawText(`Enemies: ${this.enemies.length + this.waveManager.waveEnemiesRemaining}`, this.canvas.width - sidePadding, topPadding + xpOffset + 2, {
       size: enemySize,
       align: 'right',
@@ -1376,7 +1376,7 @@ export class Game {
 
     // Shield indicator (center, compact)
     if (this.player.shield) {
-      const shieldSize = isMobile ? 16 : 14;
+      const shieldSize = isMobile ? 18 : 14;
       this.renderer.drawText('🛡️ SHIELD', this.canvas.width / 2, topPadding + goldOffset, {
         size: shieldSize,
         bold: true,
@@ -1442,9 +1442,9 @@ export class Game {
     ctx.stroke();
     ctx.restore();
 
-    // Stats content - compact format
-    const statSize = isMobile ? 11 : 13;
-    const statLineHeight = isMobile ? 16 : 18;
+    // Stats content - larger on mobile for readability
+    const statSize = isMobile ? 14 : 13;
+    const statLineHeight = isMobile ? 20 : 18;
     const statStartY = statPanelY + statPanelPadding + statLineHeight;
 
     if (isMobile) {
@@ -1535,7 +1535,7 @@ export class Game {
 
       // Title
       this.renderer.drawText('Inventory', invPanelX + invPanelWidth / 2, invPanelY + 12, {
-        size: isMobile ? 12 : 11,
+        size: isMobile ? 14 : 11,
         bold: true,
         align: 'center',
         color: '#a855f7'

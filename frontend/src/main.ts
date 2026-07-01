@@ -19,10 +19,6 @@ app.innerHTML = `
       <button id="upgradesBtn" class="menu-btn">Upgrades</button>
     </div>
     <div id="joystick-zone"></div>
-    <div id="touch-controls">
-      <button id="dashBtn" class="ability-btn">DASH</button>
-      <button id="blastBtn" class="ability-btn">BLAST</button>
-    </div>
   </div>
 `;
 
@@ -78,26 +74,5 @@ setInterval(() => {
     menuUI.style.display = 'none';
   }
 
-  // Show/hide touch controls based on state
-  const touchControls = document.querySelector<HTMLDivElement>('#touch-controls')!;
-  const dashBtn = document.querySelector<HTMLButtonElement>('#dashBtn')!;
-  const blastBtn = document.querySelector<HTMLButtonElement>('#blastBtn')!;
-
-  if (game.state === 'playing') {
-    touchControls.style.display = 'flex';
-
-    // Update button states based on cooldowns
-    if (game.player) {
-      const dashCD = game.player.dashCooldown;
-      const blastCD = game.player.blastCooldown;
-
-      dashBtn.disabled = dashCD > 0;
-      dashBtn.textContent = dashCD > 0 ? dashCD.toFixed(1) : 'DASH';
-
-      blastBtn.disabled = blastCD > 0;
-      blastBtn.textContent = blastCD > 0 ? blastCD.toFixed(1) : 'BLAST';
-    }
-  } else {
-    touchControls.style.display = 'none';
-  }
+  // Joystick is always visible during gameplay (no ability buttons)
 }, 100);

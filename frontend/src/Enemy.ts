@@ -3,7 +3,7 @@
 import { circleCollision } from './utils';
 import { SpriteSheet } from './sprites';
 
-export type EnemyType = 'slime' | 'goblin' | 'skeleton' | 'imp' | 'orc' | 'wraith' | 'necromancer' | 'troll' | 'banshee' | 'demon' | 'bat' | 'wizard' | 'mimic' | 'spider' | 'golem' | 'ghost' | 'mushroom' | 'gargoyle' | 'blob' | 'necroegg' | 'cyclops' | 'phantom' | 'druid' | 'construct' | 'swarm';
+export type EnemyType = 'slime' | 'goblin' | 'skeleton' | 'imp' | 'orc' | 'wraith' | 'necromancer' | 'troll' | 'banshee' | 'demon' | 'bat' | 'wizard' | 'mimic' | 'spider' | 'golem' | 'ghost' | 'mushroom' | 'gargoyle' | 'blob' | 'necroegg' | 'cyclops' | 'phantom' | 'druid' | 'construct' | 'swarm' | 'dasher' | 'evader' | 'orbiter' | 'spiraler';
 
 export interface EnemyTypeData {
   health: number;
@@ -19,7 +19,7 @@ export interface EnemyTypeData {
 
 const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
   slime: {
-    health: 150,
+    health: 100, // Reduced from 150 for faster Wave 1
     speed: 60,
     damage: 8,
     radius: 14,
@@ -272,6 +272,46 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     xpValue: 20,
     goldValue: 15,
     spriteName: 'swarm'
+  },
+  dasher: {
+    health: 85,
+    speed: 110,
+    damage: 14,
+    radius: 13,
+    color: '#e74c3c',
+    xpValue: 28,
+    goldValue: 22,
+    spriteName: 'dasher'
+  },
+  evader: {
+    health: 70,
+    speed: 130,
+    damage: 9,
+    radius: 11,
+    color: '#3498db',
+    xpValue: 25,
+    goldValue: 18,
+    spriteName: 'evader'
+  },
+  orbiter: {
+    health: 95,
+    speed: 95,
+    damage: 11,
+    radius: 12,
+    color: '#9b59b6',
+    xpValue: 30,
+    goldValue: 24,
+    spriteName: 'orbiter'
+  },
+  spiraler: {
+    health: 88,
+    speed: 105,
+    damage: 10,
+    radius: 12,
+    color: '#1abc9c',
+    xpValue: 27,
+    goldValue: 20,
+    spriteName: 'spiraler'
   }
 };
 
@@ -380,6 +420,26 @@ export class Enemy {
 
   // Construct specific (reflection)
   constructReflectChance: number = 0.3;
+
+  // NEW AI: Dash/lunge behavior
+  dashCooldown: number = 0;
+  dashing: boolean = false;
+  dashVelocity: { x: number; y: number } = { x: 0, y: 0 };
+  dashTimer: number = 0;
+
+  // NEW AI: Dodge behavior (avoid projectiles)
+  dodgeCooldown: number = 0;
+  dodging: boolean = false;
+  dodgeDirection: { x: number; y: number } = { x: 0, y: 0 };
+  dodgeTimer: number = 0;
+
+  // NEW AI: Circle movement
+  circleAngle: number = 0;
+  circleDistance: number = 200;
+
+  // NEW AI: Spiral movement
+  spiralAngle: number = 0;
+  spiralDistance: number = 250;
 
   constructor(x: number, y: number, type: EnemyType, waveMultiplier: number = 1, canSplit: boolean = true) {
     this.id = Enemy.nextId++;
