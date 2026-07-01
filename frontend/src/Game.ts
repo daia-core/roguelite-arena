@@ -48,6 +48,9 @@ export class Game {
     this.waveManager = new WaveManager();
     this.playerStats = new PlayerStats();
 
+    // Connect input to game state
+    this.input.setGameStateGetter(() => this.state);
+
     this.setupUI();
   }
 
@@ -380,16 +383,29 @@ export class Game {
     const mouseX = this.input.mouseX;
     const mouseY = this.input.mouseY;
 
-    const itemWidth = 200;
-    const itemHeight = 120;
-    const startX = this.canvas.width / 2 - (itemWidth * 3 + 40) / 2;
-    const startY = 200;
+    // Responsive layout
+    const isMobile = this.canvas.width < 800;
+    const itemWidth = isMobile ? Math.min(280, this.canvas.width - 40) : 200;
+    const itemHeight = isMobile ? 140 : 120;
+    const gap = isMobile ? 15 : 20;
+
+    let startX: number, startY: number;
+
+    if (isMobile) {
+      // Vertical stack on mobile
+      startX = (this.canvas.width - itemWidth) / 2;
+      startY = 150;
+    } else {
+      // Horizontal row on desktop
+      startX = this.canvas.width / 2 - (itemWidth * 3 + gap * 2) / 2;
+      startY = 200;
+    }
 
     this.selectedShopItem = -1;
 
     for (let i = 0; i < this.shopItems.length; i++) {
-      const x = startX + i * (itemWidth + 20);
-      const y = startY;
+      const x = isMobile ? startX : startX + i * (itemWidth + gap);
+      const y = isMobile ? startY + i * (itemHeight + gap) : startY;
 
       if (pointInRect(mouseX, mouseY, { x, y, width: itemWidth, height: itemHeight })) {
         this.selectedShopItem = i;
@@ -415,17 +431,19 @@ export class Game {
             }
 
             this.audio.playPurchase();
+            this.input.mouseDown = false; // Prevent accidental double purchase
           }
         }
       }
     }
 
-    // Continue button
-    const continueY = 400;
+    // Continue button - position based on layout
+    const continueY = isMobile ? startY + this.shopItems.length * (itemHeight + gap) + 20 : 400;
     const continueBtn = { x: this.canvas.width / 2 - 100, y: continueY, width: 200, height: 50 };
 
     if (pointInRect(mouseX, mouseY, continueBtn) && this.input.mouseDown) {
       this.startNextWave();
+      this.input.mouseDown = false; // Prevent multiple clicks
     }
   }
 
@@ -641,8 +659,10 @@ export class Game {
   }
 
   private drawShop(): void {
-    this.renderer.drawText('SHOP', this.canvas.width / 2, 50, {
-      size: 36,
+    const isMobile = this.canvas.width < 800;
+
+    this.renderer.drawText('SHOP', this.canvas.width / 2, isMobile ? 30 : 50, {
+      size: isMobile ? 28 : 36,
       bold: true,
       align: 'center',
       color: '#ffff00'
@@ -650,24 +670,35 @@ export class Game {
 
     if (!this.player) return;
 
-    this.renderer.drawText(`Gold: ${this.player.gold}`, this.canvas.width / 2, 100, {
-      size: 20,
+    this.renderer.drawText(`Gold: ${this.player.gold}`, this.canvas.width / 2, isMobile ? 70 : 100, {
+      size: isMobile ? 16 : 20,
       align: 'center',
       color: '#ffff00'
     });
 
-    // Draw shop items
-    const itemWidth = 200;
-    const itemHeight = 120;
-    const startX = this.canvas.width / 2 - (itemWidth * 3 + 40) / 2;
-    const startY = 200;
+    // Draw shop items - responsive layout
+    const itemWidth = isMobile ? Math.min(280, this.canvas.width - 40) : 200;
+    const itemHeight = isMobile ? 140 : 120;
+    const gap = isMobile ? 15 : 20;
+
+    let startX: number, startY: number;
+
+    if (isMobile) {
+      // Vertical stack on mobile
+      startX = (this.canvas.width - itemWidth) / 2;
+      startY = 110;
+    } else {
+      // Horizontal row on desktop
+      startX = this.canvas.width / 2 - (itemWidth * 3 + gap * 2) / 2;
+      startY = 200;
+    }
 
     const ctx = this.renderer.getContext();
 
     for (let i = 0; i < this.shopItems.length; i++) {
       const item = this.shopItems[i];
-      const x = startX + i * (itemWidth + 20);
-      const y = startY;
+      const x = isMobile ? startX : startX + i * (itemWidth + gap);
+      const y = isMobile ? startY + i * (itemHeight + gap) : startY;
       const hovered = this.selectedShopItem === i;
 
       // Background
@@ -714,8 +745,8 @@ export class Game {
       });
     }
 
-    // Continue button
-    const continueY = 400;
+    // Continue button - position based on layout
+    const continueY = isMobile ? startY + this.shopItems.length * (itemHeight + gap) + 20 : 400;
     this.renderer.drawButton(
       this.canvas.width / 2 - 100,
       continueY,

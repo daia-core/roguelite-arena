@@ -39,11 +39,16 @@ export class Input {
   private canvas: HTMLCanvasElement;
   private dashButton: HTMLButtonElement | null = null;
   private blastButton: HTMLButtonElement | null = null;
+  private gameStateGetter: (() => string) | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.setupEventListeners();
     this.setupTouchButtons();
+  }
+
+  setGameStateGetter(getter: () => string): void {
+    this.gameStateGetter = getter;
   }
 
   private setupEventListeners(): void {
@@ -81,17 +86,25 @@ export class Input {
       this.mouseDown = false;
     });
 
-    // Touch for joystick
+    // Touch for joystick and UI
     this.canvas.addEventListener('touchstart', (e) => {
       e.preventDefault();
       for (let i = 0; i < e.changedTouches.length; i++) {
         const touch = e.changedTouches[i];
         const rect = this.canvas.getBoundingClientRect();
-        const x = touch.clientX - rect.left;
-        const y = touch.clientY - rect.top;
+        const x = (touch.clientX - rect.left) * (this.canvas.width / rect.width);
+        const y = (touch.clientY - rect.top) * (this.canvas.height / rect.height);
 
-        // Left side of screen = joystick
-        if (x < this.canvas.width / 2 && !this.joystick.active) {
+        // Update mouse position for shop/UI interactions
+        this.mouseX = x;
+        this.mouseY = y;
+        this.mouseDown = true;
+
+        // Left side of screen = joystick (ONLY during gameplay, not in shop/menu/gameover)
+        const gameState = this.gameStateGetter ? this.gameStateGetter() : 'menu';
+        const canActivateJoystick = gameState === 'playing';
+
+        if (canActivateJoystick && x < this.canvas.width / 2 && !this.joystick.active) {
           this.joystick.active = true;
           this.joystick.identifier = touch.identifier;
           this.joystick.startX = x;
@@ -106,10 +119,17 @@ export class Input {
       e.preventDefault();
       for (let i = 0; i < e.changedTouches.length; i++) {
         const touch = e.changedTouches[i];
+        const rect = this.canvas.getBoundingClientRect();
+        const x = (touch.clientX - rect.left) * (this.canvas.width / rect.width);
+        const y = (touch.clientY - rect.top) * (this.canvas.height / rect.height);
+
+        // Update mouse position
+        this.mouseX = x;
+        this.mouseY = y;
+
         if (touch.identifier === this.joystick.identifier) {
-          const rect = this.canvas.getBoundingClientRect();
-          this.joystick.currentX = touch.clientX - rect.left;
-          this.joystick.currentY = touch.clientY - rect.top;
+          this.joystick.currentX = x;
+          this.joystick.currentY = y;
 
           // Calculate delta
           const dx = this.joystick.currentX - this.joystick.startX;
@@ -130,6 +150,7 @@ export class Input {
 
     this.canvas.addEventListener('touchend', (e) => {
       e.preventDefault();
+      this.mouseDown = false;
       for (let i = 0; i < e.changedTouches.length; i++) {
         const touch = e.changedTouches[i];
         if (touch.identifier === this.joystick.identifier) {
