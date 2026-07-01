@@ -117,7 +117,9 @@ export class DamageNumber {
   text: string;
   lifetime: number;
   maxLifetime: number;
+  vx: number; // GAME FEEL: Add horizontal velocity
   vy: number;
+  gravity: number; // GAME FEEL: Add gravity for arc
   color: string;
   isCrit: boolean;
   scale: number = 1;
@@ -130,7 +132,10 @@ export class DamageNumber {
     this.text = Math.round(damage).toString();
     this.lifetime = 1000;
     this.maxLifetime = this.lifetime;
-    this.vy = -60; // Float upward
+    // GAME FEEL: Physics-based movement (arc like projectiles)
+    this.vx = (Math.random() - 0.5) * 40; // Random horizontal spread
+    this.vy = -80 - Math.random() * 20; // Initial upward velocity with variance
+    this.gravity = 150; // Gravity pulling downward
     this.isCrit = isCrit;
     this.color = isCrit ? '#ff0000' : '#ffffff';
     // Start large for crits
@@ -139,7 +144,10 @@ export class DamageNumber {
   }
 
   update(dt: number): void {
+    // GAME FEEL: Apply physics (arc trajectory)
+    this.x += this.vx * dt;
     this.y += this.vy * dt;
+    this.vy += this.gravity * dt; // Apply gravity
     this.lifetime -= dt * 1000;
 
     // Animate scale: start big, shrink to normal, then float

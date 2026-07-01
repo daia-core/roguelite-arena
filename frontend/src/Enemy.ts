@@ -187,6 +187,16 @@ export class Enemy {
   maxHealth: number;
   dead: boolean = false;
 
+  // GAME FEEL: Knockback physics
+  knockbackVelocityX: number = 0;
+  knockbackVelocityY: number = 0;
+
+  // GAME FEEL: Hitstun
+  hitstunTimer: number = 0;
+
+  // GAME FEEL: White flash on hit
+  hitFlashTimer: number = 0;
+
   // Shooter specific
   shootCooldown: number = 0;
 
@@ -258,6 +268,36 @@ export class Enemy {
     splitInto?: Enemy[];
     poisonTrail?: { x: number; y: number };
   } {
+    // GAME FEEL: Update timers
+    this.hitstunTimer = Math.max(0, this.hitstunTimer - dt);
+    this.hitFlashTimer = Math.max(0, this.hitFlashTimer - dt);
+
+    // GAME FEEL: Apply knockback velocity with smooth decay
+    if (this.knockbackVelocityX !== 0 || this.knockbackVelocityY !== 0) {
+      this.x += this.knockbackVelocityX * dt;
+      this.y += this.knockbackVelocityY * dt;
+
+      // Exponential decay (lerp toward zero)
+      const decayFactor = 10.0;
+      this.knockbackVelocityX -= this.knockbackVelocityX * decayFactor * dt;
+      this.knockbackVelocityY -= this.knockbackVelocityY * decayFactor * dt;
+
+      // Stop if very small
+      if (Math.abs(this.knockbackVelocityX) < 1) this.knockbackVelocityX = 0;
+      if (Math.abs(this.knockbackVelocityY) < 1) this.knockbackVelocityY = 0;
+    }
+
+    // GAME FEEL: Skip update if in hitstun
+    if (this.hitstunTimer > 0) {
+      return {
+        shouldShoot: false,
+        shouldTeleport: false,
+        shouldSummon: false,
+        shouldScream: false,
+        shouldStomp: false
+      };
+    }
+
     const dx = playerX - this.x;
     const dy = playerY - this.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
@@ -438,6 +478,10 @@ export class Enemy {
       return null;
     }
 
+    // GAME FEEL: Trigger hitstun and hit flash
+    this.hitstunTimer = 0.1; // 100ms pause
+    this.hitFlashTimer = 0.032; // 2 frames at 60fps
+
     this.health -= amount;
 
     // Imp teleport on hit
@@ -486,6 +530,15 @@ export class Enemy {
     return null;
   }
 
+  // GAME FEEL: Apply knockback velocity
+  applyKnockback(vx: number, vy: number): void {
+    // Golem is immune to knockback
+    if (this.type === 'golem') return;
+
+    this.knockbackVelocityX = vx;
+    this.knockbackVelocityY = vy;
+  }
+
   draw(ctx: CanvasRenderingContext2D): void {
     ctx.save();
 
@@ -501,6 +554,22 @@ export class Enemy {
         ctx.globalAlpha = 0.3;
         ctx.shadowBlur = 20;
         ctx.shadowColor = '#9370db';
+      }
+
+      // GAME FEEL: White flash on hit
+      if (this.hitFlashTimer > 0) {
+        // Create white flash by drawing a white rectangle with multiply blend
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = this.hitFlashTimer / 0.032; // Fade based on timer
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(
+          this.x - sprite.width / 2 - 4,
+          this.y - sprite.height / 2 - 4,
+          sprite.width + 8,
+          sprite.height + 8
+        );
+        ctx.restore();
       }
 
       // Draw sprite

@@ -28,6 +28,10 @@ export class Player {
   shootCooldown: number = 0;
   shield: boolean = false; // Active shield
 
+  // GAME FEEL: Invincibility frames
+  invincibilityTimer: number = 0;
+  invincibilityDuration: number = 0.5; // 500ms of i-frames
+
   // Abilities
   dashCooldown: number = 0;
   dashDuration: number = 0;
@@ -59,6 +63,7 @@ export class Player {
     this.dashCooldown = Math.max(0, this.dashCooldown - dt);
     this.blastCooldown = Math.max(0, this.blastCooldown - dt);
     this.dashDuration = Math.max(0, this.dashDuration - dt);
+    this.invincibilityTimer = Math.max(0, this.invincibilityTimer - dt);
 
     // Movement
     const speed = this.dashDuration > 0 ? this.dashSpeed : this.stats.getSpeed();
@@ -130,6 +135,8 @@ export class Player {
 
     this.dashDuration = 0.2; // 200ms dash
     this.dashCooldown = 3; // 3 second cooldown
+    // GAME FEEL: Grant invincibility frames during dash
+    this.invincibilityTimer = Math.max(this.invincibilityTimer, 0.2);
     return true;
   }
 
@@ -146,9 +153,15 @@ export class Player {
   }
 
   takeDamage(amount: number): boolean {
+    // GAME FEEL: Invincibility frames prevent damage
+    if (this.invincibilityTimer > 0) {
+      return false; // No damage taken during i-frames
+    }
+
     // Shield absorbs hit
     if (this.shield) {
       this.shield = false;
+      this.invincibilityTimer = this.invincibilityDuration; // Grant i-frames even on shield break
       return false; // No damage taken
     }
 
@@ -157,6 +170,10 @@ export class Player {
       this.health = 0;
       this.dead = true;
     }
+
+    // GAME FEEL: Grant invincibility frames after taking damage
+    this.invincibilityTimer = this.invincibilityDuration;
+
     return true;
   }
 
@@ -212,6 +229,17 @@ export class Player {
       ctx.globalAlpha = 0.7;
       ctx.shadowBlur = 30;
       ctx.shadowColor = '#00ffff';
+    }
+
+    // GAME FEEL: Invincibility frames visual (blink effect)
+    if (this.invincibilityTimer > 0) {
+      // Blink at 10Hz (5 times per second)
+      const blinkPhase = Math.floor(this.invincibilityTimer * 10) % 2;
+      if (blinkPhase === 0) {
+        ctx.globalAlpha = 0.3; // Make player semi-transparent during blink
+      }
+      ctx.shadowBlur = 25;
+      ctx.shadowColor = '#ffff00'; // Yellow glow during i-frames
     }
 
     // Shield effect

@@ -37,6 +37,10 @@ export class Game {
   playerStats: PlayerStats;
   metaProgression: MetaProgression;
 
+  // GAME FEEL: Hit pause / time scale system
+  timeScale: number = 1.0;
+  hitPauseTimer: number = 0;
+
   // Shop state
   shopItems: Item[] = [];
   selectedShopItem: number = -1;
@@ -248,16 +252,27 @@ export class Game {
   private updatePlaying(dt: number): void {
     if (!this.player) return;
 
+    // GAME FEEL: Hit pause / time scale
+    if (this.hitPauseTimer > 0) {
+      this.hitPauseTimer -= dt;
+      this.timeScale = 0.05; // Almost frozen during hit pause
+    } else {
+      this.timeScale = 1.0;
+    }
+
+    // Apply time scale to delta time
+    const scaledDt = dt * this.timeScale;
+
     // Wave modifier announcement timer
     if (this.waveModifierTimer > 0) {
-      this.waveModifierTimer -= dt;
+      this.waveModifierTimer -= dt; // UI timers not affected by time scale
     }
 
     // Input
     const movement = this.input.getMovementVector();
 
     // Player update
-    this.player.update(dt, movement.x, movement.y, this.canvas.width, this.canvas.height);
+    this.player.update(scaledDt, movement.x, movement.y, this.canvas.width, this.canvas.height);
 
     // Player shooting
     const newProjectiles = this.player.tryShoot(this.enemies);
@@ -283,11 +298,11 @@ export class Game {
     }
 
     // Wave manager
-    this.enemies = this.waveManager.update(dt, this.enemies, this.canvas.width, this.canvas.height);
+    this.enemies = this.waveManager.update(scaledDt, this.enemies, this.canvas.width, this.canvas.height);
 
     // Enemies
     for (const enemy of this.enemies) {
-      const result = enemy.update(dt, this.player.x, this.player.y);
+      const result = enemy.update(scaledDt, this.player.x, this.player.y);
 
       // Enemy shooting
       if (result.shouldShoot) {
@@ -351,7 +366,7 @@ export class Game {
 
     // Projectiles
     for (const proj of this.projectiles) {
-      proj.update(dt, this.canvas.width, this.canvas.height);
+      proj.update(scaledDt, this.canvas.width, this.canvas.height);
 
       if (proj.fromPlayer) {
         // Player projectile hits enemies
@@ -362,16 +377,19 @@ export class Game {
             const isCrit = this.player.rollCrit();
             let damage = isCrit ? this.player.getCritDamage(proj.damage) : proj.damage;
 
+            // GAME FEEL: Trigger hit pause on player damage to enemy
+            this.hitPauseTimer = isCrit ? 0.08 : 0.05; // Longer pause on crit
+
             enemy.takeDamage(damage);
             proj.markHit(enemy.id);
 
-            // Knockback
+            // GAME FEEL: Enhanced knockback physics
             const knockback = this.playerStats.getKnockback();
             // Golem is immune to knockback
             if (knockback > 0 && enemy.type !== 'golem') {
               const angle = Math.atan2(enemy.y - proj.y, enemy.x - proj.x);
-              enemy.x += Math.cos(angle) * knockback * dt;
-              enemy.y += Math.sin(angle) * knockback * dt;
+              // Apply knockback as velocity (Enemy.ts will handle decay)
+              enemy.applyKnockback(Math.cos(angle) * 300, Math.sin(angle) * 300);
             }
 
             // Lifesteal
@@ -381,10 +399,11 @@ export class Game {
             }
 
             this.audio.playHit();
-            this.particles.push(...spawnHitParticles(enemy.x, enemy.y, 6));
+            // GAME FEEL: More particles on every hit
+            this.particles.push(...spawnHitParticles(enemy.x, enemy.y, 8));
             this.damageNumbers.push(new DamageNumber(enemy.x, enemy.y - 20, damage, isCrit));
-            // More shake on crit
-            this.renderer.addScreenShake(isCrit ? 0.12 : 0.05);
+            // GAME FEEL: More shake on all hits
+            this.renderer.addScreenShake(isCrit ? 0.25 : 0.15);
             this.renderer.addImpactFlash(enemy.x, enemy.y);
 
             if (enemy.dead) {
@@ -408,17 +427,17 @@ export class Game {
 
     // Particles
     for (const particle of this.particles) {
-      particle.update(dt);
+      particle.update(scaledDt);
     }
 
     // Damage numbers
     for (const num of this.damageNumbers) {
-      num.update(dt);
+      num.update(scaledDt);
     }
 
     // Health orbs
     for (const orb of this.healthOrbs) {
-      orb.update(dt);
+      orb.update(scaledDt);
 
       // Check pickup collision
       if (orb.collidesWith(this.player.x, this.player.y, this.player.radius)) {
@@ -453,6 +472,7 @@ export class Game {
   private handleBlastDamage(damage: number, radius: number): void {
     if (!this.player) return;
 
+    let hitCount = 0;
     for (const enemy of this.enemies) {
       const dist = Math.sqrt(
         (enemy.x - this.player.x) ** 2 + (enemy.y - this.player.y) ** 2
@@ -461,11 +481,21 @@ export class Game {
       if (dist < radius + enemy.typeData.radius) {
         enemy.takeDamage(damage);
         this.particles.push(...spawnHitParticles(enemy.x, enemy.y, 8));
+        hitCount++;
+
+        // GAME FEEL: Knockback enemies hit by blast
+        const angle = Math.atan2(enemy.y - this.player.y, enemy.x - this.player.x);
+        enemy.applyKnockback(Math.cos(angle) * 400, Math.sin(angle) * 400);
 
         if (enemy.dead) {
           this.handleEnemyKill(enemy);
         }
       }
+    }
+
+    // GAME FEEL: Extra shake based on how many enemies were hit
+    if (hitCount > 0) {
+      this.renderer.addScreenShake(0.3 + Math.min(hitCount * 0.1, 0.5));
     }
 
     // Visual effect
@@ -487,9 +517,9 @@ export class Game {
     this.particles.push(...spawnKillParticles(enemy.x, enemy.y));
     this.particles.push(...spawnXPParticles(enemy.x, enemy.y));
 
-    // More shake for bigger enemies
+    // GAME FEEL: Enhanced shake on all kills (bigger than just hits)
     const shakeAmount = enemy.type === 'demon' ? 0.8 :
-                       (enemy.type === 'troll' || enemy.type === 'golem') ? 0.3 : 0.1;
+                       (enemy.type === 'troll' || enemy.type === 'golem') ? 0.5 : 0.3;
     this.renderer.addScreenShake(shakeAmount);
 
     // XP and gold with meta-progression multipliers
