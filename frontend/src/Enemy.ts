@@ -4,7 +4,7 @@ import { circleCollision } from './utils';
 import { SpriteSheet } from './sprites';
 import { PathfindingSystem, type PathNode } from './PathfindingSystem';
 
-export type EnemyType = 'slime' | 'goblin' | 'skeleton' | 'imp' | 'orc' | 'wraith' | 'necromancer' | 'troll' | 'banshee' | 'demon' | 'bat' | 'wizard' | 'mimic' | 'spider' | 'golem' | 'ghost' | 'mushroom' | 'gargoyle' | 'blob' | 'necroegg' | 'cyclops' | 'phantom' | 'druid' | 'construct' | 'swarm' | 'dasher' | 'evader' | 'orbiter' | 'spiraler';
+export type EnemyType = 'slime' | 'goblin' | 'skeleton' | 'imp' | 'orc' | 'wraith' | 'necromancer' | 'troll' | 'banshee' | 'demon' | 'bat' | 'wizard' | 'mimic' | 'spider' | 'golem' | 'ghost' | 'mushroom' | 'gargoyle' | 'blob' | 'necroegg' | 'cyclops' | 'phantom' | 'druid' | 'construct' | 'swarm' | 'dasher' | 'evader' | 'orbiter' | 'spiraler' | 'shielder' | 'exploder' | 'healer' | 'summoner' | 'phaser';
 
 export interface EnemyTypeData {
   health: number;
@@ -313,6 +313,61 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     xpValue: 14,
     goldValue: 4,
     spriteName: 'spiraler'
+  },
+  // NEW: Shielder - blocks damage from one direction
+  shielder: {
+    health: 140,
+    speed: 50,
+    damage: 12,
+    radius: 15,
+    color: '#95a5a6',
+    xpValue: 18,
+    goldValue: 5,
+    spriteName: 'shielder'
+  },
+  // NEW: Exploder - explodes on death, damaging player
+  exploder: {
+    health: 80,
+    speed: 80,
+    damage: 25, // Big explosion damage
+    radius: 13,
+    color: '#e74c3c',
+    xpValue: 16,
+    goldValue: 4,
+    spriteName: 'exploder'
+  },
+  // NEW: Healer - heals nearby allies
+  healer: {
+    health: 60,
+    speed: 70,
+    damage: 5,
+    radius: 11,
+    color: '#27ae60',
+    xpValue: 20,
+    goldValue: 6,
+    spriteName: 'healer'
+  },
+  // NEW: Summoner - spawns minions periodically
+  summoner: {
+    health: 90,
+    speed: 40,
+    damage: 6,
+    radius: 13,
+    color: '#8e44ad',
+    xpValue: 25,
+    goldValue: 8,
+    spriteName: 'summoner'
+  },
+  // NEW: Phaser - briefly invincible when hit
+  phaser: {
+    health: 100,
+    speed: 110,
+    damage: 14,
+    radius: 12,
+    color: '#3498db',
+    xpValue: 22,
+    goldValue: 6,
+    spriteName: 'phaser'
   }
 };
 
@@ -452,6 +507,29 @@ export class Enemy {
   pathUpdateTimer: number = 0;
   pathUpdateInterval: number = 0.5; // Recalculate path every 500ms
   usePathfinding: boolean = false;
+
+  // NEW: Shielder specific (directional shield)
+  shielderAngle: number = 0; // Angle of shield (blocks attacks from this direction)
+  shielderRotationSpeed: number = 2; // Radians per second
+
+  // NEW: Exploder specific (explosion on death)
+  exploderFlashTimer: number = 0; // Visual warning before explosion
+  exploderExplodeRadius: number = 100;
+
+  // NEW: Healer specific (heal nearby allies)
+  healerHealCooldown: number = 0;
+  healerHealRadius: number = 150;
+  healerHealAmount: number = 20;
+
+  // NEW: Summoner specific (spawn minions)
+  summonerSpawnCooldown: number = 0;
+  summonerMaxMinions: number = 3;
+  summonerMinionsSpawned: number = 0;
+
+  // NEW: Phaser specific (invincibility frames)
+  phaserInvincible: boolean = false;
+  phaserInvincibleTimer: number = 0;
+  phaserPhaseOnHitChance: number = 0.5; // 50% chance to phase on hit
 
   constructor(x: number, y: number, type: EnemyType, waveMultiplier: number = 1, canSplit: boolean = true) {
     this.id = Enemy.nextId++;
