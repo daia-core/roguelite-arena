@@ -567,16 +567,18 @@ export class Game {
 
     // Responsive layout
     const isMobile = this.canvas.width < 800;
-    const itemWidth = isMobile ? Math.min(320, this.canvas.width - 40) : 200;
-    const itemHeight = isMobile ? 160 : 120;
-    const gap = isMobile ? 15 : 20;
+    const itemWidth = isMobile ? Math.min(380, this.canvas.width - 40) : 200;
+    const itemHeight = isMobile ? 200 : 120;
+    const gap = isMobile ? 18 : 20;
 
     let startX: number, startY: number;
 
     if (isMobile) {
-      // Vertical stack on mobile
+      // Vertical stack on mobile - center vertically in viewport
       startX = (this.canvas.width - itemWidth) / 2;
-      startY = 150;
+      // Calculate total content height and center it
+      const totalHeight = this.shopItems.length * (itemHeight + gap) - gap + 240; // 240 for header + buttons
+      startY = Math.max(135, (this.canvas.height - totalHeight) / 2 + 80);
     } else {
       // Horizontal row on desktop (4 items)
       startX = this.canvas.width / 2 - (itemWidth * 4 + gap * 3) / 2;
@@ -620,10 +622,10 @@ export class Game {
     }
 
     // Reroll button - position based on layout
-    const buttonWidth = isMobile ? 280 : 200;
-    const buttonHeight = isMobile ? 70 : 50;
-    const continueY = isMobile ? startY + this.shopItems.length * (itemHeight + gap) + 20 : 400;
-    const rerollY = continueY + buttonHeight + 15;
+    const buttonWidth = isMobile ? 340 : 200;
+    const buttonHeight = isMobile ? 90 : 50;
+    const continueY = isMobile ? startY + this.shopItems.length * (itemHeight + gap) + 25 : 400;
+    const rerollY = continueY + buttonHeight + 20;
 
     const rerollBtn = {
       x: this.canvas.width / 2 - buttonWidth / 2,
