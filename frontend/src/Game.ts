@@ -407,10 +407,9 @@ export class Game {
       // Golem stomp
       if (result.shouldStomp) {
         const stompRadius = 100;
-        const dist = Math.sqrt(
-          (this.player.x - enemy.x) ** 2 + (this.player.y - enemy.y) ** 2
-        );
-        if (dist < stompRadius) {
+        // OPTIMIZATION: Use squared distance to avoid sqrt
+        const distSq = (this.player.x - enemy.x) ** 2 + (this.player.y - enemy.y) ** 2;
+        if (distSq < stompRadius * stompRadius) {
           const damaged = this.player.takeDamage(enemy.typeData.damage * 1.5);
           if (damaged) {
             this.renderer.addScreenShake(0.6);
@@ -482,10 +481,9 @@ export class Game {
           }));
         }
         // Check if player is in range of spore cloud
-        const dist = Math.sqrt(
-          (this.player.x - result.sporeCloud.x) ** 2 + (this.player.y - result.sporeCloud.y) ** 2
-        );
-        if (dist < 80) {
+        // OPTIMIZATION: Use squared distance to avoid sqrt
+        const distSq = (this.player.x - result.sporeCloud.x) ** 2 + (this.player.y - result.sporeCloud.y) ** 2;
+        if (distSq < 80 * 80) {
           const damaged = this.player.takeDamage(enemy.typeData.damage * 0.5);
           if (damaged) {
             this.renderer.addHitFlash(0.3);
@@ -498,10 +496,9 @@ export class Game {
         // Find nearby enemies to heal
         for (const otherEnemy of this.enemies) {
           if (otherEnemy.id === enemy.id) continue;
-          const dist = Math.sqrt(
-            (otherEnemy.x - enemy.x) ** 2 + (otherEnemy.y - enemy.y) ** 2
-          );
-          if (dist < 150) {
+          // OPTIMIZATION: Use squared distance to avoid sqrt
+          const distSq = (otherEnemy.x - enemy.x) ** 2 + (otherEnemy.y - enemy.y) ** 2;
+          if (distSq < 150 * 150) {
             otherEnemy.health = Math.min(otherEnemy.maxHealth, otherEnemy.health + 15);
             // Healing particles - PERFORMANCE: Use pooled particle
             this.particles.push(this.createParticle({
@@ -578,16 +575,20 @@ export class Game {
       }
     }
 
-    // PERFORMANCE: Rebuild spatial grids each frame
+    // PERFORMANCE: Rebuild spatial grids each frame - skip dead entities
     this.enemySpatialGrid.clear();
     this.projectileSpatialGrid.clear();
 
     for (const enemy of this.enemies) {
-      this.enemySpatialGrid.insert(enemy);
+      if (!enemy.dead) {
+        this.enemySpatialGrid.insert(enemy);
+      }
     }
 
     for (const proj of this.projectiles) {
-      this.projectileSpatialGrid.insert(proj);
+      if (!proj.dead) {
+        this.projectileSpatialGrid.insert(proj);
+      }
     }
 
     // Projectiles

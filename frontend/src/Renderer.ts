@@ -11,6 +11,13 @@ export class Renderer {
   private hitFlash: number = 0;
   private impactFlashes: Array<{ x: number; y: number; radius: number; alpha: number }> = [];
 
+  // OPTIMIZATION: Cache background elements that don't change
+  private backgroundCanvas: HTMLCanvasElement | null = null;
+  private backgroundCtx: CanvasRenderingContext2D | null = null;
+  private cachedWidth: number = 0;
+  private cachedHeight: number = 0;
+  private vignetteGradient: CanvasGradient | null = null;
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     const ctx = canvas.getContext('2d');
@@ -22,39 +29,69 @@ export class Renderer {
   }
 
   clear(): void {
+    // OPTIMIZATION: Cache static background (grid + vignette) on a separate canvas
+    // Only redraw if canvas size changed
+    if (!this.backgroundCanvas ||
+        this.cachedWidth !== this.canvas.width ||
+        this.cachedHeight !== this.canvas.height) {
+      this.cacheBackground();
+    }
+
+    // Draw cached background
+    if (this.backgroundCanvas) {
+      this.ctx.drawImage(this.backgroundCanvas, 0, 0);
+    }
+  }
+
+  private cacheBackground(): void {
+    // Create offscreen canvas for background
+    if (!this.backgroundCanvas) {
+      this.backgroundCanvas = document.createElement('canvas');
+      this.backgroundCtx = this.backgroundCanvas.getContext('2d');
+      if (!this.backgroundCtx) return;
+      this.backgroundCtx.imageSmoothingEnabled = false;
+    }
+
+    this.backgroundCanvas.width = this.canvas.width;
+    this.backgroundCanvas.height = this.canvas.height;
+    this.cachedWidth = this.canvas.width;
+    this.cachedHeight = this.canvas.height;
+
+    if (!this.backgroundCtx) return;
+
     // Dark background
-    this.ctx.fillStyle = '#0a0a0a';
-    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    this.backgroundCtx.fillStyle = '#0a0a0a';
+    this.backgroundCtx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
     // Subtle pixel art grid pattern for depth
-    this.ctx.save();
-    this.ctx.globalAlpha = 0.03;
-    this.ctx.strokeStyle = '#1a1a2e';
-    this.ctx.lineWidth = 1;
+    this.backgroundCtx.save();
+    this.backgroundCtx.globalAlpha = 0.03;
+    this.backgroundCtx.strokeStyle = '#1a1a2e';
+    this.backgroundCtx.lineWidth = 1;
     const gridSize = 40;
     for (let x = 0; x < this.canvas.width; x += gridSize) {
-      this.ctx.beginPath();
-      this.ctx.moveTo(x, 0);
-      this.ctx.lineTo(x, this.canvas.height);
-      this.ctx.stroke();
+      this.backgroundCtx.beginPath();
+      this.backgroundCtx.moveTo(x, 0);
+      this.backgroundCtx.lineTo(x, this.canvas.height);
+      this.backgroundCtx.stroke();
     }
     for (let y = 0; y < this.canvas.height; y += gridSize) {
-      this.ctx.beginPath();
-      this.ctx.moveTo(0, y);
-      this.ctx.lineTo(this.canvas.width, y);
-      this.ctx.stroke();
+      this.backgroundCtx.beginPath();
+      this.backgroundCtx.moveTo(0, y);
+      this.backgroundCtx.lineTo(this.canvas.width, y);
+      this.backgroundCtx.stroke();
     }
-    this.ctx.restore();
+    this.backgroundCtx.restore();
 
-    // Vignette effect (darker at edges)
-    const gradient = this.ctx.createRadialGradient(
+    // Vignette effect (darker at edges) - cached gradient
+    this.vignetteGradient = this.backgroundCtx.createRadialGradient(
       this.canvas.width / 2, this.canvas.height / 2, 0,
       this.canvas.width / 2, this.canvas.height / 2, Math.max(this.canvas.width, this.canvas.height) * 0.7
     );
-    gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
-    gradient.addColorStop(1, 'rgba(0, 0, 0, 0.5)');
-    this.ctx.fillStyle = gradient;
-    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    this.vignetteGradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
+    this.vignetteGradient.addColorStop(1, 'rgba(0, 0, 0, 0.5)');
+    this.backgroundCtx.fillStyle = this.vignetteGradient;
+    this.backgroundCtx.fillRect(0, 0, this.canvas.width, this.canvas.height);
   }
 
   update(dt: number): void {

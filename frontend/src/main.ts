@@ -29,6 +29,7 @@ const game = new Game(canvas);
 
 // Game loop
 let lastTime = performance.now();
+let lastState: string = game.state;
 
 function gameLoop(currentTime: number): void {
   const dt = Math.min((currentTime - lastTime) / 1000, 0.1); // Cap dt at 100ms
@@ -36,6 +37,13 @@ function gameLoop(currentTime: number): void {
 
   game.update(dt);
   game.draw();
+
+  // OPTIMIZATION: Update menu visibility only on state change (not polling)
+  if (game.state !== lastState) {
+    const menuUI = document.querySelector<HTMLDivElement>('#menu-ui')!;
+    menuUI.style.display = game.state === 'menu' ? 'flex' : 'none';
+    lastState = game.state;
+  }
 
   requestAnimationFrame(gameLoop);
 }
@@ -67,14 +75,4 @@ if (window.visualViewport) {
 }
 resizeCanvas();
 
-// Hide menu UI when playing
-setInterval(() => {
-  const menuUI = document.querySelector<HTMLDivElement>('#menu-ui')!;
-  if (game.state === 'menu') {
-    menuUI.style.display = 'flex';
-  } else {
-    menuUI.style.display = 'none';
-  }
-
-  // Joystick is always visible during gameplay (no ability buttons)
-}, 100);
+// Menu UI visibility is now handled in game loop on state changes

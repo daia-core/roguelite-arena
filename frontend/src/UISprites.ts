@@ -346,6 +346,59 @@ export class UISprites {
     const coinColors = ['transparent', '#854d0e', '#ca8a04', '#fde047'];
     this.drawPixelIcon(coinCtx, coinPixels, coinColors, 2.5);
     this.icons.set('coin', coin);
+
+    // Level badge (ornate shield)
+    const levelBadge = this.createCanvas(28, 28);
+    const levelCtx = levelBadge.getContext('2d')!;
+    const levelPixels = [
+      [0,0,0,0,1,1,1,1,1,1,0,0,0,0],
+      [0,0,0,1,2,2,2,2,2,2,1,0,0,0],
+      [0,0,1,2,3,3,3,3,3,3,2,1,0,0],
+      [0,1,2,3,4,4,4,4,4,4,3,2,1,0],
+      [1,2,3,4,5,5,5,5,5,5,4,3,2,1],
+      [1,2,3,4,5,5,5,5,5,5,4,3,2,1],
+      [1,2,3,4,4,4,4,4,4,4,4,3,2,1],
+      [1,2,3,3,3,3,3,3,3,3,3,3,2,1],
+      [0,1,2,2,2,2,2,2,2,2,2,2,1,0],
+      [0,0,1,2,2,2,2,2,2,2,2,1,0,0],
+      [0,0,0,1,1,2,2,2,2,1,1,0,0,0],
+      [0,0,0,0,0,1,1,1,1,0,0,0,0,0],
+    ];
+    const levelColors = [
+      'transparent',
+      '#78716c',    // 1 - outline (stone gray)
+      '#a8a29e',    // 2 - shield mid
+      '#d6d3d1',    // 3 - shield light
+      '#3b82f6',    // 4 - inner royal blue
+      '#60a5fa'     // 5 - inner highlight
+    ];
+    this.drawPixelIcon(levelCtx, levelPixels, levelColors, 2);
+    this.icons.set('level', levelBadge);
+
+    // Wave banner (scroll/flag)
+    const waveBanner = this.createCanvas(32, 24);
+    const waveCtx = waveBanner.getContext('2d')!;
+    const wavePixels = [
+      [1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,2,2,2,2,2,2,2,2,2,2,1],
+      [1,2,3,3,3,3,3,3,3,3,2,1],
+      [1,2,3,4,4,4,4,4,4,3,2,1],
+      [1,2,3,4,4,4,4,4,4,3,2,1],
+      [1,2,3,3,3,3,3,3,3,3,2,1],
+      [1,2,2,2,2,2,2,2,2,2,2,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1],
+      [0,0,0,0,0,1,1,0,0,0,0,0],
+      [0,0,0,0,0,1,1,0,0,0,0,0],
+    ];
+    const waveColors = [
+      'transparent',
+      '#7c2d12',    // 1 - banner outline (dark crimson)
+      '#dc2626',    // 2 - banner red
+      '#f87171',    // 3 - banner highlight
+      '#fca5a5'     // 4 - inner light
+    ];
+    this.drawPixelIcon(waveCtx, wavePixels, waveColors, 2.5);
+    this.icons.set('wave', waveBanner);
   }
 
   private static drawPixelIcon(
