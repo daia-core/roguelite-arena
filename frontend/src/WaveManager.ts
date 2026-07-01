@@ -52,8 +52,9 @@ export class WaveManager {
       }
     }
 
-    // Calculate enemy count based on modifier
-    let baseCount = 15 + waveNumber * 2;
+    // Calculate enemy count based on modifier - ADJUSTED for Wave 1 balance
+    // Wave 1: 12 enemies (was 17), slower spawn
+    let baseCount = waveNumber === 1 ? 12 : 15 + waveNumber * 2;
 
     if (this.isBossWave) {
       this.totalEnemiesInWave = 10 + waveNumber;
@@ -94,7 +95,8 @@ export class WaveManager {
       this.waveEnemiesRemaining--;
 
       // Faster spawning as waves progress, even faster on horde waves
-      let baseInterval = Math.max(0.5, 1.5 - this.currentWave * 0.05);
+      // Wave 1: 2.0s spawn interval (was 1.5s) for easier start
+      let baseInterval = this.currentWave === 1 ? 2.0 : Math.max(0.5, 1.5 - this.currentWave * 0.05);
       if (this.isHordeWave) {
         baseInterval *= 0.6; // 40% faster spawning on horde waves
       }

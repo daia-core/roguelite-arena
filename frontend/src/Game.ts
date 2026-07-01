@@ -41,12 +41,13 @@ export class Game {
   timeScale: number = 1.0;
   hitPauseTimer: number = 0;
 
-  // Shop state
+  // Shop state - ADVANCED BROTATO-LEVEL MECHANICS
   shopItems: Item[] = [];
   selectedShopItem: number = -1;
   shopRerollCost: number = 2;
   shopRerolls: number = 0;
-  lockedShopItems: Set<number> = new Set(); // BROTATO-INSPIRED: Lock items between waves
+  lockedShopItems: Set<number> = new Set(); // FREE locking (no 5g cost)
+  itemsPurchasedThisWave: number = 0; // Track for free reroll bonus
 
   // Stats
   kills: number = 0;
@@ -156,6 +157,9 @@ export class Game {
       this.player.maxHealth += healthBonus;
       this.player.health = this.player.maxHealth;
     }
+
+    // Starting gold: 20g (can buy 1 cheap item immediately)
+    this.player.gold = 20;
 
     const goldBonus = this.metaProgression.getStartingGoldBonus();
     if (goldBonus > 0) {
@@ -703,7 +707,7 @@ export class Game {
   }
 
   private enterShop(): void {
-    // BROTATO-INSPIRED: Preserve locked items from previous shop
+    // BROTATO-INSPIRED: Preserve locked items from previous shop (FREE locking)
     const lockedItems: Item[] = [];
     for (const index of this.lockedShopItems) {
       if (this.shopItems[index]) {
@@ -711,13 +715,17 @@ export class Game {
       }
     }
 
-    // Generate new items for unlocked slots
-    const newItems = ItemDatabase.getRandomItems(4 - lockedItems.length);
+    // ADVANCED: 6 shop slots (was 4)
+    const shopSlotCount = 6;
+
+    // Generate new items for unlocked slots - WAVE-AWARE for tier progression
+    const currentWave = this.waveManager.currentWave;
+    const newItems = ItemDatabase.getRandomItems(shopSlotCount - lockedItems.length, currentWave);
     this.shopItems = [];
 
     // Rebuild shop: locked items first, then new items
     let lockedIndex = 0;
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < shopSlotCount; i++) {
       if (this.lockedShopItems.has(i) && lockedIndex < lockedItems.length) {
         this.shopItems.push(lockedItems[lockedIndex++]);
       } else {
@@ -727,10 +735,16 @@ export class Game {
 
     this.selectedShopItem = -1;
 
-    // Apply meta-progression reroll discount
-    const rerollDiscount = this.metaProgression.getRerollDiscount();
-    this.shopRerollCost = rerollDiscount.startCost;
+    // BROTATO-LEVEL REROLL COST: Wave-scaled formula
+    const wave = currentWave;
+    const baseRerollCost = Math.floor(wave * 0.75) + 1; // Wave 1: 1g, Wave 5: 5g, etc.
+
+    // Apply item-based reroll discount
+    const rerollDiscount = this.playerStats.getRerollDiscount();
+    this.shopRerollCost = Math.max(1, Math.floor(baseRerollCost * (1 - rerollDiscount)));
+
     this.shopRerolls = 0;
+    this.itemsPurchasedThisWave = 0; // Reset purchase counter
 
     this.state = 'shop';
     this.audio.playWaveComplete();
@@ -740,64 +754,98 @@ export class Game {
   }
 
   private updateShop(): void {
-    // Mouse hover detection for shop items
+    if (!this.player) return;
+
     const mouseX = this.input.mouseX;
     const mouseY = this.input.mouseY;
 
-    // Responsive layout - detect portrait mode for better fitting
+    // Responsive layout - 6 shop slots
     const isPortrait = this.canvas.width < this.canvas.height;
     const isMobile = this.canvas.width < 800;
-    const itemWidth = isPortrait ? Math.min(280, this.canvas.width - 40) : isMobile ? Math.min(380, this.canvas.width - 40) : 200;
-    const itemHeight = isPortrait ? 165 : isMobile ? 200 : 120; // Increased from 140 to 165 for portrait (more room for content)
-    const gap = isPortrait ? 12 : isMobile ? 18 : 20; // Increased from 8 to 12
+    const itemWidth = isPortrait ? Math.min(280, this.canvas.width - 40) : isMobile ? Math.min(360, this.canvas.width - 40) : 180;
+    const itemHeight = isPortrait ? 185 : isMobile ? 210 : 140; // Taller for recycle button
+    const gap = isPortrait ? 10 : isMobile ? 16 : 18;
 
     let startX: number, startY: number;
 
     if (isMobile) {
-      // Vertical stack on mobile
+      // Vertical stack on mobile (6 items)
       startX = (this.canvas.width - itemWidth) / 2;
-      startY = isPortrait ? 100 : 135;
+      startY = isPortrait ? 110 : 145;
     } else {
-      // Horizontal row on desktop (4 items)
-      startX = this.canvas.width / 2 - (itemWidth * 4 + gap * 3) / 2;
-      startY = 200;
+      // Desktop: 3x2 grid for 6 items
+      const gridCols = 3;
+      startX = this.canvas.width / 2 - (itemWidth * gridCols + gap * (gridCols - 1)) / 2;
+      startY = 180;
     }
 
     this.selectedShopItem = -1;
 
     for (let i = 0; i < this.shopItems.length; i++) {
-      const x = isMobile ? startX : startX + i * (itemWidth + gap);
-      const y = isMobile ? startY + i * (itemHeight + gap) : startY;
+      const item = this.shopItems[i];
 
-      // BROTATO-INSPIRED: Lock button in top-right corner of item card
-      const lockButtonSize = isMobile ? 54 : 30; // Increased from 45 to 54 for easier tapping
+      // Desktop: 3x2 grid layout
+      const gridCol = isMobile ? 0 : i % 3;
+      const gridRow = isMobile ? i : Math.floor(i / 3);
+
+      const x = isMobile ? startX : startX + gridCol * (itemWidth + gap);
+      const y = isMobile ? startY + i * (itemHeight + gap) : startY + gridRow * (itemHeight + gap);
+
+      // FREE LOCKING: Lock button in top-right corner (NO 5g cost)
+      const lockButtonSize = isMobile ? 50 : 28;
       const lockButtonX = x + itemWidth - lockButtonSize - 5;
       const lockButtonY = y + 5;
 
-      if (pointInRect(mouseX, mouseY, { x: lockButtonX, y: lockButtonY, width: lockButtonSize, height: lockButtonSize })) {
-        // Lock button clicked
-        if (this.input.mouseDown && this.player) {
-          const lockCost = 5;
+      // RECYCLING: Recycle button in bottom-left corner
+      const recycleButtonSize = isMobile ? 50 : 28;
+      const recycleButtonX = x + 5;
+      const recycleButtonY = y + itemHeight - recycleButtonSize - 5;
+
+      // Check recycle button (if player owns this item type)
+      const ownsItem = this.playerStats.items.some(owned => owned.id === item.id);
+      if (ownsItem && pointInRect(mouseX, mouseY, { x: recycleButtonX, y: recycleButtonY, width: recycleButtonSize, height: recycleButtonSize })) {
+        if (this.input.mouseDown) {
+          // Recycle item: remove from inventory, get 25% gold back (+ recycle bonus)
+          const recycleValue = this.playerStats.getRecycleValue(item);
+          this.player.gold += recycleValue;
+          this.playerStats.removeItem(item.id);
+
+          // Update player stats
+          this.player.maxHealth = this.playerStats.getMaxHealth();
+          if (this.player.health > this.player.maxHealth) {
+            this.player.health = this.player.maxHealth;
+          }
+
+          this.audio.playPurchase();
+          this.input.mouseDown = false;
+        }
+      }
+      // Check lock button (FREE - no cost)
+      else if (pointInRect(mouseX, mouseY, { x: lockButtonX, y: lockButtonY, width: lockButtonSize, height: lockButtonSize })) {
+        if (this.input.mouseDown) {
           if (this.lockedShopItems.has(i)) {
             // Unlock (free)
             this.lockedShopItems.delete(i);
-          } else if (this.player.gold >= lockCost) {
-            // Lock (costs gold)
-            this.player.gold -= lockCost;
+          } else {
+            // Lock (FREE in Brotato-level shop)
             this.lockedShopItems.add(i);
           }
           this.audio.playPurchase();
           this.input.mouseDown = false;
         }
-      } else if (pointInRect(mouseX, mouseY, { x, y, width: itemWidth, height: itemHeight })) {
+      }
+      // Check item purchase
+      else if (pointInRect(mouseX, mouseY, { x, y, width: itemWidth, height: itemHeight })) {
         this.selectedShopItem = i;
 
-        // Purchase on click
-        if (this.input.mouseDown && this.player) {
-          const item = this.shopItems[i];
-          if (this.player.gold >= item.cost) {
-            this.player.gold -= item.cost;
+        if (this.input.mouseDown) {
+          // DYNAMIC PRICING: Calculate wave-scaled price with shop discount
+          const finalPrice = this.playerStats.getItemPrice(item, this.waveManager.currentWave);
+
+          if (this.player.gold >= finalPrice) {
+            this.player.gold -= finalPrice;
             this.playerStats.addItem(item);
+            this.itemsPurchasedThisWave++;
 
             // Update player max health if needed
             if (item.maxHealthBonus) {
@@ -816,23 +864,24 @@ export class Game {
             this.lockedShopItems.delete(i);
 
             this.audio.playPurchase();
-            this.input.mouseDown = false; // Prevent accidental double purchase
+            this.input.mouseDown = false;
           }
         }
       }
     }
 
-    // Button positioning - MUST MATCH drawShop() exactly to fix alignment bug
-    const buttonWidth = isMobile ? 340 : 200;
-    const buttonHeight = isMobile ? 80 : 50; // Reduced from 90 to 80 for better fit
-    const buttonSpacing = 16; // Reduced from 20 to 16 for tighter layout
+    // Button positioning
+    const buttonWidth = isMobile ? 320 : 200;
+    const buttonHeight = isMobile ? 70 : 50;
+    const buttonSpacing = 14;
 
     // Calculate button Y positions - ensure they fit on screen
-    const itemsEndY = isMobile ? startY + this.shopItems.length * (itemHeight + gap) : 320;
-    const continueY = isMobile ? Math.min(itemsEndY + 25, this.canvas.height - buttonHeight * 2 - buttonSpacing - 20) : 400;
+    const gridRows = isMobile ? this.shopItems.length : 2; // Desktop: 2 rows for 6 items
+    const itemsEndY = isMobile ? startY + this.shopItems.length * (itemHeight + gap) : startY + gridRows * (itemHeight + gap);
+    const continueY = isMobile ? Math.min(itemsEndY + 15, this.canvas.height - buttonHeight * 2 - buttonSpacing - 20) : itemsEndY + 25;
     const rerollY = continueY + buttonHeight + buttonSpacing;
 
-    // Continue button (Next Wave) - ALWAYS FIRST
+    // Continue button (Next Wave)
     const continueBtn = {
       x: this.canvas.width / 2 - buttonWidth / 2,
       y: continueY,
@@ -845,7 +894,11 @@ export class Game {
       this.input.mouseDown = false;
     }
 
-    // Reroll button - ALWAYS SECOND (below continue)
+    // ADVANCED REROLL: Free reroll bonus if bought all 6 items
+    const freeReroll = this.itemsPurchasedThisWave >= 6;
+    const effectiveRerollCost = freeReroll ? 0 : this.shopRerollCost;
+
+    // Reroll button
     const rerollBtn = {
       x: this.canvas.width / 2 - buttonWidth / 2,
       y: rerollY,
@@ -853,26 +906,29 @@ export class Game {
       height: buttonHeight
     };
 
-    if (pointInRect(mouseX, mouseY, rerollBtn) && this.input.mouseDown && this.player) {
-      if (this.player.gold >= this.shopRerollCost) {
-        this.player.gold -= this.shopRerollCost;
-        // Generate new items for non-locked slots only
+    if (pointInRect(mouseX, mouseY, rerollBtn) && this.input.mouseDown) {
+      if (this.player.gold >= effectiveRerollCost) {
+        this.player.gold -= effectiveRerollCost;
+
+        // Generate new items for non-locked slots only (WAVE-AWARE)
         const unlockedSlots = [];
-        for (let i = 0; i < 4; i++) {
+        for (let i = 0; i < this.shopItems.length; i++) {
           if (!this.lockedShopItems.has(i)) {
             unlockedSlots.push(i);
           }
         }
-        const newItems = ItemDatabase.getRandomItems(unlockedSlots.length);
+        const newItems = ItemDatabase.getRandomItems(unlockedSlots.length, this.waveManager.currentWave);
+
         // Replace only unlocked slots
         let newItemIndex = 0;
         for (const slotIndex of unlockedSlots) {
           this.shopItems[slotIndex] = newItems[newItemIndex++];
         }
 
-        // Apply reroll cost scaling with cap from meta-progression
-        const rerollDiscount = this.metaProgression.getRerollDiscount();
-        this.shopRerollCost = Math.min(this.shopRerollCost * 2, rerollDiscount.maxCost);
+        // DYNAMIC REROLL COST: Scale per reroll this wave
+        const wave = this.waveManager.currentWave;
+        const rerollScaling = Math.floor(wave * 0.4); // +0.4g per wave per reroll
+        this.shopRerollCost += rerollScaling;
 
         this.shopRerolls++;
         this.audio.playPurchase();

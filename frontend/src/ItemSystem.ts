@@ -1,13 +1,26 @@
-// Item and upgrade system with synergies
+// Advanced item and upgrade system with tiers, tags, and Brotato-inspired mechanics
+
+export const ItemTier = {
+  Common: 1,
+  Uncommon: 2,
+  Rare: 3,
+  Legendary: 4
+} as const;
+
+export type ItemTier = typeof ItemTier[keyof typeof ItemTier];
+
+export type ItemTag = 'melee' | 'ranged' | 'defensive' | 'economic' | 'elemental' | 'utility';
 
 export interface Item {
   id: string;
   name: string;
   description: string;
   rarity: 'common' | 'rare' | 'epic' | 'legendary';
+  tier: ItemTier;
   cost: number;
   icon: string;
   unlocked: boolean;
+  tags: ItemTag[]; // For synergy detection and affinity system
 
   // Stat modifiers
   damageMultiplier?: number;
@@ -17,6 +30,7 @@ export interface Item {
   speedMultiplier?: number;
   maxHealthBonus?: number; // Additive
   healthRegen?: number; // HP per second
+  armor?: number; // Flat damage reduction
 
   // Special effects
   piercing?: number; // Number of enemies to pierce
@@ -34,259 +48,604 @@ export interface Item {
   poison?: boolean; // DoT effect
   freeze?: number; // Percentage chance to slow
   homing?: boolean; // Bullets curve toward enemies
+
+  // Brotato-inspired mechanics
+  rerollDiscount?: number; // Reduce shop reroll cost
+  shopDiscount?: number; // Reduce all shop prices
+  recycleBonus?: number; // Increase recycle value
+}
+
+export interface Weapon {
+  id: string;
+  name: string;
+  baseName: string; // For combining (e.g., "Sword")
+  tier: ItemTier;
+  damage: number;
+  icon: string;
+  cost: number;
+  unlocked: boolean;
 }
 
 export class ItemDatabase {
   private static items: Item[] = [
-    // === COMMON ITEMS ===
+    // ==================== TIER 1 (COMMON) ====================
+    // Basic stat boosts - cheap and accessible
     {
-      id: 'attack_speed',
-      name: 'Attack Speed',
-      description: '+20% fire rate',
+      id: 'damage_t1',
+      name: 'Iron Ring',
+      description: '+3 damage',
       rarity: 'common',
-      cost: 50,
+      tier: ItemTier.Common,
+      cost: 8,
+      icon: '💍',
+      unlocked: true,
+      tags: ['melee'],
+      damageMultiplier: 1.15
+    },
+    {
+      id: 'attack_speed_t1',
+      name: 'Swift Gloves',
+      description: '+10% fire rate',
+      rarity: 'common',
+      tier: ItemTier.Common,
+      cost: 8,
+      icon: '🧤',
+      unlocked: true,
+      tags: ['melee'],
+      fireRateMultiplier: 1.1
+    },
+    {
+      id: 'movement_speed_t1',
+      name: 'Worn Boots',
+      description: '+10% move speed',
+      rarity: 'common',
+      tier: ItemTier.Common,
+      cost: 7,
+      icon: '👟',
+      unlocked: true,
+      tags: ['utility'],
+      speedMultiplier: 1.1
+    },
+    {
+      id: 'max_hp_t1',
+      name: 'Health Pendant',
+      description: '+15 max health',
+      rarity: 'common',
+      tier: ItemTier.Common,
+      cost: 10,
+      icon: '❤️',
+      unlocked: true,
+      tags: ['defensive'],
+      maxHealthBonus: 15
+    },
+    {
+      id: 'hp_regen_t1',
+      name: 'Healing Charm',
+      description: '+0.5 HP/sec',
+      rarity: 'common',
+      tier: ItemTier.Common,
+      cost: 9,
+      icon: '💚',
+      unlocked: true,
+      tags: ['defensive'],
+      healthRegen: 0.5
+    },
+    {
+      id: 'xp_magnet_t1',
+      name: 'Small Magnet',
+      description: '+30% XP range',
+      rarity: 'common',
+      tier: ItemTier.Common,
+      cost: 6,
+      icon: '🧲',
+      unlocked: true,
+      tags: ['utility'],
+      xpMagnet: 1.3
+    },
+    {
+      id: 'gold_bonus_t1',
+      name: 'Coin Purse',
+      description: '+10% gold',
+      rarity: 'common',
+      tier: ItemTier.Common,
+      cost: 8,
+      icon: '💰',
+      unlocked: true,
+      tags: ['economic'],
+      goldBonus: 1.1
+    },
+    {
+      id: 'armor_t1',
+      name: 'Leather Vest',
+      description: '+2 armor',
+      rarity: 'common',
+      tier: ItemTier.Common,
+      cost: 12,
+      icon: '🦺',
+      unlocked: true,
+      tags: ['defensive'],
+      armor: 2
+    },
+
+    // ==================== TIER 2 (UNCOMMON) ====================
+    // Moderate stat boosts and simple special effects
+    {
+      id: 'damage_t2',
+      name: 'Steel Band',
+      description: '+15% damage',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 25,
+      icon: '💎',
+      unlocked: true,
+      tags: ['melee'],
+      damageMultiplier: 1.25
+    },
+    {
+      id: 'attack_speed_t2',
+      name: 'Rapid Gauntlets',
+      description: '+20% fire rate',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 25,
       icon: '⚡',
       unlocked: true,
+      tags: ['melee', 'ranged'],
       fireRateMultiplier: 1.2
     },
     {
-      id: 'damage',
-      name: 'Damage',
-      description: '+20% damage',
-      rarity: 'common',
-      cost: 50,
-      icon: '⚔️',
-      unlocked: true,
-      damageMultiplier: 1.2
-    },
-    {
-      id: 'movement_speed',
-      name: 'Movement Speed',
-      description: '+15% move speed',
-      rarity: 'common',
-      cost: 50,
-      icon: '👟',
-      unlocked: true,
-      speedMultiplier: 1.15
-    },
-    {
-      id: 'max_hp',
-      name: 'Max HP',
-      description: '+25 max health',
-      rarity: 'common',
-      cost: 50,
-      icon: '❤️',
-      unlocked: true,
-      maxHealthBonus: 25
-    },
-    {
-      id: 'hp_regen',
-      name: 'HP Regen',
-      description: '+1 HP per second',
-      rarity: 'common',
-      cost: 50,
-      icon: '💚',
-      unlocked: true,
-      healthRegen: 1
-    },
-    {
-      id: 'xp_magnet',
-      name: 'XP Magnet',
-      description: '+50% XP pickup range',
-      rarity: 'common',
-      cost: 50,
-      icon: '🧲',
-      unlocked: true,
-      xpMagnet: 1.5
-    },
-
-    // === RARE ITEMS ===
-    {
-      id: 'crit_chance',
-      name: 'Crit Chance',
-      description: '+15% crit chance',
+      id: 'movement_speed_t2',
+      name: 'Running Shoes',
+      description: '+20% move speed',
       rarity: 'rare',
-      cost: 100,
+      tier: ItemTier.Uncommon,
+      cost: 22,
+      icon: '👢',
+      unlocked: true,
+      tags: ['utility'],
+      speedMultiplier: 1.2
+    },
+    {
+      id: 'max_hp_t2',
+      name: 'Vitality Ring',
+      description: '+30 max health',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 28,
+      icon: '❤️‍🔥',
+      unlocked: true,
+      tags: ['defensive'],
+      maxHealthBonus: 30
+    },
+    {
+      id: 'crit_chance_t2',
+      name: 'Lucky Coin',
+      description: '+10% crit chance',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 30,
       icon: '🎯',
       unlocked: true,
-      critChance: 0.15
+      tags: ['melee', 'ranged'],
+      critChance: 0.1
     },
     {
-      id: 'crit_damage',
-      name: 'Crit Damage',
-      description: 'Crits do +50% damage',
+      id: 'crit_damage_t2',
+      name: 'Precision Scope',
+      description: '+35% crit damage',
       rarity: 'rare',
-      cost: 100,
-      icon: '💥',
+      tier: ItemTier.Uncommon,
+      cost: 28,
+      icon: '🔍',
       unlocked: true,
-      critDamageMultiplier: 1.5
+      tags: ['ranged'],
+      critDamageMultiplier: 1.35
     },
     {
-      id: 'projectile_count',
-      name: 'Projectile Count',
-      description: 'Fire +1 projectile',
+      id: 'lifesteal_t2',
+      name: 'Vampire Fang',
+      description: '5% lifesteal',
       rarity: 'rare',
-      cost: 100,
-      icon: '🔱',
-      unlocked: true,
-      multishot: 1
-    },
-    {
-      id: 'piercing',
-      name: 'Piercing',
-      description: 'Bullets pierce +1 enemy',
-      rarity: 'rare',
-      cost: 100,
-      icon: '🎯',
-      unlocked: true,
-      piercing: 1
-    },
-    {
-      id: 'lifesteal',
-      name: 'Lifesteal',
-      description: 'Heal 5% of damage dealt',
-      rarity: 'rare',
-      cost: 100,
+      tier: ItemTier.Uncommon,
+      cost: 32,
       icon: '🩸',
       unlocked: true,
+      tags: ['melee'],
       lifesteal: 0.05
     },
     {
-      id: 'thorns',
-      name: 'Thorns',
-      description: 'Reflect 20% damage taken',
+      id: 'dodge_t2',
+      name: 'Evasion Cloak',
+      description: '8% dodge chance',
       rarity: 'rare',
-      cost: 100,
-      icon: '🌵',
-      unlocked: true,
-      thorns: 0.2
-    },
-    {
-      id: 'gold_bonus',
-      name: 'Gold Bonus',
-      description: '+20% gold from kills',
-      rarity: 'rare',
-      cost: 100,
-      icon: '💰',
-      unlocked: true,
-      goldBonus: 1.2
-    },
-    {
-      id: 'dodge',
-      name: 'Dodge',
-      description: '10% chance to evade damage',
-      rarity: 'rare',
-      cost: 100,
+      tier: ItemTier.Uncommon,
+      cost: 30,
       icon: '💨',
       unlocked: true,
-      dodge: 0.1
+      tags: ['defensive', 'utility'],
+      dodge: 0.08
+    },
+    {
+      id: 'thorns_t2',
+      name: 'Spiked Armor',
+      description: 'Reflect 15% damage',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 26,
+      icon: '🌵',
+      unlocked: true,
+      tags: ['defensive'],
+      thorns: 0.15
+    },
+    {
+      id: 'armor_t2',
+      name: 'Chain Mail',
+      description: '+5 armor',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 35,
+      icon: '🛡️',
+      unlocked: true,
+      tags: ['defensive'],
+      armor: 5
+    },
+    {
+      id: 'gold_bonus_t2',
+      name: 'Treasure Hunter',
+      description: '+25% gold',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 24,
+      icon: '💸',
+      unlocked: true,
+      tags: ['economic'],
+      goldBonus: 1.25
+    },
+    {
+      id: 'reroll_discount_t2',
+      name: 'Spyglass',
+      description: '-50% reroll cost',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 28,
+      icon: '🔭',
+      unlocked: true,
+      tags: ['economic', 'utility'],
+      rerollDiscount: 0.5
+    },
+    {
+      id: 'shop_discount_t2',
+      name: 'Coupon Book',
+      description: '-10% shop prices',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 22,
+      icon: '🎫',
+      unlocked: true,
+      tags: ['economic'],
+      shopDiscount: 0.1
+    },
+    {
+      id: 'recycle_bonus_t2',
+      name: 'Haggler Badge',
+      description: '+50% recycle value',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 20,
+      icon: '♻️',
+      unlocked: true,
+      tags: ['economic'],
+      recycleBonus: 0.5
     },
 
-    // === EPIC ITEMS ===
+    // ==================== TIER 3 (RARE) ====================
+    // Strong effects and build-defining mechanics
     {
-      id: 'homing',
-      name: 'Homing',
-      description: 'Bullets curve toward enemies',
+      id: 'damage_t3',
+      name: 'Champion\'s Crown',
+      description: '+35% damage',
       rarity: 'epic',
-      cost: 200,
+      tier: ItemTier.Rare,
+      cost: 60,
+      icon: '👑',
+      unlocked: true,
+      tags: ['melee', 'ranged'],
+      damageMultiplier: 1.35
+    },
+    {
+      id: 'attack_speed_t3',
+      name: 'Lightning Bracers',
+      description: '+35% fire rate',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 58,
+      icon: '⚡',
+      unlocked: true,
+      tags: ['ranged'],
+      fireRateMultiplier: 1.35
+    },
+    {
+      id: 'piercing_t3',
+      name: 'Penetrating Shot',
+      description: 'Pierce +2 enemies',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 55,
       icon: '🎯',
       unlocked: true,
+      tags: ['ranged'],
+      piercing: 2
+    },
+    {
+      id: 'multishot_t3',
+      name: 'Trident',
+      description: '+2 projectiles',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 65,
+      icon: '🔱',
+      unlocked: true,
+      tags: ['ranged'],
+      multishot: 2
+    },
+    {
+      id: 'homing_t3',
+      name: 'Seeking Rune',
+      description: 'Homing projectiles',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 70,
+      icon: '🎯',
+      unlocked: true,
+      tags: ['ranged', 'elemental'],
       homing: true
     },
     {
-      id: 'explosive',
-      name: 'Explosive',
-      description: 'Bullets explode on hit',
+      id: 'explosive_t3',
+      name: 'Demolition Kit',
+      description: 'Explosions on hit',
       rarity: 'epic',
-      cost: 200,
+      tier: ItemTier.Rare,
+      cost: 75,
       icon: '💣',
       unlocked: true,
+      tags: ['ranged', 'elemental'],
       explosionOnHit: true
     },
     {
-      id: 'chain_lightning',
-      name: 'Chain Lightning',
-      description: '20% chance to chain to nearby enemy',
+      id: 'chain_lightning_t3',
+      name: 'Storm Essence',
+      description: '25% chain to nearby',
       rarity: 'epic',
-      cost: 200,
+      tier: ItemTier.Rare,
+      cost: 68,
       icon: '⚡',
       unlocked: true,
-      chainLightning: 0.2
+      tags: ['elemental', 'ranged'],
+      chainLightning: 0.25
     },
     {
-      id: 'shield',
-      name: 'Shield',
-      description: '50 HP shield (regenerates out of combat)',
+      id: 'poison_t3',
+      name: 'Toxic Vial',
+      description: 'Poison (7 dmg/s, 3s)',
       rarity: 'epic',
-      cost: 200,
-      icon: '🛡️',
-      unlocked: true,
-      shield: true
-    },
-    {
-      id: 'poison',
-      name: 'Poison',
-      description: 'Attacks apply DoT (5 dmg/sec, 3s)',
-      rarity: 'epic',
-      cost: 200,
+      tier: ItemTier.Rare,
+      cost: 62,
       icon: '☠️',
       unlocked: true,
+      tags: ['elemental'],
       poison: true
     },
     {
-      id: 'freeze',
-      name: 'Freeze',
-      description: '10% chance to slow enemy 50% for 2s',
+      id: 'freeze_t3',
+      name: 'Frost Orb',
+      description: '15% freeze chance',
       rarity: 'epic',
-      cost: 200,
+      tier: ItemTier.Rare,
+      cost: 60,
       icon: '❄️',
       unlocked: true,
-      freeze: 0.1
+      tags: ['elemental'],
+      freeze: 0.15
     },
-
-    // === LEGENDARY ITEMS ===
     {
-      id: 'mega_damage',
-      name: 'Berserker Rage',
-      description: '+50% damage',
-      rarity: 'legendary',
-      cost: 400,
-      icon: '⚔️',
+      id: 'shield_t3',
+      name: 'Energy Barrier',
+      description: '75 HP shield (regen)',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 72,
+      icon: '🛡️',
       unlocked: true,
-      damageMultiplier: 1.5
+      tags: ['defensive'],
+      shield: true
     },
     {
-      id: 'rapid_fire',
-      name: 'Rapid Fire',
-      description: '+50% fire rate',
-      rarity: 'legendary',
-      cost: 400,
-      icon: '🔫',
+      id: 'lifesteal_t3',
+      name: 'Blood Chalice',
+      description: '12% lifesteal',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 70,
+      icon: '🍷',
       unlocked: true,
-      fireRateMultiplier: 1.5
+      tags: ['melee'],
+      lifesteal: 0.12
     },
     {
-      id: 'glass_cannon',
-      name: 'Glass Cannon',
-      description: '+100% damage, -50% health',
-      rarity: 'legendary',
-      cost: 400,
-      icon: '💀',
+      id: 'dodge_t3',
+      name: 'Shadow Step',
+      description: '20% dodge chance',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 65,
+      icon: '👻',
       unlocked: true,
-      damageMultiplier: 2.0,
-      maxHealthBonus: -50
+      tags: ['defensive', 'utility'],
+      dodge: 0.2
     },
     {
-      id: 'knockback',
-      name: 'Knockback',
-      description: 'Massive knockback on hit',
-      rarity: 'legendary',
-      cost: 400,
+      id: 'crit_chance_t3',
+      name: 'Assassin\'s Mark',
+      description: '+20% crit chance',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 68,
+      icon: '🗡️',
+      unlocked: true,
+      tags: ['melee', 'ranged'],
+      critChance: 0.2
+    },
+    {
+      id: 'knockback_t3',
+      name: 'Impact Gauntlet',
+      description: 'Heavy knockback',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 55,
       icon: '👊',
       unlocked: true,
-      knockback: 300
+      tags: ['melee'],
+      knockback: 250
+    },
+
+    // ==================== TIER 4 (LEGENDARY) ====================
+    // Game-changing unique effects
+    {
+      id: 'berserker_rage_t4',
+      name: 'Berserker Rage',
+      description: '+60% damage',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 140,
+      icon: '⚔️',
+      unlocked: true,
+      tags: ['melee'],
+      damageMultiplier: 1.6
+    },
+    {
+      id: 'rapid_fire_t4',
+      name: 'Gatling Core',
+      description: '+60% fire rate',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 135,
+      icon: '🔫',
+      unlocked: true,
+      tags: ['ranged'],
+      fireRateMultiplier: 1.6
+    },
+    {
+      id: 'glass_cannon_t4',
+      name: 'Glass Cannon',
+      description: '+100% dmg, -40% HP',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 150,
+      icon: '💀',
+      unlocked: true,
+      tags: ['melee', 'ranged'],
+      damageMultiplier: 2.0,
+      maxHealthBonus: -40
+    },
+    {
+      id: 'time_slow_t4',
+      name: 'Chrono Crystal',
+      description: 'Slow time on crit',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 145,
+      icon: '⏱️',
+      unlocked: true,
+      tags: ['elemental', 'utility'],
+      critChance: 0.15,
+      freeze: 0.3 // 30% chance to slow
+    },
+    {
+      id: 'clone_projectiles_t4',
+      name: 'Mirror Shard',
+      description: 'Clone projectiles',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 155,
+      icon: '🪞',
+      unlocked: true,
+      tags: ['ranged'],
+      multishot: 3
+    },
+    {
+      id: 'chain_lightning_t4',
+      name: 'Arc Reactor',
+      description: 'Chain to all nearby',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 148,
+      icon: '⚡',
+      unlocked: true,
+      tags: ['elemental', 'ranged'],
+      chainLightning: 0.5,
+      explosionOnHit: true
+    },
+    {
+      id: 'immortal_t4',
+      name: 'Phoenix Feather',
+      description: '+100 HP, +10 HP/s',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 142,
+      icon: '🔥',
+      unlocked: true,
+      tags: ['defensive'],
+      maxHealthBonus: 100,
+      healthRegen: 10
+    },
+    {
+      id: 'mega_knockback_t4',
+      name: 'Titan Fist',
+      description: 'Massive knockback',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 138,
+      icon: '🦾',
+      unlocked: true,
+      tags: ['melee'],
+      knockback: 500,
+      damageMultiplier: 1.3
+    },
+    {
+      id: 'infinite_piercing_t4',
+      name: 'Void Lance',
+      description: 'Pierce all enemies',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 160,
+      icon: '🌌',
+      unlocked: true,
+      tags: ['ranged'],
+      piercing: 999
+    },
+    {
+      id: 'gold_rush_t4',
+      name: 'Midas Touch',
+      description: '+100% gold, -15% shop',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 125,
+      icon: '✨',
+      unlocked: true,
+      tags: ['economic'],
+      goldBonus: 2.0,
+      shopDiscount: 0.15
     }
   ];
+
+  // Weapon tiers for combining system (FUTURE FEATURE - not implemented yet)
+  // private static weapons: Weapon[] = [
+  //   { id: 'sword_bronze', name: 'Bronze Sword', baseName: 'Sword', tier: ItemTier.Common, damage: 10, icon: '🗡️', cost: 15, unlocked: true },
+  //   { id: 'sword_silver', name: 'Silver Sword', baseName: 'Sword', tier: ItemTier.Uncommon, damage: 20, icon: '⚔️', cost: 40, unlocked: false },
+  //   { id: 'sword_gold', name: 'Gold Sword', baseName: 'Sword', tier: ItemTier.Rare, damage: 35, icon: '🗡️', cost: 80, unlocked: false },
+  //   { id: 'sword_diamond', name: 'Diamond Sword', baseName: 'Sword', tier: ItemTier.Legendary, damage: 60, icon: '💎', cost: 150, unlocked: false },
+  // ];
 
   static getAllItems(): Item[] {
     return [...this.items];
@@ -300,14 +659,25 @@ export class ItemDatabase {
     return this.items.find(item => item.id === id);
   }
 
-  static getRandomItems(count: number): Item[] {
-    const unlocked = this.getUnlockedItems();
-    const shuffled = [...unlocked].sort(() => Math.random() - 0.5);
+  static getRandomItems(count: number, wave: number = 1): Item[] {
+    // Filter items based on wave progression (tier unlock system)
+    const availableItems = this.getUnlockedItems().filter(item => {
+      if (wave <= 2) return item.tier === ItemTier.Common;
+      if (wave <= 5) return item.tier <= ItemTier.Uncommon;
+      if (wave <= 10) return item.tier <= ItemTier.Rare;
+      return true; // All tiers available
+    });
+
+    const shuffled = [...availableItems].sort(() => Math.random() - 0.5);
     return shuffled.slice(0, count);
   }
 
   static getItemsByRarity(rarity: 'common' | 'rare' | 'epic' | 'legendary'): Item[] {
     return this.items.filter(item => item.rarity === rarity && item.unlocked);
+  }
+
+  static getItemsByTier(tier: ItemTier): Item[] {
+    return this.items.filter(item => item.tier === tier && item.unlocked);
   }
 
   static unlockItem(id: string): void {
@@ -316,23 +686,45 @@ export class ItemDatabase {
       item.unlocked = true;
     }
   }
+
+  // Get all items with a specific tag
+  static getItemsByTag(tag: ItemTag): Item[] {
+    return this.items.filter(item => item.tags.includes(tag) && item.unlocked);
+  }
 }
 
-// Player stats calculated from items
+// Player stats calculated from items with affinity system
 export class PlayerStats {
   items: Item[] = [];
+  affinityTags: ItemTag[] = []; // Character affinity (2 random tags at start)
 
-  // Base stats
-  baseDamage: number = 10;
-  baseFireRate: number = 2; // Shots per second
+  // Base stats - BUFFED for better early game (Wave 1 too hard fix)
+  baseDamage: number = 15; // Was 10 - 50% increase
+  baseFireRate: number = 2.5; // Was 2 - 25% increase (Shots per second)
   baseSpeed: number = 200;
   baseMaxHealth: number = 100;
   baseCritChance: number = 0.05;
   baseCritMultiplier: number = 2.0;
   baseProjectileSpeed: number = 400;
 
+  constructor() {
+    // Randomly assign 2 affinity tags
+    const allTags: ItemTag[] = ['melee', 'ranged', 'defensive', 'economic', 'elemental', 'utility'];
+    const shuffled = allTags.sort(() => Math.random() - 0.5);
+    this.affinityTags = shuffled.slice(0, 2);
+  }
+
   addItem(item: Item): void {
     this.items.push(item);
+  }
+
+  removeItem(itemId: string): Item | null {
+    const index = this.items.findIndex(item => item.id === itemId);
+    if (index !== -1) {
+      const [removed] = this.items.splice(index, 1);
+      return removed;
+    }
+    return null;
   }
 
   getDamage(): number {
@@ -340,7 +732,6 @@ export class PlayerStats {
     this.items.forEach(item => {
       if (item.damageMultiplier) damage *= item.damageMultiplier;
     });
-    // Apply weapon specialization bonus
     damage *= this.getSpecializationBonus();
     return damage;
   }
@@ -391,6 +782,14 @@ export class PlayerStats {
       if (item.healthRegen) regen += item.healthRegen;
     });
     return regen;
+  }
+
+  getArmor(): number {
+    let armor = 0;
+    this.items.forEach(item => {
+      if (item.armor) armor += item.armor;
+    });
+    return armor;
   }
 
   getLifesteal(): number {
@@ -454,7 +853,7 @@ export class PlayerStats {
     this.items.forEach(item => {
       if (item.dodge) dodge += item.dodge;
     });
-    return Math.min(0.75, dodge); // Cap at 75%
+    return Math.min(0.75, dodge);
   }
 
   getChainLightningChance(): number {
@@ -471,6 +870,31 @@ export class PlayerStats {
       if (item.freeze) chance += item.freeze;
     });
     return Math.min(1, chance);
+  }
+
+  // Brotato-inspired: Economic modifiers
+  getRerollDiscount(): number {
+    let discount = 0;
+    this.items.forEach(item => {
+      if (item.rerollDiscount) discount += item.rerollDiscount;
+    });
+    return Math.min(0.9, discount); // Max 90% discount
+  }
+
+  getShopDiscount(): number {
+    let discount = 0;
+    this.items.forEach(item => {
+      if (item.shopDiscount) discount += item.shopDiscount;
+    });
+    return Math.min(0.5, discount); // Max 50% discount
+  }
+
+  getRecycleBonus(): number {
+    let bonus = 0;
+    this.items.forEach(item => {
+      if (item.recycleBonus) bonus += item.recycleBonus;
+    });
+    return bonus;
   }
 
   hasPiercing(): boolean {
@@ -505,46 +929,47 @@ export class PlayerStats {
     return count;
   }
 
-  // MODERN ROGUELIKE: Detect synergies for visual feedback
+  // Advanced synergy detection with tag system
   hasSynergyWith(item: Item): boolean {
-    // Crit synergies (crit chance + crit damage)
+    // Affinity bonus: items matching player's affinity tags
+    const hasAffinity = item.tags.some(tag => this.affinityTags.includes(tag));
+    if (hasAffinity) return true;
+
+    // Crit synergies
     if (item.critChance && this.items.some(i => i.critDamageMultiplier)) return true;
     if (item.critDamageMultiplier && this.items.some(i => i.critChance)) return true;
 
-    // Lifesteal synergies (damage + lifesteal, or attack speed + lifesteal)
+    // Lifesteal synergies
     if (item.lifesteal && this.items.some(i => i.damageMultiplier || i.fireRateMultiplier)) return true;
     if ((item.damageMultiplier || item.fireRateMultiplier) && this.items.some(i => i.lifesteal)) return true;
 
-    // Multishot synergies (multishot + piercing)
+    // Multishot + piercing synergies
     if (item.multishot && this.items.some(i => i.piercing)) return true;
     if (item.piercing && this.items.some(i => i.multishot)) return true;
 
-    // Fire rate synergies (fire rate + on-hit effects)
+    // Fire rate + on-hit effects
     if (item.fireRateMultiplier && this.items.some(i => i.chainLightning || i.freeze || i.poison)) return true;
     if ((item.chainLightning || item.freeze || item.poison) && this.items.some(i => i.fireRateMultiplier)) return true;
 
-    // Knockback synergies (knockback + damage)
+    // Knockback + damage
     if (item.knockback && this.items.some(i => i.damageMultiplier)) return true;
     if (item.damageMultiplier && this.items.some(i => i.knockback)) return true;
+
+    // Economic synergies
+    if (item.goldBonus && this.items.some(i => i.shopDiscount || i.rerollDiscount)) return true;
+    if ((item.shopDiscount || item.rerollDiscount) && this.items.some(i => i.goldBonus)) return true;
 
     return false;
   }
 
-  // BROTATO-INSPIRED: Check weapon specialization (all melee or all ranged)
-  // For now, we'll track based on item themes (damage/attack speed = melee, projectile effects = ranged)
+  // Weapon specialization bonus
   getWeaponSpecialization(): 'melee' | 'ranged' | 'mixed' | 'none' {
     let meleeCount = 0;
     let rangedCount = 0;
 
     this.items.forEach(item => {
-      // Melee indicators: knockback, lifesteal, thorns, attack speed, raw damage
-      if (item.knockback || item.thorns || item.id === 'attack_speed' || item.id === 'damage') {
-        meleeCount++;
-      }
-      // Ranged indicators: piercing, multishot, homing, projectile speed
-      if (item.piercing || item.multishot || item.homing || item.projectileSpeed) {
-        rangedCount++;
-      }
+      if (item.tags.includes('melee')) meleeCount++;
+      if (item.tags.includes('ranged')) rangedCount++;
     });
 
     if (meleeCount > 0 && rangedCount === 0) return 'melee';
@@ -553,9 +978,29 @@ export class PlayerStats {
     return 'none';
   }
 
-  // Get specialization damage bonus (+20% if specialized)
   getSpecializationBonus(): number {
     const spec = this.getWeaponSpecialization();
     return (spec === 'melee' || spec === 'ranged') ? 1.2 : 1.0;
+  }
+
+  // Calculate final item price with shop discount
+  getItemPrice(item: Item, wave: number): number {
+    // Dynamic pricing formula (increases with wave)
+    const basePrice = item.cost;
+    const waveInflation = basePrice * 0.1 * wave;
+    let finalPrice = basePrice + wave + waveInflation;
+
+    // Apply shop discount
+    const discount = this.getShopDiscount();
+    finalPrice *= (1 - discount);
+
+    return Math.max(1, Math.floor(finalPrice));
+  }
+
+  // Calculate recycle value (25% base + recycle bonus)
+  getRecycleValue(item: Item): number {
+    const baseValue = item.cost * 0.25;
+    const bonus = this.getRecycleBonus();
+    return Math.floor(baseValue * (1 + bonus));
   }
 }
