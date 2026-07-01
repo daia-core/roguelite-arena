@@ -31,43 +31,48 @@ export class SpriteSheet {
     const canvas = this.createCanvas(size, size);
     const ctx = canvas.getContext('2d')!;
 
-    // Player - detailed knight with armor, sword, shield, and cape
+    // Player - detailed knight with HUE-SHIFTED color ramps, dithering, and rim lighting
     const pixels = [
       [0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0],
-      [0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0],
+      [0,0,0,0,0,1,1,1,12,12,1,1,12,12,1,1,1,0,0,0,0,0],
       [0,0,0,0,1,1,1,2,2,2,1,1,2,2,2,1,1,1,0,0,0,0],
       [0,0,0,1,1,1,2,2,3,2,1,1,2,3,2,2,1,1,1,0,0,0],
       [0,0,0,1,1,1,2,2,2,2,1,1,2,2,2,2,1,1,1,0,0,0],
-      [0,0,0,0,1,1,1,1,1,1,4,4,1,1,1,1,1,1,0,0,0,0],
-      [0,0,0,0,1,1,4,4,4,4,4,4,4,4,4,4,1,1,0,0,0,0],
+      [0,0,0,0,1,1,1,1,1,1,4,13,1,1,1,1,1,1,0,0,0,0],
+      [0,0,0,0,1,1,4,4,13,13,4,4,13,4,4,4,1,1,0,0,0,0],
       [0,0,0,0,0,1,4,5,5,4,4,4,4,5,5,4,1,0,0,0,0,0],
       [0,0,0,0,1,4,4,5,5,4,4,4,4,5,5,4,4,1,0,0,0,0],
-      [0,0,0,6,6,4,4,4,4,4,4,4,4,4,4,4,4,6,6,0,0,0],
-      [0,0,6,6,6,6,4,4,4,4,4,4,4,4,4,4,6,6,6,6,0,0],
+      [0,0,0,14,6,4,4,4,4,4,4,4,4,4,4,4,4,6,14,0,0,0],
+      [0,0,14,6,6,6,4,4,4,4,4,4,4,4,4,4,6,6,6,14,0,0],
       [0,6,6,7,7,6,6,4,4,4,4,4,4,4,4,6,6,7,7,6,6,0],
       [0,6,7,7,8,7,6,6,6,6,6,6,6,6,6,6,7,8,7,7,6,0],
       [0,0,6,7,7,6,6,9,9,6,6,6,6,9,9,6,6,7,7,6,0,0],
-      [0,0,0,6,6,6,9,9,9,9,0,0,9,9,9,9,6,6,6,0,0,0],
-      [0,0,0,0,6,9,9,9,9,0,0,0,0,9,9,9,9,6,0,0,0,0],
-      [0,0,0,10,9,9,9,0,0,0,0,0,0,0,9,9,9,10,0,0,0,0],
-      [0,0,10,10,10,9,0,0,0,0,0,0,0,0,9,10,10,10,0,0,0,0],
+      [0,0,0,6,6,6,9,9,15,9,0,0,9,15,9,9,6,6,6,0,0,0],
+      [0,0,0,0,6,9,9,15,9,0,0,0,0,9,15,9,9,6,0,0,0,0],
+      [0,0,0,16,9,9,9,0,0,0,0,0,0,0,9,9,9,16,0,0,0,0],
+      [0,0,16,10,10,9,0,0,0,0,0,0,0,0,9,10,10,16,0,0,0,0],
       [0,0,10,11,10,0,0,0,0,0,0,0,0,0,0,10,11,10,0,0,0,0],
       [0,0,0,10,10,10,0,0,0,0,0,0,0,0,10,10,10,0,0,0,0,0],
     ];
 
     const colors = [
       'transparent',  // 0
-      '#d4a574',      // 1 - skin light
+      '#c79b6d',      // 1 - skin outline (colored, not black)
       '#8b7355',      // 2 - skin base
       '#654321',      // 3 - eye pupils
-      '#e8e8e8',      // 4 - helmet silver
-      '#c0c0c0',      // 5 - helmet shadow
-      '#4a90e2',      // 6 - armor blue
-      '#6db3f2',      // 7 - armor blue light
-      '#ffffff',      // 8 - armor highlight
-      '#8b0000',      // 9 - cape red
-      '#b22222',      // 10 - cape red light
-      '#ff6347',      // 11 - cape highlight
+      '#e8e8e8',      // 4 - helmet silver highlight
+      '#9a9a9a',      // 5 - helmet mid (hue-shifted cooler)
+      '#2b5a8a',      // 6 - armor blue shadow (hue-shifted toward purple-blue)
+      '#6db3f2',      // 7 - armor blue mid
+      '#ffffff',      // 8 - armor rim light (warm highlight)
+      '#5a0a0a',      // 9 - cape deep shadow (hue-shifted toward purple-red)
+      '#b22222',      // 10 - cape mid red
+      '#ff6347',      // 11 - cape warm highlight
+      '#e5c29d',      // 12 - skin highlight (warm shift)
+      '#ffd700',      // 13 - helmet gold accent (warm rim light)
+      '#4a90e2',      // 14 - armor light edge (rim lighting)
+      '#c44545',      // 15 - cape dithering mid-tone
+      '#8b3a3a',      // 16 - cape outline (colored, not black)
     ];
 
     const scale = 3;
@@ -79,6 +84,12 @@ export class SpriteSheet {
         }
       });
     });
+
+    // Add subtle glow effect around player (rim lighting shader simulation)
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = 'rgba(255, 215, 0, 0.15)'; // Golden rim glow
+    ctx.fillRect(0, 0, size, size);
+    ctx.globalCompositeOperation = 'source-over';
 
     this.sprites.set('player', canvas);
   }
