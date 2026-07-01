@@ -62,25 +62,31 @@ Comparing to the research:
 | Mechanic | Current State | Modern Standard |
 |----------|---------------|-----------------|
 | **Reward pacing** | ✅ XP gems drop constantly | ✅ Good |
-| **Level-up frequency** | ⚠️ ~60-90 sec early game | 🔴 Too slow (should be 30-40 sec) |
-| **Synergies** | ⚠️ Some item combos exist | 🟡 Not discoverable/visible enough |
-| **Build variety** | ⚠️ Meta-progression adds variety | 🟡 Runs feel similar (no forced constraints) |
-| **Audiovisual juice** | ✅ Particles, screen shake, damage numbers | ✅ Good |
-| **Shop lock/reroll** | ✅ Reroll exists | 🟡 No locking mechanism |
+| **Level-up frequency** | ✅ ~30-40 sec early game (FIXED) | ✅ Good |
+| **Synergies** | ✅ Visual feedback + green glow (IMPLEMENTED) | ✅ Good |
+| **Build variety** | ✅ Specialization bonus (IMPLEMENTED) | ✅ Good |
+| **Audiovisual juice** | ✅ MASSIVE level-up effect (ENHANCED) | ✅ Excellent |
+| **Shop lock/reroll** | ✅ Lock items for 5g (IMPLEMENTED) | ✅ Good |
 | **Character asymmetry** | 🔴 None (single character) | 🔴 Missing entirely |
-| **Forced specialization** | 🔴 No build constraints | 🟡 Could add weapon-type focus |
+| **Forced specialization** | ✅ +20% melee/ranged bonus (IMPLEMENTED) | ✅ Good |
 
-## Recommended Implementations (Priority Order)
+## Implemented Features (2026-07-01)
 
-### **High Impact, Low Effort:**
-1. **Faster early XP curve** — reduce XP needed for first 5 levels by 30%
-2. **Shop item locking** — let players lock 1-2 items per wave (costs 5 gold)
-3. **Clearer synergy feedback** — visual indicator when items combo (glow effect, tooltip)
-4. **More particle juice** — level-up explosion, rare item rainbow burst
+### ✅ **Completed - High Impact, Low Effort:**
+1. ✅ **Faster early XP curve** — First 5 levels are 30% faster (Player.ts line 181-195)
+2. ✅ **Shop item locking** — Lock items for 5 gold, persist to next wave (Game.ts)
+3. ✅ **Clearer synergy feedback** — Green glow + "⚡SYNERGY" label on matching items (ItemSystem.ts)
+4. ✅ **More particle juice** — 120 particles, screen flash, bigger shake on level-up (Particle.ts)
+5. ✅ **Weapon specialization bonus** — +20% damage for melee-only or ranged-only builds (ItemSystem.ts)
 
-### **Medium Impact, Medium Effort:**
-5. **Weapon specialization bonus** — +20% damage if all weapons are melee OR all ranged
-6. **Item rarity tiers** — common/rare/legendary with visual distinction
+**Results:**
+- Level-up feels MASSIVE (Vampire Survivors-level juice)
+- Shop now strategic (lock good items, reroll bad ones)
+- Synergies are discoverable (visible at-a-glance)
+- Build variety increased (specialization rewards focused play)
+
+### **Next Priority - Medium Impact, Medium Effort:**
+6. **Item rarity tiers** — common/rare/legendary with visual distinction ⚠️ PARTIALLY DONE (colors exist)
 7. **Run modifiers** — optional challenges that boost rewards (no armor, double enemies, etc.)
 
 ### **High Impact, High Effort:**
