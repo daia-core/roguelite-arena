@@ -1115,13 +1115,14 @@ export class PlayerStats {
     this.affinityTags = shuffled.slice(0, 2);
   }
 
-  addItem(item: Item): void {
+  addItem(item: Item): { newDuos: any[]; newTransformations: any[] } {
     this.items.push(item);
     // Track for transformations
     this.transformations.trackItemPickup(item.tags);
     // Track for duo combos
-    this.duos.updateDuos(this.items);
-    // Transformation unlocks will be checked by Game.ts to show UI
+    const newDuos = this.duos.updateDuos(this.items);
+    // Return newly unlocked combos for Game.ts to show effects/UI
+    return { newDuos, newTransformations: [] }; // TODO: track transformations too
   }
 
   removeItem(itemId: string): Item | null {

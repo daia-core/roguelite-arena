@@ -20,6 +20,7 @@ import { PerformanceMonitor } from './PerformanceMonitor';
 import { QualityManager } from './QualityManager';
 import { EntityCuller } from './EntityCuller';
 import { PathfindingSystem } from './PathfindingSystem';
+import { ScreenEffects, ShakePresets } from './ScreenEffects';
 
 export type GameState = 'menu' | 'playing' | 'shop' | 'paused' | 'gameover' | 'upgrades';
 
@@ -65,6 +66,9 @@ export class Game {
 
   // PATHFINDING: Smart navigation for intelligent enemies
   private pathfindingSystem: PathfindingSystem;
+
+  // GAME FEEL: Screen effects (shake, zoom, flash)
+  private screenEffects: ScreenEffects;
 
   // GAME FEEL: Hit pause / time scale system
   timeScale: number = 1.0;
@@ -158,6 +162,9 @@ export class Game {
 
     // PATHFINDING: Initialize pathfinding system (32px cells for navigation grid)
     this.pathfindingSystem = new PathfindingSystem(canvas.width, canvas.height, 32);
+
+    // GAME FEEL: Initialize screen effects
+    this.screenEffects = new ScreenEffects();
 
     // Connect input to game state
     this.input.setGameStateGetter(() => this.state);
@@ -345,6 +352,9 @@ export class Game {
 
     // PERFORMANCE: Feed FPS to quality manager for adaptive scaling
     this.qualityManager.recordFrame(this.performanceMonitor.getFPS());
+
+    // GAME FEEL: Update screen effects
+    this.screenEffects.update(dt);
 
     switch (this.state) {
       case 'menu':
@@ -682,6 +692,13 @@ export class Game {
 
             // GAME FEEL: Trigger hit pause on player damage to enemy
             this.hitPauseTimer = isCrit ? 0.08 : 0.05; // Longer pause on crit
+
+            // GAME FEEL: Screen shake on hit (bigger on crit)
+            if (isCrit) {
+              this.screenEffects.addShake(ShakePresets.CRIT.intensity, ShakePresets.CRIT.duration);
+            } else {
+              this.screenEffects.addShake(ShakePresets.SMALL.intensity, ShakePresets.SMALL.duration);
+            }
 
             const splits = enemy.takeDamage(damage);
             if (splits && splits.length > 0) {
@@ -1048,6 +1065,10 @@ export class Game {
       // VAMPIRE SURVIVORS JUICE: Make level-ups feel MASSIVE
       this.renderer.addScreenShake(0.6); // Much bigger shake
       this.renderer.addHitFlash(0.4); // Screen flash
+      // GAME FEEL: Enhanced screen effects
+      this.screenEffects.addShake(ShakePresets.LEVEL_UP.intensity, ShakePresets.LEVEL_UP.duration);
+      this.screenEffects.setZoom(1.05, 0.3); // Slight zoom in
+      this.screenEffects.flash('#ffff00', 0.25); // Golden flash
       // Spawn huge particle explosion at player - PERFORMANCE: Use pooled particles (quality-adjusted)
       const colors = ['#ffff00', '#00ffff', '#ff00ff', '#ff6600', '#00ff00', '#ff0000', '#ffffff'];
       const levelUpParticleCount = this.getParticleCount(20);
@@ -1092,6 +1113,51 @@ export class Game {
         const damaged = this.player.takeDamage(enemy.typeData.damage * 0.8);
         if (damaged) {
           this.renderer.addHitFlash(0.4);
+        }
+      }
+    }
+
+    // Exploder explodes on death with MASSIVE radius
+    if (enemy.type === 'exploder') {
+      // Huge explosion particles
+      for (let i = 0; i < 30; i++) {
+        const angle = (Math.PI * 2 * i) / 30;
+        const speed = 120 + Math.random() * 80;
+        this.particles.push(this.createParticle({
+          x: enemy.x,
+          y: enemy.y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          color: i % 2 === 0 ? '#ff4400' : '#ffaa00',
+          size: 8 + Math.random() * 4,
+          lifetime: 1200,
+          fadeOut: true
+        }));
+      }
+
+      // Screen shake
+      this.screenEffects.addShake(ShakePresets.LARGE.intensity, ShakePresets.LARGE.duration);
+      this.screenEffects.flash('#ff4400', 0.2);
+
+      // Damage player if in explosion radius
+      const distToPlayer = Math.sqrt(
+        (this.player.x - enemy.x) ** 2 + (this.player.y - enemy.y) ** 2
+      );
+      if (distToPlayer < enemy.exploderExplodeRadius) {
+        const damaged = this.player.takeDamage(enemy.typeData.damage * 1.5);
+        if (damaged) {
+          this.renderer.addHitFlash(0.6);
+        }
+      }
+
+      // Damage other enemies in explosion radius
+      for (const otherEnemy of this.enemies) {
+        if (otherEnemy === enemy || otherEnemy.dead) continue;
+        const distToEnemy = Math.sqrt(
+          (otherEnemy.x - enemy.x) ** 2 + (otherEnemy.y - enemy.y) ** 2
+        );
+        if (distToEnemy < enemy.exploderExplodeRadius) {
+          otherEnemy.takeDamage(enemy.typeData.damage);
         }
       }
     }
@@ -1195,6 +1261,10 @@ export class Game {
     this.state = 'shop';
     this.audio.playWaveComplete();
 
+    // GAME FEEL: Wave complete effects
+    this.screenEffects.addShake(ShakePresets.WAVE_COMPLETE.intensity, ShakePresets.WAVE_COMPLETE.duration);
+    this.screenEffects.flash('#00ff00', 0.2); // Green flash for wave complete
+
     // Save progress
     this.autoSave();
   }
@@ -1293,8 +1363,18 @@ export class Game {
 
           if (this.player.gold >= finalPrice) {
             this.player.gold -= finalPrice;
-            this.playerStats.addItem(item);
+            const { newDuos } = this.playerStats.addItem(item);
             this.itemsPurchasedThisWave++;
+
+            // GAME FEEL: Duo unlock effects
+            if (newDuos.length > 0) {
+              for (const duo of newDuos) {
+                console.log(`🎉 DUO UNLOCKED: ${duo.name} - ${duo.description}`);
+                this.screenEffects.addShake(ShakePresets.MEDIUM.intensity, ShakePresets.MEDIUM.duration);
+                this.screenEffects.flash(duo.glowColor || '#ff00ff', 0.3);
+                this.screenEffects.setZoom(1.08, 0.4);
+              }
+            }
 
             // Update player max health if needed
             if (item.maxHealthBonus) {
@@ -1633,6 +1713,10 @@ export class Game {
 
     const ctx = this.renderer.getContext();
 
+    // GAME FEEL: Apply screen effects (shake, zoom) before rendering
+    ctx.save();
+    this.screenEffects.applyToContext(ctx, this.canvas.width, this.canvas.height);
+
     // PERFORMANCE: Update entity culler viewport
     this.entityCuller.updateViewport(0, 0, this.canvas.width, this.canvas.height, 100);
 
@@ -1731,6 +1815,12 @@ export class Game {
       visibleEntities: visibleCount,
       culledEntities: culledCount
     });
+
+    // GAME FEEL: Restore context after screen effects
+    ctx.restore();
+
+    // GAME FEEL: Render flash effect (must be after ctx.restore to cover whole screen)
+    this.screenEffects.renderFlash(ctx, this.canvas.width, this.canvas.height);
   }
 
   private drawHUD(): void {

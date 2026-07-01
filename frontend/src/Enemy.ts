@@ -869,6 +869,80 @@ export class Enemy {
         shouldMove = false;
       }
 
+      // NEW AI: Shielder - has rotating shield that blocks attacks from one direction
+      if (this.type === 'shielder') {
+        this.shielderAngle += this.shielderRotationSpeed * dt;
+        // Shield behavior is handled in takeDamage method
+      }
+
+      // NEW AI: Exploder - flashes before exploding when close to player
+      if (this.type === 'exploder') {
+        if (dist < 100) {
+          this.exploderFlashTimer += dt;
+          // Visual flash handled in draw method
+          // Explosion triggered when dying in Game.ts
+        } else {
+          this.exploderFlashTimer = 0;
+        }
+      }
+
+      // NEW AI: Healer - stays back and heals nearby allies
+      if (this.type === 'healer') {
+        this.healerHealCooldown -= dt;
+
+        // Keep distance from player
+        if (dist < 250) {
+          this.x -= nx * moveSpeed * dt * 0.8;
+          this.y -= ny * moveSpeed * dt * 0.8;
+          shouldMove = false;
+        } else if (dist > 350) {
+          // Approach if too far
+          shouldMove = true;
+        } else {
+          shouldMove = false;
+        }
+
+        // Heal nearby enemies
+        if (this.healerHealCooldown <= 0) {
+          shouldHeal = true;
+          this.healerHealCooldown = 4; // Heal every 4 seconds
+        }
+      }
+
+      // NEW AI: Summoner - spawns minions periodically
+      if (this.type === 'summoner') {
+        this.summonerSpawnCooldown -= dt;
+
+        // Keep distance from player (like healer)
+        if (dist < 250) {
+          this.x -= nx * moveSpeed * dt * 0.6;
+          this.y -= ny * moveSpeed * dt * 0.6;
+          shouldMove = false;
+        } else if (dist > 400) {
+          shouldMove = true;
+        } else {
+          shouldMove = false;
+        }
+
+        // Spawn minions
+        if (this.summonerSpawnCooldown <= 0 && this.summonerMinionsSpawned < this.summonerMaxMinions) {
+          shouldSpawnMinion = true;
+          this.summonerSpawnCooldown = 6; // Spawn every 6 seconds
+          this.summonerMinionsSpawned++;
+        }
+      }
+
+      // NEW AI: Phaser - has chance to phase (become invincible) when hit
+      if (this.type === 'phaser') {
+        if (this.phaserInvincible) {
+          this.phaserInvincibleTimer -= dt;
+          if (this.phaserInvincibleTimer <= 0) {
+            this.phaserInvincible = false;
+          }
+        }
+        // Phasing behavior handled in takeDamage method
+      }
+
       if (shouldMove) {
         // PATHFINDING: Use waypoint-based movement for smart enemies
         if (this.usePathfinding && this.path.length > 0) {
@@ -988,7 +1062,7 @@ export class Enemy {
     return { shouldShoot, shouldTeleport, shouldSummon, shouldScream, shouldStomp, splitInto, poisonTrail, sporeCloud, shouldHeal, shouldSpawnMinion };
   }
 
-  takeDamage(amount: number): Enemy[] | null {
+  takeDamage(amount: number, attackAngle?: number): Enemy[] | null {
     // Wraith invulnerability
     if (this.invulnerable) {
       return null;
@@ -999,9 +1073,34 @@ export class Enemy {
       return null;
     }
 
+    // Phaser invulnerability
+    if (this.type === 'phaser' && this.phaserInvincible) {
+      return null;
+    }
+
+    // Shielder shield blocking (blocks damage from shield's facing direction)
+    if (this.type === 'shielder' && attackAngle !== undefined) {
+      // Calculate angle difference between attack and shield
+      const angleDiff = Math.abs(attackAngle - this.shielderAngle);
+      const normalizedDiff = Math.min(angleDiff, Math.PI * 2 - angleDiff);
+
+      // Shield blocks attacks within 60 degrees (π/3 radians) arc
+      if (normalizedDiff < Math.PI / 3) {
+        // Blocked! No damage
+        return null;
+      }
+    }
+
     // GAME FEEL: Trigger hitstun and hit flash
     this.hitstunTimer = 0.1; // 100ms pause
     this.hitFlashTimer = 0.032; // 2 frames at 60fps
+
+    // Phaser has chance to phase on hit
+    if (this.type === 'phaser' && !this.phaserInvincible && Math.random() < this.phaserPhaseOnHitChance) {
+      this.phaserInvincible = true;
+      this.phaserInvincibleTimer = 0.8; // Invincible for 0.8 seconds
+      // Still take this hit, but next hits will be blocked
+    }
 
     this.health -= amount;
 

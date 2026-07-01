@@ -248,7 +248,8 @@ export class WaveManager {
         'slime', 'goblin', 'skeleton', 'bat', 'imp', 'spider', 'orc', 'mimic',
         'wraith', 'wizard', 'necromancer', 'troll', 'banshee', 'golem',
         'ghost', 'mushroom', 'gargoyle', 'blob', 'necroegg', 'cyclops', 'phantom', 'druid', 'construct', 'swarm',
-        'dasher', 'evader', 'orbiter', 'spiraler'
+        'dasher', 'evader', 'orbiter', 'spiraler',
+        'shielder', 'exploder', 'healer', 'summoner', 'phaser'
       ] as EnemyType[]);
     }
 
@@ -272,31 +273,34 @@ export class WaveManager {
         'dasher', 'evader', 'orbiter'
       ] as EnemyType[]);
     }
-    // Wave 11-15: Add late-game enemies, gargoyles, necroeggs, constructs, spiralers
+    // Wave 11-15: Add late-game enemies, gargoyles, necroeggs, constructs, spiralers, new advanced types
     else if (wave <= 15) {
       return randomChoice([
         'bat', 'goblin', 'skeleton', 'skeleton', 'spider', 'wizard', 'wizard',
         'imp', 'orc', 'orc', 'mimic', 'wraith', 'necromancer', 'troll', 'banshee',
         'ghost', 'mushroom', 'gargoyle', 'blob', 'necroegg', 'phantom', 'druid', 'construct', 'swarm',
-        'dasher', 'evader', 'orbiter', 'spiraler'
+        'dasher', 'evader', 'orbiter', 'spiraler',
+        'shielder', 'healer', 'summoner'
       ] as EnemyType[]);
     }
-    // Wave 16-20: Harder compositions with cyclops and advanced AI
+    // Wave 16-20: Harder compositions with cyclops and advanced AI, all new types
     else if (wave <= 20) {
       return randomChoice([
         'bat', 'skeleton', 'spider', 'wizard', 'imp', 'imp', 'orc', 'orc',
         'wraith', 'wraith', 'necromancer', 'troll', 'troll', 'banshee', 'banshee', 'golem',
         'ghost', 'mushroom', 'gargoyle', 'blob', 'necroegg', 'cyclops', 'phantom', 'druid', 'construct', 'swarm',
-        'dasher', 'dasher', 'evader', 'evader', 'orbiter', 'orbiter', 'spiraler', 'spiraler'
+        'dasher', 'dasher', 'evader', 'evader', 'orbiter', 'orbiter', 'spiraler', 'spiraler',
+        'shielder', 'shielder', 'exploder', 'healer', 'summoner', 'phaser'
       ] as EnemyType[]);
     }
-    // Wave 21+: Insane difficulty with heavy advanced AI presence
+    // Wave 21+: Insane difficulty with heavy advanced AI presence, maximum new types
     else {
       return randomChoice([
         'skeleton', 'spider', 'wizard', 'imp', 'orc', 'wraith', 'wraith',
         'necromancer', 'necromancer', 'troll', 'troll', 'banshee', 'banshee', 'golem', 'golem',
         'ghost', 'mushroom', 'gargoyle', 'gargoyle', 'blob', 'necroegg', 'cyclops', 'cyclops', 'phantom', 'druid', 'construct', 'construct', 'swarm',
-        'dasher', 'dasher', 'evader', 'evader', 'orbiter', 'orbiter', 'spiraler', 'spiraler'
+        'dasher', 'dasher', 'evader', 'evader', 'orbiter', 'orbiter', 'spiraler', 'spiraler',
+        'shielder', 'shielder', 'exploder', 'exploder', 'healer', 'healer', 'summoner', 'summoner', 'phaser', 'phaser'
       ] as EnemyType[]);
     }
   }
