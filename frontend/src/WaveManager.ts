@@ -10,9 +10,9 @@ export class WaveManager {
   waveEnemiesRemaining: number = 0;
   totalEnemiesInWave: number = 20;
   waveTimer: number = 0;
-  waveDuration: number = 35; // 35 seconds per wave
+  waveDuration: number = 30; // BALANCE: Reduced from 35s (wave 1 felt too long)
   spawnTimer: number = 0;
-  spawnInterval: number = 1.5; // Spawn every 1.5 seconds
+  spawnInterval: number = 1.2; // BALANCE: Reduced from 1.5s (faster enemy spawns)
   waveActive: boolean = false;
   waveComplete: boolean = false;
   isBossWave: boolean = false;
@@ -52,9 +52,9 @@ export class WaveManager {
       }
     }
 
-    // Calculate enemy count based on modifier - ADJUSTED for Wave 1 balance
-    // Wave 1: 12 enemies (was 17), slower spawn
-    let baseCount = waveNumber === 1 ? 12 : 15 + waveNumber * 2;
+    // Calculate enemy count based on modifier - BALANCE: More enemies for swarm feel
+    // Wave 1: 20 enemies (Vampire Survivors density)
+    let baseCount = waveNumber === 1 ? 20 : 15 + waveNumber * 2;
 
     if (this.isBossWave) {
       this.totalEnemiesInWave = 10 + waveNumber;
@@ -95,8 +95,8 @@ export class WaveManager {
       this.waveEnemiesRemaining--;
 
       // Faster spawning as waves progress, even faster on horde waves
-      // Wave 1: 2.0s spawn interval (was 1.5s) for easier start
-      let baseInterval = this.currentWave === 1 ? 2.0 : Math.max(0.5, 1.5 - this.currentWave * 0.05);
+      // Wave 1: 1.2s spawn interval (balanced for 20 enemies)
+      let baseInterval = this.currentWave === 1 ? 1.2 : Math.max(0.5, 1.5 - this.currentWave * 0.05);
       if (this.isHordeWave) {
         baseInterval *= 0.6; // 40% faster spawning on horde waves
       }

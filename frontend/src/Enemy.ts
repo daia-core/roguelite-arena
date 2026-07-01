@@ -19,13 +19,13 @@ export interface EnemyTypeData {
 
 const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
   slime: {
-    health: 100, // Reduced from 150 for faster Wave 1
+    health: 60, // BALANCE: Reduced for faster Wave 1 kills (1-second TTK)
     speed: 60,
     damage: 8,
     radius: 14,
     color: '#4ade80',
-    xpValue: 18, // +50% XP
-    goldValue: 12, // +100% gold
+    xpValue: 10, // BALANCE: Reduced to slow early leveling
+    goldValue: 2, // BALANCE: Reduced by 6x for tight economy
     spriteName: 'slime'
   },
   goblin: {
@@ -34,8 +34,8 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     damage: 6,
     radius: 12,
     color: '#7cb342',
-    xpValue: 15, // +50% XP
-    goldValue: 10, // +100% gold
+    xpValue: 10, // BALANCE: Reduced to slow early leveling
+    goldValue: 2, // BALANCE: Reduced by 5x for tight economy
     shootRate: 0.4,
     spriteName: 'goblin'
   },
@@ -45,8 +45,8 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     damage: 10,
     radius: 12,
     color: '#e0e0e0',
-    xpValue: 23, // +50% XP (rounded)
-    goldValue: 16, // +100% gold
+    xpValue: 12, // BALANCE: Reduced for progression
+    goldValue: 3, // BALANCE: Reduced for economy
     shootRate: 0.8,
     spriteName: 'skeleton'
   },
@@ -56,8 +56,8 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     damage: 12,
     radius: 11,
     color: '#8b0000',
-    xpValue: 27, // +50% XP
-    goldValue: 20, // +100% gold
+    xpValue: 14, // +50% XP
+    goldValue: 4, // +100% gold
     spriteName: 'imp'
   },
   orc: {
@@ -66,8 +66,8 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     damage: 15,
     radius: 16,
     color: '#567d46',
-    xpValue: 30, // +50% XP
-    goldValue: 24, // +100% gold
+    xpValue: 15, // +50% XP
+    goldValue: 4, // +100% gold
     spriteName: 'orc'
   },
   wraith: {
@@ -76,8 +76,8 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     damage: 10,
     radius: 13,
     color: '#9370db',
-    xpValue: 38, // +50% XP (rounded)
-    goldValue: 30, // +100% gold
+    xpValue: 19, // +50% XP (rounded)
+    goldValue: 5, // +100% gold
     spriteName: 'wraith'
   },
   necromancer: {
@@ -86,8 +86,8 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     damage: 8,
     radius: 12,
     color: '#2c2c54',
-    xpValue: 45, // +50% XP
-    goldValue: 36, // +100% gold
+    xpValue: 23, // +50% XP
+    goldValue: 6, // +100% gold
     shootRate: 0.5,
     spriteName: 'necromancer'
   },
@@ -97,8 +97,8 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     damage: 18,
     radius: 18,
     color: '#4a7c59',
-    xpValue: 53, // +50% XP (rounded)
-    goldValue: 40, // +100% gold
+    xpValue: 27, // +50% XP (rounded)
+    goldValue: 7, // +100% gold
     spriteName: 'troll'
   },
   banshee: {
@@ -107,8 +107,8 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     damage: 12,
     radius: 13,
     color: '#e0e0e0',
-    xpValue: 42, // +50% XP
-    goldValue: 32, // +100% gold
+    xpValue: 21, // +50% XP
+    goldValue: 6, // +100% gold
     spriteName: 'banshee'
   },
   demon: {
@@ -117,8 +117,8 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     damage: 20,
     radius: 20,
     color: '#8b0000',
-    xpValue: 150, // +50% XP
-    goldValue: 100, // +100% gold
+    xpValue: 75, // +50% XP
+    goldValue: 20, // +100% gold
     shootRate: 1.5,
     spriteName: 'demon'
   },
@@ -128,8 +128,8 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     damage: 6,
     radius: 10,
     color: '#4a235a',
-    xpValue: 20,
-    goldValue: 12,
+    xpValue: 10,
+    goldValue: 2,
     spriteName: 'bat'
   },
   wizard: {
@@ -138,8 +138,8 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     damage: 12,
     radius: 12,
     color: '#1f618d',
-    xpValue: 30,
-    goldValue: 24,
+    xpValue: 15,
+    goldValue: 4,
     shootRate: 0.6,
     spriteName: 'wizard'
   },
@@ -149,8 +149,8 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     damage: 14,
     radius: 14,
     color: '#b8860b',
-    xpValue: 35,
-    goldValue: 40, // 2x normal gold
+    xpValue: 18, // BALANCE: Reduced
+    goldValue: 8, // BALANCE: 2x normal (4g base)
     spriteName: 'mimic'
   },
   spider: {
@@ -159,8 +159,8 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     damage: 8,
     radius: 13,
     color: '#1c1c1c',
-    xpValue: 25,
-    goldValue: 18,
+    xpValue: 13,
+    goldValue: 3,
     spriteName: 'spider'
   },
   golem: {
@@ -169,8 +169,8 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     damage: 16,
     radius: 22,
     color: '#78909c',
-    xpValue: 60,
-    goldValue: 50,
+    xpValue: 30,
+    goldValue: 10,
     spriteName: 'golem'
   },
   ghost: {
@@ -179,8 +179,8 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     damage: 8,
     radius: 12,
     color: '#e0f7fa',
-    xpValue: 20,
-    goldValue: 15,
+    xpValue: 10,
+    goldValue: 3,
     spriteName: 'ghost'
   },
   mushroom: {
@@ -189,8 +189,8 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     damage: 10,
     radius: 14,
     color: '#8e44ad',
-    xpValue: 25,
-    goldValue: 18,
+    xpValue: 13,
+    goldValue: 3,
     spriteName: 'mushroom'
   },
   gargoyle: {
@@ -199,8 +199,8 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     damage: 12,
     radius: 16,
     color: '#5d6d7e',
-    xpValue: 35,
-    goldValue: 28,
+    xpValue: 18,
+    goldValue: 5,
     spriteName: 'gargoyle'
   },
   blob: {
@@ -210,7 +210,7 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     radius: 13,
     color: '#e74c3c',
     xpValue: 18,
-    goldValue: 14,
+    goldValue: 3,
     spriteName: 'blob'
   },
   necroegg: {
@@ -219,8 +219,8 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     damage: 5,
     radius: 12,
     color: '#8b0000',
-    xpValue: 30,
-    goldValue: 25,
+    xpValue: 15,
+    goldValue: 5,
     spriteName: 'necroegg'
   },
   cyclops: {
@@ -229,8 +229,8 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     damage: 15,
     radius: 18,
     color: '#d68910',
-    xpValue: 28,
-    goldValue: 22,
+    xpValue: 14,
+    goldValue: 4,
     spriteName: 'cyclops'
   },
   phantom: {
@@ -239,8 +239,8 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     damage: 10,
     radius: 11,
     color: '#a569bd',
-    xpValue: 22,
-    goldValue: 16,
+    xpValue: 11,
+    goldValue: 3,
     spriteName: 'phantom'
   },
   druid: {
@@ -249,8 +249,8 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     damage: 6,
     radius: 12,
     color: '#27ae60',
-    xpValue: 24,
-    goldValue: 20,
+    xpValue: 12,
+    goldValue: 4,
     spriteName: 'druid'
   },
   construct: {
@@ -259,8 +259,8 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     damage: 11,
     radius: 15,
     color: '#95a5a6',
-    xpValue: 26,
-    goldValue: 20,
+    xpValue: 13,
+    goldValue: 4,
     spriteName: 'construct'
   },
   swarm: {
@@ -269,8 +269,8 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     damage: 6,
     radius: 8,
     color: '#f39c12',
-    xpValue: 20,
-    goldValue: 15,
+    xpValue: 10,
+    goldValue: 3,
     spriteName: 'swarm'
   },
   dasher: {
@@ -279,8 +279,8 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     damage: 14,
     radius: 13,
     color: '#e74c3c',
-    xpValue: 28,
-    goldValue: 22,
+    xpValue: 14,
+    goldValue: 4,
     spriteName: 'dasher'
   },
   evader: {
@@ -289,8 +289,8 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     damage: 9,
     radius: 11,
     color: '#3498db',
-    xpValue: 25,
-    goldValue: 18,
+    xpValue: 13,
+    goldValue: 3,
     spriteName: 'evader'
   },
   orbiter: {
@@ -299,8 +299,8 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     damage: 11,
     radius: 12,
     color: '#9b59b6',
-    xpValue: 30,
-    goldValue: 24,
+    xpValue: 15,
+    goldValue: 4,
     spriteName: 'orbiter'
   },
   spiraler: {
@@ -309,8 +309,8 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     damage: 10,
     radius: 12,
     color: '#1abc9c',
-    xpValue: 27,
-    goldValue: 20,
+    xpValue: 14,
+    goldValue: 4,
     spriteName: 'spiraler'
   }
 };

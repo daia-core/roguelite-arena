@@ -6,7 +6,7 @@ import { Projectile } from './Projectile';
 import { MeleeAttack } from './MeleeAttack';
 import { Particle, DamageNumber, spawnHitParticles, spawnKillParticles, spawnXPParticles, spawnHealthOrbParticles, spawnLevelUpParticles } from './Particle';
 import { WaveManager } from './WaveManager';
-import { PlayerStats, ItemDatabase, type Item } from './ItemSystem';
+import { PlayerStats, ItemDatabase, type Item, type ItemTag } from './ItemSystem';
 import { SaveManager } from './SaveManager';
 import { Input } from './Input';
 import { Renderer } from './Renderer';
@@ -301,20 +301,21 @@ export class Game {
     }
 
     // Abilities
-    if (this.input.consumeDash()) {
-      if (this.player.tryDash()) {
-        this.audio.playDash();
-      }
-    }
+    // Dash/Blast abilities removed - shop upgrading is the core loop
+    // if (this.input.consumeDash()) {
+    //   if (this.player.tryDash()) {
+    //     this.audio.playDash();
+    //   }
+    // }
 
-    if (this.input.consumeBlast()) {
-      const blast = this.player.tryBlast();
-      if (blast.success) {
-        this.audio.playBlast();
-        this.handleBlastDamage(blast.damage, blast.radius);
-        this.renderer.addScreenShake(0.5); // Bigger shake for blast ability
-      }
-    }
+    // if (this.input.consumeBlast()) {
+    //   const blast = this.player.tryBlast();
+    //   if (blast.success) {
+    //     this.audio.playBlast();
+    //     this.handleBlastDamage(blast.damage, blast.radius);
+    //     this.renderer.addScreenShake(0.5); // Bigger shake for blast ability
+    //   }
+    // }
 
     // Wave manager
     this.enemies = this.waveManager.update(scaledDt, this.enemies, this.canvas.width, this.canvas.height);
@@ -627,41 +628,42 @@ export class Game {
     this.autoSave();
   }
 
-  private handleBlastDamage(damage: number, radius: number): void {
-    if (!this.player) return;
+  // Dash/Blast abilities removed - keeping method commented for potential future use
+  // private handleBlastDamage(damage: number, radius: number): void {
+  //   if (!this.player) return;
 
-    let hitCount = 0;
-    for (const enemy of this.enemies) {
-      const dist = Math.sqrt(
-        (enemy.x - this.player.x) ** 2 + (enemy.y - this.player.y) ** 2
-      );
+  //   let hitCount = 0;
+  //   for (const enemy of this.enemies) {
+  //     const dist = Math.sqrt(
+  //       (enemy.x - this.player.x) ** 2 + (enemy.y - this.player.y) ** 2
+  //     );
 
-      if (dist < radius + enemy.typeData.radius) {
-        const splits = enemy.takeDamage(damage);
-        if (splits && splits.length > 0) {
-          this.enemies.push(...splits);
-        }
-        this.particles.push(...spawnHitParticles(enemy.x, enemy.y, 8));
-        hitCount++;
+  //     if (dist < radius + enemy.typeData.radius) {
+  //       const splits = enemy.takeDamage(damage);
+  //       if (splits && splits.length > 0) {
+  //         this.enemies.push(...splits);
+  //       }
+  //       this.particles.push(...spawnHitParticles(enemy.x, enemy.y, 8));
+  //       hitCount++;
 
-        // GAME FEEL: Knockback enemies hit by blast
-        const angle = Math.atan2(enemy.y - this.player.y, enemy.x - this.player.x);
-        enemy.applyKnockback(Math.cos(angle) * 400, Math.sin(angle) * 400);
+  //       // GAME FEEL: Knockback enemies hit by blast
+  //       const angle = Math.atan2(enemy.y - this.player.y, enemy.x - this.player.x);
+  //       enemy.applyKnockback(Math.cos(angle) * 400, Math.sin(angle) * 400);
 
-        if (enemy.dead) {
-          this.handleEnemyKill(enemy);
-        }
-      }
-    }
+  //       if (enemy.dead) {
+  //         this.handleEnemyKill(enemy);
+  //       }
+  //     }
+  //   }
 
-    // GAME FEEL: Extra shake based on how many enemies were hit
-    if (hitCount > 0) {
-      this.renderer.addScreenShake(0.3 + Math.min(hitCount * 0.1, 0.5));
-    }
+  //   // GAME FEEL: Extra shake based on how many enemies were hit
+  //   if (hitCount > 0) {
+  //     this.renderer.addScreenShake(0.3 + Math.min(hitCount * 0.1, 0.5));
+  //   }
 
-    // Visual effect
-    this.particles.push(...spawnHitParticles(this.player.x, this.player.y, 30));
-  }
+  //   // Visual effect
+  //   this.particles.push(...spawnHitParticles(this.player.x, this.player.y, 30));
+  // }
 
   private handleEnemyKill(enemy: Enemy): void {
     if (!this.player) return;
@@ -781,9 +783,13 @@ export class Game {
     // ADVANCED: 6 shop slots (was 4)
     const shopSlotCount = 6;
 
-    // Generate new items for unlocked slots - WAVE-AWARE for tier progression
+    // Generate new items for unlocked slots - BROTATO-WEIGHTED for synergy promotion
     const currentWave = this.waveManager.currentWave;
-    const newItems = ItemDatabase.getRandomItems(shopSlotCount - lockedItems.length, currentWave);
+    const newItems = ItemDatabase.getWeightedShopItems(
+      shopSlotCount - lockedItems.length,
+      currentWave,
+      this.playerStats.items // Pass owned items for weighted generation
+    );
     this.shopItems = [];
 
     // Rebuild shop: locked items first, then new items
@@ -846,6 +852,9 @@ export class Game {
 
     for (let i = 0; i < this.shopItems.length; i++) {
       const item = this.shopItems[i];
+
+      // Skip empty slots (purchased items)
+      if (!item) continue;
 
       // Desktop: 3x2 grid layout
       const gridCol = isMobile ? 0 : i % 3;
@@ -926,8 +935,9 @@ export class Game {
             // Clear lock on purchased item
             this.lockedShopItems.delete(i);
 
-            // REMOVE PURCHASED ITEM FROM SHOP
-            this.shopItems.splice(i, 1);
+            // BUG FIX: Mark slot as empty (null) instead of removing to preserve indices
+            // Reroll will refill these empty slots
+            this.shopItems[i] = null as any; // Temporarily null, reroll fills it
 
             this.audio.playPurchase();
             this.input.mouseDown = false;
@@ -976,20 +986,37 @@ export class Game {
       if (this.player.gold >= effectiveRerollCost) {
         this.player.gold -= effectiveRerollCost;
 
-        // Generate new items for non-locked slots only (WAVE-AWARE)
-        const unlockedSlots = [];
-        for (let i = 0; i < this.shopItems.length; i++) {
-          if (!this.lockedShopItems.has(i)) {
-            unlockedSlots.push(i);
+        // BUG FIX: Rebuild shop to full 6 slots (purchased items were removed via splice)
+        const shopSlotCount = 6;
+        const newShopItems: Item[] = [];
+
+        // Keep locked items in their original positions
+        const lockedItems: Map<number, Item> = new Map();
+        for (const index of this.lockedShopItems) {
+          if (this.shopItems[index]) {
+            lockedItems.set(index, this.shopItems[index]);
           }
         }
-        const newItems = ItemDatabase.getRandomItems(unlockedSlots.length, this.waveManager.currentWave);
 
-        // Replace only unlocked slots
+        // Generate new items for unlocked slots (BROTATO-STYLE WEIGHTED)
+        const unlockedSlotCount = shopSlotCount - lockedItems.size;
+        const newItems = ItemDatabase.getWeightedShopItems(
+          unlockedSlotCount,
+          this.waveManager.currentWave,
+          this.playerStats.items // Pass owned items for tag weighting
+        );
+
+        // Rebuild shop: place locked items at their positions, fill rest with new items
         let newItemIndex = 0;
-        for (const slotIndex of unlockedSlots) {
-          this.shopItems[slotIndex] = newItems[newItemIndex++];
+        for (let i = 0; i < shopSlotCount; i++) {
+          if (lockedItems.has(i)) {
+            newShopItems.push(lockedItems.get(i)!);
+          } else {
+            newShopItems.push(newItems[newItemIndex++]);
+          }
         }
+
+        this.shopItems = newShopItems;
 
         // DYNAMIC REROLL COST: Scale per reroll this wave
         const wave = this.waveManager.currentWave;
@@ -1190,7 +1217,7 @@ export class Game {
       align: 'center'
     });
 
-    this.renderer.drawText('Abilities: SPACE (Dash), E (Blast)', this.canvas.width / 2, 230, {
+    this.renderer.drawText('Build synergistic items in the shop to survive!', this.canvas.width / 2, 230, {
       size: 16,
       align: 'center'
     });
@@ -1443,8 +1470,8 @@ export class Game {
     ctx.restore();
 
     // Stats content - larger on mobile for readability
-    const statSize = isMobile ? 14 : 13;
-    const statLineHeight = isMobile ? 20 : 18;
+    const statSize = isMobile ? 16 : 13; // BALANCE: Increased from 14 to 16 for mobile readability
+    const statLineHeight = isMobile ? 22 : 18; // Increased spacing for larger text
     const statStartY = statPanelY + statPanelPadding + statLineHeight;
 
     if (isMobile) {
@@ -1581,6 +1608,9 @@ export class Game {
     for (let i = 0; i < this.shopItems.length; i++) {
       const item = this.shopItems[i];
 
+      // Skip empty slots (purchased items)
+      if (!item) continue;
+
       // Desktop: 3x2 grid layout
       const gridCol = isMobile ? 0 : i % 3;
       const gridRow = isMobile ? i : Math.floor(i / 3);
@@ -1598,15 +1628,36 @@ export class Game {
       };
       const rarityColor = rarityColors[item.rarity] ?? '#ffffff';
 
-      // MODERN ROGUELIKE: Check for synergies with existing items
+      // BROTATO-INSPIRED: Enhanced synergy detection
       const hasSynergy = this.playerStats.hasSynergyWith(item);
+      const ownedTags = [...new Set(this.playerStats.items.flatMap(i => i.tags))];
+      const matchingTags = item.tags.filter(tag => ownedTags.includes(tag));
+      const hasTagMatch = matchingTags.length > 0;
+      const isDuplicate = this.playerStats.items.some(owned => owned.id === item.id);
 
-      // Card shadow/glow effect (brighter for synergies)
+      // Card shadow/glow effect - different colors for different synergy types
       const cardRadius = 6; // Rounded corners for cards
-      if (hovered || hasSynergy) {
+      if (hovered || hasSynergy || hasTagMatch) {
         ctx.save();
-        ctx.shadowBlur = hasSynergy ? 30 : 20;
-        ctx.shadowColor = hasSynergy ? '#00ff00' : rarityColor;
+        let glowColor = rarityColor;
+        let glowIntensity = 20;
+
+        if (isDuplicate) {
+          // Same exact item = blue glow
+          glowColor = '#0088ff';
+          glowIntensity = 25;
+        } else if (hasTagMatch) {
+          // Tag match = green synergy glow
+          glowColor = '#00ff00';
+          glowIntensity = 30;
+        } else if (hasSynergy) {
+          // Other synergy = yellow glow
+          glowColor = '#ffff00';
+          glowIntensity = 25;
+        }
+
+        ctx.shadowBlur = hovered ? glowIntensity + 5 : glowIntensity;
+        ctx.shadowColor = glowColor;
         this.renderer.drawRoundedRect(x - 2, y - 2, itemWidth + 4, itemHeight + 4, cardRadius + 2, '#2a2a2a');
         ctx.restore();
       }
@@ -1675,13 +1726,37 @@ export class Game {
         });
       }
 
-      // MODERN ROGUELIKE: Synergy indicator (top, compact)
-      if (hasSynergy) {
-        this.renderer.drawText('⚡SYNERGY', x + itemWidth / 2, y + 8, {
+      // BROTATO-INSPIRED: Enhanced synergy indicator showing type
+      if (isDuplicate || hasTagMatch || hasSynergy) {
+        let indicatorText = '';
+        let indicatorColor = '#00ff00';
+
+        if (isDuplicate) {
+          indicatorText = '🔄 DUPLICATE';
+          indicatorColor = '#0088ff';
+        } else if (hasTagMatch) {
+          // Show which tags match
+          const tagIcons: Record<ItemTag, string> = {
+            melee: '⚔️',
+            ranged: '🏹',
+            defensive: '🛡️',
+            economic: '💰',
+            elemental: '🔥',
+            utility: '🔧'
+          };
+          const matchIcons = matchingTags.map(t => tagIcons[t] || '⚡').join('');
+          indicatorText = `${matchIcons} SYNERGY`;
+          indicatorColor = '#00ff00';
+        } else if (hasSynergy) {
+          indicatorText = '⚡ SYNERGY';
+          indicatorColor = '#ffff00';
+        }
+
+        this.renderer.drawText(indicatorText, x + itemWidth / 2, y + 8, {
           size: isPortrait ? 13 : isMobile ? 18 : 12,
           bold: true,
           align: 'center',
-          color: '#00ff00'
+          color: indicatorColor
         });
       }
 

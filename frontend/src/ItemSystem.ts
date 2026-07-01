@@ -1001,17 +1001,71 @@ export class ItemDatabase {
     return this.items.find(item => item.id === id);
   }
 
-  static getRandomItems(count: number, wave: number = 1): Item[] {
-    // Filter items based on wave progression (tier unlock system)
-    const availableItems = this.getUnlockedItems().filter(item => {
-      if (wave <= 2) return item.tier === ItemTier.Common;
-      if (wave <= 5) return item.tier <= ItemTier.Uncommon;
-      if (wave <= 10) return item.tier <= ItemTier.Rare;
-      return true; // All tiers available
-    });
+  // BROTATO-INSPIRED WEIGHTED SHOP SYSTEM
+  // Promotes synergistic builds by weighting shop offerings based on owned items
+  static getWeightedShopItems(count: number, wave: number, playerItems: Item[]): Item[] {
+    const result: Item[] = [];
 
-    const shuffled = [...availableItems].sort(() => Math.random() - 0.5);
-    return shuffled.slice(0, count);
+    // Get tier-appropriate items for this wave
+    const getWaveAppropriteItems = (): Item[] => {
+      return this.getUnlockedItems().filter(item => {
+        if (wave <= 2) return item.tier === ItemTier.Common;
+        if (wave <= 5) return item.tier <= ItemTier.Uncommon;
+        if (wave <= 10) return item.tier <= ItemTier.Rare;
+        return true; // All tiers available
+      });
+    };
+
+    // Extract owned item IDs and tags
+    const ownedItemIds = playerItems.map(i => i.id);
+    const ownedTags = [...new Set(playerItems.flatMap(i => i.tags))];
+
+    for (let i = 0; i < count; i++) {
+      const roll = Math.random();
+      let selectedItem: Item | null = null;
+
+      if (roll < 0.20 && ownedItemIds.length > 0) {
+        // 20% - EXACT same item you own (stacking/duplicates)
+        const randomOwnedItem = playerItems[Math.floor(Math.random() * playerItems.length)];
+        const candidates = getWaveAppropriteItems().filter(item => item.id === randomOwnedItem.id);
+        if (candidates.length > 0) {
+          selectedItem = candidates[Math.floor(Math.random() * candidates.length)];
+        }
+      }
+
+      if (!selectedItem && roll < 0.35 && ownedTags.length > 0) {
+        // 15% - SAME TAG as items you own (synergy promotion)
+        const randomTag = ownedTags[Math.floor(Math.random() * ownedTags.length)];
+        const candidates = getWaveAppropriteItems().filter(item =>
+          item.tags.includes(randomTag) && !result.some(r => r.id === item.id)
+        );
+        if (candidates.length > 0) {
+          selectedItem = candidates[Math.floor(Math.random() * candidates.length)];
+        }
+      }
+
+      // 65% - General pool (or fallback if weighted pools failed)
+      if (!selectedItem) {
+        const candidates = getWaveAppropriteItems().filter(item =>
+          !result.some(r => r.id === item.id)
+        );
+        if (candidates.length > 0) {
+          selectedItem = candidates[Math.floor(Math.random() * candidates.length)];
+        }
+      }
+
+      if (selectedItem) {
+        result.push(selectedItem);
+      }
+    }
+
+    return result;
+  }
+
+  // Legacy method - redirects to weighted shop
+  static getRandomItems(count: number, wave: number = 1): Item[] {
+    // No player items = pure random (used for initial state)
+    return this.getWeightedShopItems(count, wave, []);
   }
 
   static getItemsByRarity(rarity: 'common' | 'rare' | 'epic' | 'legendary'): Item[] {
@@ -1327,10 +1381,10 @@ export class PlayerStats {
 
   // Calculate final item price with shop discount
   getItemPrice(item: Item, wave: number): number {
-    // Dynamic pricing formula (increases with wave)
+    // BALANCE: Brotato-inspired pricing formula for tighter economy
+    // Prices scale more aggressively to prevent player from getting rich
     const basePrice = item.cost;
-    const waveInflation = basePrice * 0.1 * wave;
-    let finalPrice = basePrice + wave + waveInflation;
+    let finalPrice = basePrice * (1 + wave * 0.15);
 
     // Apply shop discount
     const discount = this.getShopDiscount();
