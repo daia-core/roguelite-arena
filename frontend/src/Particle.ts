@@ -287,6 +287,127 @@ export function spawnKillParticles(x: number, y: number, count: number = 48): Pa
   return particles;
 }
 
+// NEW: Critical hit particles (bigger, brighter)
+export function spawnCritParticles(x: number, y: number, count: number = 32): Particle[] {
+  const particles: Particle[] = [];
+  for (let i = 0; i < count; i++) {
+    const angle = (Math.PI * 2 * i) / count;
+    const speed = 200 + Math.random() * 150;
+    particles.push(new Particle({
+      x,
+      y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      color: i % 3 === 0 ? '#ffff00' : i % 3 === 1 ? '#ff8800' : '#ffffff',
+      size: 6 + Math.random() * 6, // BIGGER
+      lifetime: 500 + Math.random() * 400,
+      gravity: 250
+    }));
+  }
+  return particles;
+}
+
+// NEW: Explosion particles (massive burst)
+export function spawnExplosionParticles(x: number, y: number, count: number = 64): Particle[] {
+  const particles: Particle[] = [];
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 180 + Math.random() * 250;
+    particles.push(new Particle({
+      x,
+      y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      color: Math.random() > 0.3 ? '#ff4400' : '#ff8800',
+      size: 8 + Math.random() * 8, // VERY BIG
+      lifetime: 700 + Math.random() * 500,
+      gravity: 400
+    }));
+  }
+  return particles;
+}
+
+// NEW: Freeze particles (icy shards)
+export function spawnFreezeParticles(x: number, y: number, count: number = 20): Particle[] {
+  const particles: Particle[] = [];
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 80 + Math.random() * 120;
+    particles.push(new Particle({
+      x,
+      y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 50,
+      color: Math.random() > 0.5 ? '#88ccff' : '#aaddff',
+      size: 4 + Math.random() * 5,
+      lifetime: 600 + Math.random() * 400,
+      gravity: 150
+    }));
+  }
+  return particles;
+}
+
+// NEW: Poison particles (bubbling green)
+export function spawnPoisonParticles(x: number, y: number, count: number = 12): Particle[] {
+  const particles: Particle[] = [];
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 40 + Math.random() * 60;
+    particles.push(new Particle({
+      x,
+      y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 80, // Rise up
+      color: Math.random() > 0.5 ? '#44ff44' : '#66ff66',
+      size: 3 + Math.random() * 4,
+      lifetime: 800 + Math.random() * 600,
+      gravity: -50 // Float upward
+    }));
+  }
+  return particles;
+}
+
+// NEW: Lightning particles (crackling bolts)
+export function spawnLightningParticles(x: number, y: number, count: number = 16): Particle[] {
+  const particles: Particle[] = [];
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 150 + Math.random() * 200;
+    particles.push(new Particle({
+      x,
+      y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      color: Math.random() > 0.5 ? '#aaffff' : '#ffffff',
+      size: 5 + Math.random() * 6,
+      lifetime: 300 + Math.random() * 300, // Fast flash
+      gravity: 0 // No gravity
+    }));
+  }
+  return particles;
+}
+
+// NEW: Level up particles (celebration)
+export function spawnLevelUpParticles(x: number, y: number, count: number = 40): Particle[] {
+  const particles: Particle[] = [];
+  const colors = ['#ffff00', '#ff8800', '#ff44ff', '#00ffff', '#88ff00'];
+  for (let i = 0; i < count; i++) {
+    const angle = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI; // Upward burst
+    const speed = 150 + Math.random() * 200;
+    particles.push(new Particle({
+      x,
+      y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      size: 6 + Math.random() * 8, // BIG
+      lifetime: 1000 + Math.random() * 800,
+      gravity: 300
+    }));
+  }
+  return particles;
+}
+
 export function spawnXPParticles(x: number, y: number, count: number = 8): Particle[] {
   const particles: Particle[] = [];
   for (let i = 0; i < count; i++) {
@@ -306,47 +427,7 @@ export function spawnXPParticles(x: number, y: number, count: number = 8): Parti
   return particles;
 }
 
-export function spawnLevelUpParticles(x: number, y: number): Particle[] {
-  const particles: Particle[] = [];
-  // VAMPIRE SURVIVORS JUICE: Make level-ups feel HUGE (100+ particles)
-  for (let i = 0; i < 120; i++) {
-    const angle = Math.random() * Math.PI * 2;
-    const speed = 150 + Math.random() * 300;
-    // More color variety for rainbow effect
-    const colors = ['#ffff00', '#00ffff', '#ff00ff', '#ff6600', '#00ff00', '#ff0000', '#ffffff'];
-    const color = colors[i % colors.length];
-    particles.push(new Particle({
-      x,
-      y,
-      vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed - 120,
-      color: color,
-      size: 10 + Math.random() * 8, // Bigger particles
-      lifetime: 1200 + Math.random() * 600, // Longer lifetime
-      gravity: -100
-    }));
-  }
-  return particles;
-}
-
-export function spawnExplosionParticles(x: number, y: number): Particle[] {
-  const particles: Particle[] = [];
-  for (let i = 0; i < 40; i++) {
-    const angle = Math.random() * Math.PI * 2;
-    const speed = 180 + Math.random() * 220;
-    particles.push(new Particle({
-      x,
-      y,
-      vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed,
-      color: i % 2 === 0 ? '#ff6600' : '#ff0000',
-      size: 7 + Math.random() * 8,
-      lifetime: 600 + Math.random() * 400,
-      gravity: 300
-    }));
-  }
-  return particles;
-}
+// Removed duplicate functions - better versions defined above with count parameter
 
 export function spawnHealthOrbParticles(x: number, y: number, count: number = 12): Particle[] {
   const particles: Particle[] = [];
