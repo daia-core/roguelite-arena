@@ -94,6 +94,8 @@ export class Renderer {
     align?: CanvasTextAlign;
     baseline?: CanvasTextBaseline;
     bold?: boolean;
+    stroke?: boolean;
+    strokeWidth?: number;
   } = {}): void {
     this.ctx.save();
 
@@ -101,9 +103,17 @@ export class Renderer {
     const font = options.bold ? `bold ${size}px Arial` : `${size}px Arial`;
 
     this.ctx.font = font;
-    this.ctx.fillStyle = options.color ?? '#ffffff';
     this.ctx.textAlign = options.align ?? 'left';
     this.ctx.textBaseline = options.baseline ?? 'top';
+
+    // Add stroke for better readability (enabled by default for UI text)
+    if (options.stroke !== false) {
+      this.ctx.strokeStyle = '#000000';
+      this.ctx.lineWidth = options.strokeWidth ?? Math.max(2, size / 12);
+      this.ctx.strokeText(text, x, y);
+    }
+
+    this.ctx.fillStyle = options.color ?? '#ffffff';
     this.ctx.fillText(text, x, y);
 
     this.ctx.restore();
@@ -249,33 +259,78 @@ export class Renderer {
   }
 
   drawButton(x: number, y: number, width: number, height: number, text: string, hovered: boolean = false, enabled: boolean = true, isMobile: boolean = false): void {
-    // Button background
+    this.ctx.save();
+
+    // Shadow/glow effect for enabled buttons
     if (enabled) {
-      this.ctx.fillStyle = hovered ? '#555555' : '#333333';
-    } else {
-      this.ctx.fillStyle = '#222222';
+      this.ctx.shadowBlur = hovered ? 25 : 15;
+      this.ctx.shadowColor = hovered ? 'rgba(74, 222, 128, 0.6)' : 'rgba(74, 222, 128, 0.3)';
     }
+
+    // Button background with gradient
+    const gradient = this.ctx.createLinearGradient(x, y, x, y + height);
+    if (enabled) {
+      if (hovered) {
+        gradient.addColorStop(0, '#4a4a4a');
+        gradient.addColorStop(1, '#2a2a2a');
+      } else {
+        gradient.addColorStop(0, '#3a3a3a');
+        gradient.addColorStop(1, '#1a1a1a');
+      }
+    } else {
+      gradient.addColorStop(0, '#2a2a2a');
+      gradient.addColorStop(1, '#1a1a1a');
+    }
+    this.ctx.fillStyle = gradient;
     this.ctx.fillRect(x, y, width, height);
 
-    // Border with pulse effect for affordable buttons
+    // Inner highlight for depth
+    this.ctx.shadowBlur = 0;
+    const highlightGradient = this.ctx.createLinearGradient(x, y, x, y + height / 3);
+    highlightGradient.addColorStop(0, 'rgba(255, 255, 255, 0.15)');
+    highlightGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    this.ctx.fillStyle = highlightGradient;
+    this.ctx.fillRect(x, y, width, height / 3);
+
+    // Border with pulse effect for enabled buttons
     if (enabled && !hovered) {
-      const pulseIntensity = Math.sin(Date.now() / 200) * 0.3 + 0.7;
-      this.ctx.strokeStyle = `rgba(0, 255, 0, ${pulseIntensity})`;
+      const pulseIntensity = Math.sin(Date.now() / 300) * 0.4 + 0.6;
+      this.ctx.strokeStyle = `rgba(74, 222, 128, ${pulseIntensity})`;
+      this.ctx.lineWidth = 4;
+    } else if (enabled && hovered) {
+      this.ctx.strokeStyle = '#4ade80';
+      this.ctx.lineWidth = 5;
     } else {
-      this.ctx.strokeStyle = enabled ? (hovered ? '#ffffff' : '#888888') : '#555555';
+      this.ctx.strokeStyle = '#555555';
+      this.ctx.lineWidth = 3;
     }
-    this.ctx.lineWidth = 2;
     this.ctx.strokeRect(x, y, width, height);
 
-    // Text
-    const fontSize = isMobile ? 32 : 18;
+    // Inner border for depth
+    this.ctx.strokeStyle = enabled ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.05)';
+    this.ctx.lineWidth = 1;
+    this.ctx.strokeRect(x + 2, y + 2, width - 4, height - 4);
+
+    this.ctx.restore();
+
+    // Text with shadow for readability
+    this.ctx.save();
+    if (enabled) {
+      this.ctx.shadowBlur = 4;
+      this.ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+      this.ctx.shadowOffsetY = 2;
+    }
+
+    const fontSize = isMobile ? 32 : 20;
     this.drawText(text, x + width / 2, y + height / 2, {
       align: 'center',
       baseline: 'middle',
       size: fontSize,
       bold: true,
-      color: enabled ? '#ffffff' : '#888888'
+      color: enabled ? '#ffffff' : '#777777'
     });
+
+    this.ctx.restore();
   }
 
   drawRect(x: number, y: number, width: number, height: number, color: string): void {

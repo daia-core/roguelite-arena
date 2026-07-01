@@ -529,31 +529,67 @@ export class Enemy {
       ctx.fill();
     }
 
-    // Health bar (always show)
-    const barWidth = this.typeData.radius * 2.4;
-    const barHeight = 5;
-    const barY = this.y - this.typeData.radius - 12;
+    // Health bar (always show, improved styling)
+    const isMobile = ctx.canvas.width < ctx.canvas.height;
+    const barWidth = this.typeData.radius * 2.6;
+    const barHeight = isMobile ? 6 : 5;
+    const barY = this.y - this.typeData.radius - 14;
 
-    // Background
+    // Background with border
     ctx.shadowBlur = 0;
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+    ctx.fillRect(this.x - barWidth / 2 - 1, barY - 1, barWidth + 2, barHeight + 2);
+
+    // Inner background
+    ctx.fillStyle = 'rgba(60, 0, 0, 0.8)';
     ctx.fillRect(this.x - barWidth / 2, barY, barWidth, barHeight);
 
-    // Health
+    // Health with gradient and color coding
     const healthPercent = this.health / this.maxHealth;
-    const healthColor = healthPercent > 0.6 ? '#00ff00' : healthPercent > 0.3 ? '#ffff00' : '#ff0000';
-    ctx.fillStyle = healthColor;
-    ctx.shadowBlur = 5;
+    let healthColor: string;
+    if (healthPercent > 0.6) {
+      healthColor = '#4ade80'; // Green
+    } else if (healthPercent > 0.3) {
+      healthColor = '#fbbf24'; // Yellow/orange
+    } else {
+      healthColor = '#ef4444'; // Red
+    }
+
+    // Health gradient
+    const healthGradient = ctx.createLinearGradient(
+      this.x - barWidth / 2,
+      barY,
+      this.x - barWidth / 2,
+      barY + barHeight
+    );
+    healthGradient.addColorStop(0, healthColor);
+    healthGradient.addColorStop(1, this.adjustColorBrightness(healthColor, 0.7));
+
+    ctx.fillStyle = healthGradient;
+    ctx.shadowBlur = 4;
     ctx.shadowColor = healthColor;
     ctx.fillRect(this.x - barWidth / 2, barY, barWidth * healthPercent, barHeight);
 
-    // Border
+    // Inner highlight for depth
     ctx.shadowBlur = 0;
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.fillRect(this.x - barWidth / 2, barY, barWidth * healthPercent, barHeight * 0.4);
+
+    // Border
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
     ctx.lineWidth = 1;
     ctx.strokeRect(this.x - barWidth / 2, barY, barWidth, barHeight);
 
     ctx.restore();
+  }
+
+  private adjustColorBrightness(color: string, factor: number): string {
+    // Simple brightness adjustment for gradient
+    const hex = color.replace('#', '');
+    const r = Math.max(0, Math.min(255, parseInt(hex.substring(0, 2), 16) * factor));
+    const g = Math.max(0, Math.min(255, parseInt(hex.substring(2, 4), 16) * factor));
+    const b = Math.max(0, Math.min(255, parseInt(hex.substring(4, 6), 16) * factor));
+    return `rgb(${r}, ${g}, ${b})`;
   }
 
   getAngleToPlayer(playerX: number, playerY: number): number {

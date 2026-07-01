@@ -565,20 +565,19 @@ export class Game {
     const mouseX = this.input.mouseX;
     const mouseY = this.input.mouseY;
 
-    // Responsive layout
+    // Responsive layout - detect portrait mode for better fitting
+    const isPortrait = this.canvas.width < this.canvas.height;
     const isMobile = this.canvas.width < 800;
-    const itemWidth = isMobile ? Math.min(380, this.canvas.width - 40) : 200;
-    const itemHeight = isMobile ? 200 : 120;
-    const gap = isMobile ? 18 : 20;
+    const itemWidth = isPortrait ? Math.min(280, this.canvas.width - 40) : isMobile ? Math.min(380, this.canvas.width - 40) : 200;
+    const itemHeight = isPortrait ? 140 : isMobile ? 200 : 120;
+    const gap = isPortrait ? 8 : isMobile ? 18 : 20;
 
     let startX: number, startY: number;
 
     if (isMobile) {
-      // Vertical stack on mobile - center vertically in viewport
+      // Vertical stack on mobile
       startX = (this.canvas.width - itemWidth) / 2;
-      // Calculate total content height and center it
-      const totalHeight = this.shopItems.length * (itemHeight + gap) - gap + 240; // 240 for header + buttons
-      startY = Math.max(135, (this.canvas.height - totalHeight) / 2 + 80);
+      startY = isPortrait ? 100 : 135;
     } else {
       // Horizontal row on desktop (4 items)
       startX = this.canvas.width / 2 - (itemWidth * 4 + gap * 3) / 2;
@@ -621,15 +620,33 @@ export class Game {
       }
     }
 
-    // Reroll button - position based on layout
+    // Button positioning - MUST MATCH drawShop() exactly to fix alignment bug
     const buttonWidth = isMobile ? 340 : 200;
     const buttonHeight = isMobile ? 90 : 50;
-    const continueY = isMobile ? startY + this.shopItems.length * (itemHeight + gap) + 25 : 400;
-    const rerollY = continueY + buttonHeight + 20;
+    const buttonSpacing = 20;
 
+    // Calculate button Y positions - ensure they fit on screen
+    const itemsEndY = isMobile ? startY + this.shopItems.length * (itemHeight + gap) : 320;
+    const continueY = isMobile ? Math.min(itemsEndY + 25, this.canvas.height - buttonHeight * 2 - buttonSpacing - 20) : 400;
+    const rerollY = continueY + buttonHeight + buttonSpacing;
+
+    // Continue button (Next Wave) - ALWAYS FIRST
+    const continueBtn = {
+      x: this.canvas.width / 2 - buttonWidth / 2,
+      y: continueY,
+      width: buttonWidth,
+      height: buttonHeight
+    };
+
+    if (pointInRect(mouseX, mouseY, continueBtn) && this.input.mouseDown) {
+      this.startNextWave();
+      this.input.mouseDown = false;
+    }
+
+    // Reroll button - ALWAYS SECOND (below continue)
     const rerollBtn = {
       x: this.canvas.width / 2 - buttonWidth / 2,
-      y: isMobile ? continueY : rerollY,
+      y: rerollY,
       width: buttonWidth,
       height: buttonHeight
     };
@@ -647,19 +664,6 @@ export class Game {
         this.audio.playPurchase();
         this.input.mouseDown = false;
       }
-    }
-
-    // Continue button - position based on layout
-    const continueBtn = {
-      x: this.canvas.width / 2 - buttonWidth / 2,
-      y: isMobile ? rerollY : continueY,
-      width: buttonWidth,
-      height: buttonHeight
-    };
-
-    if (pointInRect(mouseX, mouseY, continueBtn) && this.input.mouseDown) {
-      this.startNextWave();
-      this.input.mouseDown = false; // Prevent multiple clicks
     }
   }
 
@@ -943,6 +947,8 @@ export class Game {
   private drawHUD(): void {
     if (!this.player) return;
 
+    const ctx = this.renderer.getContext();
+
     // Detect mobile
     const isMobile = this.canvas.width < this.canvas.height;
 
@@ -953,43 +959,65 @@ export class Game {
 
     // Mobile scaling factors
     const textScale = isMobile ? 2.0 : 1;
-    const barHeightScale = isMobile ? 2.2 : 1; // More prominent bars on mobile
+    const barHeightScale = isMobile ? 2.2 : 1;
 
-    // Health bar
-    const hpLabelSize = Math.round(14 * textScale);
-    const barHeight = Math.round(20 * barHeightScale);
-    this.renderer.drawText('HP', sidePadding, topPadding, { size: hpLabelSize, bold: true });
-    this.renderer.drawHealthBar(sidePadding + 30, topPadding, 200, barHeight, this.player.health, this.player.maxHealth);
+    // Draw HUD background panel (semi-transparent)
+    const hudBgHeight = Math.round(95 * textScale);
+    ctx.save();
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.fillRect(0, 0, this.canvas.width, hudBgHeight);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(0, 0, this.canvas.width, hudBgHeight);
+    ctx.restore();
+
+    // Health bar with icon
+    const hpLabelSize = Math.round(16 * textScale);
+    const barHeight = Math.round(24 * barHeightScale);
+    this.renderer.drawText('❤', sidePadding, topPadding, { size: hpLabelSize, bold: true, color: '#ef4444' });
+    this.renderer.drawHealthBar(sidePadding + Math.round(25 * textScale), topPadding, 200, barHeight, this.player.health, this.player.maxHealth);
 
     const barWidth = Math.min(200, this.canvas.width * 0.35);
     const hpValueSize = Math.round(14 * textScale);
-    this.renderer.drawText(`${Math.ceil(this.player.health)}/${this.player.maxHealth}`, sidePadding + 30 + barWidth + 10, topPadding + 2, { size: hpValueSize });
+    this.renderer.drawText(`${Math.ceil(this.player.health)}/${this.player.maxHealth}`, sidePadding + Math.round(25 * textScale) + barWidth + 10, topPadding + 4, {
+      size: hpValueSize,
+      bold: true,
+      color: '#ffffff'
+    });
 
     // XP bar
-    const xpOffset = Math.round(30 * textScale);
-    this.renderer.drawText('XP', sidePadding, topPadding + xpOffset, { size: hpLabelSize, bold: true });
-    this.renderer.drawProgressBar(sidePadding + 30, topPadding + xpOffset, 200, barHeight, this.player.xp / this.player.xpToNextLevel, '#00ff00');
+    const xpOffset = Math.round(32 * textScale);
+    this.renderer.drawText('⭐', sidePadding, topPadding + xpOffset, { size: hpLabelSize, bold: true, color: '#ffd700' });
+    this.renderer.drawProgressBar(sidePadding + Math.round(25 * textScale), topPadding + xpOffset, 200, barHeight, this.player.xp / this.player.xpToNextLevel, '#4ade80');
     const levelSize = Math.round(14 * textScale);
-    this.renderer.drawText(`Level ${this.player.level}`, sidePadding + 30 + barWidth + 10, topPadding + xpOffset + 2, { size: levelSize });
+    this.renderer.drawText(`Lv ${this.player.level}`, sidePadding + Math.round(25 * textScale) + barWidth + 10, topPadding + xpOffset + 4, {
+      size: levelSize,
+      bold: true,
+      color: '#ffd700'
+    });
 
-    // Gold
-    const goldOffset = Math.round(60 * textScale);
-    const goldSize = Math.round(16 * textScale);
-    this.renderer.drawText(`Gold: ${this.player.gold}`, sidePadding, topPadding + goldOffset, { size: goldSize, bold: true, color: '#ffff00' });
+    // Gold with icon
+    const goldOffset = Math.round(64 * textScale);
+    const goldSize = Math.round(18 * textScale);
+    this.renderer.drawText(`💰 ${this.player.gold}`, sidePadding, topPadding + goldOffset, {
+      size: goldSize,
+      bold: true,
+      color: '#ffd700'
+    });
 
-    // Wave info (top right)
-    let waveText = `Wave ${this.waveManager.currentWave}`;
-    let waveColor = '#00ffff';
+    // Wave info (top right) with icon
+    let waveText = `🌊 Wave ${this.waveManager.currentWave}`;
+    let waveColor = '#4a9eff';
 
     if (this.waveManager.isBossWave) {
-      waveText += ' - BOSS';
-      waveColor = '#ff0000';
+      waveText = `👹 Wave ${this.waveManager.currentWave} - BOSS`;
+      waveColor = '#ef4444';
     } else if (this.waveManager.isHordeWave) {
-      waveText += ' - HORDE';
-      waveColor = '#ff6600';
+      waveText = `⚡ Wave ${this.waveManager.currentWave} - HORDE`;
+      waveColor = '#f97316';
     }
 
-    const waveSize = Math.round(20 * textScale);
+    const waveSize = Math.round(24 * textScale);
     this.renderer.drawText(waveText, this.canvas.width - sidePadding, topPadding, {
       size: waveSize,
       bold: true,
@@ -998,83 +1026,128 @@ export class Game {
     });
 
     const enemySize = Math.round(16 * textScale);
-    this.renderer.drawText(`Enemies: ${this.enemies.length + this.waveManager.waveEnemiesRemaining}`, this.canvas.width - sidePadding, topPadding + xpOffset, {
+    this.renderer.drawText(`Enemies: ${this.enemies.length + this.waveManager.waveEnemiesRemaining}`, this.canvas.width - sidePadding, topPadding + xpOffset + 4, {
       size: enemySize,
-      align: 'right'
+      align: 'right',
+      color: '#cccccc'
     });
 
     // Ability cooldowns (bottom left, above joystick zone)
-    const abilityY = this.canvas.height - 180;
+    const abilityY = this.canvas.height - Math.round(180 * textScale);
+    const abilityBoxSize = Math.round(80 * textScale);
+    const abilitySpacing = Math.round(90 * textScale);
 
-    // Dash
+    // Draw ability boxes
     const dashCD = this.player.dashCooldown;
     const dashReady = dashCD <= 0;
-    const abilityTextSize = Math.round(14 * textScale);
-    const abilityCDSize = Math.round(12 * textScale);
-    this.renderer.drawText('DASH', sidePadding, abilityY, {
-      size: abilityTextSize,
-      bold: true,
-      color: dashReady ? '#00ff00' : '#888888'
-    });
-    if (!dashReady) {
-      this.renderer.drawText(`${dashCD.toFixed(1)}s`, sidePadding, abilityY + 18, { size: abilityCDSize });
-    }
-
-    // Blast
     const blastCD = this.player.blastCooldown;
     const blastReady = blastCD <= 0;
-    this.renderer.drawText('BLAST', sidePadding + 100, abilityY, {
+
+    // Dash ability box
+    ctx.save();
+    ctx.fillStyle = dashReady ? 'rgba(74, 222, 128, 0.2)' : 'rgba(0, 0, 0, 0.6)';
+    ctx.fillRect(sidePadding, abilityY, abilityBoxSize, abilityBoxSize);
+    ctx.strokeStyle = dashReady ? '#4ade80' : '#666666';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(sidePadding, abilityY, abilityBoxSize, abilityBoxSize);
+    ctx.restore();
+
+    const abilityTextSize = Math.round(16 * textScale);
+    const abilityCDSize = Math.round(20 * textScale);
+    this.renderer.drawText('DASH', sidePadding + abilityBoxSize / 2, abilityY + Math.round(20 * textScale), {
       size: abilityTextSize,
       bold: true,
-      color: blastReady ? '#00ff00' : '#888888'
+      align: 'center',
+      color: dashReady ? '#4ade80' : '#888888'
     });
-    if (!blastReady) {
-      this.renderer.drawText(`${blastCD.toFixed(1)}s`, sidePadding + 100, abilityY + 18, { size: abilityCDSize });
+    if (!dashReady) {
+      this.renderer.drawText(`${dashCD.toFixed(1)}`, sidePadding + abilityBoxSize / 2, abilityY + Math.round(45 * textScale), {
+        size: abilityCDSize,
+        bold: true,
+        align: 'center',
+        color: '#ffffff'
+      });
+    } else {
+      this.renderer.drawText('⚡', sidePadding + abilityBoxSize / 2, abilityY + Math.round(40 * textScale), {
+        size: Math.round(24 * textScale),
+        align: 'center'
+      });
     }
 
-    // Shield indicator
+    // Blast ability box
+    ctx.save();
+    ctx.fillStyle = blastReady ? 'rgba(239, 68, 68, 0.2)' : 'rgba(0, 0, 0, 0.6)';
+    ctx.fillRect(sidePadding + abilitySpacing, abilityY, abilityBoxSize, abilityBoxSize);
+    ctx.strokeStyle = blastReady ? '#ef4444' : '#666666';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(sidePadding + abilitySpacing, abilityY, abilityBoxSize, abilityBoxSize);
+    ctx.restore();
+
+    this.renderer.drawText('BLAST', sidePadding + abilitySpacing + abilityBoxSize / 2, abilityY + Math.round(20 * textScale), {
+      size: abilityTextSize,
+      bold: true,
+      align: 'center',
+      color: blastReady ? '#ef4444' : '#888888'
+    });
+    if (!blastReady) {
+      this.renderer.drawText(`${blastCD.toFixed(1)}`, sidePadding + abilitySpacing + abilityBoxSize / 2, abilityY + Math.round(45 * textScale), {
+        size: abilityCDSize,
+        bold: true,
+        align: 'center',
+        color: '#ffffff'
+      });
+    } else {
+      this.renderer.drawText('💥', sidePadding + abilitySpacing + abilityBoxSize / 2, abilityY + Math.round(40 * textScale), {
+        size: Math.round(24 * textScale),
+        align: 'center'
+      });
+    }
+
+    // Shield indicator (center top, below HUD)
     if (this.player.shield) {
-      const shieldSize = Math.round(20 * textScale);
-      this.renderer.drawText('🛡️ SHIELD ACTIVE', this.canvas.width / 2, topPadding, {
+      const shieldSize = Math.round(24 * textScale);
+      this.renderer.drawText('🛡️ SHIELD ACTIVE', this.canvas.width / 2, topPadding + goldOffset + Math.round(10 * textScale), {
         size: shieldSize,
         bold: true,
         align: 'center',
-        color: '#00ffff'
+        color: '#4a9eff'
       });
     }
   }
 
   private drawShop(): void {
+    const isPortrait = this.canvas.width < this.canvas.height;
     const isMobile = this.canvas.width < 800;
 
-    this.renderer.drawText('SHOP', this.canvas.width / 2, isMobile ? 35 : 50, {
-      size: isMobile ? 56 : 36,
+    // Shop title with fancy styling
+    this.renderer.drawText('SHOP', this.canvas.width / 2, isMobile ? 25 : 50, {
+      size: isMobile ? 64 : 48,
       bold: true,
       align: 'center',
-      color: '#ffff00'
+      color: '#ffd700'
     });
 
     if (!this.player) return;
 
-    this.renderer.drawText(`Gold: ${this.player.gold}`, this.canvas.width / 2, isMobile ? 95 : 100, {
-      size: isMobile ? 32 : 20,
+    // Gold display with icon
+    this.renderer.drawText(`Gold: ${this.player.gold}`, this.canvas.width / 2, isMobile ? 75 : 100, {
+      size: isMobile ? 32 : 24,
+      bold: true,
       align: 'center',
-      color: '#ffff00'
+      color: '#ffd700'
     });
 
-    // Draw shop items - responsive layout
-    const itemWidth = isMobile ? Math.min(380, this.canvas.width - 40) : 200;
-    const itemHeight = isMobile ? 200 : 120;
-    const gap = isMobile ? 18 : 20;
+    // Draw shop items - responsive layout (MUST MATCH updateShop positions)
+    const itemWidth = isPortrait ? Math.min(280, this.canvas.width - 40) : isMobile ? Math.min(380, this.canvas.width - 40) : 200;
+    const itemHeight = isPortrait ? 140 : isMobile ? 200 : 120;
+    const gap = isPortrait ? 8 : isMobile ? 18 : 20;
 
     let startX: number, startY: number;
 
     if (isMobile) {
-      // Vertical stack on mobile - center vertically in viewport
+      // Vertical stack on mobile
       startX = (this.canvas.width - itemWidth) / 2;
-      // Calculate total content height and center it
-      const totalHeight = this.shopItems.length * (itemHeight + gap) - gap + 240; // 240 for header + buttons
-      startY = Math.max(135, (this.canvas.height - totalHeight) / 2 + 80);
+      startY = isPortrait ? 100 : 135;
     } else {
       // Horizontal row on desktop (4 items)
       startX = this.canvas.width / 2 - (itemWidth * 4 + gap * 3) / 2;
@@ -1089,76 +1162,87 @@ export class Game {
       const y = isMobile ? startY + i * (itemHeight + gap) : startY;
       const hovered = this.selectedShopItem === i;
 
-      // Background
-      ctx.fillStyle = hovered ? '#444444' : '#222222';
-      ctx.fillRect(x, y, itemWidth, itemHeight);
-
-      // Border (color by rarity)
+      // Rarity colors with better palette
       const rarityColors: Record<string, string> = {
         common: '#888888',
-        rare: '#0088ff',
-        epic: '#aa00ff',
-        legendary: '#ffaa00'
+        rare: '#4a9eff',
+        epic: '#a855f7',
+        legendary: '#ffd700'
       };
-      ctx.strokeStyle = rarityColors[item.rarity] ?? '#ffffff';
-      ctx.lineWidth = 3;
+      const rarityColor = rarityColors[item.rarity] ?? '#ffffff';
+
+      // Card shadow/glow effect
+      if (hovered) {
+        ctx.save();
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = rarityColor;
+        ctx.fillStyle = '#2a2a2a';
+        ctx.fillRect(x - 2, y - 2, itemWidth + 4, itemHeight + 4);
+        ctx.restore();
+      }
+
+      // Background with gradient
+      const gradient = ctx.createLinearGradient(x, y, x, y + itemHeight);
+      gradient.addColorStop(0, hovered ? '#3a3a3a' : '#222222');
+      gradient.addColorStop(1, hovered ? '#2a2a2a' : '#1a1a1a');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(x, y, itemWidth, itemHeight);
+
+      // Border with rarity color (thicker for better visibility)
+      ctx.strokeStyle = rarityColor;
+      ctx.lineWidth = hovered ? 5 : 4;
       ctx.strokeRect(x, y, itemWidth, itemHeight);
 
-      // Icon
-      this.renderer.drawText(item.icon, x + itemWidth / 2, y + (isMobile ? 20 : 15), {
-        size: isMobile ? 68 : 32,
+      // Inner shadow for depth
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x + 2, y + 2, itemWidth - 4, itemHeight - 4);
+
+      // Icon with better positioning
+      this.renderer.drawText(item.icon, x + itemWidth / 2, y + (isPortrait ? 15 : isMobile ? 20 : 15), {
+        size: isPortrait ? 48 : isMobile ? 68 : 32,
         align: 'center'
       });
 
-      // Name
-      this.renderer.drawText(item.name, x + itemWidth / 2, y + (isMobile ? 95 : 55), {
-        size: isMobile ? 26 : 14,
+      // Name with better contrast
+      this.renderer.drawText(item.name, x + itemWidth / 2, y + (isPortrait ? 70 : isMobile ? 95 : 55), {
+        size: isPortrait ? 20 : isMobile ? 26 : 16,
         bold: true,
-        align: 'center'
+        align: 'center',
+        color: rarityColor
       });
 
       // Description
-      this.renderer.drawText(item.description, x + itemWidth / 2, y + (isMobile ? 125 : 75), {
-        size: isMobile ? 20 : 11,
-        align: 'center'
+      this.renderer.drawText(item.description, x + itemWidth / 2, y + (isPortrait ? 95 : isMobile ? 125 : 75), {
+        size: isPortrait ? 14 : isMobile ? 20 : 12,
+        align: 'center',
+        color: '#cccccc'
       });
 
-      // Cost
+      // Cost with better styling
       const canAfford = this.player.gold >= item.cost;
-      this.renderer.drawText(`${item.cost} gold`, x + itemWidth / 2, y + (isMobile ? 155 : 95), {
-        size: isMobile ? 24 : 12,
+      this.renderer.drawText(`${item.cost} gold`, x + itemWidth / 2, y + (isPortrait ? 120 : isMobile ? 165 : 100), {
+        size: isPortrait ? 18 : isMobile ? 28 : 14,
         bold: true,
         align: 'center',
-        color: canAfford ? '#ffff00' : '#ff0000'
+        color: canAfford ? '#ffd700' : '#ef4444'
       });
     }
 
-    // Button dimensions
+    // Button dimensions and positioning - MUST MATCH updateShop
     const buttonWidth = isMobile ? 340 : 200;
     const buttonHeight = isMobile ? 90 : 50;
-    const continueY = isMobile ? startY + this.shopItems.length * (itemHeight + gap) + 25 : 400;
-    const rerollY = continueY + buttonHeight + 20;
+    const buttonSpacing = 20;
 
-    // Reroll button
-    const canAffordReroll = this.player.gold >= this.shopRerollCost;
-    const rerollButtonY = isMobile ? continueY : rerollY;
+    // Calculate button Y positions - ensure they fit on screen
+    const itemsEndY = isMobile ? startY + this.shopItems.length * (itemHeight + gap) : 320;
+    const continueY = isMobile ? Math.min(itemsEndY + 25, this.canvas.height - buttonHeight * 2 - buttonSpacing - 20) : 400;
+    const rerollY = continueY + buttonHeight + buttonSpacing;
 
+    // Continue button (Next Wave) - ALWAYS FIRST
     this.renderer.drawButton(
       this.canvas.width / 2 - buttonWidth / 2,
-      rerollButtonY,
-      buttonWidth,
-      buttonHeight,
-      `Reroll (${this.shopRerollCost}g)`,
-      false,
-      canAffordReroll,
-      isMobile
-    );
-
-    // Continue button
-    const continueButtonY = isMobile ? rerollY : continueY;
-    this.renderer.drawButton(
-      this.canvas.width / 2 - buttonWidth / 2,
-      continueButtonY,
+      continueY,
       buttonWidth,
       buttonHeight,
       'Next Wave',
@@ -1166,53 +1250,99 @@ export class Game {
       true,
       isMobile
     );
+
+    // Reroll button - ALWAYS SECOND (below continue)
+    const canAffordReroll = this.player.gold >= this.shopRerollCost;
+    this.renderer.drawButton(
+      this.canvas.width / 2 - buttonWidth / 2,
+      rerollY,
+      buttonWidth,
+      buttonHeight,
+      `Reroll (${this.shopRerollCost}g)`,
+      false,
+      canAffordReroll,
+      isMobile
+    );
   }
 
   private drawPaused(): void {
-    // Dim background
     const ctx = this.renderer.getContext();
+    const isMobile = this.canvas.width < 800;
+
+    // Dim background with stronger overlay
     ctx.save();
-    ctx.globalAlpha = 0.7;
+    ctx.globalAlpha = 0.8;
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     ctx.restore();
 
-    this.renderer.drawText('PAUSED', this.canvas.width / 2, 150, {
-      size: 48,
+    // Pause menu panel
+    const panelWidth = isMobile ? Math.min(400, this.canvas.width - 40) : 500;
+    const panelHeight = isMobile ? 450 : 400;
+    const panelX = (this.canvas.width - panelWidth) / 2;
+    const panelY = (this.canvas.height - panelHeight) / 2;
+
+    // Panel background with gradient
+    const gradient = ctx.createLinearGradient(panelX, panelY, panelX, panelY + panelHeight);
+    gradient.addColorStop(0, '#2a2a2a');
+    gradient.addColorStop(1, '#1a1a1a');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(panelX, panelY, panelWidth, panelHeight);
+
+    // Panel border
+    ctx.strokeStyle = '#4a9eff';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(panelX, panelY, panelWidth, panelHeight);
+
+    // Inner border for depth
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(panelX + 3, panelY + 3, panelWidth - 6, panelHeight - 6);
+
+    // Title
+    this.renderer.drawText('⏸ PAUSED', this.canvas.width / 2, panelY + 60, {
+      size: isMobile ? 56 : 64,
       bold: true,
       align: 'center',
-      color: '#ffff00'
+      color: '#4a9eff'
     });
 
-    const buttonWidth = 200;
-    const buttonHeight = 50;
+    const buttonWidth = isMobile ? Math.min(300, panelWidth - 40) : 280;
+    const buttonHeight = isMobile ? 70 : 60;
     const spacing = 20;
+    const startY = panelY + 150;
 
     this.renderer.drawButton(
       this.canvas.width / 2 - buttonWidth / 2,
-      250,
+      startY,
       buttonWidth,
       buttonHeight,
       'Resume',
-      false
+      false,
+      true,
+      isMobile
     );
 
     this.renderer.drawButton(
       this.canvas.width / 2 - buttonWidth / 2,
-      250 + buttonHeight + spacing,
+      startY + buttonHeight + spacing,
       buttonWidth,
       buttonHeight,
       'Restart Run',
-      false
+      false,
+      true,
+      isMobile
     );
 
     this.renderer.drawButton(
       this.canvas.width / 2 - buttonWidth / 2,
-      250 + (buttonHeight + spacing) * 2,
+      startY + (buttonHeight + spacing) * 2,
       buttonWidth,
       buttonHeight,
       'Main Menu',
-      false
+      false,
+      true,
+      isMobile
     );
   }
 
@@ -1311,50 +1441,103 @@ export class Game {
   }
 
   private drawGameOver(): void {
-    this.renderer.drawText('GAME OVER', this.canvas.width / 2, 80, {
-      size: 48,
+    const ctx = this.renderer.getContext();
+    const isMobile = this.canvas.width < 800;
+
+    // Dramatic dark overlay
+    ctx.save();
+    ctx.globalAlpha = 0.85;
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    ctx.restore();
+
+    // Title with pulsing effect
+    const pulseScale = 1 + Math.sin(Date.now() / 300) * 0.05;
+    ctx.save();
+    ctx.translate(this.canvas.width / 2, isMobile ? 60 : 80);
+    ctx.scale(pulseScale, pulseScale);
+    this.renderer.drawText('💀 GAME OVER', 0, 0, {
+      size: isMobile ? 56 : 72,
       bold: true,
       align: 'center',
-      color: '#ff0000'
+      color: '#ef4444'
     });
+    ctx.restore();
 
-    // Stats
-    const statsY = 160;
-    const lineSpacing = 35;
+    // Stats panel
+    const panelWidth = isMobile ? Math.min(380, this.canvas.width - 40) : 500;
+    const panelHeight = isMobile ? 380 : 320;
+    const panelX = (this.canvas.width - panelWidth) / 2;
+    const panelY = isMobile ? 140 : 170;
 
-    this.renderer.drawText(`Wave Reached: ${this.gameOverStats.wavesReached}`, this.canvas.width / 2, statsY, {
-      size: 22,
-      align: 'center'
-    });
+    // Panel background with gradient
+    const gradient = ctx.createLinearGradient(panelX, panelY, panelX, panelY + panelHeight);
+    gradient.addColorStop(0, '#2a2a2a');
+    gradient.addColorStop(1, '#1a1a1a');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(panelX, panelY, panelWidth, panelHeight);
 
-    this.renderer.drawText(`Enemies Killed: ${this.gameOverStats.enemiesKilled}`, this.canvas.width / 2, statsY + lineSpacing, {
-      size: 22,
-      align: 'center'
-    });
+    // Panel border
+    ctx.strokeStyle = '#ef4444';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(panelX, panelY, panelWidth, panelHeight);
 
-    this.renderer.drawText(`Gold Earned: ${this.gameOverStats.goldEarned}`, this.canvas.width / 2, statsY + lineSpacing * 2, {
-      size: 22,
-      align: 'center'
-    });
+    // Inner border
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(panelX + 3, panelY + 3, panelWidth - 6, panelHeight - 6);
 
-    this.renderer.drawText(`Items Collected: ${this.gameOverStats.itemsCollected}`, this.canvas.width / 2, statsY + lineSpacing * 3, {
-      size: 22,
-      align: 'center'
-    });
+    // Stats with icons
+    const statsY = panelY + 50;
+    const lineSpacing = isMobile ? 45 : 40;
+    const statSize = isMobile ? 24 : 22;
 
-    // Souls earned (highlighted)
-    this.renderer.drawText(`Souls Earned: ${this.gameOverStats.soulsEarned}`, this.canvas.width / 2, statsY + lineSpacing * 4 + 20, {
-      size: 28,
+    this.renderer.drawText(`🌊 Wave: ${this.gameOverStats.wavesReached}`, this.canvas.width / 2, statsY, {
+      size: statSize,
       bold: true,
       align: 'center',
-      color: '#9370db'
+      color: '#4a9eff'
     });
+
+    this.renderer.drawText(`⚔️ Kills: ${this.gameOverStats.enemiesKilled}`, this.canvas.width / 2, statsY + lineSpacing, {
+      size: statSize,
+      bold: true,
+      align: 'center',
+      color: '#ef4444'
+    });
+
+    this.renderer.drawText(`💰 Gold: ${this.gameOverStats.goldEarned}`, this.canvas.width / 2, statsY + lineSpacing * 2, {
+      size: statSize,
+      bold: true,
+      align: 'center',
+      color: '#ffd700'
+    });
+
+    this.renderer.drawText(`🎁 Items: ${this.gameOverStats.itemsCollected}`, this.canvas.width / 2, statsY + lineSpacing * 3, {
+      size: statSize,
+      bold: true,
+      align: 'center',
+      color: '#a855f7'
+    });
+
+    // Souls earned (highlighted prominently)
+    const soulsY = statsY + lineSpacing * 4 + 20;
+    ctx.save();
+    ctx.shadowBlur = 25;
+    ctx.shadowColor = '#9370db';
+    this.renderer.drawText(`✨ Souls Earned: ${this.gameOverStats.soulsEarned} ✨`, this.canvas.width / 2, soulsY, {
+      size: isMobile ? 32 : 36,
+      bold: true,
+      align: 'center',
+      color: '#c084fc'
+    });
+    ctx.restore();
 
     // Buttons
-    const buttonWidth = 200;
-    const buttonHeight = 50;
-    const spacing = 20;
-    const startY = this.canvas.height - 200;
+    const buttonWidth = isMobile ? Math.min(300, this.canvas.width - 60) : 260;
+    const buttonHeight = isMobile ? 70 : 60;
+    const spacing = 18;
+    const startY = this.canvas.height - (isMobile ? 240 : 220);
 
     this.renderer.drawButton(
       this.canvas.width / 2 - buttonWidth / 2,
@@ -1362,7 +1545,9 @@ export class Game {
       buttonWidth,
       buttonHeight,
       'Try Again',
-      false
+      false,
+      true,
+      isMobile
     );
 
     this.renderer.drawButton(
@@ -1371,7 +1556,9 @@ export class Game {
       buttonWidth,
       buttonHeight,
       'View Upgrades',
-      false
+      false,
+      true,
+      isMobile
     );
 
     this.renderer.drawButton(
@@ -1380,7 +1567,9 @@ export class Game {
       buttonWidth,
       buttonHeight,
       'Main Menu',
-      false
+      false,
+      true,
+      isMobile
     );
   }
 }

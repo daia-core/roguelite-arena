@@ -84,6 +84,9 @@ export class DamageNumber {
   maxLifetime: number;
   vy: number;
   color: string;
+  isCrit: boolean;
+  scale: number = 1;
+  rotation: number = 0;
   dead: boolean = false;
 
   constructor(x: number, y: number, damage: number, isCrit: boolean = false) {
@@ -93,12 +96,27 @@ export class DamageNumber {
     this.lifetime = 1000;
     this.maxLifetime = this.lifetime;
     this.vy = -60; // Float upward
+    this.isCrit = isCrit;
     this.color = isCrit ? '#ff0000' : '#ffffff';
+    // Start large for crits
+    this.scale = isCrit ? 1.6 : 1.2;
+    this.rotation = isCrit ? (Math.random() - 0.5) * 0.3 : 0;
   }
 
   update(dt: number): void {
     this.y += this.vy * dt;
     this.lifetime -= dt * 1000;
+
+    // Animate scale: start big, shrink to normal, then float
+    const progress = 1 - (this.lifetime / this.maxLifetime);
+    if (progress < 0.2) {
+      // First 20%: scale down from initial to 1.0
+      this.scale = this.isCrit ? 1.6 - (progress / 0.2) * 0.6 : 1.2 - (progress / 0.2) * 0.2;
+    } else {
+      // After 20%: stay at 1.0
+      this.scale = 1.0;
+    }
+
     if (this.lifetime <= 0) {
       this.dead = true;
     }
@@ -108,30 +126,44 @@ export class DamageNumber {
     ctx.save();
 
     const alpha = this.lifetime / this.maxLifetime;
-    const scale = 1 + (1 - alpha) * 0.3; // Grows slightly as it fades
     ctx.globalAlpha = alpha;
+
+    // Translate and rotate for crits
+    ctx.translate(this.x, this.y);
+    if (this.isCrit) {
+      ctx.rotate(this.rotation);
+    }
 
     // Detect mobile based on canvas orientation
     const isMobile = ctx.canvas.width < ctx.canvas.height;
     const baseFontSize = isMobile ? 48 : 36;
     const critFontSize = isMobile ? 72 : 54;
-    const fontSize = this.color === '#ff0000' ? critFontSize : baseFontSize;
+    const fontSize = this.isCrit ? critFontSize : baseFontSize;
 
-    // Stronger glow effect for damage numbers
-    ctx.shadowBlur = 15;
+    // Stronger glow effect
+    ctx.shadowBlur = this.isCrit ? 25 : 15;
     ctx.shadowColor = this.color;
 
     // Draw outline for better visibility
     ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 3;
-    ctx.font = `bold ${fontSize * scale}px Arial`;
+    ctx.lineWidth = this.isCrit ? 5 : 4;
+    ctx.font = `bold ${fontSize * this.scale}px Arial`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.strokeText(this.text, this.x, this.y);
+    ctx.strokeText(this.text, 0, 0);
 
-    ctx.fillStyle = this.color;
-    ctx.font = `bold ${fontSize * scale}px Arial`;
-    ctx.fillText(this.text, this.x, this.y);
+    // Fill with color (gradient for crits)
+    if (this.isCrit) {
+      const gradient = ctx.createLinearGradient(0, -fontSize * this.scale / 2, 0, fontSize * this.scale / 2);
+      gradient.addColorStop(0, '#ff4444');
+      gradient.addColorStop(0.5, '#ff0000');
+      gradient.addColorStop(1, '#cc0000');
+      ctx.fillStyle = gradient;
+    } else {
+      ctx.fillStyle = this.color;
+    }
+    ctx.font = `bold ${fontSize * this.scale}px Arial`;
+    ctx.fillText(this.text, 0, 0);
 
     ctx.restore();
   }
