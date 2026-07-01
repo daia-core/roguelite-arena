@@ -14,6 +14,9 @@ export class Renderer {
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('Could not get 2d context');
     this.ctx = ctx;
+
+    // PIXEL ART: Disable image smoothing globally for crisp pixels
+    this.ctx.imageSmoothingEnabled = false;
   }
 
   clear(): void {
@@ -52,15 +55,34 @@ export class Renderer {
   }
 
   endFrame(): void {
-    // Draw impact flashes
+    // Draw impact flashes as PIXEL ART (no smooth arcs)
     for (const flash of this.impactFlashes) {
       this.ctx.save();
       this.ctx.globalAlpha = flash.alpha;
-      this.ctx.strokeStyle = '#ffffff';
-      this.ctx.lineWidth = 3;
-      this.ctx.beginPath();
-      this.ctx.arc(flash.x, flash.y, flash.radius, 0, Math.PI * 2);
-      this.ctx.stroke();
+      this.ctx.imageSmoothingEnabled = false;
+
+      // Draw pixelated expanding ring instead of smooth circle
+      const pixelSize = 3;
+      const steps = Math.floor(flash.radius / pixelSize);
+      this.ctx.fillStyle = '#ffffff';
+
+      // Octagonal approximation with pixels for ring effect
+      for (let i = 0; i < 8; i++) {
+        const angle = (Math.PI / 4) * i;
+        const px = Math.floor(flash.x + Math.cos(angle) * flash.radius);
+        const py = Math.floor(flash.y + Math.sin(angle) * flash.radius);
+        this.ctx.fillRect(px - pixelSize, py - pixelSize, pixelSize * 2, pixelSize * 2);
+
+        // Fill in between points for fuller ring
+        if (steps > 3) {
+          const nextAngle = (Math.PI / 4) * ((i + 1) % 8);
+          const midAngle = (angle + nextAngle) / 2;
+          const mpx = Math.floor(flash.x + Math.cos(midAngle) * flash.radius);
+          const mpy = Math.floor(flash.y + Math.sin(midAngle) * flash.radius);
+          this.ctx.fillRect(mpx - pixelSize / 2, mpy - pixelSize / 2, pixelSize, pixelSize);
+        }
+      }
+
       this.ctx.restore();
     }
 

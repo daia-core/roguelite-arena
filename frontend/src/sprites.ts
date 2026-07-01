@@ -186,10 +186,10 @@ export class SpriteSheet {
     const canvas = this.createCanvas(size, size);
     const ctx = canvas.getContext('2d')!;
 
-    // Detailed goblin with crude armor, sharp teeth, and dagger
+    // Advanced goblin: hue-shifted shadows, colored outlines, menacing red eye glow
     const pixels = [
       [0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0],
-      [0,0,0,0,1,1,2,2,2,2,2,2,1,1,0,0,0,0],
+      [0,0,0,0,1,1,2,2,11,2,2,11,1,1,0,0,0,0],
       [0,0,0,1,1,2,2,2,2,2,2,2,2,1,1,0,0,0],
       [0,0,1,1,2,2,3,3,2,2,3,3,2,2,1,1,0,0],
       [0,1,1,2,2,3,3,4,2,2,3,3,4,2,2,1,1,0],
@@ -197,9 +197,9 @@ export class SpriteSheet {
       [0,1,2,2,2,2,2,2,5,5,2,2,2,2,2,2,1,0],
       [0,0,1,2,2,5,5,5,5,5,5,5,5,2,2,1,0,0],
       [0,0,0,1,2,2,5,6,6,6,6,5,2,2,1,0,0,0],
-      [0,0,7,7,1,2,6,6,6,6,6,6,2,1,7,7,0,0],
-      [0,7,7,7,7,1,1,1,1,1,1,1,1,7,7,7,7,0],
-      [0,7,8,8,7,7,7,7,7,7,7,7,7,7,8,8,7,0],
+      [0,0,12,7,1,2,6,6,6,6,6,6,2,1,7,12,0,0],
+      [0,12,7,7,7,1,1,1,1,1,1,1,1,7,7,7,12,0],
+      [0,7,8,8,7,7,7,13,7,7,13,7,7,7,8,8,7,0],
       [0,0,7,8,8,7,7,0,0,0,0,7,7,8,8,7,0,0],
       [0,0,0,7,7,7,0,0,0,0,0,0,7,7,7,0,0,0],
       [9,0,0,0,7,0,0,0,0,0,0,0,0,7,0,0,0,9],
@@ -209,16 +209,19 @@ export class SpriteSheet {
 
     const colors = [
       'transparent',
-      '#558b2f',     // 1 - dark green outline
-      '#7cb342',     // 2 - green skin base
-      '#ffeb3b',     // 3 - eyes yellow
-      '#d32f2f',     // 4 - eyes red glow/evil
+      '#476b24',     // 1 - outline (colored, hue-shifted darker green)
+      '#7cb342',     // 2 - skin mid green
+      '#ffeb3b',     // 3 - eyes yellow core
+      '#d32f2f',     // 4 - eyes red evil glow (rim light)
       '#8b4513',     // 5 - nose/mouth brown
       '#f5f5dc',     // 6 - sharp teeth beige
-      '#4a4a4a',     // 7 - crude armor dark
-      '#696969',     // 8 - armor highlights
-      '#8b8b8b',     // 9 - dagger blade
+      '#2a2a2a',     // 7 - armor shadow (hue-shifted toward cool blue-gray)
+      '#696969',     // 8 - armor mid
+      '#a8a8a8',     // 9 - dagger blade highlight
       '#654321',     // 10 - dagger handle
+      '#96d15f',     // 11 - skin highlight (warm shift toward yellow-green)
+      '#3a3a3a',     // 12 - armor edge (colored outline)
+      '#4a4a4a',     // 13 - armor dither mid-tone
     ];
 
     const scale = 3;
@@ -231,6 +234,12 @@ export class SpriteSheet {
       });
     });
 
+    // Evil eye glow
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = 'rgba(211, 47, 47, 0.25)'; // Red menacing glow
+    ctx.fillRect(0, 0, size, size);
+    ctx.globalCompositeOperation = 'source-over';
+
     this.sprites.set('goblin', canvas);
   }
 
@@ -239,10 +248,10 @@ export class SpriteSheet {
     const canvas = this.createCanvas(size, size);
     const ctx = canvas.getContext('2d')!;
 
-    // Detailed skeleton with hollow eye sockets, rib cage, and eerie glow
+    // Advanced skeleton: hue-shifted bone (warm highlights, cool shadows), intense eye glow
     const pixels = [
       [0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0],
-      [0,0,0,0,1,1,2,2,2,2,2,2,1,1,0,0,0,0],
+      [0,0,0,0,1,1,2,2,7,2,2,7,1,1,0,0,0,0],
       [0,0,0,1,1,2,2,2,2,2,2,2,2,1,1,0,0,0],
       [0,0,1,1,2,3,3,3,2,2,3,3,3,2,1,1,0,0],
       [0,1,1,2,2,3,4,3,2,2,3,4,3,2,2,1,1,0],
@@ -262,12 +271,13 @@ export class SpriteSheet {
 
     const colors = [
       'transparent',
-      '#c0c0c0',     // 1 - bone light
-      '#e0e0e0',     // 2 - bone white
-      '#000000',     // 3 - eye socket darkness
-      '#00ff00',     // 4 - eerie green glow in eyes
-      '#8b0000',     // 5 - mouth/teeth dark red
-      '#ff0000',     // 6 - throat glow
+      '#9a9a9a',     // 1 - bone shadow (hue-shifted toward cool blue-gray)
+      '#e0e0e0',     // 2 - bone white mid
+      '#1a1a1a',     // 3 - eye socket deep shadow (not pure black)
+      '#00ff00',     // 4 - eerie green glow (bright rim light in eyes)
+      '#6b1010',     // 5 - mouth shadow (hue-shifted dark red-purple)
+      '#ff0000',     // 6 - throat glow core
+      '#faf8e8',     // 7 - bone highlight (warm shift toward yellow-white)
     ];
 
     const scale = 3;
@@ -279,6 +289,12 @@ export class SpriteSheet {
         }
       });
     });
+
+    // Intense eerie glow from eyes
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = 'rgba(0, 255, 0, 0.3)'; // Strong green undead glow
+    ctx.fillRect(0, 0, size, size);
+    ctx.globalCompositeOperation = 'source-over';
 
     this.sprites.set('skeleton', canvas);
   }
