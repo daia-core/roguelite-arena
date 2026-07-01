@@ -3,7 +3,7 @@
 import { Enemy, type EnemyType } from './Enemy';
 import { randomChoice, randomInt } from './utils';
 
-export type WaveModifier = 'none' | 'horde' | 'elite' | 'speed' | 'tank' | 'chaos';
+export type WaveModifier = 'none' | 'horde' | 'elite' | 'speed' | 'tank' | 'chaos' | 'reward' | 'challenge' | 'miniboss';
 
 export class WaveManager {
   currentWave: number = 0;
@@ -33,20 +33,37 @@ export class WaveManager {
     // Determine wave modifier (not on boss waves)
     if (!this.isBossWave && waveNumber > 1) {
       const roll = Math.random();
-      if (roll < 0.25) {
+
+      // Every 5th wave (not boss) is a reward wave
+      if (waveNumber % 5 === 0) {
+        this.waveModifier = 'reward';
+        this.waveModifierText = 'REWARD WAVE - Extra gold & XP!';
+      }
+      // Every 7th wave (not boss/reward) has a miniboss
+      else if (waveNumber % 7 === 0) {
+        this.waveModifier = 'miniboss';
+        this.waveModifierText = 'MINIBOSS WAVE - Elite enemy incoming!';
+      }
+      // Challenge wave (hard but rewarding)
+      else if (roll < 0.08) {
+        this.waveModifier = 'challenge';
+        this.waveModifierText = 'CHALLENGE WAVE - Survive for bonus!';
+      }
+      // Standard modifiers
+      else if (roll < 0.28) {
         this.waveModifier = 'horde';
         this.waveModifierText = 'HORDE WAVE - Swarm incoming!';
         this.isHordeWave = true;
-      } else if (roll < 0.40) {
+      } else if (roll < 0.45) {
         this.waveModifier = 'elite';
         this.waveModifierText = 'ELITE WAVE - Tougher enemies!';
-      } else if (roll < 0.60) {
+      } else if (roll < 0.65) {
         this.waveModifier = 'speed';
         this.waveModifierText = 'SPEED WAVE - Fast enemies!';
-      } else if (roll < 0.80) {
+      } else if (roll < 0.85) {
         this.waveModifier = 'tank';
         this.waveModifierText = 'TANK WAVE - Heavily armored!';
-      } else if (roll < 0.90) {
+      } else if (roll < 0.95) {
         this.waveModifier = 'chaos';
         this.waveModifierText = 'CHAOS WAVE - Mixed threats!';
       }
@@ -59,6 +76,12 @@ export class WaveManager {
     if (this.isBossWave) {
       this.totalEnemiesInWave = 10 + waveNumber;
       this.waveModifierText = 'BOSS WAVE - BOSS APPROACHING';
+    } else if (this.waveModifier === 'reward') {
+      this.totalEnemiesInWave = Math.floor(baseCount * 0.7); // Fewer enemies, more rewards
+    } else if (this.waveModifier === 'challenge') {
+      this.totalEnemiesInWave = Math.floor(baseCount * 1.5); // More enemies + elite
+    } else if (this.waveModifier === 'miniboss') {
+      this.totalEnemiesInWave = Math.floor(baseCount * 0.6) + 1; // Miniboss + support
     } else if (this.waveModifier === 'horde') {
       this.totalEnemiesInWave = baseCount * 2;
     } else if (this.waveModifier === 'tank') {
@@ -85,6 +108,13 @@ export class WaveManager {
     if (this.isBossWave && !this.bossSpawned) {
       const boss = this.spawnBoss(canvasWidth, canvasHeight);
       enemies.push(boss);
+      this.bossSpawned = true;
+    }
+
+    // Spawn miniboss at start of miniboss wave
+    if (this.waveModifier === 'miniboss' && !this.bossSpawned) {
+      const miniboss = this.spawnMiniboss(canvasWidth, canvasHeight);
+      enemies.push(miniboss);
       this.bossSpawned = true;
     }
 
@@ -161,6 +191,10 @@ export class WaveManager {
       waveMultiplier *= 2; // Double health/damage
     } else if (this.waveModifier === 'tank') {
       waveMultiplier *= 3; // Triple health
+    } else if (this.waveModifier === 'challenge') {
+      waveMultiplier *= 1.8; // Tougher enemies
+    } else if (this.waveModifier === 'reward') {
+      waveMultiplier *= 0.7; // Weaker enemies
     }
 
     const enemy = new Enemy(x, y, type, waveMultiplier);
@@ -170,7 +204,39 @@ export class WaveManager {
       enemy.typeData.speed *= 1.5;
     }
 
+    // Reward wave: enemies drop 2x gold and XP
+    if (this.waveModifier === 'reward') {
+      enemy.typeData.goldValue *= 2;
+      enemy.typeData.xpValue *= 2;
+    }
+
+    // Challenge wave: enemies drop 1.5x gold and XP
+    if (this.waveModifier === 'challenge') {
+      enemy.typeData.goldValue *= 1.5;
+      enemy.typeData.xpValue *= 1.5;
+    }
+
     return enemy;
+  }
+
+  private spawnMiniboss(canvasWidth: number, _canvasHeight: number): Enemy {
+    // Spawn miniboss at top center (similar to boss)
+    const x = canvasWidth / 2;
+    const y = -40;
+
+    const waveMultiplier = 1 + (this.currentWave - 1) * 0.2;
+
+    // Choose a strong enemy type for miniboss
+    const minibossTypes: EnemyType[] = ['troll', 'cyclops', 'golem', 'necromancer', 'banshee'];
+    const type = randomChoice(minibossTypes);
+
+    const miniboss = new Enemy(x, y, type, waveMultiplier * 1.5); // 1.5x stronger than normal
+
+    // Miniboss drops extra rewards
+    miniboss.typeData.goldValue *= 2;
+    miniboss.typeData.xpValue *= 2;
+
+    return miniboss;
   }
 
   private chooseEnemyType(): EnemyType {
