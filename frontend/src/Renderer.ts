@@ -20,7 +20,38 @@ export class Renderer {
   }
 
   clear(): void {
+    // Dark background
     this.ctx.fillStyle = '#0a0a0a';
+    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+    // Subtle pixel art grid pattern for depth
+    this.ctx.save();
+    this.ctx.globalAlpha = 0.03;
+    this.ctx.strokeStyle = '#1a1a2e';
+    this.ctx.lineWidth = 1;
+    const gridSize = 40;
+    for (let x = 0; x < this.canvas.width; x += gridSize) {
+      this.ctx.beginPath();
+      this.ctx.moveTo(x, 0);
+      this.ctx.lineTo(x, this.canvas.height);
+      this.ctx.stroke();
+    }
+    for (let y = 0; y < this.canvas.height; y += gridSize) {
+      this.ctx.beginPath();
+      this.ctx.moveTo(0, y);
+      this.ctx.lineTo(this.canvas.width, y);
+      this.ctx.stroke();
+    }
+    this.ctx.restore();
+
+    // Vignette effect (darker at edges)
+    const gradient = this.ctx.createRadialGradient(
+      this.canvas.width / 2, this.canvas.height / 2, 0,
+      this.canvas.width / 2, this.canvas.height / 2, Math.max(this.canvas.width, this.canvas.height) * 0.7
+    );
+    gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
+    gradient.addColorStop(1, 'rgba(0, 0, 0, 0.5)');
+    this.ctx.fillStyle = gradient;
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
   }
 
