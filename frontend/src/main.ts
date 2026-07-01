@@ -53,11 +53,12 @@ function resizeCanvas(): void {
     height: window.innerHeight
   };
 
-  // Set canvas to FULL viewport dimensions
-  canvas.width = viewport.width;
-  canvas.height = viewport.height;
+  // ZOOM OUT: Render at higher resolution, scale down via CSS for zoomed-out effect
+  const zoomFactor = 1.6; // 60% more game area visible
+  canvas.width = viewport.width * zoomFactor;
+  canvas.height = viewport.height * zoomFactor;
 
-  // CSS already sets to 100vw x 100vh, but ensure it matches
+  // CSS scales down to viewport size (creates zoom-out effect)
   canvas.style.width = '100%';
   canvas.style.height = '100%';
 }

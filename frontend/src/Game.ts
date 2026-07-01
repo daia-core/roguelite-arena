@@ -748,8 +748,8 @@ export class Game {
     const isPortrait = this.canvas.width < this.canvas.height;
     const isMobile = this.canvas.width < 800;
     const itemWidth = isPortrait ? Math.min(280, this.canvas.width - 40) : isMobile ? Math.min(380, this.canvas.width - 40) : 200;
-    const itemHeight = isPortrait ? 140 : isMobile ? 200 : 120;
-    const gap = isPortrait ? 8 : isMobile ? 18 : 20;
+    const itemHeight = isPortrait ? 165 : isMobile ? 200 : 120; // Increased from 140 to 165 for portrait (more room for content)
+    const gap = isPortrait ? 12 : isMobile ? 18 : 20; // Increased from 8 to 12
 
     let startX: number, startY: number;
 
@@ -770,7 +770,7 @@ export class Game {
       const y = isMobile ? startY + i * (itemHeight + gap) : startY;
 
       // BROTATO-INSPIRED: Lock button in top-right corner of item card
-      const lockButtonSize = isMobile ? 45 : 30;
+      const lockButtonSize = isMobile ? 54 : 30; // Increased from 45 to 54 for easier tapping
       const lockButtonX = x + itemWidth - lockButtonSize - 5;
       const lockButtonY = y + 5;
 
@@ -824,8 +824,8 @@ export class Game {
 
     // Button positioning - MUST MATCH drawShop() exactly to fix alignment bug
     const buttonWidth = isMobile ? 340 : 200;
-    const buttonHeight = isMobile ? 90 : 50;
-    const buttonSpacing = 20;
+    const buttonHeight = isMobile ? 80 : 50; // Reduced from 90 to 80 for better fit
+    const buttonSpacing = 16; // Reduced from 20 to 16 for tighter layout
 
     // Calculate button Y positions - ensure they fit on screen
     const itemsEndY = isMobile ? startY + this.shopItems.length * (itemHeight + gap) : 320;
@@ -1279,7 +1279,7 @@ export class Game {
 
     // Shop title with fancy styling
     this.renderer.drawText('SHOP', this.canvas.width / 2, isMobile ? 25 : 50, {
-      size: isMobile ? 64 : 48,
+      size: isMobile ? 56 : 48, // Reduced from 64 to 56 for mobile
       bold: true,
       align: 'center',
       color: '#ffd700'
@@ -1288,8 +1288,8 @@ export class Game {
     if (!this.player) return;
 
     // Gold display with icon
-    this.renderer.drawText(`Gold: ${this.player.gold}`, this.canvas.width / 2, isMobile ? 75 : 100, {
-      size: isMobile ? 32 : 24,
+    this.renderer.drawText(`Gold: ${this.player.gold}`, this.canvas.width / 2, isMobile ? 70 : 100, {
+      size: isMobile ? 28 : 24, // Reduced from 32 to 28
       bold: true,
       align: 'center',
       color: '#ffd700'
@@ -1297,8 +1297,8 @@ export class Game {
 
     // Lock feature hint
     if (this.waveManager.currentWave <= 3) {
-      this.renderer.drawText('Tip: Lock items (5g) to keep them next wave!', this.canvas.width / 2, isMobile ? 105 : 125, {
-        size: isMobile ? 18 : 14,
+      this.renderer.drawText('Tip: Lock items (5g) to keep them next wave!', this.canvas.width / 2, isMobile ? 100 : 125, {
+        size: isMobile ? 16 : 14, // Reduced from 18 to 16
         align: 'center',
         color: '#aaaaaa'
       });
@@ -1306,15 +1306,15 @@ export class Game {
 
     // Draw shop items - responsive layout (MUST MATCH updateShop positions)
     const itemWidth = isPortrait ? Math.min(280, this.canvas.width - 40) : isMobile ? Math.min(380, this.canvas.width - 40) : 200;
-    const itemHeight = isPortrait ? 140 : isMobile ? 200 : 120;
-    const gap = isPortrait ? 8 : isMobile ? 18 : 20;
+    const itemHeight = isPortrait ? 165 : isMobile ? 200 : 120; // Increased from 140 to 165 for portrait
+    const gap = isPortrait ? 12 : isMobile ? 18 : 20; // Increased from 8 to 12
 
     let startX: number, startY: number;
 
     if (isMobile) {
       // Vertical stack on mobile
       startX = (this.canvas.width - itemWidth) / 2;
-      startY = isPortrait ? 100 : 135;
+      startY = isPortrait ? 125 : 135; // Adjusted from 100 to 125 to account for smaller header
     } else {
       // Horizontal row on desktop (4 items)
       startX = this.canvas.width / 2 - (itemWidth * 4 + gap * 3) / 2;
@@ -1371,11 +1371,11 @@ export class Game {
       ctx.stroke();
 
       // BROTATO-INSPIRED: Lock button in top-right corner
-      const lockButtonSize = isMobile ? 45 : 30;
+      const lockButtonSize = isMobile ? 54 : 30; // Increased from 45 to 54 for easier tapping
       const lockButtonX = x + itemWidth - lockButtonSize - 5;
       const lockButtonY = y + 5;
       const isLocked = this.lockedShopItems.has(i);
-      const lockRadius = 4;
+      const lockRadius = 6; // Increased from 4 to 6 for more rounded look
 
       // Lock button background - rounded
       ctx.save();
@@ -1387,15 +1387,15 @@ export class Game {
       ctx.restore();
 
       // Lock icon
-      this.renderer.drawText(isLocked ? '🔒' : '🔓', lockButtonX + lockButtonSize / 2, lockButtonY + (isMobile ? 5 : 2), {
-        size: isMobile ? 32 : 20,
+      this.renderer.drawText(isLocked ? '🔒' : '🔓', lockButtonX + lockButtonSize / 2, lockButtonY + (isMobile ? 8 : 2), {
+        size: isMobile ? 36 : 20, // Increased from 32 to 36 for better visibility
         align: 'center'
       });
 
-      // MODERN ROGUELIKE: Synergy indicator
+      // MODERN ROGUELIKE: Synergy indicator (top, compact)
       if (hasSynergy) {
-        this.renderer.drawText('⚡SYNERGY', x + itemWidth / 2, y + 3, {
-          size: isPortrait ? 14 : isMobile ? 18 : 12,
+        this.renderer.drawText('⚡SYNERGY', x + itemWidth / 2, y + 8, {
+          size: isPortrait ? 13 : isMobile ? 18 : 12,
           bold: true,
           align: 'center',
           color: '#00ff00'
@@ -1403,30 +1403,30 @@ export class Game {
       }
 
       // Icon with better positioning
-      this.renderer.drawText(item.icon, x + itemWidth / 2, y + (isPortrait ? 15 : isMobile ? 20 : 15), {
-        size: isPortrait ? 48 : isMobile ? 68 : 32,
+      this.renderer.drawText(item.icon, x + itemWidth / 2, y + (isPortrait ? 25 : isMobile ? 20 : 15), {
+        size: isPortrait ? 44 : isMobile ? 68 : 32, // Reduced from 48 to 44 for portrait
         align: 'center'
       });
 
       // Name with better contrast
-      this.renderer.drawText(item.name, x + itemWidth / 2, y + (isPortrait ? 70 : isMobile ? 95 : 55), {
-        size: isPortrait ? 20 : isMobile ? 26 : 16,
+      this.renderer.drawText(item.name, x + itemWidth / 2, y + (isPortrait ? 80 : isMobile ? 95 : 55), {
+        size: isPortrait ? 18 : isMobile ? 26 : 16, // Reduced from 20 to 18
         bold: true,
         align: 'center',
         color: rarityColor
       });
 
-      // Description
-      this.renderer.drawText(item.description, x + itemWidth / 2, y + (isPortrait ? 95 : isMobile ? 125 : 75), {
-        size: isPortrait ? 14 : isMobile ? 20 : 12,
+      // Description (more compact)
+      this.renderer.drawText(item.description, x + itemWidth / 2, y + (isPortrait ? 105 : isMobile ? 125 : 75), {
+        size: isPortrait ? 13 : isMobile ? 20 : 12, // Reduced from 14 to 13
         align: 'center',
         color: '#cccccc'
       });
 
-      // Cost with better styling
+      // Cost with better styling (bottom, prominent)
       const canAfford = this.player.gold >= item.cost;
-      this.renderer.drawText(`${item.cost} gold`, x + itemWidth / 2, y + (isPortrait ? 120 : isMobile ? 165 : 100), {
-        size: isPortrait ? 18 : isMobile ? 28 : 14,
+      this.renderer.drawText(`💰 ${item.cost}`, x + itemWidth / 2, y + (isPortrait ? 138 : isMobile ? 165 : 100), {
+        size: isPortrait ? 20 : isMobile ? 28 : 14, // Increased from 18 to 20 for portrait
         bold: true,
         align: 'center',
         color: canAfford ? '#ffd700' : '#ef4444'
@@ -1435,12 +1435,12 @@ export class Game {
 
     // Button dimensions and positioning - MUST MATCH updateShop
     const buttonWidth = isMobile ? 340 : 200;
-    const buttonHeight = isMobile ? 90 : 50;
-    const buttonSpacing = 20;
+    const buttonHeight = isMobile ? 80 : 50; // Reduced from 90 to 80 for better fit
+    const buttonSpacing = 16; // Reduced from 20 to 16 for tighter layout
 
     // Calculate button Y positions - ensure they fit on screen
     const itemsEndY = isMobile ? startY + this.shopItems.length * (itemHeight + gap) : 320;
-    const continueY = isMobile ? Math.min(itemsEndY + 25, this.canvas.height - buttonHeight * 2 - buttonSpacing - 20) : 400;
+    const continueY = isMobile ? Math.min(itemsEndY + 20, this.canvas.height - buttonHeight * 2 - buttonSpacing - 20) : 400; // Reduced from 25 to 20
     const rerollY = continueY + buttonHeight + buttonSpacing;
 
     // Continue button (Next Wave) - ALWAYS FIRST
