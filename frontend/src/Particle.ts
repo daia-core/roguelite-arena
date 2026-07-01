@@ -60,16 +60,51 @@ export class Particle {
     // Detect mobile and scale particle size
     const isMobile = ctx.canvas.width < ctx.canvas.height;
     const sizeScale = isMobile ? 1.5 : 1;
+    const pixelSize = Math.max(2, Math.round(this.size * sizeScale));
 
-    // Glow effect
-    ctx.shadowBlur = 15;
-    ctx.shadowColor = this.color;
-    ctx.globalCompositeOperation = 'lighter';
+    // PIXEL ART PARTICLES: Draw as crisp pixel squares with dithering, not smooth circles
+    ctx.imageSmoothingEnabled = false;
 
+    // Core pixel
+    const x = Math.floor(this.x);
+    const y = Math.floor(this.y);
     ctx.fillStyle = this.color;
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, this.size * sizeScale, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.fillRect(x - pixelSize / 2, y - pixelSize / 2, pixelSize, pixelSize);
+
+    // Dithered edge pixels for larger particles (creates gradient effect)
+    if (pixelSize >= 6) {
+      // Parse color to create darker shade for dither
+      const darkenColor = (color: string, factor: number = 0.7): string => {
+        const hex = color.replace('#', '');
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+        return `#${Math.floor(r * factor).toString(16).padStart(2, '0')}${Math.floor(g * factor).toString(16).padStart(2, '0')}${Math.floor(b * factor).toString(16).padStart(2, '0')}`;
+      };
+
+      const darkColor = darkenColor(this.color);
+      ctx.fillStyle = darkColor;
+
+      // Checkerboard dither around edges
+      const half = pixelSize / 2;
+      for (let dx = -half - 2; dx <= half + 2; dx += 2) {
+        for (let dy = -half - 2; dy <= half + 2; dy += 2) {
+          if (Math.abs(dx) > half || Math.abs(dy) > half) {
+            if ((Math.floor(dx / 2) + Math.floor(dy / 2)) % 2 === 0) {
+              ctx.fillRect(x + dx, y + dy, 2, 2);
+            }
+          }
+        }
+      }
+    }
+
+    // Optional: Subtle additive glow for very bright particles
+    if (this.color.includes('ff')) {
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = (this.lifetime / this.maxLifetime) * 0.3;
+      ctx.fillStyle = this.color;
+      ctx.fillRect(x - pixelSize / 2 - 1, y - pixelSize / 2 - 1, pixelSize + 2, pixelSize + 2);
+    }
 
     ctx.restore();
   }

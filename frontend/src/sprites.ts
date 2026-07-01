@@ -128,12 +128,12 @@ export class SpriteSheet {
     const canvas = this.createCanvas(size, size);
     const ctx = canvas.getContext('2d')!;
 
-    // Detailed gelatinous slime with shine, nucleus, and gradient
+    // Advanced slime: hue-shifted shadows (toward blue), clustered dithering, translucent glow
     const pixels = [
       [0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0],
-      [0,0,0,1,1,1,2,2,2,2,2,2,1,1,1,0,0,0],
+      [0,0,0,1,1,1,2,2,9,2,2,9,1,1,1,0,0,0],
       [0,0,1,1,2,2,2,3,3,3,3,2,2,2,1,1,0,0],
-      [0,1,1,2,2,3,3,3,3,3,3,3,3,2,2,1,1,0],
+      [0,1,1,2,2,3,3,3,9,3,3,9,3,2,2,1,1,0],
       [0,1,2,2,3,4,4,3,3,3,3,4,4,3,2,2,1,0],
       [1,1,2,3,3,4,5,4,3,3,4,5,4,3,3,2,1,1],
       [1,2,2,3,4,4,5,5,3,3,4,5,5,4,3,2,2,1],
@@ -143,22 +143,23 @@ export class SpriteSheet {
       [1,2,3,3,3,3,3,3,3,3,3,3,3,3,3,3,2,1],
       [1,2,2,3,3,7,7,3,3,3,3,7,7,3,3,2,2,1],
       [0,1,2,2,3,3,3,3,3,3,3,3,3,3,2,2,1,0],
-      [0,1,1,2,2,2,8,8,2,2,8,8,2,2,2,1,1,0],
-      [0,0,1,1,2,2,2,2,2,2,2,2,2,2,1,1,0,0],
+      [0,1,1,2,2,2,8,8,2,9,8,8,2,2,2,1,1,0],
+      [0,0,1,1,2,2,2,9,2,2,9,2,2,2,1,1,0,0],
       [0,0,0,1,1,1,2,2,2,2,2,2,1,1,1,0,0,0],
       [0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0],
     ];
 
     const colors = [
       'transparent',
-      '#22c55e',     // 1 - dark green outline
-      '#4ade80',     // 2 - green slime base
-      '#86efac',     // 3 - green light
-      '#ffffff',     // 4 - eyes white
-      '#f0f0f0',     // 5 - eyes lighter
-      '#e0e0e0',     // 6 - shine top
-      '#10b981',     // 7 - nucleus darker
-      '#16a34a',     // 8 - bottom darker
+      '#22c55e',     // 1 - outline (colored, not black)
+      '#4ade80',     // 2 - slime mid green
+      '#86efac',     // 3 - slime highlight (warm shift toward yellow-green)
+      '#ffffff',     // 4 - eyes white core
+      '#f0f0f0',     // 5 - eyes light
+      '#e0e0e0',     // 6 - top shine (warm)
+      '#10b981',     // 7 - nucleus darker green
+      '#0d7a52',     // 8 - shadow (hue-shifted toward blue-green, cooler)
+      '#66d99d',     // 9 - dithering mid-tone (clustered pattern for organic feel)
     ];
 
     const scale = 3;
@@ -170,6 +171,12 @@ export class SpriteSheet {
         }
       });
     });
+
+    // Add translucent glow (slime glows slightly)
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = 'rgba(134, 239, 172, 0.2)'; // Subtle green glow
+    ctx.fillRect(0, 0, size, size);
+    ctx.globalCompositeOperation = 'source-over';
 
     this.sprites.set('slime', canvas);
   }
