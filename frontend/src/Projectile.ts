@@ -125,10 +125,17 @@ export class Projectile {
     const sprite = SpriteSheet.get(spriteName);
 
     if (sprite) {
-      // PERFORMANCE: Reduced shadow blur (15 → 8)
-      ctx.shadowBlur = 8;
+      // BROTATO-STYLE: Stronger glow and outline for projectile visibility
+      ctx.shadowBlur = 15;
       ctx.shadowColor = this.color;
       ctx.globalCompositeOperation = 'lighter';
+
+      // Add dark outline for clarity
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.radius + 1, 0, Math.PI * 2);
+      ctx.stroke();
 
       // Draw sprite
       ctx.drawImage(
@@ -137,12 +144,19 @@ export class Projectile {
         this.y - sprite.height / 2
       );
     } else {
-      // PERFORMANCE: Simplified fallback (single gradient, reduced shadow blur)
-      ctx.shadowBlur = 10;
+      // BROTATO-STYLE: Enhanced fallback with outline and stronger glow
+      ctx.shadowBlur = 15;
       ctx.shadowColor = this.color;
       ctx.globalCompositeOperation = 'lighter';
 
-      // Single gradient (no outer glow)
+      // Dark outline for visibility
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.radius + 1, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Brighter gradient
       const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius);
       gradient.addColorStop(0, '#ffffff');
       gradient.addColorStop(0.4, this.color);

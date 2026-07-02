@@ -1388,11 +1388,11 @@ export class Enemy {
   draw(ctx: CanvasRenderingContext2D): void {
     ctx.save();
 
-    // BROTATO-STYLE: Thick dark outline for all enemies for visibility
+    // BROTATO-STYLE: Extra thick dark outline for all enemies for maximum visibility
     ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 2.5;
+    ctx.lineWidth = 4;
     ctx.beginPath();
-    ctx.arc(this.x, this.y, this.typeData.radius + 1, 0, Math.PI * 2);
+    ctx.arc(this.x, this.y, this.typeData.radius + 2, 0, Math.PI * 2);
     ctx.stroke();
 
     const sprite = SpriteSheet.get(this.typeData.spriteName);

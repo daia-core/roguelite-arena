@@ -48,7 +48,7 @@ export class SpriteSheet {
     ctx: CanvasRenderingContext2D,
     pixels: number[][],
     colors: string[],
-    scale: number = 3
+    scale: number = 4
   ): void {
     pixels.forEach((row, y) => {
       row.forEach((pixel, x) => {
@@ -62,7 +62,7 @@ export class SpriteSheet {
 
   // ==================== PLAYER SPRITES ====================
   private static createPlayerSprites() {
-    const size = 66;
+    const size = 88;
 
     // IDLE ANIMATION (2 frames, 6 FPS)
     const idleFrame1 = this.createCanvas(size, size);
@@ -137,7 +137,7 @@ export class SpriteSheet {
       '#991b1b',      // 16 - cape outline (colored, not black)
     ];
 
-    const scale = 3;
+    const scale = 4;
     this.drawPixels(idleFrame1.getContext('2d')!, idlePixels1, playerColors, scale);
     this.drawPixels(idleFrame2.getContext('2d')!, idlePixels2, playerColors, scale);
 
@@ -189,7 +189,7 @@ export class SpriteSheet {
   }
 
   private static createSlimeSprite() {
-    const size = 48;
+    const size = 64;
 
     // IDLE ANIMATION (2 frames - squish effect)
     const frame1 = this.createCanvas(size, size);
@@ -251,7 +251,7 @@ export class SpriteSheet {
       '#6ee7b7',     // 9 - dithering mid-tone
     ];
 
-    const scale = 3;
+    const scale = 4;
     this.drawPixels(frame1.getContext('2d')!, pixels1, slimeColors, scale);
     this.drawPixels(frame2.getContext('2d')!, pixels2, slimeColors, scale);
 
@@ -267,7 +267,7 @@ export class SpriteSheet {
   }
 
   private static createGoblinSprite() {
-    const size = 48;
+    const size = 64;
     const canvas = this.createCanvas(size, size);
     const ctx = canvas.getContext('2d')!;
 
@@ -309,14 +309,14 @@ export class SpriteSheet {
       '#52525b',     // 13 - armor dither mid-tone
     ];
 
-    const scale = 3;
+    const scale = 4;
     this.drawPixels(ctx, pixels, goblinColors, scale);
 
     this.sprites.set('goblin', canvas);
   }
 
   private static createSkeletonSprite() {
-    const size = 48;
+    const size = 64;
     const canvas = this.createCanvas(size, size);
     const ctx = canvas.getContext('2d')!;
 
@@ -352,14 +352,14 @@ export class SpriteSheet {
       '#fafaf9',     // 7 - bone highlight (warm shift toward cream-white)
     ];
 
-    const scale = 3;
+    const scale = 4;
     this.drawPixels(ctx, pixels, skeletonColors, scale);
 
     this.sprites.set('skeleton', canvas);
   }
 
   private static createDemonSprite() {
-    const size = 72;
+    const size = 96;
     const canvas = this.createCanvas(size, size);
     const ctx = canvas.getContext('2d')!;
 
@@ -399,7 +399,7 @@ export class SpriteSheet {
       '#f97316',     // 8 - mouth inner hellfire glow (orange-red)
     ];
 
-    const scale = 3;
+    const scale = 4;
     this.drawPixels(ctx, pixels, demonColors, scale);
 
     this.sprites.set('demon', canvas);
@@ -409,7 +409,7 @@ export class SpriteSheet {
   // Due to file size constraints, remaining enemies are static but follow medieval palette
 
   private static createImpSprite() {
-    const size = 48;
+    const size = 64;
     const canvas = this.createCanvas(size, size);
     const ctx = canvas.getContext('2d')!;
 
@@ -444,13 +444,13 @@ export class SpriteSheet {
       '#6b7280',     // 8 - wings mid gray
     ];
 
-    const scale = 3;
+    const scale = 4;
     this.drawPixels(ctx, pixels, impColors, scale);
     this.sprites.set('imp', canvas);
   }
 
   private static createOrcSprite() {
-    const size = 60;
+    const size = 80;
     const canvas = this.createCanvas(size, size);
     const ctx = canvas.getContext('2d')!;
 
@@ -488,13 +488,13 @@ export class SpriteSheet {
       '#292524',     // 10 - armor edge outline
     ];
 
-    const scale = 3;
+    const scale = 4;
     this.drawPixels(ctx, pixels, orcColors, scale);
     this.sprites.set('orc', canvas);
   }
 
   private static createWraithSprite() {
-    const size = 54;
+    const size = 72;
     const canvas = this.createCanvas(size, size);
     const ctx = canvas.getContext('2d')!;
 
@@ -530,13 +530,13 @@ export class SpriteSheet {
       '#c4b5fd',     // 8 - body highlight (ethereal lavender shift)
     ];
 
-    const scale = 3;
+    const scale = 4;
     this.drawPixels(ctx, pixels, wraithColors, scale);
     this.sprites.set('wraith', canvas);
   }
 
   private static createNecromancerSprite() {
-    const size = 54;
+    const size = 72;
     const canvas = this.createCanvas(size, size);
     const ctx = canvas.getContext('2d')!;
 
@@ -572,13 +572,13 @@ export class SpriteSheet {
       '#7c2d12',     // 9 - rune glow red-brown
     ];
 
-    const scale = 3;
+    const scale = 4;
     this.drawPixels(ctx, pixels, necroColors, scale);
     this.sprites.set('necromancer', canvas);
   }
 
   private static createTrollSprite() {
-    const size = 72;
+    const size = 96;
     const canvas = this.createCanvas(size, size);
     const ctx = canvas.getContext('2d')!;
 
@@ -615,13 +615,13 @@ export class SpriteSheet {
       '#84cc16',     // 9 - skin highlight (warm lime shift)
     ];
 
-    const scale = 3;
+    const scale = 4;
     this.drawPixels(ctx, pixels, trollColors, scale);
     this.sprites.set('troll', canvas);
   }
 
   private static createBansheeSprite() {
-    const size = 54;
+    const size = 72;
     const canvas = this.createCanvas(size, size);
     const ctx = canvas.getContext('2d')!;
 
@@ -657,13 +657,13 @@ export class SpriteSheet {
       '#ddd6fe',     // 8 - body highlight (pale lavender shift)
     ];
 
-    const scale = 3;
+    const scale = 4;
     this.drawPixels(ctx, pixels, bansheeColors, scale);
     this.sprites.set('banshee', canvas);
   }
 
   private static createBatSprite() {
-    const size = 42;
+    const size = 56;
     const canvas = this.createCanvas(size, size);
     const ctx = canvas.getContext('2d')!;
 
@@ -691,7 +691,7 @@ export class SpriteSheet {
       '#e7e5e4',     // 6 - fangs ivory
     ];
 
-    const scale = 3;
+    const scale = 4;
     this.drawPixels(ctx, pixels, batColors, scale);
     this.sprites.set('bat', canvas);
   }
@@ -700,7 +700,7 @@ export class SpriteSheet {
   // To stay within file size limits, I'll create placeholder implementations
 
   private static createWizardSprite() {
-    const size = 54;
+    const size = 72;
     const canvas = this.createCanvas(size, size);
     const ctx = canvas.getContext('2d')!;
 
@@ -739,13 +739,13 @@ export class SpriteSheet {
       '#c4b5fd',     // 9 - face highlight
     ];
 
-    const scale = 3;
+    const scale = 4;
     this.drawPixels(ctx, pixels, wizardColors, scale);
     this.sprites.set('wizard', canvas);
   }
 
   private static createMimicSprite() {
-    const size = 48;
+    const size = 64;
     const canvas = this.createCanvas(size, size);
     const ctx = canvas.getContext('2d')!;
 
@@ -784,13 +784,13 @@ export class SpriteSheet {
       '#ef4444',     // 10 - tongue red
     ];
 
-    const scale = 3;
+    const scale = 4;
     this.drawPixels(ctx, pixels, mimicColors, scale);
     this.sprites.set('mimic', canvas);
   }
 
   private static createSpiderSprite() {
-    const size = 48;
+    const size = 64;
     const canvas = this.createCanvas(size, size);
     const ctx = canvas.getContext('2d')!;
 
@@ -825,13 +825,13 @@ export class SpriteSheet {
       '#78716c',     // 7 - body highlight (lighter warm gray)
     ];
 
-    const scale = 3;
+    const scale = 4;
     this.drawPixels(ctx, pixels, spiderColors, scale);
     this.sprites.set('spider', canvas);
   }
 
   private static createGolemSprite() {
-    const size = 72;
+    const size = 96;
     const canvas = this.createCanvas(size, size);
     const ctx = canvas.getContext('2d')!;
 
@@ -868,13 +868,13 @@ export class SpriteSheet {
       '#a8a29e',     // 8 - stone highlight (warm light gray)
     ];
 
-    const scale = 3;
+    const scale = 4;
     this.drawPixels(ctx, pixels, golemColors, scale);
     this.sprites.set('golem', canvas);
   }
 
   private static createGhostSprite() {
-    const size = 48;
+    const size = 64;
     const canvas = this.createCanvas(size, size);
     const ctx = canvas.getContext('2d')!;
 
@@ -911,13 +911,13 @@ export class SpriteSheet {
       '#f5f3ff',     // 8 - body highlight (near white)
     ];
 
-    const scale = 3;
+    const scale = 4;
     this.drawPixels(ctx, pixels, ghostColors, scale);
     this.sprites.set('ghost', canvas);
   }
 
   private static createMushroomSprite() {
-    const size = 42;
+    const size = 56;
     const canvas = this.createCanvas(size, size);
     const ctx = canvas.getContext('2d')!;
 
@@ -951,13 +951,13 @@ export class SpriteSheet {
       '#fecaca',     // 8 - cap highlight (light red)
     ];
 
-    const scale = 3;
+    const scale = 4;
     this.drawPixels(ctx, pixels, mushroomColors, scale);
     this.sprites.set('mushroom', canvas);
   }
 
   private static createGargoyleSprite() {
-    const size = 60;
+    const size = 80;
     const canvas = this.createCanvas(size, size);
     const ctx = canvas.getContext('2d')!;
 
@@ -993,13 +993,13 @@ export class SpriteSheet {
       '#44403c',     // 7 - mouth shadow (dark stone)
     ];
 
-    const scale = 3;
+    const scale = 4;
     this.drawPixels(ctx, pixels, gargoyleColors, scale);
     this.sprites.set('gargoyle', canvas);
   }
 
   private static createBlobSprite() {
-    const size = 48;
+    const size = 64;
     const canvas = this.createCanvas(size, size);
     const ctx = canvas.getContext('2d')!;
 
@@ -1038,13 +1038,13 @@ export class SpriteSheet {
       '#e879f9',     // 9 - surface highlight (fuchsia tint)
     ];
 
-    const scale = 3;
+    const scale = 4;
     this.drawPixels(ctx, pixels, blobColors, scale);
     this.sprites.set('blob', canvas);
   }
 
   private static createNecroEggSprite() {
-    const size = 42;
+    const size = 56;
     const canvas = this.createCanvas(size, size);
     const ctx = canvas.getContext('2d')!;
 
@@ -1081,13 +1081,13 @@ export class SpriteSheet {
       '#7c3aed',     // 8 - surface highlight (violet)
     ];
 
-    const scale = 3;
+    const scale = 4;
     this.drawPixels(ctx, pixels, necroeggColors, scale);
     this.sprites.set('necroegg', canvas);
   }
 
   private static createCyclopsSprite() {
-    const size = 72;
+    const size = 96;
     const canvas = this.createCanvas(size, size);
     const ctx = canvas.getContext('2d')!;
 
@@ -1127,13 +1127,13 @@ export class SpriteSheet {
       '#57534e',     // 10 - fur/loincloth gray-brown
     ];
 
-    const scale = 3;
+    const scale = 4;
     this.drawPixels(ctx, pixels, cyclopsColors, scale);
     this.sprites.set('cyclops', canvas);
   }
 
   private static createPhantomSprite() {
-    const size = 54;
+    const size = 72;
     const canvas = this.createCanvas(size, size);
     const ctx = canvas.getContext('2d')!;
 
@@ -1170,13 +1170,13 @@ export class SpriteSheet {
       '#7c3aed',     // 8 - body highlight (violet shift)
     ];
 
-    const scale = 3;
+    const scale = 4;
     this.drawPixels(ctx, pixels, phantomColors, scale);
     this.sprites.set('phantom', canvas);
   }
 
   private static createDruidSprite() {
-    const size = 54;
+    const size = 72;
     const canvas = this.createCanvas(size, size);
     const ctx = canvas.getContext('2d')!;
 
@@ -1213,13 +1213,13 @@ export class SpriteSheet {
       '#65a30d',     // 9 - leaf/nature accents (olive-green)
     ];
 
-    const scale = 3;
+    const scale = 4;
     this.drawPixels(ctx, pixels, druidColors, scale);
     this.sprites.set('druid', canvas);
   }
 
   private static createConstructSprite() {
-    const size = 60;
+    const size = 80;
     const canvas = this.createCanvas(size, size);
     const ctx = canvas.getContext('2d')!;
 
@@ -1256,7 +1256,7 @@ export class SpriteSheet {
       '#a1a1aa',     // 8 - metal highlight (light gray)
     ];
 
-    const scale = 3;
+    const scale = 4;
     this.drawPixels(ctx, pixels, constructColors, scale);
     this.sprites.set('construct', canvas);
   }
@@ -1288,13 +1288,13 @@ export class SpriteSheet {
       '#f59e0b',     // 2 - bug body (amber/gold)
     ];
 
-    const scale = 3;
+    const scale = 4;
     this.drawPixels(ctx, pixels, swarmColors, scale);
     this.sprites.set('swarm', canvas);
   }
 
   private static createDasherSprite() {
-    const size = 48;
+    const size = 64;
     const canvas = this.createCanvas(size, size);
     const ctx = canvas.getContext('2d')!;
 
@@ -1331,13 +1331,13 @@ export class SpriteSheet {
       '#dc2626',     // 9 - motion blur (semi-transparent effect)
     ];
 
-    const scale = 3;
+    const scale = 4;
     this.drawPixels(ctx, pixels, dasherColors, scale);
     this.sprites.set('dasher', canvas);
   }
 
   private static createEvaderSprite() {
-    const size = 48;
+    const size = 64;
     const canvas = this.createCanvas(size, size);
     const ctx = canvas.getContext('2d')!;
 
@@ -1374,13 +1374,13 @@ export class SpriteSheet {
       '#10b981',     // 9 - afterimage (semi-transparent effect)
     ];
 
-    const scale = 3;
+    const scale = 4;
     this.drawPixels(ctx, pixels, evaderColors, scale);
     this.sprites.set('evader', canvas);
   }
 
   private static createOrbiterSprite() {
-    const size = 48;
+    const size = 64;
     const canvas = this.createCanvas(size, size);
     const ctx = canvas.getContext('2d')!;
 
@@ -1412,13 +1412,13 @@ export class SpriteSheet {
       '#ddd6fe',     // 8 - core highlight (pale purple)
     ];
 
-    const scale = 3;
+    const scale = 4;
     this.drawPixels(ctx, pixels, orbiterColors, scale);
     this.sprites.set('orbiter', canvas);
   }
 
   private static createSpiralerSprite() {
-    const size = 48;
+    const size = 64;
     const canvas = this.createCanvas(size, size);
     const ctx = canvas.getContext('2d')!;
 
@@ -1453,7 +1453,7 @@ export class SpriteSheet {
       '#5eead4',     // 8 - highlight (teal tint)
     ];
 
-    const scale = 3;
+    const scale = 4;
     this.drawPixels(ctx, pixels, spiralerColors, scale);
     this.sprites.set('spiraler', canvas);
   }
