@@ -8,6 +8,40 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-02 (night) — Damage-type split (melee / ranged / elemental)
+
+**Player-visible**
+- Damage now splits into three lanes. Items can boost **melee**, **ranged**, or **elemental**
+  damage *independently*, so a melee build and a ranged build are now mechanically different —
+  not just cosmetic tags. Completes the "different builds" ask (Part 6 of the design doc).
+- 7 new specialisation items, each with a real cross-lane cost:
+  - Ranged — **Marksman Scope** (T1, +20% ranged / −8% fire rate), **Sniper's Focus** (T2, +40% ranged / −25% move speed).
+  - Melee — **Warhammer Grip** (T1, +22% melee / −10% move speed), **Brawler's Rage** (T2, +45% melee / −12% ranged).
+  - Elemental — **Storm Conduit** (T2, +35% elemental / −12% dmg), **Overcharged Core** (T3, +55% elemental / +12% fire rate / −3 armor), **Prism Lens** (T4, +90% elemental).
+- Elemental multiplier scales the chain-lightning and explosion-on-hit damage, giving the
+  "elemental mage" build a real power knob.
+
+**Under the hood**
+- `PlayerStats`: new `getMeleeDamageMult` / `getRangedDamageMult` / `getElementalDamageMult`
+  (product of the matching item field, default 1 → fully backward compatible) plus
+  `getMeleeDamage` / `getRangedDamage` (global damage × lane multiplier).
+- Wired at the three real damage points: ranged projectile spawn (`Player.ts`), melee swing
+  (`Player.ts`), and on-hit elemental effects (`Game.ts applyOnHitEffects` — chain + explosion).
+- Range stat deliberately NOT added: auto-aim currently acquires the globally-nearest enemy
+  (no radius cap), so a `range` stat would be a dead stat until a targeting refactor — held to
+  avoid repeating the old `xpMagnet` placebo bug.
+
+**Commit** `a38dd87`
+**Live verified** `qa-damagetype.mjs` builds the shipped `frontend/dist`, drives it headless,
+6/6 cases PASS, 0 console errors: mults default to 1 with no items (backward compat); a melee
+item raises melee only (36.25 vs base 25) and leaves ranged untouched; a ranged item raises
+ranged only; lane damage composes with global (`getMeleeDamage === getDamage × mult`); elemental
+stacks across items (1.35×1.55=2.09); and the real DB items shipped with the right fields. Prod
+serves `index-DQn9eRTB.js` (258,254 B) containing `snipers_focus_t2` / `Overcharged Core` /
+`rangedDamageMult` / `Prism Lens`; bundle 200.
+
+---
+
 ## 2026-07-02 (night) — Build-diversity behavioral verification (no code change)
 
 **Under the hood**
