@@ -3,11 +3,22 @@
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
+import { execSync } from 'node:child_process';
 import puppeteer from 'puppeteer-core';
 
-const ROOT = '/workspace/canvas/roguelite';
+const FRONTEND = '/workspace/work/roguelite-game/frontend';
+const ROOT = path.join(FRONTEND, 'dist'); // the deployed Vite build — NOT the stale canvas copy
 const OUT = '/workspace/work/roguelite-game/shots/pixel-art';
 fs.mkdirSync(OUT, { recursive: true });
+
+// Build fresh so QA always exercises exactly what ships.
+console.log('Building frontend (npm run build)...');
+try {
+  execSync('npm run build', { cwd: FRONTEND, stdio: 'inherit' });
+} catch (e) {
+  console.error('BUILD FAILED — cannot QA a build that does not compile.');
+  process.exit(1);
+}
 
 const MIME = {
   '.html':'text/html',
@@ -23,12 +34,9 @@ const server = http.createServer((req, res) => {
   let p = decodeURIComponent(req.url.split('?')[0]);
   if (p === '/') p = '/index.html';
 
-  const CANVAS_ROOT = '/workspace/canvas';
-  const file = p.startsWith('/canvas/')
-    ? path.join(CANVAS_ROOT, p.replace(/^\/canvas\//, ''))
-    : path.join(ROOT, p);
+  const file = path.join(ROOT, p);
 
-  if ((!file.startsWith(ROOT) && !file.startsWith(CANVAS_ROOT)) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
+  if (!file.startsWith(ROOT) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
     res.writeHead(404);
     res.end('not found');
     return;

@@ -1,14 +1,27 @@
 #!/usr/bin/env node
 // Roguelite QA harness — adapted from Mission Control harness
-// Serves the roguelite canvas, drives Chromium, captures errors, and screenshots
+// Builds a fresh production bundle, serves frontend/dist (what actually ships),
+// drives Chromium, captures errors, and screenshots.
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
+import { execSync } from 'node:child_process';
 import puppeteer from 'puppeteer-core';
 
-const ROOT = '/workspace/canvas/roguelite';
+const FRONTEND = '/workspace/work/roguelite-game/frontend';
+const ROOT = path.join(FRONTEND, 'dist'); // the deployed Vite build — NOT the stale canvas copy
 const OUT = '/workspace/work/roguelite-game/shots/qa';
 fs.mkdirSync(OUT, { recursive: true });
+
+// Build fresh so QA always exercises exactly what ships (prevents testing a stale dist).
+console.log('Building frontend (npm run build)...');
+try {
+  execSync('npm run build', { cwd: FRONTEND, stdio: 'inherit' });
+} catch (e) {
+  console.error('\n=== Roguelite QA Report ===');
+  console.error('BUILD FAILED — cannot QA a build that does not compile.');
+  process.exit(1);
+}
 
 const MIME = {
   '.html':'text/html',
@@ -24,12 +37,9 @@ const server = http.createServer((req, res) => {
   let p = decodeURIComponent(req.url.split('?')[0]);
   if (p === '/') p = '/index.html';
 
-  const CANVAS_ROOT = '/workspace/canvas';
-  const file = p.startsWith('/canvas/')
-    ? path.join(CANVAS_ROOT, p.replace(/^\/canvas\//, ''))
-    : path.join(ROOT, p);
+  const file = path.join(ROOT, p);
 
-  if ((!file.startsWith(ROOT) && !file.startsWith(CANVAS_ROOT)) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
+  if (!file.startsWith(ROOT) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
     res.writeHead(404);
     res.end('not found');
     return;
