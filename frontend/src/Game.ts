@@ -89,6 +89,7 @@ export class Game {
   lockedShopItems: Set<number> = new Set(); // FREE locking (no 5g cost)
   itemsPurchasedThisWave: number = 0; // Track for free reroll bonus
   lastInterestGained: number = 0; // Gold earned from banking interest this shop (for display)
+  showCombosOverlay: boolean = false; // COMBOS guide overlay (explains synergies/duos)
 
   // Stats
   kills: number = 0;
@@ -1357,6 +1358,7 @@ export class Game {
   }
 
   private enterShop(): void {
+    this.showCombosOverlay = false; // always open the shop on the buy screen
     // BANKING INTEREST: reward saving gold — you earn interest on your balance
     // when you reach the shop. Capped so hoarding can't snowball out of control,
     // and it plays against rising shop prices (spend now vs. bank for a big buy).
@@ -1612,6 +1614,17 @@ export class Game {
     };
   }
 
+  // "COMBOS ?" help button — top-left of the shop header (stats panel sits below
+  // it on mobile; the inventory panel is top-right on desktop, so left is clear).
+  private getCombosButtonRect() {
+    const zoom = this.canvas.clientWidth ? this.canvas.width / this.canvas.clientWidth : 1;
+    const s = (v: number) => Math.round(v * zoom);
+    const isMobile = this.canvas.width / zoom < 800;
+    const width = s(isMobile ? 96 : 108);
+    const height = s(isMobile ? 30 : 30);
+    return { x: s(8), y: s(6), width, height };
+  }
+
   private updateShop(): void {
     if (!this.player) return;
 
@@ -1623,6 +1636,23 @@ export class Game {
       buttonWidth, buttonHeight, continueY, rerollY } = this.getShopLayout();
 
     this.selectedShopItem = -1;
+
+    // COMBOS guide button (top-right of shop header) — explains synergies/duos.
+    const combosBtn = this.getCombosButtonRect();
+    // When the overlay is open it owns ALL input: a tap on the button toggles it
+    // off, a tap anywhere else closes it. Nothing beneath it is interactable.
+    if (this.showCombosOverlay) {
+      if (this.input.mouseDown) {
+        this.showCombosOverlay = false;
+        this.input.mouseDown = false;
+      }
+      return;
+    }
+    if (pointInRect(mouseX, mouseY, combosBtn) && this.input.mouseDown) {
+      this.showCombosOverlay = true;
+      this.input.mouseDown = false;
+      return;
+    }
 
     for (let i = 0; i < this.shopItems.length; i++) {
       const item = this.shopItems[i];
@@ -2265,6 +2295,30 @@ export class Game {
       });
     }
   }
+
+  // Duo/combo info for a shop card so synergies are legible: which named combo this item
+  // belongs to, its partner, its effect, and whether buying it would COMPLETE the combo.
+  // Prefers a duo you can complete now; otherwise surfaces one to teach the pairing.
+  private getCardDuoInfo(item: Item): { name: string; partner: string; effect: string; completes: boolean } | null {
+    let discovery: { name: string; partner: string; effect: string; completes: boolean } | null = null;
+    for (const duo of DUO_COMBOS) {
+      const isItem1 = item.id === duo.item1Id;
+      const isItem2 = item.id === duo.item2Id;
+      if (!isItem1 && !isItem2) continue;
+      const partnerId = isItem1 ? duo.item2Id : duo.item1Id;
+      const partner = ItemDatabase.getItemById(partnerId);
+      const ownsPartner = this.playerStats.items.some(o => o.id === partnerId);
+      const effect = duo.specialEffect || duo.description;
+      if (ownsPartner) {
+        // Buying this completes the combo — highest priority, return immediately.
+        return { name: duo.name, partner: partner?.name ?? '?', effect, completes: true };
+      }
+      // Otherwise remember the first pairing to teach ("combos with X").
+      if (!discovery) discovery = { name: duo.name, partner: partner?.name ?? '?', effect, completes: false };
+    }
+    return discovery;
+  }
+
   private drawShop(): void {
     const { s, isMobile, itemWidth, itemHeight, gap, startX, startY, lockButtonSize,
       buttonWidth, buttonHeight, continueY, rerollY,
@@ -2290,6 +2344,26 @@ export class Game {
       align: 'center',
       color: '#ffd700'
     });
+
+    // COMBOS help button (top-left) — opens the synergy guide. Shows the count of
+    // active duos so a live combo is visible at a glance and invites a tap.
+    {
+      const btn = this.getCombosButtonRect();
+      const activeCount = this.playerStats.getActiveDuos().length;
+      ctx.save();
+      ctx.fillStyle = activeCount > 0 ? '#3d2f12' : '#2e1c0e';
+      ctx.fillRect(btn.x, btn.y, btn.width, btn.height);
+      ctx.strokeStyle = activeCount > 0 ? '#ffd43b' : '#c8a15a';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(btn.x, btn.y, btn.width, btn.height);
+      ctx.restore();
+      const label = activeCount > 0 ? `COMBOS ${activeCount}★` : 'COMBOS ?';
+      this.renderer.drawText(label, btn.x + btn.width / 2, btn.y + Math.round(btn.height * 0.28), {
+        size: s(8),
+        align: 'center',
+        color: activeCount > 0 ? '#ffe066' : '#e5d9c3'
+      });
+    }
 
     // Banking interest earned this shop (save-vs-spend feedback)
     if (this.lastInterestGained > 0) {
@@ -2453,16 +2527,10 @@ export class Game {
       const matchingTags = item.tags.filter(tag => ownedTags.includes(tag));
       const hasTagMatch = matchingTags.length > 0;
       const isDuplicate = this.playerStats.items.some(owned => owned.id === item.id);
-      // Buying this would complete a duo combo — the game's biggest
-      // threshold moment, so it gets the loudest highlight
-      const completesDuo = DUO_COMBOS.some((duo) => {
-        const ownsFirst = this.playerStats.items.some((o) => o.id === duo.item1Id);
-        const ownsSecond = this.playerStats.items.some((o) => o.id === duo.item2Id);
-        return (
-          (ownsFirst && !ownsSecond && item.id === duo.item2Id) ||
-          (ownsSecond && !ownsFirst && item.id === duo.item1Id)
-        );
-      });
+      // Named combo this item is part of (its effect + partner + whether buying completes it).
+      // Completing a duo is the game's biggest threshold moment → loudest highlight.
+      const duoInfo = this.getCardDuoInfo(item);
+      const completesDuo = duoInfo?.completes ?? false;
 
       // Card: wood panel with a crisp rarity/synergy-colored inner border
       // (pixel-art treatment — no glows, no gradients)
@@ -2520,17 +2588,20 @@ export class Game {
         });
       }
 
-      // BROTATO-INSPIRED: Enhanced synergy indicator showing type
-      if (completesDuo || isDuplicate || hasTagMatch || hasSynergy) {
+      // Synergy indicator — NAME the combo so it's legible, not a vague "SYNERGY".
+      // Priority: completes a named duo > teaches an unowned duo pairing > tag synergy.
+      if (completesDuo || duoInfo || hasTagMatch || hasSynergy) {
         let indicatorText = '';
         let indicatorColor = '#00ff00';
-        if (completesDuo) {
-          indicatorText = 'DUO COMBO!';
+        if (completesDuo && duoInfo) {
+          // You own the partner — buying this fires the combo now.
+          indicatorText = `⚡ ${duoInfo.name.toUpperCase()}`;
           indicatorColor = '#ffd43b';
-        } else
-
-        // Don't show "DUPLICATE" text - just show synergy indicators
-        if (hasTagMatch) {
+        } else if (duoInfo) {
+          // Part of a named combo you don't have the partner for yet — teach the pairing.
+          indicatorText = `🔗 + ${duoInfo.partner}`;
+          indicatorColor = '#74c0fc';
+        } else if (hasTagMatch) {
           // Show which tags match
           const tagIcons: Record<ItemTag, string> = {
             melee: '⚔️',
@@ -2552,7 +2623,8 @@ export class Game {
           this.renderer.drawText(indicatorText, x + itemWidth / 2, y + s(6), {
             size: synergySize,
             align: 'center',
-            color: indicatorColor
+            color: indicatorColor,
+            maxWidth: itemWidth - s(10)
           });
         }
       }
@@ -2570,12 +2642,22 @@ export class Game {
         color: rarityColor
       });
 
-      // Description (more compact)
-      this.renderer.drawText(item.description, x + itemWidth / 2, y + descY, {
-        size: descSize,
-        align: 'center',
-        color: '#e5d9c3'
-      });
+      // Description (more compact) — swapped for the combo payoff when you'd complete a duo,
+      // so the card tells you WHAT the synergy does at the moment of decision, not just its name.
+      if (completesDuo && duoInfo) {
+        this.renderer.drawText(duoInfo.effect, x + itemWidth / 2, y + descY, {
+          size: descSize,
+          align: 'center',
+          color: '#ffe066',
+          maxWidth: itemWidth - s(12)
+        });
+      } else {
+        this.renderer.drawText(item.description, x + itemWidth / 2, y + descY, {
+          size: descSize,
+          align: 'center',
+          color: '#e5d9c3'
+        });
+      }
 
       // Cost with better styling (bottom, prominent)
       const finalPrice = this.playerStats.getItemPrice(item, this.waveManager.currentWave);

@@ -1,7 +1,7 @@
 // Advanced item and upgrade system with tiers, tags, and Brotato-inspired mechanics
 
 import { TransformationTracker } from './TransformationSystem';
-import { DuoTracker, DUO_COMBOS } from './DuoSystem';
+import { DuoTracker, DUO_COMBOS, type DuoCombo } from './DuoSystem';
 
 export const ItemTier = {
   Common: 1,
@@ -1634,14 +1634,48 @@ export class ItemDatabase {
     return this.items.find(item => item.id === id);
   }
 
+  // Whether a SECOND copy of this item does anything. Items whose only effects are
+  // boolean/weapon flags don't stack — hasShield/hasHoming/hasPoison/hasExplosionOnHit
+  // aggregate with .some() and getWeaponType() picks the first weapon with .find(), so a
+  // duplicate is pure wasted gold. Anything with an additive or multiplicative stat DOES
+  // stack (that stat accumulates), so it stays rebuyable. Used to hide owned non-stacking
+  // items from the shop.
+  private static readonly MULT_KEYS: (keyof Item)[] = [
+    'damageMultiplier', 'meleeDamageMult', 'rangedDamageMult', 'elementalDamageMult',
+    'fireRateMultiplier', 'critDamageMultiplier', 'speedMultiplier', 'goldBonus'
+  ];
+  private static readonly ADD_KEYS: (keyof Item)[] = [
+    'critChance', 'maxHealthBonus', 'healthRegen', 'armor', 'lifesteal', 'thorns',
+    'multishot', 'piercing', 'projectileSpeed', 'knockback', 'dodge', 'chainLightning',
+    'freeze', 'rerollDiscount', 'shopDiscount', 'recycleBonus', 'interestBonus', 'luck', 'xpMagnet'
+  ];
+
+  static itemStacks(item: Item): boolean {
+    for (const k of this.MULT_KEYS) {
+      const v = item[k] as number | undefined;
+      if (typeof v === 'number' && v !== 1) return true; // multiplier ≠ neutral 1
+    }
+    for (const k of this.ADD_KEYS) {
+      const v = item[k] as number | undefined;
+      if (typeof v === 'number' && v !== 0) return true; // additive ≠ neutral 0
+    }
+    return false; // only boolean/weapon flags left → a duplicate is wasted
+  }
+
   // BROTATO-INSPIRED WEIGHTED SHOP SYSTEM
   // Promotes synergistic builds by weighting shop offerings based on owned items
   static getWeightedShopItems(count: number, wave: number, playerItems: Item[], luck: number = 0): Item[] {
     const result: Item[] = [];
 
-    // Get tier-appropriate items for this wave
+    // Owned items that gain NOTHING from a duplicate — never offer these again.
+    const nonStackOwned = new Set(
+      playerItems.filter(i => !this.itemStacks(i)).map(i => i.id)
+    );
+
+    // Get tier-appropriate items for this wave (owned non-stacking items filtered out)
     const getWaveAppropriteItems = (): Item[] => {
       return this.getUnlockedItems().filter(item => {
+        if (nonStackOwned.has(item.id)) return false; // already own it and a dupe is useless
         if (wave <= 2) return item.tier === ItemTier.Common;
         if (wave <= 5) return item.tier <= ItemTier.Uncommon;
         if (wave <= 10) return item.tier <= ItemTier.Rare;
@@ -2123,6 +2157,36 @@ export class PlayerStats {
     if ((item.shopDiscount || item.rerollDiscount) && this.items.some(i => i.goldBonus)) return true;
 
     return false;
+  }
+
+  // ── Synergy-clarity helpers (feed the shop's COMBOS panel) ──
+
+  // Duos the player has BOTH items for (currently active / firing now).
+  getActiveDuos(): DuoCombo[] {
+    return DUO_COMBOS.filter(duo =>
+      this.items.some(o => o.id === duo.item1Id) &&
+      this.items.some(o => o.id === duo.item2Id)
+    );
+  }
+
+  // Duos the player is exactly one item away from, plus the still-needed
+  // partner — so the shop can say "have X → get Y → <effect>".
+  getPotentialDuos(): Array<{ duo: DuoCombo; owned: Item | undefined; needed: Item | undefined }> {
+    const out: Array<{ duo: DuoCombo; owned: Item | undefined; needed: Item | undefined }> = [];
+    for (const duo of DUO_COMBOS) {
+      const ownsFirst = this.items.some(o => o.id === duo.item1Id);
+      const ownsSecond = this.items.some(o => o.id === duo.item2Id);
+      if (ownsFirst !== ownsSecond) {
+        const ownedId = ownsFirst ? duo.item1Id : duo.item2Id;
+        const neededId = ownsFirst ? duo.item2Id : duo.item1Id;
+        out.push({
+          duo,
+          owned: ItemDatabase.getItemById(ownedId),
+          needed: ItemDatabase.getItemById(neededId),
+        });
+      }
+    }
+    return out;
   }
 
   // Weapon specialization bonus

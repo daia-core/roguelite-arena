@@ -90,6 +90,49 @@ const r2 = await page.evaluate(() => {
   };
 });
 
+// --- Test 3: non-stacking items are hidden from the shop once owned ---
+// homing_t3 (Seeking Rune) is pure `homing:true` → a 2nd copy does nothing (hasHoming uses
+// .some()), so once owned it must never be offered. damage_t1 (Iron Ring) stacks → stays offered.
+const r3 = await page.evaluate(() => {
+  const DB = window.__ItemDatabase;
+  const homing = DB.getItemById('homing_t3');   // non-stacking (boolean flag only)
+  const iron = DB.getItemById('damage_t1');      // stacking (damageMultiplier)
+  const stacksHoming = DB.itemStacks(homing);
+  const stacksIron = DB.itemStacks(iron);
+  // Own BOTH; roll a big sample of end-game shops (all tiers unlocked at wave 11).
+  const owned = [homing, iron];
+  let homingOffered = 0, ironOffered = 0;
+  for (let n = 0; n < 400; n++) {
+    const shop = DB.getWeightedShopItems(6, 11, owned, 0);
+    for (const it of shop) {
+      if (it.id === 'homing_t3') homingOffered++;
+      if (it.id === 'damage_t1') ironOffered++;
+    }
+  }
+  return { stacksHoming, stacksIron, homingOffered, ironOffered };
+});
+
+// --- Test 4: synergies are legible — the card knows the named combo + partner + effect ---
+const r4 = await page.evaluate(() => {
+  const g = window.__game;
+  const DB = window.__ItemDatabase;
+  const storm = DB.getItemById('chain_lightning_t3'); // Storm Essence, half of Storm Surge
+  const iron = DB.getItemById('damage_t1');            // not in any duo
+  // (a) partner NOT owned → discovery info (teaches the pairing), completes=false
+  g.playerStats.items = [];
+  const discovery = g.getCardDuoInfo(storm);
+  // (b) own the partner (Seeking Rune) → completing the combo now
+  g.playerStats.items = [DB.getItemById('homing_t3')];
+  const completing = g.getCardDuoInfo(storm);
+  // (c) item in no duo → null
+  const none = g.getCardDuoInfo(iron);
+  return {
+    discovery: { name: discovery?.name, partner: discovery?.partner, completes: discovery?.completes, hasEffect: !!discovery?.effect },
+    completing: { name: completing?.name, partner: completing?.partner, completes: completing?.completes },
+    noneIsNull: none === null,
+  };
+});
+
 await page.screenshot({ path: '/tmp/roguelite-mechanics-shop.png' });
 await browser.close();
 server.close();
@@ -101,9 +144,23 @@ const result = {
     pass: r1.state === 'shop' && r1.interest === 12 && r1.gold === 212,
   },
   test2_statLogic: { ...r2, pass: r2.dmgWentUp && r2.armorWentDown && r2.hpWentDown && Math.abs(r2.interestBonus - 0.08) < 1e-9 },
+  test3_nonStackingExcluded: {
+    ...r3,
+    // homing is non-stacking (never re-offered when owned); iron stacks (still shows up).
+    pass: r3.stacksHoming === false && r3.stacksIron === true && r3.homingOffered === 0 && r3.ironOffered > 0,
+  },
+  test4_synergyLegible: {
+    ...r4,
+    pass:
+      r4.discovery.name === 'Storm Surge' && r4.discovery.partner === 'Seeking Rune' &&
+      r4.discovery.completes === false && r4.discovery.hasEffect === true &&
+      r4.completing.name === 'Storm Surge' && r4.completing.completes === true &&
+      r4.noneIsNull === true,
+  },
   errors,
 };
 console.log(JSON.stringify(result, null, 2));
-const ok = result.test1_baseInterest.pass && result.test2_statLogic.pass && errors.length === 0;
+const ok = result.test1_baseInterest.pass && result.test2_statLogic.pass &&
+  result.test3_nonStackingExcluded.pass && result.test4_synergyLegible.pass && errors.length === 0;
 console.log(ok ? 'ALL PASS' : 'FAIL');
 process.exit(ok ? 0 : 1);
