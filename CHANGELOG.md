@@ -26,12 +26,14 @@ origin doesn't move as you drag (the knob moves, not the origin)."*
   `height−140`); `touchmove` never rewrites them, so the origin is naturally fixed for the gesture.
   `getMovementVector()` divisor 70 → 100 to match the `touchmove` clamp radius.
 
-**Commit** `<this deploy>`.
-**Verified** headless synthetic-touch harness on the shipped build AND on live
-(`index-D4JSOll_.js`): a `touchstart` at 68%/30% of the canvas anchors the origin exactly at that
-point (fixedX/Y == computed touch coords), a following `touchmove` leaves the origin unchanged while
-the knob delta + movement vector respond (delta 90/20 → move 0.8/0.5), 0 console errors. Mobile
-390×844 screenshot shows the base + knob rendering under the touch, not the old corner.
+**Commit** `60c3487` (fix) + `d59a621` (`qa-joystick.mjs` regression harness).
+**Verified & LIVE** at `index-D4JSOll_.js` (the fix was committed earlier but production still served
+the pre-joystick speed build until this deploy — now shipped). `qa-joystick.mjs` transpiles the real
+`Input.ts` and drives synthetic touch through a mock DOM: a `touchstart` at 60%/40% of the canvas
+anchors the origin exactly at that point (fixedX/Y == computed touch coords 480/560), a following
+`touchmove` leaves the origin unchanged while the knob clamps to radius 100 and a full-tilt drag
+reads |vector| = 1.000 — **5/5 checks pass**. Live mobile 390×844: game loads/starts, 0 console
+errors, HUD + sprites clean.
 
 ---
 
