@@ -22,6 +22,8 @@ import { EntityCuller } from './EntityCuller';
 import { PathfindingSystem } from './PathfindingSystem';
 import { ScreenEffects, ShakePresets } from './ScreenEffects';
 import { ParticleBatchRenderer } from './ParticleBatchRenderer';
+import { drawPanel, DARK_WOOD_THEME } from './pixel/panel';
+import { UISprites } from './UISprites';
 
 export type GameState = 'menu' | 'playing' | 'shop' | 'paused' | 'gameover' | 'upgrades';
 
@@ -113,6 +115,9 @@ export class Game {
   waveModifierTimer: number = 0;
 
   constructor(canvas: HTMLCanvasElement) {
+    // Dev/QA hook: lets tooling (screenshot scripts, the shots-qa harness)
+    // inspect and force game state. Not a public API.
+    (window as unknown as { __game: Game }).__game = this;
     this.canvas = canvas;
     this.renderer = new Renderer(canvas);
     this.input = new Input(canvas);
@@ -169,6 +174,15 @@ export class Game {
 
     // GAME FEEL: Initialize screen effects
     this.screenEffects = new ScreenEffects();
+
+    // Quadtree bounds and the pathfinding grid depend on canvas size, which is
+    // only set by resizeCanvas() after construction — main.ts calls this on every resize
+    window.addEventListener('game-resize', () => {
+      const { width, height } = this.canvas;
+      this.enemyQuadtree = new Quadtree({ x: 0, y: 0, width, height });
+      this.projectileQuadtree = new Quadtree({ x: 0, y: 0, width, height });
+      this.pathfindingSystem = new PathfindingSystem(width, height, 32);
+    });
 
     // PERFORMANCE: Initialize batch particle renderer
     this.particleBatchRenderer = new ParticleBatchRenderer();
@@ -479,15 +493,9 @@ export class Game {
       // Skip further processing for dead enemies
       if (enemy.dead) continue;
 
-      // Enemy shooting
+      // Enemy shooting (pattern-based: single/ring/homing/spiral/burst)
       if (result.shouldShoot) {
-        const angle = enemy.getAngleToPlayer(this.player.x, this.player.y);
-        // Wizard fires homing projectiles (slightly curved toward player - handled in projectile update)
-        // PERFORMANCE: Use pooled projectile
-        const proj = this.projectilePool.acquire();
-        proj.init(enemy.x, enemy.y, angle, enemy.typeData.damage, enemy.type === 'wizard' ? 250 : 300, false);
-        this.projectiles.push(proj);
-        this.audio.playShoot();
+        this.fireEnemyPattern(enemy);
       }
 
       // Golem stomp
@@ -684,6 +692,19 @@ export class Game {
 
     // Projectiles
     for (const proj of this.projectiles) {
+      // Homing enemy shots curve toward the player (capped turn rate)
+      if (proj.homing && !proj.fromPlayer) {
+        const desired = Math.atan2(this.player.y - proj.y, this.player.x - proj.x);
+        const current = Math.atan2(proj.vy, proj.vx);
+        let delta = desired - current;
+        while (delta > Math.PI) delta -= Math.PI * 2;
+        while (delta < -Math.PI) delta += Math.PI * 2;
+        const maxTurn = proj.turnSpeed * scaledDt;
+        const turn = Math.max(-maxTurn, Math.min(maxTurn, delta));
+        const speed = Math.hypot(proj.vx, proj.vy);
+        proj.vx = Math.cos(current + turn) * speed;
+        proj.vy = Math.sin(current + turn) * speed;
+      }
       proj.update(scaledDt, this.canvas.width, this.canvas.height);
 
       // Skip collision detection for projectiles that are already dead
@@ -1273,31 +1294,133 @@ export class Game {
     this.autoSave();
   }
 
+  /** Emit an enemy's shots according to its fire pattern. */
+  private fireEnemyPattern(enemy: Enemy): void {
+    if (!this.player) return;
+    const pattern = enemy.typeData.firePattern ?? 'single';
+    const damage = enemy.typeData.damage;
+
+    const spawn = (
+      angle: number,
+      speed: number,
+      opts: { homing?: boolean; color?: string; radius?: number } = {}
+    ) => {
+      const proj = this.projectilePool.acquire();
+      proj.init(enemy.x, enemy.y, angle, damage, speed, false);
+      if (opts.homing) {
+        proj.homing = true;
+        proj.turnSpeed = 2.2;
+      }
+      if (opts.color) proj.color = opts.color;
+      if (opts.radius) proj.radius = opts.radius;
+      this.projectiles.push(proj);
+    };
+
+    const angleToPlayer = enemy.getAngleToPlayer(this.player.x, this.player.y);
+
+    switch (pattern) {
+      case 'ring': {
+        // Rotating ring — successive rings are offset so lanes shift
+        const count = 8;
+        enemy.patternPhase += Math.PI / 8;
+        for (let i = 0; i < count; i++) {
+          spawn(enemy.patternPhase + (Math.PI * 2 * i) / count, 210, { color: '#ffa94d' });
+        }
+        break;
+      }
+      case 'spiral': {
+        // Twin arms sweeping around: rapid fire rate turns this into a spiral
+        enemy.patternPhase += 0.45;
+        spawn(enemy.patternPhase, 230, { color: '#38d9a9' });
+        spawn(enemy.patternPhase + Math.PI, 230, { color: '#38d9a9' });
+        break;
+      }
+      case 'homing': {
+        spawn(angleToPlayer, 190, { homing: true, color: '#e599f7', radius: 12 });
+        break;
+      }
+      case 'burst': {
+        // Aimed fan toward the player
+        for (let i = -2; i <= 2; i++) {
+          spawn(angleToPlayer + i * 0.22, 280, { color: '#ff8787' });
+        }
+        break;
+      }
+      default:
+        spawn(angleToPlayer, enemy.type === 'wizard' ? 250 : 300);
+    }
+    this.audio.playShoot();
+  }
+
+  /**
+   * Shared shop layout for drawShop + updateShop — click hitboxes MUST match
+   * visuals, so both consume this. Values are canvas px, derived from display
+   * (CSS) sizes via the zoom factor so the shop reads identically at any zoom.
+   */
+  private getShopLayout() {
+    const zoom = this.canvas.clientWidth ? this.canvas.width / this.canvas.clientWidth : 1;
+    const cssW = this.canvas.width / zoom;
+    const cssH = this.canvas.height / zoom;
+    const isPortrait = cssW < cssH;
+    const isMobile = cssW < 800;
+    const s = (v: number) => Math.round(v * zoom);
+
+    const itemWidth = isPortrait
+      ? s(Math.min(300, cssW - 32))
+      : isMobile
+        ? s(Math.min(360, cssW - 60))
+        : s(200);
+    const itemHeight = isPortrait ? s(92) : isMobile ? s(100) : s(150);
+    const gap = s(isPortrait ? 8 : 12);
+
+    let startX: number;
+    let startY: number;
+    if (isMobile) {
+      startX = Math.round((this.canvas.width - itemWidth) / 2);
+      startY = s(isPortrait ? 118 : 96);
+    } else {
+      startX = Math.round(this.canvas.width / 2 - (itemWidth * 3 + gap * 2) / 2);
+      startY = s(120);
+    }
+
+    const buttonWidth = s(isMobile ? 240 : 220);
+    const buttonHeight = s(isMobile ? 48 : 44);
+    const buttonSpacing = s(10);
+    const rows = isMobile ? 6 : 2;
+    const itemsEndY = startY + rows * (itemHeight + gap);
+    const continueY = Math.min(
+      itemsEndY + s(10),
+      this.canvas.height - buttonHeight * 2 - buttonSpacing - s(14)
+    );
+    const rerollY = continueY + buttonHeight + buttonSpacing;
+
+    return {
+      zoom, s, isPortrait, isMobile,
+      itemWidth, itemHeight, gap, startX, startY,
+      lockButtonSize: s(isMobile ? 34 : 26),
+      buttonWidth, buttonHeight, continueY, rerollY,
+      // Card content offsets/sizes (within a card)
+      iconY: Math.round(itemHeight * 0.14),
+      iconSize: s(isMobile ? 26 : 30),
+      nameY: Math.round(itemHeight * 0.46),
+      nameSize: s(isMobile ? 9 : 10),
+      descY: Math.round(itemHeight * 0.63),
+      descSize: s(8),
+      costY: Math.round(itemHeight * 0.8),
+      costSize: s(11),
+      synergySize: s(7),
+    };
+  }
+
   private updateShop(): void {
     if (!this.player) return;
 
     const mouseX = this.input.mouseX;
     const mouseY = this.input.mouseY;
 
-    // Responsive layout - 6 shop slots
-    const isPortrait = this.canvas.width < this.canvas.height;
-    const isMobile = this.canvas.width < 800;
-    const itemWidth = isPortrait ? Math.min(280, this.canvas.width - 40) : isMobile ? Math.min(360, this.canvas.width - 40) : 180;
-    const itemHeight = isPortrait ? 185 : isMobile ? 210 : 140; // Taller for recycle button
-    const gap = isPortrait ? 10 : isMobile ? 16 : 18;
-
-    let startX: number, startY: number;
-
-    if (isMobile) {
-      // Vertical stack on mobile (6 items)
-      startX = (this.canvas.width - itemWidth) / 2;
-      startY = isPortrait ? 110 : 145;
-    } else {
-      // Desktop: 3x2 grid for 6 items
-      const gridCols = 3;
-      startX = this.canvas.width / 2 - (itemWidth * gridCols + gap * (gridCols - 1)) / 2;
-      startY = 180;
-    }
+    // Layout shared with drawShop so hitboxes always match visuals
+    const { s, isMobile, itemWidth, itemHeight, gap, startX, startY, lockButtonSize,
+      buttonWidth, buttonHeight, continueY, rerollY } = this.getShopLayout();
 
     this.selectedShopItem = -1;
 
@@ -1315,14 +1438,13 @@ export class Game {
       const y = isMobile ? startY + i * (itemHeight + gap) : startY + gridRow * (itemHeight + gap);
 
       // FREE LOCKING: Lock button in top-right corner (NO 5g cost)
-      const lockButtonSize = isMobile ? 50 : 28;
-      const lockButtonX = x + itemWidth - lockButtonSize - 5;
-      const lockButtonY = y + 5;
+      const lockButtonX = x + itemWidth - lockButtonSize - s(4);
+      const lockButtonY = y + s(4);
 
       // RECYCLING: Recycle button in bottom-left corner
-      const recycleButtonSize = isMobile ? 50 : 28;
-      const recycleButtonX = x + 5;
-      const recycleButtonY = y + itemHeight - recycleButtonSize - 5;
+      const recycleButtonSize = lockButtonSize;
+      const recycleButtonX = x + s(4);
+      const recycleButtonY = y + itemHeight - recycleButtonSize - s(4);
 
       // Check recycle button (if player owns this item type)
       const ownsItem = this.playerStats.items.some(owned => owned.id === item.id);
@@ -1407,17 +1529,7 @@ export class Game {
       }
     }
 
-    // Button positioning
-    const buttonWidth = isMobile ? 320 : 200;
-    const buttonHeight = isMobile ? 70 : 50;
-    const buttonSpacing = 14;
-
-    // Calculate button Y positions - ensure they fit on screen
-    const gridRows = isMobile ? this.shopItems.length : 2; // Desktop: 2 rows for 6 items
-    const itemsEndY = isMobile ? startY + this.shopItems.length * (itemHeight + gap) : startY + gridRows * (itemHeight + gap);
-    const continueY = isMobile ? Math.min(itemsEndY + 15, this.canvas.height - buttonHeight * 2 - buttonSpacing - 20) : itemsEndY + 25;
-    const rerollY = continueY + buttonHeight + buttonSpacing;
-
+    // Button geometry comes from the shared layout
     // Continue button (Next Wave)
     const continueBtn = {
       x: this.canvas.width / 2 - buttonWidth / 2,
@@ -1669,47 +1781,34 @@ export class Game {
   }
 
   private drawMenu(): void {
-    this.renderer.drawText('ROGUELITE', this.canvas.width / 2, 100, {
-      size: 48,
-      bold: true,
-      align: 'center',
-      color: '#00ff00'
+    const zoom = this.canvas.clientWidth ? this.canvas.width / this.canvas.clientWidth : 1;
+    const s = (v: number) => Math.round(v * zoom);
+    const cx = this.canvas.width / 2;
+
+    // Title with a hard drop shadow for a chunky pixel look
+    this.renderer.drawText('ROGUELITE', cx + s(4), s(64) + s(4), {
+      size: s(42), align: 'center', color: '#241407', stroke: false
+    });
+    this.renderer.drawText('ROGUELITE', cx, s(64), {
+      size: s(42), align: 'center', color: '#f2d94e', strokeWidth: s(4)
     });
 
-    this.renderer.drawText('Controls: WASD or Touch Joystick', this.canvas.width / 2, 200, {
-      size: 16,
-      align: 'center'
+    this.renderer.drawText('WASD OR TOUCH JOYSTICK', cx, s(140), {
+      size: s(10), align: 'center', color: '#dfe6ee'
+    });
+    this.renderer.drawText('BUILD A BROKEN BUILD IN THE SHOP. SURVIVE.', cx, s(162), {
+      size: s(10), align: 'center', color: '#dfe6ee'
     });
 
-    this.renderer.drawText('Build synergistic items in the shop to survive!', this.canvas.width / 2, 230, {
-      size: 16,
-      align: 'center'
+    this.renderer.drawText(`SOULS ${this.metaProgression.souls}`, cx, s(196), {
+      size: s(14), align: 'center', color: '#b197fc'
     });
 
-    // Souls display
-    this.renderer.drawText(`Souls: ${this.metaProgression.souls}`, this.canvas.width / 2, 270, {
-      size: 24,
-      bold: true,
-      align: 'center',
-      color: '#9370db'
-    });
-
-    // Stats
     const stats = SaveManager.getStats();
-    this.renderer.drawText(`Highest Wave: ${stats.highestWave}`, this.canvas.width / 2, 320, {
-      size: 18,
-      align: 'center'
-    });
-
-    this.renderer.drawText(`Total Runs: ${stats.totalRuns}`, this.canvas.width / 2, 350, {
-      size: 18,
-      align: 'center'
-    });
-
-    this.renderer.drawText(`Total Kills: ${stats.totalKills}`, this.canvas.width / 2, 380, {
-      size: 18,
-      align: 'center'
-    });
+    this.renderer.drawText(
+      `BEST WAVE ${stats.highestWave}   RUNS ${stats.totalRuns}   KILLS ${stats.totalKills}`,
+      cx, s(226), { size: s(9), align: 'center', color: '#aab6c3' }
+    );
   }
 
   private drawPlaying(): void {
@@ -1834,253 +1933,202 @@ export class Game {
     if (!this.player) return;
 
     const ctx = this.renderer.getContext();
-    const isMobile = this.canvas.width < this.canvas.height;
+    // The canvas renders larger than the viewport and is CSS-scaled down;
+    // size HUD elements in display pixels and convert via the zoom factor so
+    // readability is identical on any screen.
+    const zoom = this.canvas.clientWidth ? this.canvas.width / this.canvas.clientWidth : 1;
+    const s = (v: number) => Math.round(v * zoom);
+    const art = Math.max(2, s(3));
+    const isPortrait = this.canvas.width < this.canvas.height;
 
-    // Mobile-optimized padding and sizing
-    const topPadding = isMobile ? 20 : 10;
-    const sidePadding = isMobile ? 20 : 10;
+    const pad = s(8);
+    const iconS = s(20);
+    const barW = s(isPortrait ? 104 : 170);
+    const barH = s(12);
+    const rowGap = s(7);
+    const textS = s(9);
 
-    // Larger HUD elements for mobile readability - TRIPLED for visibility
-    const barHeight = isMobile ? 50 : 12;
-    const barWidth = isMobile ? Math.min(320, this.canvas.width * 0.6) : 180;
+    const drawBar = (
+      x: number, y: number, w: number, h: number,
+      frac: number, fill: string, bg: string
+    ) => {
+      ctx.fillStyle = '#241407';
+      ctx.fillRect(x - s(2), y - s(2), w + s(4), h + s(4));
+      ctx.fillStyle = bg;
+      ctx.fillRect(x, y, w, h);
+      ctx.fillStyle = fill;
+      ctx.fillRect(x, y, Math.round(w * Math.max(0, Math.min(1, frac))), h);
+    };
 
-    // Top bar background - larger on mobile
-    const hudBgHeight = isMobile ? 150 : 56;
-    this.renderer.drawRoundedRect(0, 0, this.canvas.width, hudBgHeight, 0, 'rgba(0, 0, 0, 0.65)');
-    ctx.save();
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(0, hudBgHeight - 1, this.canvas.width, 1);
-    ctx.restore();
+    // --- Left panel: HP / XP / gold ---
+    const rowH = Math.max(iconS, barH) + rowGap;
+    const panelW = pad * 2 + iconS + s(6) + barW + s(isPortrait ? 64 : 78);
+    const panelH = pad * 2 + rowH * 3 - rowGap;
+    drawPanel(ctx, s(6), s(6), panelW, panelH, DARK_WOOD_THEME, art);
 
-    // Health bar - larger icons and text on mobile - TRIPLED for readability
-    const iconSize = isMobile ? 60 : 14;
-    this.renderer.drawText('❤', sidePadding + 2, topPadding, { size: iconSize, bold: true, color: '#ef4444' });
-    this.renderer.drawHealthBar(sidePadding + (isMobile ? 50 : 20), topPadding + 1, barWidth, barHeight, this.player.health, this.player.maxHealth);
+    const x0 = s(6) + pad + s(2);
+    let y = s(6) + pad + s(2);
+    const barX = x0 + iconS + s(6);
+    const textX = barX + barW + s(8);
 
-    const hpValueSize = isMobile ? 36 : 11;
-    this.renderer.drawText(`${Math.ceil(this.player.health)}/${this.player.maxHealth}`, sidePadding + (isMobile ? 70 : 20) + barWidth + 6, topPadding + 2, {
-      size: hpValueSize,
-      bold: true,
-      color: '#ffffff'
+    const hpFrac = this.player.health / this.player.maxHealth;
+    const heart = UISprites.getIcon('heart');
+    if (heart) ctx.drawImage(heart, x0, y, iconS, iconS);
+    drawBar(barX, y + Math.round((iconS - barH) / 2), barW, barH, hpFrac,
+      hpFrac > 0.6 ? '#4ade80' : hpFrac > 0.3 ? '#fbbf24' : '#ef4444', '#3c0000');
+    this.renderer.drawText(
+      `${Math.ceil(this.player.health)}/${this.player.maxHealth}`,
+      textX, y + Math.round(iconS / 2), { size: textS, baseline: 'middle', color: '#ffffff' }
+    );
+
+    y += rowH;
+    const star = UISprites.getIcon('star');
+    if (star) ctx.drawImage(star, x0, y, iconS, iconS);
+    drawBar(barX, y + Math.round((iconS - barH) / 2), barW, barH,
+      this.player.xp / this.player.xpToNextLevel, '#4a9eff', '#101c30');
+    this.renderer.drawText(`LV ${this.player.level}`, textX, y + Math.round(iconS / 2), {
+      size: textS, baseline: 'middle', color: '#ffd700'
     });
 
-    // XP bar - directly below health
-    const xpOffset = isMobile ? 62 : 20;
-    this.renderer.drawText('⭐', sidePadding + 2, topPadding + xpOffset, { size: iconSize, bold: true, color: '#ffd700' });
-    this.renderer.drawProgressBar(sidePadding + (isMobile ? 70 : 20), topPadding + xpOffset + 1, barWidth, barHeight, this.player.xp / this.player.xpToNextLevel, '#4ade80');
-
-    const levelSize = isMobile ? 36 : 11;
-    this.renderer.drawText(`Lv ${this.player.level}`, sidePadding + (isMobile ? 70 : 20) + barWidth + 6, topPadding + xpOffset + 2, {
-      size: levelSize,
-      bold: true,
-      color: '#ffd700'
+    y += rowH;
+    const coin = UISprites.getIcon('coin');
+    if (coin) ctx.drawImage(coin, x0, y, iconS, iconS);
+    this.renderer.drawText(`${this.player.gold}`, barX, y + Math.round(iconS / 2), {
+      size: s(11), baseline: 'middle', color: '#ffd700'
     });
 
-    // Gold - compact, below XP
-    const goldOffset = isMobile ? 124 : 40;
-    const goldSize = isMobile ? 42 : 13;
-    this.renderer.drawText(`💰 ${this.player.gold}`, sidePadding + 2, topPadding + goldOffset, {
-      size: goldSize,
-      bold: true,
-      color: '#ffd700'
+    // --- Right panel: wave + enemies remaining ---
+    let waveText = `WAVE ${this.waveManager.currentWave}`;
+    let waveColor = '#9ecbff';
+    if (this.waveManager.isBossWave) { waveText += ' BOSS'; waveColor = '#ff6b6b'; }
+    else if (this.waveManager.isHordeWave) { waveText += ' HORDE'; waveColor = '#ffa94d'; }
+
+    const rPanelW = pad * 2 + s(isPortrait ? 118 : 150);
+    const rPanelH = pad * 2 + s(34);
+    const rx = this.canvas.width - rPanelW - s(6);
+    drawPanel(ctx, rx, s(6), rPanelW, rPanelH, DARK_WOOD_THEME, art, 3);
+    this.renderer.drawText(waveText, rx + rPanelW / 2, s(6) + pad + s(4), {
+      size: s(isPortrait ? 9 : 11), align: 'center', color: waveColor
     });
+    this.renderer.drawText(
+      `ENEMIES ${this.enemies.length + this.waveManager.waveEnemiesRemaining}`,
+      rx + rPanelW / 2, s(6) + pad + s(22),
+      { size: s(8), align: 'center', color: '#cfd8e3' }
+    );
 
-    // Wave info (top right) - clean, compact
-    let waveText = `Wave ${this.waveManager.currentWave}`;
-    let waveColor = '#4a9eff';
-    let waveIcon = '🌊';
-
-    if (this.waveManager.isBossWave) {
-      waveText = `Wave ${this.waveManager.currentWave} BOSS`;
-      waveColor = '#ef4444';
-      waveIcon = '👹';
-    } else if (this.waveManager.isHordeWave) {
-      waveText = `Wave ${this.waveManager.currentWave} HORDE`;
-      waveColor = '#f97316';
-      waveIcon = '⚡';
-    }
-
-    const waveSize = isMobile ? 48 : 16;
-    this.renderer.drawText(`${waveIcon} ${waveText}`, this.canvas.width - sidePadding, topPadding + 2, {
-      size: waveSize,
-      bold: true,
-      align: 'right',
-      color: waveColor
-    });
-
-    const enemySize = isMobile ? 36 : 12;
-    this.renderer.drawText(`Enemies: ${this.enemies.length + this.waveManager.waveEnemiesRemaining}`, this.canvas.width - sidePadding, topPadding + xpOffset + 2, {
-      size: enemySize,
-      align: 'right',
-      color: '#cccccc'
-    });
-
-    // Ability cooldowns - NO LONGER SHOWN IN HUD (buttons handle this)
-    // Removed the large ability boxes from bottom-left
-
-    // Shield indicator (center, compact)
-    if (this.player.shield) {
-      const shieldSize = isMobile ? 40 : 14;
-      this.renderer.drawText('🛡️ SHIELD', this.canvas.width / 2, topPadding + goldOffset, {
-        size: shieldSize,
-        bold: true,
-        align: 'center',
-        color: '#4a9eff'
+    // --- Boss health bar (bottom center, with name) ---
+    const boss = this.enemies.find((e) => e.typeData.isBoss);
+    if (boss) {
+      const BOSS_NAMES: Record<string, string> = {
+        boss_necrolord: 'NECRO LORD',
+        boss_flamefiend: 'FLAME FIEND',
+        boss_voidbeast: 'VOID BEAST',
+        boss_stormking: 'STORM KING',
+        boss_ancientgolem: 'ANCIENT GOLEM',
+      };
+      const bw = Math.min(s(420), this.canvas.width - s(60));
+      const bh = s(14);
+      const bx = Math.round((this.canvas.width - bw) / 2);
+      const by = this.canvas.height - s(48);
+      drawPanel(ctx, bx - s(12), by - s(26), bw + s(24), bh + s(38), DARK_WOOD_THEME, art, 7);
+      this.renderer.drawText(BOSS_NAMES[boss.type] ?? 'BOSS', this.canvas.width / 2, by - s(14), {
+        size: s(9), align: 'center', color: '#ff6b6b'
       });
+      drawBar(bx, by, bw, bh, boss.health / boss.maxHealth, '#e03131', '#3c0000');
     }
 
-    // Weapon specialization (if active, show below wave on right side)
+    // --- Status callouts under the left panel ---
+    let statusY = s(6) + panelH + s(8);
+    if (this.player.shield) {
+      this.renderer.drawText('SHIELD ACTIVE', s(10), statusY, { size: s(8), color: '#4a9eff' });
+      statusY += s(14);
+    }
     const specialization = this.playerStats.getWeaponSpecialization();
     if (specialization === 'melee' || specialization === 'ranged') {
-      const specSize = isMobile ? 24 : 11;
-      const specIcon = specialization === 'melee' ? '⚔️' : '🏹';
-      const specColor = specialization === 'melee' ? '#ff6600' : '#00ffff';
-      this.renderer.drawText(`${specIcon} ${specialization.toUpperCase()} +20%`, this.canvas.width - sidePadding, topPadding + goldOffset, {
-        size: specSize,
-        bold: true,
-        align: 'right',
-        color: specColor
+      this.renderer.drawText(`${specialization.toUpperCase()} +20%`, s(10), statusY, {
+        size: s(8), color: specialization === 'melee' ? '#ff8c42' : '#5ee0e0'
       });
     }
   }
-
   private drawShop(): void {
-    const isPortrait = this.canvas.width < this.canvas.height;
-    const isMobile = this.canvas.width < 800;
+    const { s, isMobile, itemWidth, itemHeight, gap, startX, startY, lockButtonSize,
+      buttonWidth, buttonHeight, continueY, rerollY,
+      iconY, iconSize, nameY, nameSize, descY, descSize, costY, costSize,
+      synergySize } = this.getShopLayout();
     const ctx = this.renderer.getContext();
 
-    // Shop title with fancy styling
-    this.renderer.drawText('SHOP', this.canvas.width / 2, isMobile ? 20 : 40, {
-      size: isMobile ? 60 : 40,
-      bold: true,
-      align: 'center',
-      color: '#ffd700'
+    // Shop title with a hard pixel drop shadow
+    const titleSize = s(isMobile ? 16 : 22);
+    const titleY = s(isMobile ? 10 : 20);
+    this.renderer.drawText('SHOP', this.canvas.width / 2 + s(2), titleY + s(2), {
+      size: titleSize, align: 'center', color: '#241407', stroke: false
+    });
+    this.renderer.drawText('SHOP', this.canvas.width / 2, titleY, {
+      size: titleSize, align: 'center', color: '#ffd700'
     });
 
     if (!this.player) return;
 
-    // Gold display with icon
-    this.renderer.drawText(`💰 ${this.player.gold}`, this.canvas.width / 2, isMobile ? 55 : 75, {
-      size: isMobile ? 32 : 20,
-      bold: true,
+    // Gold display
+    this.renderer.drawText(`${this.player.gold} G`, this.canvas.width / 2, s(isMobile ? 32 : 50), {
+      size: s(10),
       align: 'center',
       color: '#ffd700'
     });
 
     // PLAYER STATS PANEL - compact display on the left side (desktop) or top (mobile)
-    const statPanelPadding = 8;
-    const statPanelWidth = isMobile ? this.canvas.width - 20 : 220;
-    const statPanelHeight = isMobile ? 65 : 140;
-    const statPanelX = isMobile ? 10 : 10;
-    const statPanelY = isMobile ? 85 : 40;
+    const statPanelPadding = s(8);
+    const statPanelWidth = isMobile ? this.canvas.width - s(20) : s(220);
+    const statPanelHeight = isMobile ? s(38) : s(140);
+    const statPanelX = s(10);
+    const statPanelY = isMobile ? s(64) : s(56);
 
-    // PERFORMANCE: Stats panel background (cached offscreen canvas)
-    // This complex gradient+border is expensive to redraw every frame
-    const cache = this.renderer.getOffscreenCache();
-    const cacheKey = `shop-stats-panel-${isMobile ? 'mobile' : 'desktop'}`;
-    const cachedPanel = cache.renderCached(cacheKey, statPanelWidth, statPanelHeight, (cacheCtx) => {
-      const gradient = cacheCtx.createLinearGradient(0, 0, 0, statPanelHeight);
-      gradient.addColorStop(0, 'rgba(40, 40, 40, 0.9)');
-      gradient.addColorStop(1, 'rgba(20, 20, 20, 0.9)');
+    // Stats panel: wood, pixel font, no emoji
+    drawPanel(ctx, statPanelX, statPanelY, statPanelWidth, statPanelHeight, DARK_WOOD_THEME, 4, 11);
 
-      // Rounded rectangle
-      cacheCtx.fillStyle = gradient;
-      cacheCtx.beginPath();
-      cacheCtx.moveTo(6, 0);
-      cacheCtx.lineTo(statPanelWidth - 6, 0);
-      cacheCtx.quadraticCurveTo(statPanelWidth, 0, statPanelWidth, 6);
-      cacheCtx.lineTo(statPanelWidth, statPanelHeight - 6);
-      cacheCtx.quadraticCurveTo(statPanelWidth, statPanelHeight, statPanelWidth - 6, statPanelHeight);
-      cacheCtx.lineTo(6, statPanelHeight);
-      cacheCtx.quadraticCurveTo(0, statPanelHeight, 0, statPanelHeight - 6);
-      cacheCtx.lineTo(0, 6);
-      cacheCtx.quadraticCurveTo(0, 0, 6, 0);
-      cacheCtx.closePath();
-      cacheCtx.fill();
-
-      // Border
-      cacheCtx.strokeStyle = '#4a9eff';
-      cacheCtx.lineWidth = 2;
-      cacheCtx.stroke();
-    });
-
-    // Draw the cached panel
-    ctx.drawImage(cachedPanel, statPanelX, statPanelY);
-
-    // Stats content - larger on mobile for readability
-    const statSize = isMobile ? 16 : 13; // BALANCE: Increased from 14 to 16 for mobile readability
-    const statLineHeight = isMobile ? 22 : 18; // Increased spacing for larger text
-    const statStartY = statPanelY + statPanelPadding + statLineHeight;
+    const stats: Array<[string, string, string]> = [
+      ['HP', `${Math.floor(this.player.health)}/${this.playerStats.getMaxHealth()}`, '#ff6b6b'],
+      ['DMG', `${Math.floor(this.playerStats.getDamage())}`, '#ffa94d'],
+      ['FIRE', `${this.playerStats.getFireRate().toFixed(1)}/S`, '#ff8787'],
+      ['SPD', `${Math.floor(this.playerStats.getSpeed())}`, '#66d9e8'],
+      ['CRIT', `${Math.floor(this.playerStats.getCritChance() * 100)}%`, '#ffd43b'],
+      ['MULTI', `${this.playerStats.getMultishot()}`, '#69db7c'],
+    ];
 
     if (isMobile) {
-      // Mobile: horizontal layout, 2 rows
-      const col1X = statPanelX + statPanelPadding;
-      const col2X = statPanelX + statPanelWidth / 3 + statPanelPadding;
-      const col3X = statPanelX + (statPanelWidth * 2 / 3) + statPanelPadding;
-
-      this.renderer.drawText(`❤️${Math.floor(this.player.health)}/${this.playerStats.getMaxHealth()}`, col1X, statStartY, {
-        size: statSize, color: '#ff6b6b', align: 'left'
-      });
-      this.renderer.drawText(`⚔️${Math.floor(this.playerStats.getDamage())}`, col2X, statStartY, {
-        size: statSize, color: '#ffa500', align: 'left'
-      });
-      this.renderer.drawText(`🔥${this.playerStats.getFireRate().toFixed(1)}/s`, col3X, statStartY, {
-        size: statSize, color: '#ff4444', align: 'left'
-      });
-
-      this.renderer.drawText(`💨${Math.floor(this.playerStats.getSpeed())}`, col1X, statStartY + statLineHeight, {
-        size: statSize, color: '#88ffff', align: 'left'
-      });
-      this.renderer.drawText(`💥${Math.floor(this.playerStats.getCritChance() * 100)}%`, col2X, statStartY + statLineHeight, {
-        size: statSize, color: '#ffff00', align: 'left'
-      });
-      this.renderer.drawText(`🎯${this.playerStats.getMultishot()}x`, col3X, statStartY + statLineHeight, {
-        size: statSize, color: '#00ff00', align: 'left'
+      // Mobile: 3 columns x 2 rows
+      const statSize = s(7);
+      const colW = (statPanelWidth - statPanelPadding * 2) / 3;
+      stats.forEach(([label, value, color], idx) => {
+        const colX = statPanelX + statPanelPadding + (idx % 3) * colW;
+        const rowY = statPanelY + s(8) + Math.floor(idx / 3) * s(15);
+        this.renderer.drawText(`${label} ${value}`, colX, rowY, {
+          size: statSize, color, align: 'left'
+        });
       });
     } else {
-      // Desktop: vertical layout
-      const statX = statPanelX + statPanelPadding;
-      let currentY = statStartY;
-
-      this.renderer.drawText(`❤️ HP: ${Math.floor(this.player.health)}/${this.playerStats.getMaxHealth()}`, statX, currentY, {
-        size: statSize, color: '#ff6b6b', align: 'left'
-      });
-      currentY += statLineHeight;
-
-      this.renderer.drawText(`⚔️ DMG: ${Math.floor(this.playerStats.getDamage())}`, statX, currentY, {
-        size: statSize, color: '#ffa500', align: 'left'
-      });
-      currentY += statLineHeight;
-
-      this.renderer.drawText(`🔥 Fire: ${this.playerStats.getFireRate().toFixed(1)}/s`, statX, currentY, {
-        size: statSize, color: '#ff4444', align: 'left'
-      });
-      currentY += statLineHeight;
-
-      this.renderer.drawText(`💨 Speed: ${Math.floor(this.playerStats.getSpeed())}`, statX, currentY, {
-        size: statSize, color: '#88ffff', align: 'left'
-      });
-      currentY += statLineHeight;
-
-      this.renderer.drawText(`💥 Crit: ${Math.floor(this.playerStats.getCritChance() * 100)}%`, statX, currentY, {
-        size: statSize, color: '#ffff00', align: 'left'
-      });
-      currentY += statLineHeight;
-
-      this.renderer.drawText(`🎯 Multi: ${this.playerStats.getMultishot()}`, statX, currentY, {
-        size: statSize, color: '#00ff00', align: 'left'
+      // Desktop: vertical rows, label left / value right
+      const statSize = s(9);
+      stats.forEach(([label, value, color], idx) => {
+        const rowY = statPanelY + s(14) + idx * s(19);
+        this.renderer.drawText(label, statPanelX + statPanelPadding + 4, rowY, {
+          size: statSize, color: '#c8b998', align: 'left'
+        });
+        this.renderer.drawText(value, statPanelX + statPanelWidth - statPanelPadding - 4, rowY, {
+          size: statSize, color, align: 'right'
+        });
       });
     }
 
     // INVENTORY PANEL - show current items as tiny icons on the right side (desktop) or below stats (mobile)
-    const invPanelPadding = 6;
-    const invPanelWidth = isMobile ? this.canvas.width - 20 : 220;
-    const invPanelMaxHeight = isMobile ? 80 : 200;
-    const invPanelX = isMobile ? 10 : this.canvas.width - 230;
-    const invPanelY = isMobile ? 155 : 40;
+    const invPanelPadding = s(6);
+    const invPanelWidth = s(220);
+    const invPanelMaxHeight = s(200);
+    const invPanelX = this.canvas.width - s(230);
+    const invPanelY = s(56);
 
-    if (this.playerStats.items.length > 0) {
+    // Inventory panel is desktop-only; portrait screens have no room for it
+    if (!isMobile && this.playerStats.items.length > 0) {
       // Group items by ID and count duplicates
       const itemCounts = new Map<string, { item: Item; count: number }>();
       for (const item of this.playerStats.items) {
@@ -2095,71 +2143,54 @@ export class Game {
       const uniqueItems = Array.from(itemCounts.values());
 
       // Calculate actual height based on unique items
-      const iconSize = isMobile ? 28 : 24;
-      const iconsPerRow = isMobile ? Math.floor((invPanelWidth - invPanelPadding * 2) / (iconSize + 4)) : 6;
+      const iconSize = s(24);
+      const iconsPerRow = 6;
       const rows = Math.ceil(uniqueItems.length / iconsPerRow);
-      const invPanelHeight = Math.min(invPanelMaxHeight, rows * (iconSize + 4) + invPanelPadding * 2 + 18);
+      const invPanelHeight = Math.min(invPanelMaxHeight, rows * (iconSize + s(4)) + invPanelPadding * 2 + s(18));
 
       // Inventory panel background
-      ctx.save();
-      const invGradient = ctx.createLinearGradient(invPanelX, invPanelY, invPanelX, invPanelY + invPanelHeight);
-      invGradient.addColorStop(0, 'rgba(40, 40, 40, 0.9)');
-      invGradient.addColorStop(1, 'rgba(20, 20, 20, 0.9)');
-      this.renderer.drawRoundedRect(invPanelX, invPanelY, invPanelWidth, invPanelHeight, 6, invGradient);
-      ctx.strokeStyle = '#a855f7';
-      ctx.lineWidth = 2;
-      this.renderer['drawRoundedRectPath'](invPanelX, invPanelY, invPanelWidth, invPanelHeight, 6);
-      ctx.stroke();
-      ctx.restore();
+      drawPanel(ctx, invPanelX, invPanelY, invPanelWidth, invPanelHeight, DARK_WOOD_THEME, 4, 23);
 
       // Title
-      this.renderer.drawText('Inventory', invPanelX + invPanelWidth / 2, invPanelY + 12, {
-        size: isMobile ? 14 : 11,
-        bold: true,
+      this.renderer.drawText('INVENTORY', invPanelX + invPanelWidth / 2, invPanelY + s(8), {
+        size: s(8),
         align: 'center',
-        color: '#a855f7'
+        color: '#d0bfff'
       });
 
       // Draw item icons in grid with count badges
       const gridStartX = invPanelX + invPanelPadding;
-      const gridStartY = invPanelY + 22;
+      const gridStartY = invPanelY + s(20);
 
       for (let i = 0; i < uniqueItems.length; i++) {
         const { item, count } = uniqueItems[i];
         const col = i % iconsPerRow;
         const row = Math.floor(i / iconsPerRow);
-        const x = gridStartX + col * (iconSize + 4);
-        const y = gridStartY + row * (iconSize + 4);
+        const x = gridStartX + col * (iconSize + s(4));
+        const y = gridStartY + row * (iconSize + s(4));
 
         // Item icon
-        this.renderer.drawText(item.icon, x + iconSize / 2, y + 2, {
-          size: isMobile ? 20 : 18,
+        this.renderer.drawText(item.icon, x + iconSize / 2, y + s(2), {
+          size: s(16),
           align: 'center'
         });
 
         // Count badge (only show if count > 1)
         if (count > 1) {
-          const badgeSize = isMobile ? 14 : 12;
+          const badgeSize = s(12);
           const badgeX = x + iconSize - badgeSize / 2 - 2;
           const badgeY = y - badgeSize / 2 + 2;
 
-          // Badge circle background
+          // Square pixel badge
           ctx.save();
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-          ctx.beginPath();
-          ctx.arc(badgeX, badgeY, badgeSize / 2, 0, Math.PI * 2);
-          ctx.fill();
-
-          // Badge border
+          ctx.fillStyle = '#241407';
+          ctx.fillRect(badgeX - badgeSize / 2, badgeY - badgeSize / 2, badgeSize, badgeSize);
           ctx.strokeStyle = '#a855f7';
           ctx.lineWidth = 1;
-          ctx.stroke();
-
-          // Count text
+          ctx.strokeRect(badgeX - badgeSize / 2, badgeY - badgeSize / 2, badgeSize, badgeSize);
           ctx.restore();
-          this.renderer.drawText(`×${count}`, badgeX, badgeY, {
-            size: isMobile ? 10 : 8,
-            bold: true,
+          this.renderer.drawText(`x${count}`, badgeX, badgeY - badgeSize / 4, {
+            size: s(7),
             align: 'center',
             color: '#ffffff'
           });
@@ -2167,23 +2198,7 @@ export class Game {
       }
     }
 
-    // Draw shop items - responsive layout (MUST MATCH updateShop positions)
-    const itemWidth = isPortrait ? Math.min(280, this.canvas.width - 40) : isMobile ? Math.min(360, this.canvas.width - 40) : 180;
-    const itemHeight = isPortrait ? 185 : isMobile ? 210 : 140;
-    const gap = isPortrait ? 10 : isMobile ? 16 : 18;
-
-    let startX: number, startY: number;
-
-    if (isMobile) {
-      // Vertical stack on mobile - adjust for stats/inventory panels
-      startX = (this.canvas.width - itemWidth) / 2;
-      startY = isPortrait ? 245 : 145; // Adjusted to account for stats and inventory panels
-    } else {
-      // Desktop: 3x2 grid for 6 items
-      const gridCols = 3;
-      startX = this.canvas.width / 2 - (itemWidth * gridCols + gap * (gridCols - 1)) / 2;
-      startY = 200;
-    }
+    // Card grid geometry comes from getShopLayout() (shared with updateShop)
 
     for (let i = 0; i < this.shopItems.length; i++) {
       const item = this.shopItems[i];
@@ -2201,7 +2216,7 @@ export class Game {
 
       // Rarity colors with better palette
       const rarityColors: Record<string, string> = {
-        common: '#888888',
+        common: '#d7d3c8',
         rare: '#4a9eff',
         epic: '#a855f7',
         legendary: '#ffd700'
@@ -2215,93 +2230,57 @@ export class Game {
       const hasTagMatch = matchingTags.length > 0;
       const isDuplicate = this.playerStats.items.some(owned => owned.id === item.id);
 
-      // Card shadow/glow effect - different colors for different synergy types
-      const cardRadius = 6; // Rounded corners for cards
-      if (hovered || hasSynergy || hasTagMatch) {
-        ctx.save();
-        let glowColor = rarityColor;
-        let glowIntensity = 20;
-
-        if (isDuplicate) {
-          // Same exact item = blue glow
-          glowColor = '#0088ff';
-          glowIntensity = 25;
-        } else if (hasTagMatch) {
-          // Tag match = green synergy glow
-          glowColor = '#00ff00';
-          glowIntensity = 30;
-        } else if (hasSynergy) {
-          // Other synergy = yellow glow
-          glowColor = '#ffff00';
-          glowIntensity = 25;
-        }
-
-        ctx.shadowBlur = hovered ? glowIntensity + 5 : glowIntensity;
-        ctx.shadowColor = glowColor;
-        this.renderer.drawRoundedRect(x - 2, y - 2, itemWidth + 4, itemHeight + 4, cardRadius + 2, '#2a2a2a');
-        ctx.restore();
-      }
-
-      // Background with gradient - rounded
-      const gradient = ctx.createLinearGradient(x, y, x, y + itemHeight);
-      gradient.addColorStop(0, hovered ? '#3a3a3a' : '#222222');
-      gradient.addColorStop(1, hovered ? '#2a2a2a' : '#1a1a1a');
-      ctx.fillStyle = gradient;
-      this.renderer.drawRoundedRect(x, y, itemWidth, itemHeight, cardRadius, gradient);
-
-      // Border with rarity color (thicker for better visibility) - rounded
-      ctx.strokeStyle = rarityColor;
-      ctx.lineWidth = hovered ? 5 : 4;
-      this.renderer['drawRoundedRectPath'](x, y, itemWidth, itemHeight, cardRadius);
-      ctx.stroke();
-
-      // Inner shadow for depth - rounded
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-      ctx.lineWidth = 1;
-      this.renderer['drawRoundedRectPath'](x + 2, y + 2, itemWidth - 4, itemHeight - 4, Math.max(0, cardRadius - 2));
-      ctx.stroke();
+      // Card: wood panel with a crisp rarity/synergy-colored inner border
+      // (pixel-art treatment — no glows, no gradients)
+      drawPanel(ctx, x, y, itemWidth, itemHeight, DARK_WOOD_THEME, 4, i);
+      let borderColor = rarityColor;
+      if (isDuplicate) borderColor = '#4a9eff';
+      else if (hasTagMatch || hasSynergy) borderColor = '#7bd94a';
+      ctx.save();
+      ctx.strokeStyle = borderColor;
+      ctx.lineWidth = hovered ? 6 : 3;
+      ctx.strokeRect(x + 6, y + 6, itemWidth - 12, itemHeight - 12);
+      ctx.restore();
 
       // Lock button in top-right corner
-      const lockButtonSize = isMobile ? 50 : 28;
-      const lockButtonX = x + itemWidth - lockButtonSize - 5;
-      const lockButtonY = y + 5;
+      const lockButtonX = x + itemWidth - lockButtonSize - s(4);
+      const lockButtonY = y + s(4);
       const isLocked = this.lockedShopItems.has(i);
-      const lockRadius = 6;
 
-      // Lock button background - rounded
+      // Lock button background
       ctx.save();
-      this.renderer.drawRoundedRect(lockButtonX, lockButtonY, lockButtonSize, lockButtonSize, lockRadius, isLocked ? '#ffd700' : '#2a2a2a');
-      ctx.strokeStyle = isLocked ? '#ffff00' : '#666666';
+      ctx.fillStyle = isLocked ? '#ffd700' : '#2e1c0e';
+      ctx.fillRect(lockButtonX, lockButtonY, lockButtonSize, lockButtonSize);
+      ctx.strokeStyle = isLocked ? '#fff3bf' : '#6b4423';
       ctx.lineWidth = 2;
-      this.renderer['drawRoundedRectPath'](lockButtonX, lockButtonY, lockButtonSize, lockButtonSize, lockRadius);
-      ctx.stroke();
+      ctx.strokeRect(lockButtonX, lockButtonY, lockButtonSize, lockButtonSize);
       ctx.restore();
 
       // Lock icon
-      this.renderer.drawText(isLocked ? '🔒' : '🔓', lockButtonX + lockButtonSize / 2, lockButtonY + (isMobile ? 8 : 2), {
-        size: isMobile ? 32 : 20,
+      this.renderer.drawText(isLocked ? '🔒' : '🔓', lockButtonX + lockButtonSize / 2, lockButtonY + Math.round(lockButtonSize * 0.15), {
+        size: Math.round(lockButtonSize * 0.6),
         align: 'center'
       });
 
       // Recycle button in bottom-left corner (if player owns this item)
       const ownsItem = this.playerStats.items.some(owned => owned.id === item.id);
       if (ownsItem) {
-        const recycleButtonSize = isMobile ? 50 : 28;
-        const recycleButtonX = x + 5;
-        const recycleButtonY = y + itemHeight - recycleButtonSize - 5;
+        const recycleButtonSize = lockButtonSize;
+        const recycleButtonX = x + s(4);
+        const recycleButtonY = y + itemHeight - recycleButtonSize - s(4);
 
         // Recycle button background
         ctx.save();
-        this.renderer.drawRoundedRect(recycleButtonX, recycleButtonY, recycleButtonSize, recycleButtonSize, lockRadius, '#2a2a2a');
+        ctx.fillStyle = '#2e1c0e';
+        ctx.fillRect(recycleButtonX, recycleButtonY, recycleButtonSize, recycleButtonSize);
         ctx.strokeStyle = '#ff8800';
         ctx.lineWidth = 2;
-        this.renderer['drawRoundedRectPath'](recycleButtonX, recycleButtonY, recycleButtonSize, recycleButtonSize, lockRadius);
-        ctx.stroke();
+        ctx.strokeRect(recycleButtonX, recycleButtonY, recycleButtonSize, recycleButtonSize);
         ctx.restore();
 
         // Recycle icon
-        this.renderer.drawText('♻️', recycleButtonX + recycleButtonSize / 2, recycleButtonY + (isMobile ? 8 : 2), {
-          size: isMobile ? 28 : 18,
+        this.renderer.drawText('♻️', recycleButtonX + recycleButtonSize / 2, recycleButtonY + Math.round(recycleButtonSize * 0.18), {
+          size: Math.round(recycleButtonSize * 0.55),
           align: 'center'
         });
       }
@@ -2331,9 +2310,8 @@ export class Game {
         }
 
         if (indicatorText) {
-          this.renderer.drawText(indicatorText, x + itemWidth / 2, y + 8, {
-            size: (isPortrait || isMobile) ? 18 : 12,
-            bold: true,
+          this.renderer.drawText(indicatorText, x + itemWidth / 2, y + s(6), {
+            size: synergySize,
             align: 'center',
             color: indicatorColor
           });
@@ -2341,48 +2319,36 @@ export class Game {
       }
 
       // Icon with better positioning
-      this.renderer.drawText(item.icon, x + itemWidth / 2, y + (isPortrait ? 25 : isMobile ? 20 : 15), {
-        size: (isPortrait || isMobile) ? 68 : 32, // Unified mobile size
+      this.renderer.drawText(item.icon, x + itemWidth / 2, y + iconY, {
+        size: iconSize,
         align: 'center'
       });
 
-      // Name with better contrast
-      this.renderer.drawText(item.name, x + itemWidth / 2, y + (isPortrait ? 80 : isMobile ? 95 : 55), {
-        size: (isPortrait || isMobile) ? 26 : 16, // Unified mobile size
-        bold: true,
+      // Name — pixel font is wide, so sizes are tuned to fit the card width
+      this.renderer.drawText(item.name, x + itemWidth / 2, y + nameY, {
+        size: nameSize,
         align: 'center',
         color: rarityColor
       });
 
       // Description (more compact)
-      this.renderer.drawText(item.description, x + itemWidth / 2, y + (isPortrait ? 105 : isMobile ? 125 : 75), {
-        size: (isPortrait || isMobile) ? 20 : 12, // Unified mobile size
+      this.renderer.drawText(item.description, x + itemWidth / 2, y + descY, {
+        size: descSize,
         align: 'center',
-        color: '#cccccc'
+        color: '#e5d9c3'
       });
 
       // Cost with better styling (bottom, prominent)
       const finalPrice = this.playerStats.getItemPrice(item, this.waveManager.currentWave);
       const canAfford = this.player.gold >= finalPrice;
-      this.renderer.drawText(`💰 ${finalPrice}`, x + itemWidth / 2, y + (isPortrait ? 160 : isMobile ? 180 : 115), {
-        size: (isPortrait || isMobile) ? 28 : 16,
-        bold: true,
+      this.renderer.drawText(`${finalPrice} G`, x + itemWidth / 2, y + costY, {
+        size: costSize,
         align: 'center',
         color: canAfford ? '#ffd700' : '#ef4444'
       });
     }
 
-    // Button dimensions and positioning - MUST MATCH updateShop
-    const buttonWidth = isMobile ? 320 : 200;
-    const buttonHeight = isMobile ? 70 : 50;
-    const buttonSpacing = 14;
-
-    // Calculate button Y positions - ensure they fit on screen
-    const gridRows = isMobile ? this.shopItems.length : 2; // Desktop: 2 rows for 6 items
-    const itemsEndY = isMobile ? startY + this.shopItems.length * (itemHeight + gap) : startY + gridRows * (itemHeight + gap);
-    const continueY = isMobile ? Math.min(itemsEndY + 15, this.canvas.height - buttonHeight * 2 - buttonSpacing - 20) : itemsEndY + 25;
-    const rerollY = continueY + buttonHeight + buttonSpacing;
-
+    // Button geometry comes from the shared layout
     // Continue button (Next Wave) - ALWAYS FIRST
     this.renderer.drawButton(
       this.canvas.width / 2 - buttonWidth / 2,

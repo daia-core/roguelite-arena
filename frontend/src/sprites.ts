@@ -3,6 +3,9 @@
  * Follows hue-shifting, proper shading, and animation best practices
  */
 
+import { renderSprite } from './pixel/sprite';
+import { ENEMY_SPRITE_DATA } from './spriteData';
+
 export interface AnimatedSprite {
   frames: HTMLCanvasElement[];
   frameRate: number; // FPS (6 for idle, 8 for walk, 12 for attack)
@@ -26,6 +29,25 @@ export class SpriteSheet {
     this.createProjectileSprites();
     this.createItemSprites();
     this.createPickupSprites();
+    // Data-driven sprites load last so they override legacy hand-coded ones
+    this.loadDataSprites();
+  }
+
+  /** All registered sprite names (for dev tooling like the gallery page). */
+  static names(): string[] {
+    return [...this.sprites.keys()];
+  }
+
+  private static loadDataSprites() {
+    for (const [name, def] of Object.entries(ENEMY_SPRITE_DATA)) {
+      const rendered = renderSprite(def);
+      this.sprites.set(name, rendered.frames[0]);
+      if (rendered.frames.length > 1) {
+        this.animations.set(name, {
+          idle: { frames: rendered.frames, frameRate: rendered.frameRate, loop: true },
+        });
+      }
+    }
   }
 
   static get(name: string): HTMLCanvasElement | null {
@@ -1430,8 +1452,8 @@ export class SpriteSheet {
   }
 
   private static createPickupSprites() {
-    // XP gem - emerald green
-    const xp = this.createCanvas(12, 12);
+    // XP gem (7x7 grid at scale 5 = 35px)
+    const xp = this.createCanvas(35, 35);
     const ctx = xp.getContext('2d')!;
 
     const xpPixels = [
@@ -1450,7 +1472,7 @@ export class SpriteSheet {
       '#3b82f6',     // Bright blue crystal
       '#ffffff'      // White sparkle
     ];
-    this.drawPixels(ctx, xpPixels, xpColors);
+    this.drawPixels(ctx, xpPixels, xpColors, 5);
     this.sprites.set('xp', xp);
 
     // Health orb - red/pink with cross (9x9 base)
@@ -1477,11 +1499,11 @@ export class SpriteSheet {
       '#ffffff'      // 4 - white cross
     ];
 
-    this.drawPixels(healthCtx, healthPixels, healthColors);
+    this.drawPixels(healthCtx, healthPixels, healthColors, 6);
     this.sprites.set('health_orb', healthOrb);
 
-    // Gold coin - medieval gold
-    const gold = this.createCanvas(12, 12);
+    // Gold coin (7x7 grid at scale 5 = 35px)
+    const gold = this.createCanvas(35, 35);
     const ctx2 = gold.getContext('2d')!;
 
     const goldPixels = [
@@ -1501,7 +1523,7 @@ export class SpriteSheet {
       '#fde68a'      // Yellow highlight
     ];
 
-    this.drawPixels(ctx2, goldPixels, goldColors);
+    this.drawPixels(ctx2, goldPixels, goldColors, 5);
     this.sprites.set('gold', gold);
   }
 }

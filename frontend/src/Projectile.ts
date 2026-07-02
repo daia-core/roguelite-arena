@@ -19,6 +19,10 @@ export class Projectile {
   trail: Array<{ x: number; y: number; age: number }> = []; // Trail effect
   maxPierceCount: number = 0;
   pierceCount: number = 0;
+  // Enemy pattern shots: homing projectiles curve toward the player (steered
+  // by Game, which knows the player position)
+  homing: boolean = false;
+  turnSpeed: number = 0;
 
   constructor(
     x: number = 0,
@@ -70,6 +74,8 @@ export class Projectile {
     this.trail = [];
     this.maxPierceCount = 0;
     this.pierceCount = 0;
+    this.homing = false;
+    this.turnSpeed = 0;
   }
 
   update(dt: number, canvasWidth: number, canvasHeight: number): void {

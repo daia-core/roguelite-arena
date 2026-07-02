@@ -1,6 +1,7 @@
 // Canvas rendering with effects
 
 import { UISprites } from './UISprites';
+import { drawPanel, WOOD_THEME, STONE_THEME, type PanelTheme } from './pixel/panel';
 import { OffscreenCanvasCache } from './OffscreenCanvasCache';
 import { StardewBackground } from './StardewBackground';
 
@@ -29,7 +30,6 @@ export class Renderer {
 
   private cachedWidth: number = 0;
   private cachedHeight: number = 0;
-  private vignetteGradient: CanvasGradient | null = null;
 
   // PERFORMANCE: Offscreen canvas cache for static UI elements
   private offscreenCache: OffscreenCanvasCache;
@@ -134,18 +134,9 @@ export class Renderer {
   private cacheBackground(): void {
     if (!this.backgroundCtx || !this.backgroundCanvas) return;
 
-    // STARDEW VALLEY STYLE: Tiled grass background (clean, organized)
+    // Stardew-style ground drawn on the sprite art grid; it includes its own
+    // dithered edge darkening, so no smooth gradient vignette on top
     this.stardewBackground.draw(this.backgroundCtx, this.canvas.width, this.canvas.height);
-
-    // Vignette effect (darker at edges) - cached gradient
-    this.vignetteGradient = this.backgroundCtx.createRadialGradient(
-      this.canvas.width / 2, this.canvas.height / 2, 0,
-      this.canvas.width / 2, this.canvas.height / 2, Math.max(this.canvas.width, this.canvas.height) * 0.7
-    );
-    this.vignetteGradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
-    this.vignetteGradient.addColorStop(1, 'rgba(0, 0, 0, 0.5)');
-    this.backgroundCtx.fillStyle = this.vignetteGradient;
-    this.backgroundCtx.fillRect(0, 0, this.canvas.width, this.canvas.height);
   }
 
   update(dt: number): void {
@@ -260,26 +251,33 @@ export class Renderer {
     stroke?: boolean;
     strokeWidth?: number;
   } = {}): void {
-    this.ctx.save();
+    // Draw on the game layer — the same layer entities and HUD panels use —
+    // so z-order follows call order (text drawn after a panel sits on top of
+    // it). The main ctx would be composited UNDER this layer.
+    const ctx = this.gameCtx || this.ctx;
+    ctx.save();
 
     const size = options.size ?? 16;
-    const font = options.bold ? `bold ${size}px Arial` : `${size}px Arial`;
+    // Pixel font everywhere; 'bold' is meaningless for Press Start 2P but kept
+    // as a fallback hint for the monospace fallback fonts
+    const family = `'Press Start 2P', 'Courier New', monospace`;
+    const font = options.bold ? `bold ${size}px ${family}` : `${size}px ${family}`;
 
-    this.ctx.font = font;
-    this.ctx.textAlign = options.align ?? 'left';
-    this.ctx.textBaseline = options.baseline ?? 'top';
+    ctx.font = font;
+    ctx.textAlign = options.align ?? 'left';
+    ctx.textBaseline = options.baseline ?? 'top';
 
     // Add stroke for better readability (enabled by default for UI text)
     if (options.stroke !== false) {
-      this.ctx.strokeStyle = '#000000';
-      this.ctx.lineWidth = options.strokeWidth ?? Math.max(2, size / 12);
-      this.ctx.strokeText(text, x, y);
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = options.strokeWidth ?? Math.max(2, size / 12);
+      ctx.strokeText(text, x, y);
     }
 
-    this.ctx.fillStyle = options.color ?? '#ffffff';
-    this.ctx.fillText(text, x, y);
+    ctx.fillStyle = options.color ?? '#ffffff';
+    ctx.fillText(text, x, y);
 
-    this.ctx.restore();
+    ctx.restore();
   }
 
   drawCircle(x: number, y: number, radius: number, color: string): void {
@@ -457,110 +455,20 @@ export class Renderer {
   }
 
   drawButton(x: number, y: number, width: number, height: number, text: string, hovered: boolean = false, enabled: boolean = true, isMobile: boolean = false): void {
-    this.ctx.save();
-
-    const button = UISprites.getButton('primary');
-
-    if (button) {
-      // Use pixel art button sprites
-      const sprite = !enabled ? button.disabled : hovered ? button.hover : button.normal;
-      const scale = Math.min(width / button.width, height / button.height);
-      const scaledWidth = button.width * scale;
-      const scaledHeight = button.height * scale;
-
-      // Center the button sprite
-      const drawX = x + (width - scaledWidth) / 2;
-      const drawY = y + (height - scaledHeight) / 2;
-
-      this.ctx.drawImage(sprite, drawX, drawY, scaledWidth, scaledHeight);
-    } else {
-      // Fallback to programmatic rendering
-      const radius = 4;
-
-      if (enabled) {
-        this.ctx.shadowBlur = hovered ? 25 : 15;
-        this.ctx.shadowColor = hovered ? 'rgba(74, 222, 128, 0.6)' : 'rgba(74, 222, 128, 0.3)';
-      }
-
-      const gradient = this.ctx.createLinearGradient(x, y, x, y + height);
-      if (enabled) {
-        if (hovered) {
-          gradient.addColorStop(0, '#4a4a4a');
-          gradient.addColorStop(1, '#2a2a2a');
-        } else {
-          gradient.addColorStop(0, '#3a3a3a');
-          gradient.addColorStop(1, '#1a1a1a');
-        }
-      } else {
-        gradient.addColorStop(0, '#2a2a2a');
-        gradient.addColorStop(1, '#1a1a1a');
-      }
-      this.ctx.fillStyle = gradient;
-      this.drawRoundedRectPath(x, y, width, height, radius);
-      this.ctx.fill();
-
-      this.ctx.shadowBlur = 0;
-      const highlightGradient = this.ctx.createLinearGradient(x, y, x, y + height / 3);
-      highlightGradient.addColorStop(0, 'rgba(255, 255, 255, 0.15)');
-      highlightGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-      this.ctx.fillStyle = highlightGradient;
-      this.drawRoundedRectPath(x, y, width, height / 3, radius);
-      this.ctx.fill();
-
-      if (enabled && !hovered) {
-        const pulseIntensity = Math.sin(Date.now() / 300) * 0.4 + 0.6;
-        this.ctx.strokeStyle = `rgba(74, 222, 128, ${pulseIntensity})`;
-        this.ctx.lineWidth = 4;
-      } else if (enabled && hovered) {
-        this.ctx.strokeStyle = '#4ade80';
-        this.ctx.lineWidth = 5;
-      } else {
-        this.ctx.strokeStyle = '#555555';
-        this.ctx.lineWidth = 3;
-      }
-      this.drawRoundedRectPath(x, y, width, height, radius);
-      this.ctx.stroke();
-
-      this.ctx.strokeStyle = enabled ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.05)';
-      this.ctx.lineWidth = 1;
-      this.drawRoundedRectPath(x + 2, y + 2, width - 4, height - 4, Math.max(0, radius - 2));
-      this.ctx.stroke();
-    }
-
-    this.ctx.restore();
-
-    // Text with shadow for readability
-    this.ctx.save();
-    if (enabled) {
-      this.ctx.shadowBlur = 4;
-      this.ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-      this.ctx.shadowOffsetY = 2;
-    }
-
-    const fontSize = isMobile ? 32 : 20;
-    this.drawText(text, x + width / 2, y + height / 2, {
+    // Pixel-art wood button (stone when disabled); same layer as drawText so
+    // the label composites on top
+    const ctx = this.gameCtx || this.ctx;
+    const HOVER_WOOD: PanelTheme = {
+      ...WOOD_THEME, face: '#9a6a3e', faceLight: '#b98756', faceDark: '#7a4e2a',
+    };
+    const theme = !enabled ? STONE_THEME : hovered ? HOVER_WOOD : WOOD_THEME;
+    drawPanel(ctx, x, y, width, height, theme, 4, 17);
+    this.drawText(text.toUpperCase(), x + width / 2, y + height / 2 + 1, {
+      size: isMobile ? 14 : 12,
       align: 'center',
       baseline: 'middle',
-      size: fontSize,
-      bold: true,
-      color: enabled ? '#ffffff' : '#777777'
+      color: enabled ? '#f4e6c2' : '#55534c',
     });
-
-    this.ctx.restore();
-  }
-
-  private drawRoundedRectPath(x: number, y: number, width: number, height: number, radius: number): void {
-    const r = Math.min(radius, Math.floor(Math.min(width, height) / 2));
-    this.ctx.beginPath();
-    this.ctx.moveTo(x + r, y);
-    this.ctx.lineTo(x + width - r, y);
-    this.ctx.lineTo(x + width, y + r);
-    this.ctx.lineTo(x + width, y + height - r);
-    this.ctx.lineTo(x + width - r, y + height);
-    this.ctx.lineTo(x + r, y + height);
-    this.ctx.lineTo(x, y + height - r);
-    this.ctx.lineTo(x, y + r);
-    this.ctx.closePath();
   }
 
   drawRect(x: number, y: number, width: number, height: number, color: string): void {
@@ -643,6 +551,20 @@ export class Renderer {
       // Always composite the UI layer
       this.ctx.drawImage(this.uiCanvas, 0, 0);
     }
+  }
+
+  private drawRoundedRectPath(x: number, y: number, width: number, height: number, radius: number): void {
+    const r = Math.min(radius, Math.floor(Math.min(width, height) / 2));
+    this.ctx.beginPath();
+    this.ctx.moveTo(x + r, y);
+    this.ctx.lineTo(x + width - r, y);
+    this.ctx.lineTo(x + width, y + r);
+    this.ctx.lineTo(x + width, y + height - r);
+    this.ctx.lineTo(x + width - r, y + height);
+    this.ctx.lineTo(x + r, y + height);
+    this.ctx.lineTo(x, y + height - r);
+    this.ctx.lineTo(x, y + r);
+    this.ctx.closePath();
   }
 
   getWidth(): number {

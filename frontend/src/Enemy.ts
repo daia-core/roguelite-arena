@@ -2,9 +2,10 @@
 
 import { circleCollision } from './utils';
 import { SpriteSheet } from './sprites';
+import { tintSilhouette, drawDithered } from './pixel/sprite';
 import { PathfindingSystem, type PathNode } from './PathfindingSystem';
 
-export type EnemyType = 'slime' | 'goblin' | 'skeleton' | 'imp' | 'orc' | 'wraith' | 'necromancer' | 'troll' | 'banshee' | 'demon' | 'bat' | 'wizard' | 'mimic' | 'spider' | 'golem' | 'ghost' | 'mushroom' | 'gargoyle' | 'blob' | 'necroegg' | 'cyclops' | 'phantom' | 'druid' | 'construct' | 'swarm' | 'dasher' | 'evader' | 'orbiter' | 'spiraler' | 'shielder' | 'exploder' | 'healer' | 'summoner' | 'phaser' | 'boss_necrolord' | 'boss_flamefiend' | 'boss_voidbeast' | 'boss_stormking' | 'boss_ancientgolem';
+export type EnemyType = 'slime' | 'goblin' | 'skeleton' | 'imp' | 'orc' | 'wraith' | 'necromancer' | 'troll' | 'banshee' | 'demon' | 'bat' | 'wizard' | 'mimic' | 'spider' | 'golem' | 'ghost' | 'mushroom' | 'gargoyle' | 'blob' | 'necroegg' | 'cyclops' | 'phantom' | 'druid' | 'construct' | 'swarm' | 'dasher' | 'evader' | 'orbiter' | 'spiraler' | 'spinner' | 'shielder' | 'exploder' | 'healer' | 'summoner' | 'phaser' | 'boss_necrolord' | 'boss_flamefiend' | 'boss_voidbeast' | 'boss_stormking' | 'boss_ancientgolem';
 
 export interface EnemyTypeData {
   health: number;
@@ -15,11 +16,13 @@ export interface EnemyTypeData {
   xpValue: number;
   goldValue: number;
   shootRate?: number; // Shots per second (for ranged types)
+  /** How this enemy's shots are emitted (default 'single' straight shot). */
+  firePattern?: 'single' | 'ring' | 'homing' | 'spiral' | 'burst';
   spriteName: string;
   isBoss?: boolean; // Mark as boss enemy
 }
 
-const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
+export const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
   slime: {
     health: 60, // BALANCE: Reduced for faster Wave 1 kills (1-second TTK)
     speed: 60,
@@ -122,6 +125,7 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     xpValue: 75, // +50% XP
     goldValue: 20, // +100% gold
     shootRate: 1.5,
+    firePattern: 'burst',
     spriteName: 'demon'
   },
   bat: {
@@ -143,6 +147,7 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     xpValue: 15,
     goldValue: 4,
     shootRate: 0.6,
+    firePattern: 'homing',
     spriteName: 'wizard'
   },
   mimic: {
@@ -263,6 +268,8 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     color: '#95a5a6',
     xpValue: 13,
     goldValue: 4,
+    shootRate: 0.35,
+    firePattern: 'ring',
     spriteName: 'construct'
   },
   swarm: {
@@ -313,7 +320,22 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     color: '#1abc9c',
     xpValue: 14,
     goldValue: 4,
+    shootRate: 1.4,
+    firePattern: 'spiral',
     spriteName: 'spiraler'
+  },
+  // Stationary turret firing rotating rings of shots (Felix: "spinning shots")
+  spinner: {
+    health: 110,
+    speed: 18,
+    damage: 9,
+    radius: 14,
+    color: '#ffa94d',
+    xpValue: 16,
+    goldValue: 5,
+    shootRate: 0.45,
+    firePattern: 'ring',
+    spriteName: 'spinner'
   },
   // NEW: Shielder - blocks damage from one direction
   shielder: {
@@ -384,7 +406,7 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     xpValue: 200,
     goldValue: 100,
     shootRate: 2.0, // Fast shooter
-    spriteName: 'demon', // Reuse demon sprite
+    spriteName: 'boss_necrolord',
     isBoss: true
   },
 
@@ -398,7 +420,7 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     xpValue: 400,
     goldValue: 200,
     shootRate: 1.5,
-    spriteName: 'demon',
+    spriteName: 'boss_flamefiend',
     isBoss: true
   },
 
@@ -412,7 +434,7 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     xpValue: 600,
     goldValue: 300,
     shootRate: 1.8,
-    spriteName: 'demon',
+    spriteName: 'boss_voidbeast',
     isBoss: true
   },
 
@@ -426,7 +448,7 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     xpValue: 800,
     goldValue: 400,
     shootRate: 2.5,
-    spriteName: 'demon',
+    spriteName: 'boss_stormking',
     isBoss: true
   },
 
@@ -440,7 +462,7 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     xpValue: 1000,
     goldValue: 500,
     shootRate: 1.0,
-    spriteName: 'demon',
+    spriteName: 'boss_ancientgolem',
     isBoss: true
   }
 };
@@ -453,6 +475,8 @@ export class Enemy {
   y: number;
   type: EnemyType;
   typeData: EnemyTypeData;
+  /** Rotation state for ring/spiral fire patterns. */
+  patternPhase: number = Math.random() * Math.PI * 2;
   health: number;
   maxHealth: number;
   dead: boolean = false;
@@ -1388,160 +1412,55 @@ export class Enemy {
   draw(ctx: CanvasRenderingContext2D): void {
     ctx.save();
 
-    // BROTATO-STYLE: Extra thick dark outline for all enemies for maximum visibility
-    ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, this.typeData.radius + 2, 0, Math.PI * 2);
-    ctx.stroke();
-
     const sprite = SpriteSheet.get(this.typeData.spriteName);
 
     if (sprite) {
-      // PURE PIXEL ART: No shadows, no blur, no smooth alpha
-      // Use dithering and alternate rendering techniques instead
+      const dx = this.x - sprite.width / 2;
+      const dy = this.y - sprite.height / 2;
 
-      // Wraith phasing: draw with 30% dithered pattern
       if (this.invulnerable) {
-        const ditherSize = 2;
-        ctx.save();
-        // Create a dithered clipping mask
-        ctx.beginPath();
-        for (let dx = 0; dx < sprite.width; dx += ditherSize) {
-          for (let dy = 0; dy < sprite.height; dy += ditherSize) {
-            if (((dx + dy) / ditherSize) % 3 !== 0) { // 66% of pixels (skipping 33%)
-              ctx.rect(
-                this.x - sprite.width / 2 + dx,
-                this.y - sprite.height / 2 + dy,
-                ditherSize,
-                ditherSize
-              );
-            }
-          }
-        }
-        ctx.clip();
-        ctx.drawImage(sprite, this.x - sprite.width / 2, this.y - sprite.height / 2);
-        ctx.restore();
-      }
-      // Ghost translucent: draw with 60% dithered pattern
-      else if (this.type === 'ghost') {
-        const ditherSize = 2;
-        ctx.save();
-        ctx.beginPath();
-        for (let dx = 0; dx < sprite.width; dx += ditherSize) {
-          for (let dy = 0; dy < sprite.height; dy += ditherSize) {
-            if (((dx + dy) / ditherSize) % 5 <= 2) { // 60% of pixels
-              ctx.rect(
-                this.x - sprite.width / 2 + dx,
-                this.y - sprite.height / 2 + dy,
-                ditherSize,
-                ditherSize
-              );
-            }
-          }
-        }
-        ctx.clip();
-        ctx.drawImage(sprite, this.x - sprite.width / 2, this.y - sprite.height / 2);
-        ctx.restore();
-      }
-      // Phantom invisibility: draw with 20% sparse dithered pattern
-      else if (this.type === 'phantom' && this.phantomInvisible) {
-        const ditherSize = 2;
-        ctx.save();
-        ctx.beginPath();
-        for (let dx = 0; dx < sprite.width; dx += ditherSize) {
-          for (let dy = 0; dy < sprite.height; dy += ditherSize) {
-            if (((dx + dy) / ditherSize) % 5 === 0) { // 20% of pixels
-              ctx.rect(
-                this.x - sprite.width / 2 + dx,
-                this.y - sprite.height / 2 + dy,
-                ditherSize,
-                ditherSize
-              );
-            }
-          }
-        }
-        ctx.clip();
-        ctx.drawImage(sprite, this.x - sprite.width / 2, this.y - sprite.height / 2);
-        ctx.restore();
-      }
-      // Normal draw
-      else {
-        // PIXEL ART: Hit flash using color replacement instead of additive blend
-        if (this.hitFlashTimer > 0) {
-          // Draw sprite in white for flash effect
-          const flashStrength = this.hitFlashTimer / 0.032;
-          if (flashStrength > 0.5) {
-            // Full flash: draw white overlay sprite
-            ctx.save();
-            ctx.fillStyle = '#ffffff';
-            // Draw white rectangle at sprite position
-            ctx.fillRect(
-              this.x - sprite.width / 2,
-              this.y - sprite.height / 2,
-              sprite.width,
-              sprite.height
-            );
-            ctx.restore();
-          } else {
-            // Fading: draw normal sprite
-            ctx.drawImage(sprite, this.x - sprite.width / 2, this.y - sprite.height / 2);
-          }
-        } else {
-          // Normal sprite draw
-          ctx.drawImage(sprite, this.x - sprite.width / 2, this.y - sprite.height / 2);
-        }
+        // Wraith phasing: mostly-there dithered transparency
+        drawDithered(ctx, sprite, dx, dy, 0.66);
+      } else if (this.type === 'ghost') {
+        drawDithered(ctx, sprite, dx, dy, 0.6);
+      } else if (this.type === 'phantom' && this.phantomInvisible) {
+        drawDithered(ctx, sprite, dx, dy, 0.2);
+      } else if (this.hitFlashTimer > 0.016) {
+        // Pixel-perfect white silhouette flash (not a white box)
+        ctx.drawImage(tintSilhouette(sprite, '#ffffff'), dx, dy);
+      } else {
+        ctx.drawImage(sprite, dx, dy);
       }
     } else {
-      // PIXEL ART FALLBACK: Solid color circle, no gradient
+      // Fallback for types without a sprite yet: flat disc, no gradient
       ctx.fillStyle = this.typeData.color;
       ctx.beginPath();
       ctx.arc(this.x, this.y, this.typeData.radius, 0, Math.PI * 2);
       ctx.fill();
-
-      // Add black outline
       ctx.strokeStyle = '#000000';
       ctx.lineWidth = 2;
       ctx.stroke();
     }
 
-    // PIXEL ART HEALTH BAR: No smooth gradients or shadows
-    const isMobile = ctx.canvas.width < ctx.canvas.height;
-    const barWidth = this.typeData.radius * 2.6;
-    const barHeight = isMobile ? 6 : 5;
-    const barY = this.y - this.typeData.radius - 14;
+    // Health bar only once damaged — full-health bars are visual clutter
+    if (this.health < this.maxHealth) {
+      const isMobile = ctx.canvas.width < ctx.canvas.height;
+      const barWidth = this.typeData.radius * 2.6;
+      const barHeight = isMobile ? 6 : 5;
+      const barY = this.y - this.typeData.radius - 14;
 
-    // Black border (pixel perfect)
-    ctx.fillStyle = '#000000';
-    ctx.fillRect(this.x - barWidth / 2 - 1, barY - 1, barWidth + 2, barHeight + 2);
+      const healthPercent = this.health / this.maxHealth;
+      const healthColor =
+        healthPercent > 0.6 ? '#4ade80' : healthPercent > 0.3 ? '#fbbf24' : '#ef4444';
 
-    // Dark red background
-    ctx.fillStyle = '#3c0000';
-    ctx.fillRect(this.x - barWidth / 2, barY, barWidth, barHeight);
-
-    // Solid color health bar (no gradient)
-    const healthPercent = this.health / this.maxHealth;
-    let healthColor: string;
-    if (healthPercent > 0.6) {
-      healthColor = '#4ade80'; // Green
-    } else if (healthPercent > 0.3) {
-      healthColor = '#fbbf24'; // Yellow/orange
-    } else {
-      healthColor = '#ef4444'; // Red
+      // Crisp pixel bar: black frame, dark background, solid fill
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(this.x - barWidth / 2 - 1, barY - 1, barWidth + 2, barHeight + 2);
+      ctx.fillStyle = '#3c0000';
+      ctx.fillRect(this.x - barWidth / 2, barY, barWidth, barHeight);
+      ctx.fillStyle = healthColor;
+      ctx.fillRect(this.x - barWidth / 2, barY, barWidth * healthPercent, barHeight);
     }
-
-    ctx.fillStyle = healthColor;
-    ctx.fillRect(this.x - barWidth / 2, barY, barWidth * healthPercent, barHeight);
-
-    // Inner highlight for depth
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-    ctx.fillRect(this.x - barWidth / 2, barY, barWidth * healthPercent, barHeight * 0.4);
-
-    // Border
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(this.x - barWidth / 2, barY, barWidth, barHeight);
 
     ctx.restore();
   }

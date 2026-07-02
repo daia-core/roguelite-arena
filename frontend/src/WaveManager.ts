@@ -287,7 +287,7 @@ export class WaveManager {
     }
     // Wave 5-6: Add spiders, mimics, mushrooms, blobs, evaders
     else if (wave <= 6) {
-      return randomChoice(['slime', 'goblin', 'bat', 'bat', 'spider', 'spider', 'mimic', 'ghost', 'mushroom', 'blob', 'swarm', 'dasher', 'evader'] as EnemyType[]);
+      return randomChoice(['slime', 'goblin', 'bat', 'bat', 'spider', 'spider', 'mimic', 'ghost', 'mushroom', 'blob', 'swarm', 'dasher', 'evader', 'spinner'] as EnemyType[]);
     }
     // Wave 7-10: Add skeletons, wizards, imps, phantoms, druids, orbiters
     else if (wave <= 10) {

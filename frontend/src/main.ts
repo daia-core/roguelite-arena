@@ -3,11 +3,23 @@
 import { Game } from './Game';
 import { SpriteSheet } from './sprites';
 import { UISprites } from './UISprites';
+import { panelCanvas, WOOD_THEME } from './pixel/panel';
 import './style.css';
 
 // Initialize sprite systems
 SpriteSheet.init();
 UISprites.init();
+
+// Pixel-art wood textures for the DOM menu buttons (see .menu-btn in style.css)
+const HOVER_WOOD = { ...WOOD_THEME, face: '#9a6a3e', faceLight: '#b98756', faceDark: '#7a4e2a' };
+document.documentElement.style.setProperty(
+  '--pixel-btn',
+  `url(${panelCanvas(260, 72, WOOD_THEME, 4).toDataURL()})`
+);
+document.documentElement.style.setProperty(
+  '--pixel-btn-hover',
+  `url(${panelCanvas(260, 72, HOVER_WOOD, 4, 5).toDataURL()})`
+);
 
 // Setup canvas
 const app = document.querySelector<HTMLDivElement>('#app')!;
@@ -59,14 +71,20 @@ function resizeCanvas(): void {
     height: window.innerHeight
   };
 
-  // ZOOM OUT: Render at higher resolution, scale down via CSS for zoomed-out effect
-  const zoomFactor = 3.2; // 2x more zoom (was 1.6x, now 3.2x = 220% more game area)
-  canvas.width = viewport.width * zoomFactor;
-  canvas.height = viewport.height * zoomFactor;
+  // The world IS the canvas (no camera): zoomFactor sets how much arena fits on
+  // screen. 3.2 made 128px sprites display at ~40px — far too small to read as
+  // chunky pixel art. 1.6 shows sprites at ~80px (Brotato scale); small screens
+  // get a bit more room to kite.
+  const zoomFactor = viewport.width < 500 ? 2.0 : 1.6;
+  canvas.width = Math.round(viewport.width * zoomFactor);
+  canvas.height = Math.round(viewport.height * zoomFactor);
 
   // CSS scales down to viewport size (creates zoom-out effect)
   canvas.style.width = '100%';
   canvas.style.height = '100%';
+
+  // Let the game rebuild size-dependent structures (quadtrees, pathfinding grid)
+  window.dispatchEvent(new Event('game-resize'));
 }
 
 window.addEventListener('resize', resizeCanvas);
