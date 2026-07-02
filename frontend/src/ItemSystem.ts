@@ -150,7 +150,7 @@ export class ItemDatabase {
     {
       id: 'xp_magnet_t1',
       name: 'Small Magnet',
-      description: '+30% XP range',
+      description: '+30% pickup range',
       rarity: 'common',
       tier: ItemTier.Common,
       cost: 6,
@@ -974,7 +974,7 @@ export class ItemDatabase {
     {
       id: 'soul_collector_t3',
       name: 'Soul Collector',
-      description: '+50% XP gain',
+      description: '+50% pickup range',
       rarity: 'epic',
       tier: ItemTier.Rare,
       cost: 45,
@@ -1218,7 +1218,7 @@ export class ItemDatabase {
     {
       id: 'experience_gem_t2',
       name: 'Experience Gem',
-      description: '+60% XP range',
+      description: '+60% pickup range',
       rarity: 'rare',
       tier: ItemTier.Uncommon,
       cost: 28,

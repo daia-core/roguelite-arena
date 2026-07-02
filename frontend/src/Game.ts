@@ -974,9 +974,22 @@ export class Game {
       num.update(scaledDt);
     }
 
-    // Health orbs
+    // Health orbs — magnet attraction (getXPMagnet drives a real pickup range)
+    const pickupMagnet = this.playerStats.getXPMagnet();
+    const attractRadius = 60 * pickupMagnet; // baseline vacuum, widened by magnet items
     for (const orb of this.healthOrbs) {
       orb.update(scaledDt);
+
+      // Pull orbs within attraction range toward the player (speed ramps as they close in)
+      const dx = this.player.x - orb.x;
+      const dy = this.player.y - orb.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist > 0 && dist <= attractRadius) {
+        const pull = 170 + (1 - dist / attractRadius) * 300; // 170..470 px/s, faster than the player
+        const step = Math.min(dist, pull * scaledDt);
+        orb.x += (dx / dist) * step;
+        orb.y += (dy / dist) * step;
+      }
 
       // Check pickup collision
       if (orb.collidesWith(this.player.x, this.player.y, this.player.radius)) {

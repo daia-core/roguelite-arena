@@ -8,6 +8,35 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-02 — Pickup magnet now works (dead stat fixed) + orb vacuum
+
+**Player-visible**
+- Health orbs are now **vacuumed toward you** when you get near, instead of only being collected
+  by walking directly onto them. There's a baseline pickup range, and the closer an orb is the
+  faster it snaps in — so ranged/kiting builds that never touch enemies can finally grab heals.
+- The three magnet items — **Small Magnet**, **Soul Collector**, **Experience Gem** — actually do
+  something now. They were **placebo**: you paid gold for a stat the game never read. They now
+  widen your pickup range as their tooltips imply. Descriptions corrected to "+X% pickup range"
+  (Soul Collector was mislabeled "+50% XP gain").
+
+**Under the hood**
+- Root cause: `PlayerStats.getXPMagnet()` (whose own field comment reads *"Multiplier for pickup
+  range"*) was defined and fed by three items + a transformation bonus, but **never called
+  anywhere** — a genuine dead stat found while reviewing hitboxes/pickups. Fix wires it into the
+  health-orb loop (`Game.ts`): orbs within `60 × magnet` px are pulled toward the player at
+  170→470 px/s (ramps with closeness, always faster than the 200 px/s player so they're caught).
+- Isolated: only the health-orb update loop + three item description strings. No effect on the
+  instant XP/gold-on-kill economy. Complements the same-day build-diversity deploy below (that
+  pass reviewed pickups but didn't catch the dead magnet stat).
+
+**Commit** `TBD`
+**Verified on the shipped `frontend/dist`** via a new deterministic harness (`qa-magnet.mjs`) that
+steps the real game loop with fixed dt: baseline (no items) vacuums a 55px orb → collected + player
+healed; a 200px orb stays put (range is bounded, not global); a magnet item (2×) pulls a 100px orb;
+`getXPMagnet()` returns 1 then 2 as expected; 0 console errors. Standard smoke also clean.
+
+---
+
 ## 2026-07-02 — Build diversity: banking interest + trade-off items
 
 **Player-visible**
