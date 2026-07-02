@@ -1427,8 +1427,8 @@ export class Game {
       this.input.mouseDown = false;
     }
 
-    // ADVANCED REROLL: Free reroll bonus if bought all 6 items
-    const freeReroll = this.itemsPurchasedThisWave >= 6;
+    // ADVANCED REROLL: Free reroll ONLY when shop is completely empty
+    const freeReroll = this.shopItems.filter(item => item !== null && item !== undefined).length === 0;
     const effectiveRerollCost = freeReroll ? 0 : this.shopRerollCost;
 
     // Reroll button
@@ -1833,12 +1833,12 @@ export class Game {
     const topPadding = isMobile ? 20 : 10;
     const sidePadding = isMobile ? 20 : 10;
 
-    // Larger HUD elements for mobile readability - DOUBLED for better visibility
-    const barHeight = isMobile ? 36 : 12;
-    const barWidth = isMobile ? Math.min(240, this.canvas.width * 0.5) : 180;
+    // Larger HUD elements for mobile readability - TRIPLED for visibility
+    const barHeight = isMobile ? 50 : 12;
+    const barWidth = isMobile ? Math.min(320, this.canvas.width * 0.6) : 180;
 
     // Top bar background - larger on mobile
-    const hudBgHeight = isMobile ? 120 : 56;
+    const hudBgHeight = isMobile ? 150 : 56;
     this.renderer.drawRoundedRect(0, 0, this.canvas.width, hudBgHeight, 0, 'rgba(0, 0, 0, 0.65)');
     ctx.save();
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
@@ -1846,33 +1846,33 @@ export class Game {
     ctx.strokeRect(0, hudBgHeight - 1, this.canvas.width, 1);
     ctx.restore();
 
-    // Health bar - larger icons and text on mobile - DOUBLED for readability
-    const iconSize = isMobile ? 40 : 14;
+    // Health bar - larger icons and text on mobile - TRIPLED for readability
+    const iconSize = isMobile ? 60 : 14;
     this.renderer.drawText('❤', sidePadding + 2, topPadding, { size: iconSize, bold: true, color: '#ef4444' });
     this.renderer.drawHealthBar(sidePadding + (isMobile ? 50 : 20), topPadding + 1, barWidth, barHeight, this.player.health, this.player.maxHealth);
 
-    const hpValueSize = isMobile ? 28 : 11;
-    this.renderer.drawText(`${Math.ceil(this.player.health)}/${this.player.maxHealth}`, sidePadding + (isMobile ? 50 : 20) + barWidth + 6, topPadding + 2, {
+    const hpValueSize = isMobile ? 36 : 11;
+    this.renderer.drawText(`${Math.ceil(this.player.health)}/${this.player.maxHealth}`, sidePadding + (isMobile ? 70 : 20) + barWidth + 6, topPadding + 2, {
       size: hpValueSize,
       bold: true,
       color: '#ffffff'
     });
 
     // XP bar - directly below health
-    const xpOffset = isMobile ? 48 : 20;
+    const xpOffset = isMobile ? 62 : 20;
     this.renderer.drawText('⭐', sidePadding + 2, topPadding + xpOffset, { size: iconSize, bold: true, color: '#ffd700' });
-    this.renderer.drawProgressBar(sidePadding + (isMobile ? 50 : 20), topPadding + xpOffset + 1, barWidth, barHeight, this.player.xp / this.player.xpToNextLevel, '#4ade80');
+    this.renderer.drawProgressBar(sidePadding + (isMobile ? 70 : 20), topPadding + xpOffset + 1, barWidth, barHeight, this.player.xp / this.player.xpToNextLevel, '#4ade80');
 
-    const levelSize = isMobile ? 28 : 11;
-    this.renderer.drawText(`Lv ${this.player.level}`, sidePadding + (isMobile ? 50 : 20) + barWidth + 6, topPadding + xpOffset + 2, {
+    const levelSize = isMobile ? 36 : 11;
+    this.renderer.drawText(`Lv ${this.player.level}`, sidePadding + (isMobile ? 70 : 20) + barWidth + 6, topPadding + xpOffset + 2, {
       size: levelSize,
       bold: true,
       color: '#ffd700'
     });
 
     // Gold - compact, below XP
-    const goldOffset = isMobile ? 96 : 40;
-    const goldSize = isMobile ? 32 : 13;
+    const goldOffset = isMobile ? 124 : 40;
+    const goldSize = isMobile ? 42 : 13;
     this.renderer.drawText(`💰 ${this.player.gold}`, sidePadding + 2, topPadding + goldOffset, {
       size: goldSize,
       bold: true,
@@ -1894,7 +1894,7 @@ export class Game {
       waveIcon = '⚡';
     }
 
-    const waveSize = isMobile ? 36 : 16;
+    const waveSize = isMobile ? 48 : 16;
     this.renderer.drawText(`${waveIcon} ${waveText}`, this.canvas.width - sidePadding, topPadding + 2, {
       size: waveSize,
       bold: true,
@@ -1902,7 +1902,7 @@ export class Game {
       color: waveColor
     });
 
-    const enemySize = isMobile ? 28 : 12;
+    const enemySize = isMobile ? 36 : 12;
     this.renderer.drawText(`Enemies: ${this.enemies.length + this.waveManager.waveEnemiesRemaining}`, this.canvas.width - sidePadding, topPadding + xpOffset + 2, {
       size: enemySize,
       align: 'right',
@@ -1914,7 +1914,7 @@ export class Game {
 
     // Shield indicator (center, compact)
     if (this.player.shield) {
-      const shieldSize = isMobile ? 30 : 14;
+      const shieldSize = isMobile ? 40 : 14;
       this.renderer.drawText('🛡️ SHIELD', this.canvas.width / 2, topPadding + goldOffset, {
         size: shieldSize,
         bold: true,
@@ -1945,7 +1945,7 @@ export class Game {
 
     // Shop title with fancy styling
     this.renderer.drawText('SHOP', this.canvas.width / 2, isMobile ? 20 : 40, {
-      size: isMobile ? 48 : 40,
+      size: isMobile ? 60 : 40,
       bold: true,
       align: 'center',
       color: '#ffd700'
@@ -1955,7 +1955,7 @@ export class Game {
 
     // Gold display with icon
     this.renderer.drawText(`💰 ${this.player.gold}`, this.canvas.width / 2, isMobile ? 55 : 75, {
-      size: isMobile ? 24 : 20,
+      size: isMobile ? 32 : 20,
       bold: true,
       align: 'center',
       color: '#ffd700'
@@ -2325,7 +2325,7 @@ export class Game {
 
         if (indicatorText) {
           this.renderer.drawText(indicatorText, x + itemWidth / 2, y + 8, {
-            size: isPortrait ? 13 : isMobile ? 18 : 12,
+            size: (isPortrait || isMobile) ? 18 : 12,
             bold: true,
             align: 'center',
             color: indicatorColor
@@ -2335,13 +2335,13 @@ export class Game {
 
       // Icon with better positioning
       this.renderer.drawText(item.icon, x + itemWidth / 2, y + (isPortrait ? 25 : isMobile ? 20 : 15), {
-        size: isPortrait ? 44 : isMobile ? 68 : 32, // Reduced from 48 to 44 for portrait
+        size: (isPortrait || isMobile) ? 68 : 32, // Unified mobile size
         align: 'center'
       });
 
       // Name with better contrast
       this.renderer.drawText(item.name, x + itemWidth / 2, y + (isPortrait ? 80 : isMobile ? 95 : 55), {
-        size: isPortrait ? 18 : isMobile ? 26 : 16, // Reduced from 20 to 18
+        size: (isPortrait || isMobile) ? 26 : 16, // Unified mobile size
         bold: true,
         align: 'center',
         color: rarityColor
@@ -2349,7 +2349,7 @@ export class Game {
 
       // Description (more compact)
       this.renderer.drawText(item.description, x + itemWidth / 2, y + (isPortrait ? 105 : isMobile ? 125 : 75), {
-        size: isPortrait ? 13 : isMobile ? 20 : 12, // Reduced from 14 to 13
+        size: (isPortrait || isMobile) ? 20 : 12, // Unified mobile size
         align: 'center',
         color: '#cccccc'
       });
@@ -2358,7 +2358,7 @@ export class Game {
       const finalPrice = this.playerStats.getItemPrice(item, this.waveManager.currentWave);
       const canAfford = this.player.gold >= finalPrice;
       this.renderer.drawText(`💰 ${finalPrice}`, x + itemWidth / 2, y + (isPortrait ? 160 : isMobile ? 180 : 115), {
-        size: isPortrait ? 20 : isMobile ? 28 : 16,
+        size: (isPortrait || isMobile) ? 28 : 16,
         bold: true,
         align: 'center',
         color: canAfford ? '#ffd700' : '#ef4444'
@@ -2389,7 +2389,7 @@ export class Game {
     );
 
     // Reroll button - ALWAYS SECOND (below continue)
-    const freeReroll = this.itemsPurchasedThisWave >= 6;
+    const freeReroll = this.shopItems.filter(item => item !== null && item !== undefined).length === 0;
     const effectiveRerollCost = freeReroll ? 0 : this.shopRerollCost;
     const canAffordReroll = this.player.gold >= effectiveRerollCost;
     this.renderer.drawButton(
