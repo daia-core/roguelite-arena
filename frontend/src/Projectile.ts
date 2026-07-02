@@ -107,64 +107,32 @@ export class Projectile {
   draw(ctx: CanvasRenderingContext2D): void {
     ctx.save();
 
-    // PERFORMANCE: Simplified trail rendering (no shadow blur per point)
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.shadowBlur = 0; // Disable shadow blur for trail points
+    // STARDEW STYLE: Pixel art trail - square pixels only, no smooth circles
+    const trailPixelSize = 6; // Pixel size for trail
     for (let i = 0; i < this.trail.length; i++) {
       const point = this.trail[i];
       const alpha = 1 - (point.age / 0.12);
-      const size = this.radius * (0.5 + alpha * 0.5);
 
-      ctx.fillStyle = this.color + Math.floor(alpha * 80).toString(16).padStart(2, '0');
-      ctx.beginPath();
-      ctx.arc(point.x, point.y, size, 0, Math.PI * 2);
-      ctx.fill();
+      // Draw trail as pixel squares
+      ctx.globalAlpha = alpha * 0.6;
+      ctx.fillStyle = this.color;
+      const x = Math.floor(point.x);
+      const y = Math.floor(point.y);
+      ctx.fillRect(x - trailPixelSize / 2, y - trailPixelSize / 2, trailPixelSize, trailPixelSize);
     }
+    ctx.globalAlpha = 1;
 
     const spriteName = this.fromPlayer ? 'bullet' : 'enemy_bullet';
     const sprite = SpriteSheet.get(spriteName);
 
     if (sprite) {
-      // BROTATO-STYLE: Stronger glow and outline for projectile visibility
-      ctx.shadowBlur = 15;
-      ctx.shadowColor = this.color;
-      ctx.globalCompositeOperation = 'lighter';
-
-      // Add dark outline for clarity
-      ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(this.x, this.y, this.radius + 1, 0, Math.PI * 2);
-      ctx.stroke();
-
-      // Draw sprite
+      // PIXEL ART: Just draw the sprite, no glow, no outlines, no smooth effects
+      ctx.imageSmoothingEnabled = false;
       ctx.drawImage(
         sprite,
-        this.x - sprite.width / 2,
-        this.y - sprite.height / 2
+        Math.floor(this.x - sprite.width / 2),
+        Math.floor(this.y - sprite.height / 2)
       );
-    } else {
-      // BROTATO-STYLE: Enhanced fallback with outline and stronger glow
-      ctx.shadowBlur = 15;
-      ctx.shadowColor = this.color;
-      ctx.globalCompositeOperation = 'lighter';
-
-      // Dark outline for visibility
-      ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(this.x, this.y, this.radius + 1, 0, Math.PI * 2);
-      ctx.stroke();
-
-      // Brighter gradient
-      const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius);
-      gradient.addColorStop(0, '#ffffff');
-      gradient.addColorStop(0.4, this.color);
-      gradient.addColorStop(1, this.color + '88');
-      ctx.fillStyle = gradient;
-      ctx.beginPath();
-      ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-      ctx.fill();
     }
 
     ctx.restore();

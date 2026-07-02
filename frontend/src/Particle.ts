@@ -207,42 +207,76 @@ export class DamageNumber {
     const alpha = this.lifetime / this.maxLifetime;
     ctx.globalAlpha = alpha;
 
-    // Translate and rotate for crits
-    ctx.translate(this.x, this.y);
-    if (this.isCrit) {
-      ctx.rotate(this.rotation);
-    }
+    // STARDEW STYLE: Pixel art damage numbers - draw each digit as pixels, no smooth text
+    ctx.imageSmoothingEnabled = false;
 
     // Detect mobile based on canvas orientation
     const isMobile = ctx.canvas.width < ctx.canvas.height;
-    const baseFontSize = isMobile ? 48 : 36;
-    const critFontSize = isMobile ? 72 : 54;
-    const fontSize = this.isCrit ? critFontSize : baseFontSize;
+    const pixelScale = isMobile ? 6 : 4; // How big each pixel is
+    const pixelScaleFinal = this.isCrit ? pixelScale * 1.5 : pixelScale;
 
-    // Stronger glow effect
-    ctx.shadowBlur = this.isCrit ? 25 : 15;
-    ctx.shadowColor = this.color;
+    // Simple pixel font (3x5 per digit)
+    const digitPatterns: Record<string, number[][]> = {
+      '0': [[1,1,1],[1,0,1],[1,0,1],[1,0,1],[1,1,1]],
+      '1': [[0,1,0],[1,1,0],[0,1,0],[0,1,0],[1,1,1]],
+      '2': [[1,1,1],[0,0,1],[1,1,1],[1,0,0],[1,1,1]],
+      '3': [[1,1,1],[0,0,1],[1,1,1],[0,0,1],[1,1,1]],
+      '4': [[1,0,1],[1,0,1],[1,1,1],[0,0,1],[0,0,1]],
+      '5': [[1,1,1],[1,0,0],[1,1,1],[0,0,1],[1,1,1]],
+      '6': [[1,1,1],[1,0,0],[1,1,1],[1,0,1],[1,1,1]],
+      '7': [[1,1,1],[0,0,1],[0,0,1],[0,0,1],[0,0,1]],
+      '8': [[1,1,1],[1,0,1],[1,1,1],[1,0,1],[1,1,1]],
+      '9': [[1,1,1],[1,0,1],[1,1,1],[0,0,1],[1,1,1]],
+    };
 
-    // Draw outline for better visibility
-    ctx.strokeStyle = '#000000';
-    ctx.lineWidth = this.isCrit ? 5 : 4;
-    ctx.font = `bold ${fontSize * this.scale}px Arial`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.strokeText(this.text, 0, 0);
+    const digitWidth = 3 * pixelScaleFinal;
+    const digitSpacing = 1 * pixelScaleFinal;
+    const totalWidth = this.text.length * (digitWidth + digitSpacing) - digitSpacing;
 
-    // Fill with color (gradient for crits)
-    if (this.isCrit) {
-      const gradient = ctx.createLinearGradient(0, -fontSize * this.scale / 2, 0, fontSize * this.scale / 2);
-      gradient.addColorStop(0, '#ff4444');
-      gradient.addColorStop(0.5, '#ff0000');
-      gradient.addColorStop(1, '#cc0000');
-      ctx.fillStyle = gradient;
-    } else {
+    // Draw each digit
+    let xOffset = this.x - totalWidth / 2;
+    for (const char of this.text) {
+      const pattern = digitPatterns[char];
+      if (!pattern) continue;
+
+      // Draw black outline first
+      ctx.fillStyle = '#000000';
+      for (let row = 0; row < 5; row++) {
+        for (let col = 0; col < 3; col++) {
+          if (pattern[row][col]) {
+            // Outline pixels
+            for (let dy = -1; dy <= 1; dy++) {
+              for (let dx = -1; dx <= 1; dx++) {
+                if (dx === 0 && dy === 0) continue;
+                ctx.fillRect(
+                  Math.floor(xOffset + col * pixelScaleFinal + dx * pixelScaleFinal),
+                  Math.floor(this.y - 12 * this.scale + row * pixelScaleFinal + dy * pixelScaleFinal),
+                  pixelScaleFinal,
+                  pixelScaleFinal
+                );
+              }
+            }
+          }
+        }
+      }
+
+      // Draw digit pixels
       ctx.fillStyle = this.color;
+      for (let row = 0; row < 5; row++) {
+        for (let col = 0; col < 3; col++) {
+          if (pattern[row][col]) {
+            ctx.fillRect(
+              Math.floor(xOffset + col * pixelScaleFinal),
+              Math.floor(this.y - 12 * this.scale + row * pixelScaleFinal),
+              pixelScaleFinal,
+              pixelScaleFinal
+            );
+          }
+        }
+      }
+
+      xOffset += digitWidth + digitSpacing;
     }
-    ctx.font = `bold ${fontSize * this.scale}px Arial`;
-    ctx.fillText(this.text, 0, 0);
 
     ctx.restore();
   }

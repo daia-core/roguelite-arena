@@ -1343,38 +1343,54 @@ export class SpriteSheet {
 
   // ==================== PROJECTILES ====================
   private static createProjectileSprites() {
-    // Player bullet - diamond shape with medieval blue
-    const bullet = this.createCanvas(12, 12);
+    // STARDEW STYLE: Proper pixel art bullets - no smooth paths
+
+    // Player bullet - bright blue diamond (6x6 base)
+    const bullet = this.createCanvas(36, 36); // 6x6 * 6 scale
     const ctx = bullet.getContext('2d')!;
 
-    ctx.fillStyle = '#3b82f6'; // Royal blue
-    ctx.beginPath();
-    ctx.moveTo(6, 0);
-    ctx.lineTo(12, 6);
-    ctx.lineTo(6, 12);
-    ctx.lineTo(0, 6);
-    ctx.fill();
+    const bulletPixels = [
+      [0,0,0,1,0,0,0],
+      [0,0,1,2,1,0,0],
+      [0,1,2,3,2,1,0],
+      [1,2,3,3,3,2,1],
+      [0,1,2,3,2,1,0],
+      [0,0,1,2,1,0,0],
+      [0,0,0,1,0,0,0],
+    ];
 
-    ctx.fillStyle = '#93c5fd'; // Light blue highlight
-    ctx.beginPath();
-    ctx.moveTo(6, 2);
-    ctx.lineTo(10, 6);
-    ctx.lineTo(6, 10);
-    ctx.lineTo(2, 6);
-    ctx.fill();
+    const bulletColors = [
+      'transparent',
+      '#000000',     // 1 - black outline
+      '#3b82f6',     // 2 - bright blue
+      '#93c5fd'      // 3 - light blue shine
+    ];
 
+    this.drawPixels(ctx, bulletPixels, bulletColors);
     this.sprites.set('bullet', bullet);
 
-    // Enemy projectile - crimson cross
-    const enemyBullet = this.createCanvas(10, 10);
+    // Enemy projectile - red skull (7x7 base)
+    const enemyBullet = this.createCanvas(42, 42); // 7x7 * 6 scale
     const ctx2 = enemyBullet.getContext('2d')!;
-    ctx2.fillStyle = '#dc2626'; // Crimson
-    ctx2.fillRect(3, 0, 4, 10);
-    ctx2.fillRect(0, 3, 10, 4);
-    ctx2.fillStyle = '#f87171'; // Crimson highlight
-    ctx2.fillRect(4, 2, 2, 6);
-    ctx2.fillRect(2, 4, 6, 2);
 
+    const enemyBulletPixels = [
+      [0,0,1,1,1,0,0],
+      [0,1,2,2,2,1,0],
+      [1,2,3,2,3,2,1],
+      [1,2,2,2,2,2,1],
+      [1,2,3,3,3,2,1],
+      [0,1,2,2,2,1,0],
+      [0,0,1,1,1,0,0],
+    ];
+
+    const enemyBulletColors = [
+      'transparent',
+      '#000000',     // 1 - black outline
+      '#dc2626',     // 2 - crimson
+      '#f87171'      // 3 - light red
+    ];
+
+    this.drawPixels(ctx2, enemyBulletPixels, enemyBulletColors);
     this.sprites.set('enemy_bullet', enemyBullet);
   }
 
@@ -1431,6 +1447,33 @@ export class SpriteSheet {
     ];
     this.drawPixels(ctx, xpPixels, xpColors);
     this.sprites.set('xp', xp);
+
+    // Health orb - red/pink with cross (9x9 base)
+    const healthOrb = this.createCanvas(54, 54); // 9x9 * 6
+    const healthCtx = healthOrb.getContext('2d')!;
+
+    const healthPixels = [
+      [0,0,0,1,1,1,0,0,0],
+      [0,0,1,2,2,2,1,0,0],
+      [0,1,2,2,3,2,2,1,0],
+      [1,2,2,3,4,3,2,2,1],
+      [1,2,3,4,4,4,3,2,1],
+      [1,2,2,3,4,3,2,2,1],
+      [0,1,2,2,3,2,2,1,0],
+      [0,0,1,2,2,2,1,0,0],
+      [0,0,0,1,1,1,0,0,0],
+    ];
+
+    const healthColors = [
+      'transparent',
+      '#000000',     // 1 - black outline
+      '#dc2626',     // 2 - red
+      '#f87171',     // 3 - light red
+      '#ffffff'      // 4 - white cross
+    ];
+
+    this.drawPixels(healthCtx, healthPixels, healthColors);
+    this.sprites.set('health_orb', healthOrb);
 
     // Gold coin - medieval gold
     const gold = this.createCanvas(12, 12);

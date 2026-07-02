@@ -49,25 +49,35 @@ export class MeleeAttack {
     const progress = 1 - (this.lifetime / this.maxLifetime);
     const alpha = Math.sin(progress * Math.PI); // Fade in and out
 
-    // Draw arc
-    ctx.strokeStyle = `rgba(255, 200, 0, ${alpha * 0.8})`;
-    ctx.lineWidth = 8;
-    ctx.shadowBlur = 20;
-    ctx.shadowColor = '#ffaa00';
+    // STARDEW STYLE: Pixel art melee slash - draw as pixel arc, not smooth curves
+    ctx.imageSmoothingEnabled = false;
+    ctx.globalAlpha = alpha * 0.8;
 
     const startAngle = this.angle - this.arc / 2;
     const endAngle = this.angle + this.arc / 2;
 
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, this.range, startAngle, endAngle);
-    ctx.stroke();
+    // Draw slash as pixel "pixels" along the arc
+    const pixelSize = 8; // Size of each pixel in the slash
+    const numPixels = Math.floor((this.arc * this.range) / (pixelSize * 1.5)); // How many pixels to draw
 
-    // Inner glow
-    ctx.strokeStyle = `rgba(255, 255, 255, ${alpha * 0.6})`;
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, this.range, startAngle, endAngle);
-    ctx.stroke();
+    for (let i = 0; i < numPixels; i++) {
+      const angleStep = startAngle + (endAngle - startAngle) * (i / numPixels);
+      const px = this.x + Math.cos(angleStep) * this.range;
+      const py = this.y + Math.sin(angleStep) * this.range;
+
+      // Outer yellow pixels
+      ctx.fillStyle = '#ffc800';
+      ctx.fillRect(Math.floor(px - pixelSize / 2), Math.floor(py - pixelSize / 2), pixelSize, pixelSize);
+
+      // Inner white pixels for highlight (every other pixel)
+      if (i % 2 === 0) {
+        ctx.fillStyle = '#ffffff';
+        const innerRadius = this.range - pixelSize;
+        const ipx = this.x + Math.cos(angleStep) * innerRadius;
+        const ipy = this.y + Math.sin(angleStep) * innerRadius;
+        ctx.fillRect(Math.floor(ipx - pixelSize / 2), Math.floor(ipy - pixelSize / 2), pixelSize * 0.6, pixelSize * 0.6);
+      }
+    }
 
     ctx.restore();
   }
