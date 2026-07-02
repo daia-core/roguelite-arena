@@ -8,6 +8,32 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-02 — Fix boss-wave soft-lock (run could stall forever)
+
+**Player-visible**
+- A boss wave can no longer trap you forever. Boss waves still require the kill, but if the boss is
+  somehow still alive **45 s past the wave timer** (e.g. an under-powered build that can't out-damage
+  it), the wave now force-resolves instead of leaving you kiting an un-killable boss with no way to
+  progress and no game-over. The boss despawns with **no reward** — you didn't win the fight, but the
+  run continues.
+
+**Under the hood**
+- Root cause found via the headless balance simulator (`tools/qa/simulate-balance.mjs`): normal waves
+  time-box + despawn stragglers, but boss waves had **no timeout** at all — `waveActive` stayed true
+  until the boss died. A kite-bot proved the soft-lock: it reached wave 10, couldn't kill the boss,
+  and was still alive-but-stuck at the 3-minute sim bail-out (1 of 5 baseline runs).
+- Fix: `WaveManager.BOSS_GRACE_SEC = 45`. When `waveTimer <= -45` on a boss wave, despawn all enemies
+  (`dead = true` → no reward, same path as straggler despawn) and complete the wave. Minimal,
+  consistent with existing behaviour, no effect on normal play (a fair build kills the boss well
+  inside the window).
+
+**Commit** `PENDING`
+**Sim-verified** post-fix re-run: **8/8 runs reached wave 15, zero STUCK** (was 1/5 soft-locked);
+wave-10 boss now resolves in a bounded ~44 s. Full analysis + two staged balance-feel findings
+(inverted difficulty curve, runaway gold economy) → `BALANCE-SIM-2026-07-02.md`.
+
+---
+
 ## 2026-07-02 — Fix same-frame double-kill (double XP/gold bug)
 
 **Player-visible**

@@ -21,6 +21,13 @@ export class WaveManager {
   waveModifier: WaveModifier = 'none';
   waveModifierText: string = '';
 
+  // Anti-soft-lock: a boss wave never auto-completes on the timer (you must kill
+  // the boss). If a build can't out-DPS the boss, that would let a pure kiter
+  // stall the run forever (proved by the balance sim, 2026-07-02). After this
+  // many seconds PAST the wave timer, force-resolve the wave and despawn the
+  // boss with no reward — same as straggler despawn, just a much longer grace.
+  static readonly BOSS_GRACE_SEC = 45;
+
   constructor() {}
 
   startWave(waveNumber: number): void {
@@ -151,6 +158,15 @@ export class WaveManager {
       }
       this.waveEnemiesRemaining = 0;
       if (!this.isBossWave) {
+        this.waveActive = false;
+        this.waveComplete = true;
+        return enemies;
+      }
+      // Boss wave: hard grace cap so an un-killable boss can't soft-lock the run.
+      // Past the cap, despawn the boss (dead=true → no reward, the fight wasn't
+      // won) and complete the wave, exactly like the straggler despawn above.
+      if (this.waveTimer <= -WaveManager.BOSS_GRACE_SEC) {
+        for (const enemy of enemies) enemy.dead = true;
         this.waveActive = false;
         this.waveComplete = true;
         return enemies;
