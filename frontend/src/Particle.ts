@@ -81,65 +81,24 @@ export class Particle {
     // PURE PIXEL ART: No alpha blending, no additive glow - use dithering for ALL effects
     const fadeProgress = this.fadeOut ? (1 - this.lifetime / this.maxLifetime) : 0;
 
-    // Dithered fade: as particle ages, use sparser dither patterns
+    // PERFORMANCE OPTIMIZATION: Simplified dithering - fewer draw calls
     ctx.fillStyle = this.color;
 
     if (fadeProgress < 0.25) {
-      // First quarter: full solid square
+      // First quarter: full solid square (1 draw call instead of nested loops)
       ctx.fillRect(x - pixelSize / 2, y - pixelSize / 2, pixelSize, pixelSize);
-
-      // Dithered edge pixels for larger particles (shading effect)
-      if (pixelSize >= 6) {
-        const darkenColor = (color: string, factor: number = 0.7): string => {
-          const hex = color.replace('#', '');
-          const r = parseInt(hex.substring(0, 2), 16);
-          const g = parseInt(hex.substring(2, 4), 16);
-          const b = parseInt(hex.substring(4, 6), 16);
-          return `#${Math.floor(r * factor).toString(16).padStart(2, '0')}${Math.floor(g * factor).toString(16).padStart(2, '0')}${Math.floor(b * factor).toString(16).padStart(2, '0')}`;
-        };
-
-        const darkColor = darkenColor(this.color);
-        ctx.fillStyle = darkColor;
-
-        // Checkerboard dither around edges
-        const half = pixelSize / 2;
-        for (let dx = -half - 2; dx <= half + 2; dx += 2) {
-          for (let dy = -half - 2; dy <= half + 2; dy += 2) {
-            if (Math.abs(dx) > half || Math.abs(dy) > half) {
-              if ((Math.floor(dx / 2) + Math.floor(dy / 2)) % 2 === 0) {
-                ctx.fillRect(x + dx, y + dy, 2, 2);
-              }
-            }
-          }
-        }
-      }
     } else if (fadeProgress < 0.5) {
-      // Second quarter: 75% dithered
-      for (let dx = 0; dx < pixelSize; dx += 2) {
-        for (let dy = 0; dy < pixelSize; dy += 2) {
-          if ((dx + dy) % 4 !== 3) { // Skip 1 in 4
-            ctx.fillRect(x - pixelSize / 2 + dx, y - pixelSize / 2 + dy, 2, 2);
-          }
-        }
-      }
+      // Second quarter: Simple 75% pattern (reduced complexity)
+      const size = Math.max(2, pixelSize - 2);
+      ctx.fillRect(x - size / 2, y - size / 2, size, size);
     } else if (fadeProgress < 0.75) {
-      // Third quarter: 50% checkerboard
-      for (let dx = 0; dx < pixelSize; dx += 2) {
-        for (let dy = 0; dy < pixelSize; dy += 2) {
-          if ((dx + dy) % 4 === 0) {
-            ctx.fillRect(x - pixelSize / 2 + dx, y - pixelSize / 2 + dy, 2, 2);
-          }
-        }
-      }
+      // Third quarter: 50% simple pattern
+      const size = Math.max(2, pixelSize - 4);
+      ctx.fillRect(x - size / 2, y - size / 2, size, size);
     } else {
-      // Final quarter: 25% sparse
-      for (let dx = 0; dx < pixelSize; dx += 2) {
-        for (let dy = 0; dy < pixelSize; dy += 2) {
-          if ((dx + dy) % 8 === 0) {
-            ctx.fillRect(x - pixelSize / 2 + dx, y - pixelSize / 2 + dy, 2, 2);
-          }
-        }
-      }
+      // Final quarter: 25% tiny square
+      const size = Math.max(2, Math.floor(pixelSize / 2));
+      ctx.fillRect(x - size / 2, y - size / 2, size, size);
     }
 
     ctx.restore();
