@@ -40,6 +40,13 @@ export interface Item {
 
   // Stat modifiers
   damageMultiplier?: number;
+  // Per-damage-type multipliers (Brotato-style). These layer ON TOP of the global
+  // damageMultiplier and only apply to the matching source, so an item can read
+  // "+45% melee dmg, -10% ranged dmg" — a real specialisation cost that makes a
+  // melee build and a ranged build mechanically different, not just a tag.
+  meleeDamageMult?: number; // multiplies melee-weapon hits only
+  rangedDamageMult?: number; // multiplies projectile hits only
+  elementalDamageMult?: number; // multiplies on-hit elemental effects (chain, explosion)
   fireRateMultiplier?: number;
   critChance?: number; // Additive
   critDamageMultiplier?: number; // Multiplicative
@@ -1436,6 +1443,106 @@ export class ItemDatabase {
       damageMultiplier: 0.85
     },
 
+    // ============ DAMAGE-TYPE SPECIALISATION ITEMS (melee / ranged / elemental) ============
+    // These carry PER-TYPE multipliers so a build can commit to one damage lane. The
+    // downside usually hits the OTHER lanes or mobility, so the same item is great for a
+    // specialist and a trap for a generalist — that's what makes archetypes mechanically
+    // real instead of cosmetic tags.
+    // --- Ranged lane ---
+    {
+      id: 'marksman_scope_t1',
+      name: 'Marksman Scope',
+      description: '+20% ranged dmg, -8% fire rate',
+      rarity: 'common',
+      tier: ItemTier.Common,
+      cost: 15,
+      icon: '🎯',
+      unlocked: true,
+      tags: ['ranged'],
+      rangedDamageMult: 1.20,
+      fireRateMultiplier: 0.92
+    },
+    {
+      id: 'snipers_focus_t2',
+      name: "Sniper's Focus",
+      description: '+40% ranged dmg, -25% move speed',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 30,
+      icon: '🔭',
+      unlocked: true,
+      tags: ['ranged'],
+      rangedDamageMult: 1.40,
+      speedMultiplier: 0.75
+    },
+    // --- Melee lane ---
+    {
+      id: 'warhammer_grip_t1',
+      name: 'Warhammer Grip',
+      description: '+22% melee dmg, -10% move speed',
+      rarity: 'common',
+      tier: ItemTier.Common,
+      cost: 15,
+      icon: '🔨',
+      unlocked: true,
+      tags: ['melee'],
+      meleeDamageMult: 1.22,
+      speedMultiplier: 0.90
+    },
+    {
+      id: 'brawlers_rage_t2',
+      name: "Brawler's Rage",
+      description: '+45% melee dmg, -12% ranged dmg',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 30,
+      icon: '👊',
+      unlocked: true,
+      tags: ['melee'],
+      meleeDamageMult: 1.45,
+      rangedDamageMult: 0.88
+    },
+    // --- Elemental lane (scales chain lightning + explosion on-hit) ---
+    {
+      id: 'storm_conduit_t2',
+      name: 'Storm Conduit',
+      description: '+35% elemental dmg, -12% dmg',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 28,
+      icon: '⚡',
+      unlocked: true,
+      tags: ['elemental'],
+      elementalDamageMult: 1.35,
+      damageMultiplier: 0.88
+    },
+    {
+      id: 'overcharged_core_t3',
+      name: 'Overcharged Core',
+      description: '+55% elemental dmg, +12% fire rate, -3 armor',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 54,
+      icon: '🔮',
+      unlocked: true,
+      tags: ['elemental'],
+      elementalDamageMult: 1.55,
+      fireRateMultiplier: 1.12,
+      armor: -3
+    },
+    {
+      id: 'prism_lens_t4',
+      name: 'Prism Lens',
+      description: '+90% elemental dmg — chain & blast melt crowds',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 92,
+      icon: '💠',
+      unlocked: true,
+      tags: ['elemental'],
+      elementalDamageMult: 1.90
+    },
+
     // ==================== BANKING ITEMS (interest economy) ====================
     // Reward the save-vs-spend playstyle: bank gold, earn interest, buy big later.
     {
@@ -1704,6 +1811,37 @@ export class PlayerStats {
     // DUO COMBO BONUS
     damage *= this.duos.getTotalBonuses().damageMultiplier;
     return damage;
+  }
+
+  // ---- Per-damage-type multipliers (layer on top of getDamage) ----
+  // Each is the product of the matching item field, defaulting to 1 when no item
+  // carries it — so builds without type items behave exactly as before.
+  getMeleeDamageMult(): number {
+    let m = 1;
+    this.items.forEach(item => { if (item.meleeDamageMult) m *= item.meleeDamageMult; });
+    return m;
+  }
+
+  getRangedDamageMult(): number {
+    let m = 1;
+    this.items.forEach(item => { if (item.rangedDamageMult) m *= item.rangedDamageMult; });
+    return m;
+  }
+
+  getElementalDamageMult(): number {
+    let m = 1;
+    this.items.forEach(item => { if (item.elementalDamageMult) m *= item.elementalDamageMult; });
+    return m;
+  }
+
+  /** Damage for a melee-weapon swing: global damage × melee multiplier. */
+  getMeleeDamage(): number {
+    return this.getDamage() * this.getMeleeDamageMult();
+  }
+
+  /** Damage for a fired projectile: global damage × ranged multiplier. */
+  getRangedDamage(): number {
+    return this.getDamage() * this.getRangedDamageMult();
   }
 
   getFireRate(): number {

@@ -1,5 +1,13 @@
 # Roguelite Balance Analysis - 2026-07-02
 
+> **STATUS (updated 2026-07-02 eve): the HIGH-priority item is SHIPPED.** Problem #1 (wave 1 too
+> long) is fixed in `WaveManager.ts` — `waveDuration = 30` default plus the per-wave formula
+> `Math.min(60, 22 + waveNumber*1.5)` makes wave 1 ~23.5s (was 35s), and `spawnInterval = 1.2`
+> (was 1.5). The MEDIUM/LOW items below (economy tightening #2, price scaling #3) are deliberately
+> **NOT done** — they're gated on Felix playtesting the current build first (see "Conservative
+> Approach: only do #1 and playtest before touching economy"). So the only open work here is
+> **Felix's playtest feedback**, not an unimplemented fix. Don't re-investigate #1 as open.
+
 ## Current Wave 1 Economy
 
 ### Gold Income (Wave 1)

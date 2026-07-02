@@ -106,7 +106,7 @@ export class Player {
 
     const weaponType = this.stats.getWeaponType();
     const angle = Math.atan2(nearest.y - this.y, nearest.x - this.x);
-    const damage = this.stats.getDamage();
+    const damage = this.stats.getRangedDamage();
     const speed = this.stats.getProjectileSpeed();
     const piercingCount = this.stats.getPiercing();
 
@@ -198,7 +198,7 @@ export class Player {
     if (!nearest) return null;
 
     const angle = Math.atan2(nearest.y - this.y, nearest.x - this.x);
-    const damage = this.stats.getDamage();
+    const damage = this.stats.getMeleeDamage();
     const range = this.stats.getWeaponRange();
     const arc = this.stats.getWeaponArc();
     const knockback = this.stats.getKnockback();

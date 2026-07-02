@@ -1431,6 +1431,9 @@ export class Game {
    * these items existed and were purchasable but had no implementation.
    */
   private applyOnHitEffects(enemy: Enemy, damage: number): void {
+    // Elemental damage scales with the elemental-damage stat, so an "elemental mage"
+    // build (chain/explosion) is mechanically distinct from raw melee/ranged.
+    const elem = this.playerStats.getElementalDamageMult();
     // Chain lightning: arc to the nearest other enemy for 60% damage
     if (Math.random() < this.playerStats.getChainLightningChance()) {
       let nearest: Enemy | null = null;
@@ -1441,10 +1444,11 @@ export class Game {
         if (d < bd) { bd = d; nearest = other; }
       }
       if (nearest) {
-        const splits = nearest.takeDamage(damage * 0.6);
+        const chainDmg = damage * 0.6 * elem;
+        const splits = nearest.takeDamage(chainDmg);
         if (splits && splits.length > 0) this.enemies.push(...splits);
         this.damageNumbers.push(
-          this.createDamageNumber(nearest.x, nearest.y - 20, damage * 0.6, false, '#ffd43b')
+          this.createDamageNumber(nearest.x, nearest.y - 20, chainDmg, false, '#ffd43b')
         );
         if (nearest.dead) this.handleEnemyKill(nearest);
       }
@@ -1465,7 +1469,7 @@ export class Game {
       for (const other of this.enemies) {
         if (other === enemy || other.dead) continue;
         if ((other.x - enemy.x) ** 2 + (other.y - enemy.y) ** 2 < 80 * 80) {
-          const splits = other.takeDamage(damage * 0.5);
+          const splits = other.takeDamage(damage * 0.5 * elem);
           if (splits && splits.length > 0) this.enemies.push(...splits);
           if (other.dead) this.handleEnemyKill(other);
         }
