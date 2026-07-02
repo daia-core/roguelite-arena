@@ -31,6 +31,8 @@ export class Player {
 
   // GAME FEEL: Invincibility frames
   invincibilityTimer: number = 0;
+  /** Dodged hits waiting for a "DODGE" popup (consumed by Game). */
+  pendingDodges: number = 0;
   invincibilityDuration: number = 0.5; // 500ms of i-frames
 
   // Abilities
@@ -91,8 +93,11 @@ export class Player {
       const dist = Math.sqrt(
         (enemy.x - this.x) ** 2 + (enemy.y - this.y) ** 2
       );
-      if (dist < nearestDist) {
-        nearestDist = dist;
+      // Bosses count as closer than they are so trash can't fully soak
+      // the auto-aim during boss fights
+      const effDist = enemy.typeData.isBoss ? dist * 0.55 : dist;
+      if (effDist < nearestDist) {
+        nearestDist = effDist;
         nearest = enemy;
       }
     }
@@ -144,6 +149,10 @@ export class Player {
       // Default: Auto-aim bullets
       const mainProj = new Projectile(this.x, this.y, angle, damage, speed, true, piercingCount > 0);
       mainProj.maxPierceCount = piercingCount;
+      if (this.stats.hasHoming()) {
+        mainProj.homing = true;
+        mainProj.turnSpeed = 3.5;
+      }
       projectiles.push(mainProj);
 
       // Multishot
@@ -229,12 +238,23 @@ export class Player {
       return false; // No damage taken during i-frames
     }
 
+    // Dodge chance (Evasion Cloak etc.) — Game reads pendingDodges for the
+    // "DODGE" popup so the miss is visible
+    if (Math.random() < this.stats.getDodgeChance()) {
+      this.pendingDodges++;
+      this.invincibilityTimer = this.invincibilityDuration * 0.5;
+      return false;
+    }
+
     // Shield absorbs hit
     if (this.shield) {
       this.shield = false;
       this.invincibilityTimer = this.invincibilityDuration; // Grant i-frames even on shield break
       return false; // No damage taken
     }
+
+    // Armor: flat reduction, but a hit always deals at least 1
+    amount = Math.max(1, amount - this.stats.getArmor());
 
     this.health -= amount;
     if (this.health <= 0) {
@@ -275,7 +295,9 @@ export class Player {
     if (this.level <= 5) {
       this.xpToNextLevel = Math.floor(this.xpToNextLevel * 1.35); // 1.5 * 0.7 = ~1.35
     } else {
-      this.xpToNextLevel = Math.floor(this.xpToNextLevel * 1.5);
+      // BALANCE: 1.5 stalled leveling around L11 (L13 needed 5+ full waves of
+      // XP); 1.25 keeps level-ups flowing into the late game
+      this.xpToNextLevel = Math.floor(this.xpToNextLevel * 1.25);
     }
 
     // Stat boosts on level up

@@ -75,11 +75,13 @@ export class Input {
       this.keys.set(e.key.toLowerCase(), false);
     });
 
-    // Mouse
+    // Mouse — scale from CSS pixels to canvas pixels, exactly like the touch
+    // path below (the canvas renders larger than the viewport and is
+    // CSS-scaled down, so unscaled coordinates land short of the target)
     this.canvas.addEventListener('mousemove', (e) => {
       const rect = this.canvas.getBoundingClientRect();
-      this.mouseX = e.clientX - rect.left;
-      this.mouseY = e.clientY - rect.top;
+      this.mouseX = (e.clientX - rect.left) * (this.canvas.width / rect.width);
+      this.mouseY = (e.clientY - rect.top) * (this.canvas.height / rect.height);
     });
 
     this.canvas.addEventListener('mousedown', () => {

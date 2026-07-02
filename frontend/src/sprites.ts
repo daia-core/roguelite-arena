@@ -1372,8 +1372,8 @@ export class SpriteSheet {
   private static createProjectileSprites() {
     // STARDEW STYLE: Proper pixel art bullets - no smooth paths
 
-    // Player bullet - bright blue diamond (6x6 base)
-    const bullet = this.createCanvas(36, 36); // 6x6 * 6 scale
+    // Player bullet - bright blue diamond (7x7 grid at scale 6 = 42px)
+    const bullet = this.createCanvas(42, 42);
     const ctx = bullet.getContext('2d')!;
 
     const bulletPixels = [
@@ -1393,11 +1393,11 @@ export class SpriteSheet {
       '#93c5fd'      // 3 - light blue shine
     ];
 
-    this.drawPixels(ctx, bulletPixels, bulletColors);
+    this.drawPixels(ctx, bulletPixels, bulletColors, 6);
     this.sprites.set('bullet', bullet);
 
-    // Enemy projectile - red skull (7x7 base)
-    const enemyBullet = this.createCanvas(42, 42); // 7x7 * 6 scale
+    // Enemy projectile - red skull (7x7 grid at scale 6 = 42px)
+    const enemyBullet = this.createCanvas(42, 42);
     const ctx2 = enemyBullet.getContext('2d')!;
 
     const enemyBulletPixels = [
@@ -1417,7 +1417,7 @@ export class SpriteSheet {
       '#f87171'      // 3 - light red
     ];
 
-    this.drawPixels(ctx2, enemyBulletPixels, enemyBulletColors);
+    this.drawPixels(ctx2, enemyBulletPixels, enemyBulletColors, 6);
     this.sprites.set('enemy_bullet', enemyBullet);
   }
 

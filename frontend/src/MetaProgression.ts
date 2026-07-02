@@ -90,7 +90,7 @@ export class MetaProgression {
       {
         id: 'reroll_discount',
         name: 'Reroll Discount',
-        description: 'Start 1g / Cap 8g / Start 0g / Free first reroll',
+        description: 'Cheaper rerolls, eventually free',
         icon: '🔄',
         maxLevel: 4,
         costs: [30, 60, 100, 150]
@@ -139,14 +139,6 @@ export class MetaProgression {
       },
 
       // Tier 4: Advanced mechanics
-      {
-        id: 'extra_shop_slots',
-        name: 'Extra Shop Slots',
-        description: '+1/+2/+3 items in shop',
-        icon: '🛒',
-        maxLevel: 3,
-        costs: [80, 160, 300]
-      },
       {
         id: 'boss_damage',
         name: 'Boss Damage',

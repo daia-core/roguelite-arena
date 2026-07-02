@@ -44,26 +44,28 @@ export class WaveManager {
         this.waveModifier = 'miniboss';
         this.waveModifierText = 'MINIBOSS WAVE - Elite enemy incoming!';
       }
-      // Challenge wave (hard but rewarding)
-      else if (roll < 0.08) {
+      // Challenge wave (hard but rewarding). BALANCE: modifiers used to hit
+      // 95% of waves — normal waves are the baseline, modifiers the spice
+      // (~44%) — and stat-spike modifiers wait until wave 4
+      else if (roll < 0.05) {
         this.waveModifier = 'challenge';
         this.waveModifierText = 'CHALLENGE WAVE - Survive for bonus!';
       }
       // Standard modifiers
-      else if (roll < 0.28) {
+      else if (roll < 0.15) {
         this.waveModifier = 'horde';
         this.waveModifierText = 'HORDE WAVE - Swarm incoming!';
         this.isHordeWave = true;
-      } else if (roll < 0.45) {
+      } else if (roll < 0.25 && waveNumber >= 4) {
         this.waveModifier = 'elite';
         this.waveModifierText = 'ELITE WAVE - Tougher enemies!';
-      } else if (roll < 0.65) {
+      } else if (roll < 0.33) {
         this.waveModifier = 'speed';
         this.waveModifierText = 'SPEED WAVE - Fast enemies!';
-      } else if (roll < 0.85) {
+      } else if (roll < 0.4 && waveNumber >= 4) {
         this.waveModifier = 'tank';
         this.waveModifierText = 'TANK WAVE - Heavily armored!';
-      } else if (roll < 0.95) {
+      } else if (roll < 0.44) {
         this.waveModifier = 'chaos';
         this.waveModifierText = 'CHAOS WAVE - Mixed threats!';
       }
@@ -71,7 +73,7 @@ export class WaveManager {
 
     // Calculate enemy count based on modifier - BALANCE: More enemies for swarm feel
     // Wave 1: 12 enemies (gentler intro, ramps up fast)
-    let baseCount = waveNumber === 1 ? 12 : 15 + waveNumber * 2;
+    let baseCount = waveNumber === 1 ? 18 : 15 + waveNumber * 2;
 
     if (this.isBossWave) {
       this.totalEnemiesInWave = 10 + waveNumber;
@@ -91,6 +93,9 @@ export class WaveManager {
     }
 
     this.waveEnemiesRemaining = this.totalEnemiesInWave;
+    // Time-boxed waves (Brotato-style): the wave ends when the timer runs out,
+    // scaling gently so late waves stay intense but bounded
+    this.waveDuration = Math.min(60, 22 + waveNumber * 1.5);
     this.waveTimer = this.waveDuration;
     this.spawnTimer = 0;
     this.waveActive = true;
@@ -118,19 +123,44 @@ export class WaveManager {
       this.bossSpawned = true;
     }
 
-    // Spawn enemies
+    // Spawn enemies — cadence derived from wave duration so the full budget
+    // lands within ~65% of the wave and density scales with the timer
     if (this.spawnTimer <= 0 && this.waveEnemiesRemaining > 0) {
       const newEnemy = this.spawnEnemy(canvasWidth, canvasHeight);
       enemies.push(newEnemy);
       this.waveEnemiesRemaining--;
 
-      // Faster spawning as waves progress, even faster on horde waves
-      // Wave 1: 1.2s spawn interval (balanced for 20 enemies)
-      let baseInterval = this.currentWave === 1 ? 1.2 : Math.max(0.5, 1.5 - this.currentWave * 0.05);
+      let baseInterval = Math.min(
+        1.2,
+        Math.max(0.25, (this.waveDuration * 0.65) / this.totalEnemiesInWave)
+      );
       if (this.isHordeWave) {
         baseInterval *= 0.6; // 40% faster spawning on horde waves
       }
       this.spawnTimer = baseInterval;
+    }
+
+    // Timer expiry: non-boss leftovers despawn WITHOUT rewards and the wave
+    // ends — no more soft-locks from fleeing stragglers. Boss waves stay
+    // open until the boss dies (trash still despawns, spawning stops).
+    if (this.waveTimer <= 0) {
+      for (const enemy of enemies) {
+        if (!enemy.typeData.isBoss) enemy.dead = true;
+      }
+      this.waveEnemiesRemaining = 0;
+      if (!this.isBossWave) {
+        this.waveActive = false;
+        this.waveComplete = true;
+        return enemies;
+      }
+    }
+
+    // Last stragglers (all spawned, ≤3 alive): enrage — they charge the
+    // player instead of fleeing, so kill-all endings stay snappy
+    if (this.waveEnemiesRemaining <= 0 && enemies.length <= 3) {
+      for (const enemy of enemies) {
+        if (!enemy.typeData.isBoss) enemy.enraged = true;
+      }
     }
 
     // Check wave completion
@@ -210,7 +240,7 @@ export class WaveManager {
     } else if (this.waveModifier === 'elite') {
       waveMultiplier *= 2; // Double health/damage
     } else if (this.waveModifier === 'tank') {
-      waveMultiplier *= 3; // Triple health
+      waveMultiplier *= 2; // Tanky (also scales damage, so keep it sane)
     } else if (this.waveModifier === 'challenge') {
       waveMultiplier *= 1.8; // Tougher enemies
     } else if (this.waveModifier === 'reward') {
@@ -222,6 +252,11 @@ export class WaveManager {
     // Apply speed modifier
     if (this.waveModifier === 'speed') {
       enemy.typeData.speed *= 1.5;
+    }
+
+    // Horde: double count would double income at full gold — halve per-kill
+    if (this.waveModifier === 'horde') {
+      enemy.typeData.goldValue = Math.max(1, Math.round(enemy.typeData.goldValue * 0.5));
     }
 
     // Reward wave: enemies drop 2x gold and XP

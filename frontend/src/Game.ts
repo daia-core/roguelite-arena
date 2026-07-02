@@ -216,9 +216,15 @@ export class Game {
   /**
    * PERFORMANCE: Create damage number using pool
    */
-  private createDamageNumber(x: number, y: number, damage: number, isCrit: boolean): DamageNumber {
+  private createDamageNumber(
+    x: number,
+    y: number,
+    damage: number | string,
+    isCrit: boolean,
+    color?: string
+  ): DamageNumber {
     const num = this.damageNumberPool.acquire();
-    num.init(x, y, damage, isCrit);
+    num.init(x, y, damage, isCrit, color);
     return num;
   }
 
@@ -282,10 +288,16 @@ export class Game {
 
     // Apply meta-progression starting item
     if (this.metaProgression.hasStartingItem()) {
-      const commonItems = ItemDatabase.getItemsByRarity('common');
-      if (commonItems.length > 0) {
-        const randomItem = commonItems[Math.floor(Math.random() * commonItems.length)];
+      const tierItems = ItemDatabase.getItemsByRarity(this.metaProgression.getStartingItemTier());
+      if (tierItems.length > 0) {
+        const randomItem = tierItems[Math.floor(Math.random() * tierItems.length)];
         this.playerStats.addItem(randomItem);
+      }
+    }
+    if (this.metaProgression.hasStartingLegendary()) {
+      const legendaries = ItemDatabase.getItemsByRarity('legendary');
+      if (legendaries.length > 0) {
+        this.playerStats.addItem(legendaries[Math.floor(Math.random() * legendaries.length)]);
       }
     }
 
@@ -311,6 +323,17 @@ export class Game {
       this.player.gold += goldBonus;
     }
 
+    // Remaining meta upgrades — purchasable for weeks but never wired
+    const speedBonus = this.metaProgression.getStartingSpeedBonus();
+    if (speedBonus > 0) this.player.stats.baseSpeed *= 1 + speedBonus;
+    const fireRateBonus = this.metaProgression.getStartingFireRateBonus();
+    if (fireRateBonus > 0) this.player.stats.baseFireRate *= 1 + fireRateBonus;
+    const critBonus = this.metaProgression.getStartingCritBonus();
+    if (critBonus > 0) this.player.stats.baseCritChance += critBonus;
+    this.playerStats.metaArmor = this.metaProgression.getStartingArmorBonus();
+    this.playerStats.metaShopDiscount = this.metaProgression.getShopDiscountBonus();
+    if (this.metaProgression.hasPermanentShield()) this.player.shield = true;
+
     this.enemies = [];
     this.projectiles = [];
     this.meleeAttacks = [];
@@ -322,7 +345,7 @@ export class Game {
     this.soulsEarnedThisRun = 0;
 
     this.waveManager.reset();
-    this.waveManager.startWave(1);
+    this.waveManager.startWave(1 + this.metaProgression.getWaveSkip());
     this.waveModifierTimer = 3;
 
     this.state = 'playing';
@@ -347,7 +370,12 @@ export class Game {
     if (save.level) {
       this.player.level = save.level;
       this.player.xp = save.xp ?? 0;
-      this.player.xpToNextLevel = 100 * Math.pow(1.5, save.level - 1);
+      // Reproduce the piecewise curve (1.35 through L5, then 1.25)
+      let xpReq = 100;
+      for (let l = 2; l <= save.level; l++) {
+        xpReq = Math.floor(xpReq * (l <= 5 ? 1.35 : 1.25));
+      }
+      this.player.xpToNextLevel = xpReq;
     }
     if (save.gold !== undefined) this.player.gold = save.gold;
     if (save.health !== undefined) this.player.health = save.health;
@@ -432,6 +460,20 @@ export class Game {
     // Player update
     this.player.update(scaledDt, movement.x, movement.y, this.canvas.width, this.canvas.height);
 
+    // Health regen (items + meta) — previously sold but never ticked
+    const regen = this.playerStats.getHealthRegen() + this.metaProgression.getStartingRegenBonus();
+    if (regen > 0 && this.player.health < this.player.maxHealth) {
+      this.player.heal(regen * scaledDt);
+    }
+
+    // Dodge popups so Evasion items visibly do something
+    while (this.player.pendingDodges > 0) {
+      this.player.pendingDodges--;
+      this.damageNumbers.push(
+        this.createDamageNumber(this.player.x, this.player.y - 24, 'DODGE', false, '#66d9e8')
+      );
+    }
+
     // Player shooting
     const weaponType = this.playerStats.getWeaponType();
     if (weaponType === 'melee') {
@@ -450,6 +492,8 @@ export class Game {
           const pooled = this.projectilePool.acquire();
           pooled.init(proj.x, proj.y, Math.atan2(proj.vy, proj.vx), proj.damage, proj.speed, proj.fromPlayer, proj.piercing);
           pooled.maxPierceCount = proj.maxPierceCount;
+          pooled.homing = proj.homing;
+          pooled.turnSpeed = proj.turnSpeed;
           this.projectiles.push(pooled);
         }
         this.audio.playShoot();
@@ -486,6 +530,18 @@ export class Game {
           this.pathfindingSystem,
           scaledDt
         );
+      }
+
+      // Status effects (wired item mechanics: Frost Orb, Toxic Vial, ...)
+      if (enemy.frozenTimer > 0) enemy.frozenTimer -= scaledDt;
+      if (enemy.poisonTimer > 0) {
+        enemy.poisonTimer -= scaledDt;
+        enemy.health -= 7 * scaledDt;
+        if (enemy.health <= 0 && !enemy.dead) {
+          enemy.dead = true;
+          this.handleEnemyKill(enemy);
+          continue;
+        }
       }
 
       const result = enemy.update(scaledDt, this.player.x, this.player.y);
@@ -616,6 +672,9 @@ export class Game {
       if (result.shouldSpawnMinion) {
         const angle = Math.random() * Math.PI * 2;
         const dist = 40;
+        // Cap the battlefield so summoners can't flood (and adds can't
+        // farm-feed the player forever)
+        if (this.enemies.length > 20) continue;
         const minion = new Enemy(
           enemy.x + Math.cos(angle) * dist,
           enemy.y + Math.sin(angle) * dist,
@@ -624,6 +683,9 @@ export class Game {
         );
         minion.typeData.health = 30;
         minion.typeData.damage = 4;
+        // Token rewards: free spawns must not out-earn real enemies
+        minion.typeData.xpValue = 5;
+        minion.typeData.goldValue = 1;
         minion.maxHealth = minion.typeData.health;
         minion.health = minion.maxHealth;
         this.enemies.push(minion);
@@ -647,10 +709,15 @@ export class Game {
       // Check wall collision for cyclops
       enemy.checkWallCollision(this.canvas.width, this.canvas.height);
 
-      // Enemy-player collision
-      if (enemy.collidesWith(this.player.x, this.player.y, this.player.radius)) {
+      // Enemy-player collision — enemies persist and keep attacking on a
+      // cooldown (kamikaze contact made melee pressure evaporate); only
+      // true suicide types still die on touch
+      enemy.contactCooldown -= scaledDt;
+      if (enemy.contactCooldown <= 0 && enemy.collidesWith(this.player.x, this.player.y, this.player.radius)) {
+        enemy.contactCooldown = 0.8;
         const damaged = this.player.takeDamage(enemy.typeData.damage);
         if (damaged) {
+          this.applyThorns(enemy.typeData.damage, enemy);
           this.renderer.addScreenShake(0.3);
           this.renderer.addHitFlash(0.5);
           // PERFORMANCE: Use pooled particles
@@ -669,7 +736,9 @@ export class Game {
             }));
           }
         }
-        enemy.dead = true; // Enemy dies on contact
+        if (enemy.type === 'exploder' || enemy.type === 'swarm') {
+          enemy.dead = true; // Suicide attackers still trade themselves
+        }
       }
     }
 
@@ -692,9 +761,21 @@ export class Game {
 
     // Projectiles
     for (const proj of this.projectiles) {
-      // Homing enemy shots curve toward the player (capped turn rate)
-      if (proj.homing && !proj.fromPlayer) {
-        const desired = Math.atan2(this.player.y - proj.y, this.player.x - proj.x);
+      // Homing shots curve toward their target (capped turn rate):
+      // enemy shots seek the player, player shots seek the nearest enemy
+      let homeX = this.player.x;
+      let homeY = this.player.y;
+      let hasTarget = !proj.fromPlayer;
+      if (proj.homing && proj.fromPlayer) {
+        let bd = Infinity;
+        for (const e of this.enemyQuadtree.retrieve({ x: proj.x, y: proj.y, radius: 350 })) {
+          if (e.dead) continue;
+          const d = (e.x - proj.x) ** 2 + (e.y - proj.y) ** 2;
+          if (d < bd) { bd = d; homeX = e.x; homeY = e.y; hasTarget = true; }
+        }
+      }
+      if (proj.homing && hasTarget) {
+        const desired = Math.atan2(homeY - proj.y, homeX - proj.x);
         const current = Math.atan2(proj.vy, proj.vx);
         let delta = desired - current;
         while (delta > Math.PI) delta -= Math.PI * 2;
@@ -720,6 +801,9 @@ export class Game {
           if (enemy.collidesWith(proj.x, proj.y, proj.radius)) {
             const isCrit = this.player.rollCrit();
             let damage = isCrit ? this.player.getCritDamage(proj.damage) : proj.damage;
+            if (enemy.typeData.isBoss) {
+              damage *= this.metaProgression.getBossDamageMultiplier();
+            }
 
             // GAME FEEL: Trigger hit pause on player damage to enemy
             this.hitPauseTimer = isCrit ? 0.08 : 0.05; // Longer pause on crit
@@ -776,6 +860,8 @@ export class Game {
 
             if (enemy.dead) {
               this.handleEnemyKill(enemy);
+            } else {
+              this.applyOnHitEffects(enemy, damage);
             }
           }
         }
@@ -784,6 +870,7 @@ export class Game {
         if (this.player.collidesWith(proj.x, proj.y, proj.radius)) {
           const damaged = this.player.takeDamage(proj.damage);
           if (damaged) {
+            this.applyThorns(proj.damage);
             this.renderer.addScreenShake(0.25);
             this.renderer.addHitFlash(0.4);
             // PERFORMANCE: Use pooled particles
@@ -821,6 +908,9 @@ export class Game {
         if (melee.isPointInArc(enemy.x, enemy.y)) {
           const isCrit = this.player.rollCrit();
           let damage = isCrit ? this.player.getCritDamage(melee.damage) : melee.damage;
+          if (enemy.typeData.isBoss) {
+            damage *= this.metaProgression.getBossDamageMultiplier();
+          }
 
           // Hit pause
           this.hitPauseTimer = isCrit ? 0.08 : 0.05;
@@ -1074,6 +1164,15 @@ export class Game {
     // Apply modifiers from wave type
     let finalXP = enemy.typeData.xpValue * xpMultiplier;
     let finalGold = enemy.typeData.goldValue * goldMultiplier;
+    // Item-based gold bonuses (Coin Purse, Midas Touch, Merchant) — were
+    // sold but never applied
+    finalGold *= this.playerStats.getGoldBonus();
+    if (this.metaProgression.hasDoubleLevelUps()) {
+      finalXP *= 2;
+    }
+    if (this.waveManager.waveModifier === 'elite' || this.waveManager.waveModifier === 'tank') {
+      finalGold *= this.metaProgression.getEliteRewardMultiplier();
+    }
 
     if (this.waveManager.waveModifier === 'elite') {
       finalGold *= 1.5;
@@ -1272,13 +1371,15 @@ export class Game {
 
     this.selectedShopItem = -1;
 
-    // BROTATO-LEVEL REROLL COST: Wave-scaled formula
+    // BROTATO-LEVEL REROLL COST: wave-scaled base + meta policy + item discount
     const wave = currentWave;
-    const baseRerollCost = Math.floor(wave * 0.75) + 1; // Wave 1: 1g, Wave 5: 5g, etc.
-
-    // Apply item-based reroll discount
+    const rerollPolicy = this.metaProgression.getRerollDiscount();
+    const baseRerollCost = Math.floor(wave * 0.75) + rerollPolicy.startCost;
     const rerollDiscount = this.playerStats.getRerollDiscount();
-    this.shopRerollCost = Math.max(1, Math.floor(baseRerollCost * (1 - rerollDiscount)));
+    this.shopRerollCost = Math.min(
+      rerollPolicy.maxCost,
+      Math.max(1, Math.floor(baseRerollCost * (1 - rerollDiscount)))
+    );
 
     this.shopRerolls = 0;
     this.itemsPurchasedThisWave = 0; // Reset purchase counter
@@ -1292,6 +1393,70 @@ export class Game {
 
     // Save progress
     this.autoSave();
+  }
+
+  /**
+   * On-hit item mechanics (chain lightning, freeze, poison, explosion) —
+   * these items existed and were purchasable but had no implementation.
+   */
+  private applyOnHitEffects(enemy: Enemy, damage: number): void {
+    // Chain lightning: arc to the nearest other enemy for 60% damage
+    if (Math.random() < this.playerStats.getChainLightningChance()) {
+      let nearest: Enemy | null = null;
+      let bd = 200 * 200;
+      for (const other of this.enemies) {
+        if (other === enemy || other.dead) continue;
+        const d = (other.x - enemy.x) ** 2 + (other.y - enemy.y) ** 2;
+        if (d < bd) { bd = d; nearest = other; }
+      }
+      if (nearest) {
+        const splits = nearest.takeDamage(damage * 0.6);
+        if (splits && splits.length > 0) this.enemies.push(...splits);
+        this.damageNumbers.push(
+          this.createDamageNumber(nearest.x, nearest.y - 20, damage * 0.6, false, '#ffd43b')
+        );
+        if (nearest.dead) this.handleEnemyKill(nearest);
+      }
+    }
+
+    // Freeze: halt movement for 1s
+    if (Math.random() < this.playerStats.getFreezeChance()) {
+      enemy.frozenTimer = 1.0;
+    }
+
+    // Poison: DoT for 3s (ticked in the enemy loop)
+    if (this.playerStats.hasPoison()) {
+      enemy.poisonTimer = 3.0;
+    }
+
+    // Explosion on hit: AoE for 50% damage around the target
+    if (this.playerStats.hasExplosionOnHit()) {
+      for (const other of this.enemies) {
+        if (other === enemy || other.dead) continue;
+        if ((other.x - enemy.x) ** 2 + (other.y - enemy.y) ** 2 < 80 * 80) {
+          const splits = other.takeDamage(damage * 0.5);
+          if (splits && splits.length > 0) this.enemies.push(...splits);
+          if (other.dead) this.handleEnemyKill(other);
+        }
+      }
+      this.renderer.addImpactFlash(enemy.x, enemy.y);
+    }
+  }
+
+  /** Thorns (Spiked Armor): reflect a share of damage taken to nearby enemies. */
+  private applyThorns(amount: number, source?: Enemy): void {
+    const thorns = this.playerStats.getThorns();
+    if (thorns <= 0 || !this.player) return;
+    const reflected = amount * thorns;
+    const targets = source
+      ? [source]
+      : this.enemyQuadtree.retrieve({ x: this.player.x, y: this.player.y, radius: 120 });
+    for (const t of targets) {
+      if (t.dead) continue;
+      const splits = t.takeDamage(reflected);
+      if (splits && splits.length > 0) this.enemies.push(...splits);
+      if (t.dead) this.handleEnemyKill(t);
+    }
   }
 
   /** Emit an enemy's shots according to its fire pattern. */
@@ -1593,8 +1758,13 @@ export class Game {
 
         // DYNAMIC REROLL COST: Scale per reroll this wave
         const wave = this.waveManager.currentWave;
-        const rerollScaling = Math.floor(wave * 0.4); // +0.4g per wave per reroll
-        this.shopRerollCost += rerollScaling;
+        // Always at least +1 — a zero increment allowed unlimited flat-price
+        // rerolls on waves 1-2
+        const rerollScaling = Math.max(1, Math.floor(wave * 0.4));
+        this.shopRerollCost = Math.min(
+          this.metaProgression.getRerollDiscount().maxCost,
+          this.shopRerollCost + rerollScaling
+        );
 
         this.shopRerolls++;
         this.audio.playPurchase();
@@ -1644,35 +1814,40 @@ export class Game {
     }
   }
 
+  /** Shared grid layout for the meta-upgrades screen (draw + clicks). */
+  private getUpgradesLayout() {
+    const zoom = this.canvas.clientWidth ? this.canvas.width / this.canvas.clientWidth : 1;
+    const s = (v: number) => Math.round(v * zoom);
+    const cssW = this.canvas.width / zoom;
+    const cols = cssW >= 900 ? 3 : 2;
+    const gap = s(6);
+    const cellW = Math.min(s(300), Math.floor((this.canvas.width - s(20) - gap * (cols - 1)) / cols));
+    const cellH = cols === 3 ? s(80) : s(72);
+    const gridW = cellW * cols + gap * (cols - 1);
+    const startX = Math.round((this.canvas.width - gridW) / 2);
+    const startY = s(96);
+    const backBtn = { x: s(10), y: s(10), width: s(120), height: s(36) };
+    return { s, cols, cellW, cellH, gap, startX, startY, backBtn };
+  }
+
   private updateUpgrades(): void {
     const mouseX = this.input.mouseX;
     const mouseY = this.input.mouseY;
-
-    const isMobile = this.canvas.width < 800;
-    const upgradeWidth = isMobile ? Math.min(350, this.canvas.width - 40) : 320;
-    const upgradeHeight = isMobile ? 120 : 100;
-    const gap = 15;
+    const { cols, cellW, cellH, gap, startX, startY, backBtn } = this.getUpgradesLayout();
 
     const upgrades = this.metaProgression.getAllUpgrades();
-    const startX = (this.canvas.width - upgradeWidth) / 2;
-    const startY = 140;
-
     for (let i = 0; i < upgrades.length; i++) {
-      const upgrade = upgrades[i];
-      const x = startX;
-      const y = startY + i * (upgradeHeight + gap);
-
-      if (pointInRect(mouseX, mouseY, { x, y, width: upgradeWidth, height: upgradeHeight })) {
-        if (this.input.mouseDown && this.metaProgression.canPurchaseUpgrade(upgrade.id)) {
-          this.metaProgression.purchaseUpgrade(upgrade.id);
+      const x = startX + (i % cols) * (cellW + gap);
+      const y = startY + Math.floor(i / cols) * (cellH + gap);
+      if (pointInRect(mouseX, mouseY, { x, y, width: cellW, height: cellH })) {
+        if (this.input.mouseDown && this.metaProgression.canPurchaseUpgrade(upgrades[i].id)) {
+          this.metaProgression.purchaseUpgrade(upgrades[i].id);
           this.audio.playPurchase();
           this.input.mouseDown = false;
         }
       }
     }
 
-    // Back button
-    const backBtn = { x: this.canvas.width / 2 - 100, y: this.canvas.height - 80, width: 200, height: 50 };
     if (pointInRect(mouseX, mouseY, backBtn) && this.input.mouseDown) {
       this.state = 'menu';
       this.input.mouseDown = false;
@@ -2010,10 +2185,12 @@ export class Game {
     this.renderer.drawText(waveText, rx + rPanelW / 2, s(6) + pad + s(4), {
       size: s(isPortrait ? 9 : 11), align: 'center', color: waveColor
     });
+    const t = Math.max(0, Math.ceil(this.waveManager.waveTimer));
+    const timerText = `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
     this.renderer.drawText(
-      `ENEMIES ${this.enemies.length + this.waveManager.waveEnemiesRemaining}`,
+      `${timerText}  ·  ${this.enemies.length + this.waveManager.waveEnemiesRemaining}`,
       rx + rPanelW / 2, s(6) + pad + s(22),
-      { size: s(8), align: 'center', color: '#cfd8e3' }
+      { size: s(8), align: 'center', color: t <= 5 ? '#ffd43b' : '#cfd8e3' }
     );
 
     // --- Boss health bar (bottom center, with name) ---
@@ -2459,97 +2636,58 @@ export class Game {
   }
 
   private drawUpgrades(): void {
-    this.renderer.drawText('PERMANENT UPGRADES', this.canvas.width / 2, 50, {
-      size: 36,
-      bold: true,
-      align: 'center',
-      color: '#9370db'
-    });
-
-    this.renderer.drawText(`Souls: ${this.metaProgression.souls}`, this.canvas.width / 2, 100, {
-      size: 24,
-      bold: true,
-      align: 'center',
-      color: '#ffff00'
-    });
-
-    const isMobile = this.canvas.width < 800;
-    const upgradeWidth = isMobile ? Math.min(350, this.canvas.width - 40) : 320;
-    const upgradeHeight = isMobile ? 120 : 100;
-    const gap = 15;
-
-    const upgrades = this.metaProgression.getAllUpgrades();
-    const startX = (this.canvas.width - upgradeWidth) / 2;
-    const startY = 140;
-
+    const { s, cols, cellW, cellH, gap, startX, startY, backBtn } = this.getUpgradesLayout();
     const ctx = this.renderer.getContext();
 
+    this.renderer.drawText('PERMANENT UPGRADES', this.canvas.width / 2 + s(2), s(22) + s(2), {
+      size: s(16), align: 'center', color: '#241407', stroke: false
+    });
+    this.renderer.drawText('PERMANENT UPGRADES', this.canvas.width / 2, s(22), {
+      size: s(16), align: 'center', color: '#b197fc'
+    });
+    this.renderer.drawText(`SOULS ${this.metaProgression.souls}`, this.canvas.width / 2, s(52), {
+      size: s(11), align: 'center', color: '#ffd43b'
+    });
+
+    const upgrades = this.metaProgression.getAllUpgrades();
     for (let i = 0; i < upgrades.length; i++) {
       const upgrade = upgrades[i];
-      const x = startX;
-      const y = startY + i * (upgradeHeight + gap);
+      const x = startX + (i % cols) * (cellW + gap);
+      const y = startY + Math.floor(i / cols) * (cellH + gap);
 
       const isMaxLevel = upgrade.currentLevel >= upgrade.maxLevel;
       const canAfford = this.metaProgression.canPurchaseUpgrade(upgrade.id);
 
-      // Background
-      ctx.fillStyle = canAfford ? '#2d4a2d' : isMaxLevel ? '#4a4a2d' : '#2a2a2a';
-      ctx.fillRect(x, y, upgradeWidth, upgradeHeight);
-
-      // Border
-      ctx.strokeStyle = isMaxLevel ? '#ffff00' : canAfford ? '#00ff00' : '#666666';
+      drawPanel(ctx, x, y, cellW, cellH, DARK_WOOD_THEME, 4, i);
+      ctx.save();
+      ctx.strokeStyle = isMaxLevel ? '#ffd43b' : canAfford ? '#7bd94a' : '#55534c';
       ctx.lineWidth = 2;
-      ctx.strokeRect(x, y, upgradeWidth, upgradeHeight);
+      ctx.strokeRect(x + 5, y + 5, cellW - 10, cellH - 10);
+      ctx.restore();
 
-      // Icon
-      this.renderer.drawText(upgrade.icon, x + 20, y + 20, {
-        size: 32
+      this.renderer.drawText(upgrade.icon, x + s(10), y + s(10), { size: s(14) });
+      this.renderer.drawText(upgrade.name.toUpperCase(), x + s(32), y + s(12), {
+        size: s(8), color: '#f4e6c2'
       });
-
-      // Name
-      this.renderer.drawText(upgrade.name, x + 70, y + 20, {
-        size: 16,
-        bold: true
+      this.renderer.drawText(`${upgrade.currentLevel}/${upgrade.maxLevel}`, x + cellW - s(10), y + s(12), {
+        size: s(8), align: 'right', color: isMaxLevel ? '#ffd43b' : '#aab6c3'
       });
-
-      // Level
-      this.renderer.drawText(`[${upgrade.currentLevel}/${upgrade.maxLevel}]`, x + upgradeWidth - 60, y + 20, {
-        size: 14,
-        color: isMaxLevel ? '#ffff00' : '#ffffff'
+      this.renderer.drawText(upgrade.description, x + s(10), y + s(32), {
+        size: s(7), color: '#c8b998'
       });
-
-      // Description
-      this.renderer.drawText(upgrade.description, x + 70, y + 45, {
-        size: 12,
-        color: '#aaaaaa'
-      });
-
-      // Cost
       if (!isMaxLevel) {
         const cost = upgrade.costs[upgrade.currentLevel];
-        this.renderer.drawText(`Cost: ${cost} souls`, x + 70, y + 70, {
-          size: 14,
-          bold: true,
-          color: canAfford ? '#00ff00' : '#ff0000'
+        this.renderer.drawText(`${cost} SOULS`, x + s(10), y + cellH - s(18), {
+          size: s(8), color: canAfford ? '#7bd94a' : '#ff8787'
         });
       } else {
-        this.renderer.drawText('MAX LEVEL', x + 70, y + 70, {
-          size: 14,
-          bold: true,
-          color: '#ffff00'
+        this.renderer.drawText('MAX', x + s(10), y + cellH - s(18), {
+          size: s(8), color: '#ffd43b'
         });
       }
     }
 
-    // Back button
-    this.renderer.drawButton(
-      this.canvas.width / 2 - 100,
-      this.canvas.height - 80,
-      200,
-      50,
-      'Back to Menu',
-      false
-    );
+    this.renderer.drawButton(backBtn.x, backBtn.y, backBtn.width, backBtn.height, 'Back', false);
   }
 
   private drawGameOver(): void {

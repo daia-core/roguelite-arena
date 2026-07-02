@@ -141,17 +141,17 @@ export class DamageNumber {
   /**
    * Initialize/reinitialize damage number (for object pooling)
    */
-  init(x: number, y: number, damage: number, isCrit: boolean = false): void {
+  init(x: number, y: number, damage: number | string, isCrit: boolean = false, color?: string): void {
     this.x = x;
     this.y = y;
-    this.text = Math.round(damage).toString();
+    this.text = typeof damage === 'number' ? Math.round(damage).toString() : damage;
     this.lifetime = 1000;
     this.maxLifetime = this.lifetime;
     this.vx = (Math.random() - 0.5) * 40;
     this.vy = -80 - Math.random() * 20;
     this.gravity = 150;
     this.isCrit = isCrit;
-    this.color = isCrit ? '#ff0000' : '#ffffff';
+    this.color = color ?? (isCrit ? '#ff0000' : '#ffffff');
     this.scale = isCrit ? 1.6 : 1.2;
     this.rotation = isCrit ? (Math.random() - 0.5) * 0.3 : 0;
     this.dead = false;

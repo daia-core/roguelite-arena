@@ -398,7 +398,7 @@ export const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
 
   // Wave 10 Boss: Necro Lord - Summons undead minions, shoots dark bolts
   boss_necrolord: {
-    health: 2000,
+    health: 1100,
     speed: 50,
     damage: 15,
     radius: 30,
@@ -412,7 +412,7 @@ export const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
 
   // Wave 20 Boss: Flame Fiend - Fire attacks, leaves burning ground
   boss_flamefiend: {
-    health: 4000,
+    health: 2600,
     speed: 65,
     damage: 20,
     radius: 32,
@@ -477,6 +477,14 @@ export class Enemy {
   typeData: EnemyTypeData;
   /** Rotation state for ring/spiral fire patterns. */
   patternPhase: number = Math.random() * Math.PI * 2;
+  /** Set by WaveManager on the last stragglers: charge, never flee. */
+  enraged: boolean = false;
+  /** Contact-attack cooldown — enemies persist and keep attacking. */
+  contactCooldown: number = 0;
+  /** Frozen: no movement while > 0 (Frost Orb etc., ticked by Game). */
+  frozenTimer: number = 0;
+  /** Poison DoT remaining seconds (Toxic Vial etc., ticked by Game). */
+  poisonTimer: number = 0;
   health: number;
   maxHealth: number;
   dead: boolean = false;
@@ -645,6 +653,10 @@ export class Enemy {
     this.typeData.health *= waveMultiplier;
     this.typeData.damage *= waveMultiplier;
     this.typeData.speed *= (1 + (waveMultiplier - 1) * 0.3); // Speed scales slower
+    // Rewards scale too (slower than stats) so income and level-ups keep
+    // pace with rising shop prices instead of stalling mid-game
+    this.typeData.xpValue = Math.round(this.typeData.xpValue * (1 + (waveMultiplier - 1) * 0.5));
+    this.typeData.goldValue = Math.round(this.typeData.goldValue * (1 + (waveMultiplier - 1) * 0.15));
 
     this.maxHealth = this.typeData.health;
     this.health = this.maxHealth;
@@ -720,10 +732,20 @@ export class Enemy {
       let moveSpeed = this.typeData.speed;
       let shouldMove = true;
 
+      // Enraged stragglers charge the player at boosted speed
+      if (this.enraged) {
+        moveSpeed *= 1.6;
+      }
+
+      // Frozen enemies can't move
+      if (this.frozenTimer > 0) {
+        moveSpeed = 0;
+      }
+
       // Type-specific movement
       if (this.type === 'skeleton' || this.type === 'goblin' || this.type === 'necromancer') {
         // Ranged units keep distance
-        if (dist < 250) {
+        if (!this.enraged && dist < 250) {
           // Move away if too close
           this.x -= nx * moveSpeed * dt * 0.5;
           this.y -= ny * moveSpeed * dt * 0.5;
@@ -872,7 +894,7 @@ export class Enemy {
       if (this.type === 'druid') {
         this.druidHealCooldown -= dt;
 
-        if (dist < this.druidFleeDistance) {
+        if (!this.enraged && dist < this.druidFleeDistance) {
           // Flee from player
           this.x -= nx * moveSpeed * dt * 1.5;
           this.y -= ny * moveSpeed * dt * 1.5;
@@ -921,7 +943,7 @@ export class Enemy {
             this.dodging = false;
           }
           shouldMove = false;
-        } else if (dist < 300 && this.dodgeCooldown <= 0 && Math.random() < 0.5) {
+        } else if (!this.enraged && dist < 300 && this.dodgeCooldown <= 0 && Math.random() < 0.5) {
           // Random dodge perpendicular to player direction
           const perpX = -ny;
           const perpY = nx;

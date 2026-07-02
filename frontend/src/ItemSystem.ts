@@ -1362,13 +1362,25 @@ export class ItemDatabase {
         }
       }
 
-      // 65% - General pool (or fallback if weighted pools failed)
+      // 65% - General pool, rarity-weighted so legendaries stay special
+      // (uniform pick made T4 items as frequent as commons at wave 11+)
       if (!selectedItem) {
         const candidates = getWaveAppropriteItems().filter(item =>
           !result.some(r => r.id === item.id)
         );
         if (candidates.length > 0) {
-          selectedItem = candidates[Math.floor(Math.random() * candidates.length)];
+          const weightOf = (item: Item): number =>
+            item.tier === ItemTier.Common ? 100 :
+            item.tier === ItemTier.Uncommon ? 60 :
+            item.tier === ItemTier.Rare ? 30 : 10;
+          let total = 0;
+          for (const c of candidates) total += weightOf(c);
+          let pick = Math.random() * total;
+          for (const c of candidates) {
+            pick -= weightOf(c);
+            if (pick <= 0) { selectedItem = c; break; }
+          }
+          selectedItem = selectedItem ?? candidates[candidates.length - 1];
         }
       }
 
@@ -1527,8 +1539,13 @@ export class PlayerStats {
     return regen;
   }
 
+  /** Flat armor from meta progression (set by Game at run start). */
+  metaArmor: number = 0;
+  /** Additional shop discount from meta progression. */
+  metaShopDiscount: number = 0;
+
   getArmor(): number {
-    let armor = 0;
+    let armor = this.metaArmor;
     this.items.forEach(item => {
       if (item.armor) armor += item.armor;
     });
@@ -1749,8 +1766,8 @@ export class PlayerStats {
     const basePrice = item.cost;
     let finalPrice = basePrice * (1 + wave * 0.15);
 
-    // Apply shop discount
-    const discount = this.getShopDiscount();
+    // Apply shop discount (items + meta, shared 50% cap)
+    const discount = Math.min(0.5, this.getShopDiscount() + this.metaShopDiscount);
     finalPrice *= (1 - discount);
 
     return Math.max(1, Math.floor(finalPrice));
