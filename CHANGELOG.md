@@ -31,6 +31,11 @@ Live: https://roguelite-game-blush.vercel.app
 **Sim-verified** post-fix re-run: **8/8 runs reached wave 15, zero STUCK** (was 1/5 soft-locked);
 wave-10 boss now resolves in a bounded ~44 s. Full analysis + two staged balance-feel findings
 (inverted difficulty curve, runaway gold economy) → `BALANCE-SIM-2026-07-02.md`.
+**Re-verified on the deployed build (2026-07-02 eve):** local `frontend/dist` hash
+`index-BFYpbdyQ.js` confirmed byte-identical to what live prod serves, then **12/12 sim runs to
+wave 16 cleared both boss waves (10 & 15), zero STUCK** — wave-10 boss ~56 s avg, always resolves.
+This closes the loop honestly after the QA harness was found serving a stale copy earlier tonight:
+the fix is now proven on exactly the code Felix plays.
 
 ---
 
