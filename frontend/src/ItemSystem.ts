@@ -1801,7 +1801,11 @@ export class PlayerStats {
   // Base stats - BUFFED for better early game (Wave 1 too hard fix)
   baseDamage: number = 25; // Wave 1 balance: kill slimes quickly
   baseFireRate: number = 3.0; // Faster shooting for better feel (shots per second)
-  baseSpeed: number = 200;
+  baseSpeed: number = 240; // snappier start (was 200 — early game felt sluggish)
+  // Hard ceiling on effective move speed. Stacked speed items/duos/transformations
+  // used to compound unbounded and let a broken build zoom uncontrollably across a
+  // phone screen. 2x base stays fast for a real speed build but keeps it playable.
+  maxSpeed: number = 480;
   baseMaxHealth: number = 100;
   baseCritChance: number = 0.05;
   baseCritMultiplier: number = 2.0;
@@ -1899,7 +1903,7 @@ export class PlayerStats {
     speed *= this.transformations.getTotalBonuses().speedMultiplier;
     // DUO COMBO BONUS
     speed *= this.duos.getTotalBonuses().speedMultiplier;
-    return speed;
+    return Math.min(speed, this.maxSpeed); // clamp so broken builds can't zoom off-screen
   }
 
   getMaxHealth(): number {

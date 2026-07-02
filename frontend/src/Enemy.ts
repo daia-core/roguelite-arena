@@ -22,6 +22,12 @@ export interface EnemyTypeData {
   isBoss?: boolean; // Mark as boss enemy
 }
 
+// Global multiplier on every enemy's base move speed. Early waves felt sluggish
+// with the player buffed to 240; scaling all enemies uniformly keeps the relative
+// kiting feel while making the whole game read faster. Per-type values below stay
+// as the readable base; this is the single knob to tune overall pace.
+export const ENEMY_SPEED_SCALE = 1.2;
+
 export const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
   slime: {
     health: 60, // BALANCE: Reduced for faster Wave 1 kills (1-second TTK)
@@ -652,6 +658,7 @@ export class Enemy {
     // Scale with wave
     this.typeData.health *= waveMultiplier;
     this.typeData.damage *= waveMultiplier;
+    this.typeData.speed *= ENEMY_SPEED_SCALE; // global pace buff (early game felt slow)
     this.typeData.speed *= Math.min(1.25, 1 + (waveMultiplier - 1) * 0.3); // Speed barely scales (genre norm: composition ramps, not velocity)
     // Rewards scale too (slower than stats) so income and level-ups keep
     // pace with rising shop prices instead of stalling mid-game

@@ -133,6 +133,22 @@ const r4 = await page.evaluate(() => {
   };
 });
 
+// --- Test 5: player base speed raised to 240 and hard-capped at 480 ---
+const r5 = await page.evaluate(() => {
+  const g = window.__game;
+  const DB = window.__ItemDatabase;
+  g.playerStats.items = [];
+  const base = g.playerStats.getSpeed();          // no items → base 240
+  // Stack every speed-boosting item several times over so the raw product blows
+  // well past the cap, then confirm getSpeed() clamps to exactly maxSpeed.
+  const speedItems = DB.getAllItems().filter(i => (i.speedMultiplier ?? 1) > 1);
+  g.playerStats.items = [...speedItems, ...speedItems, ...speedItems];
+  const capped = g.playerStats.getSpeed();
+  const maxSpeed = g.playerStats.maxSpeed;
+  g.playerStats.items = [];
+  return { base, capped, maxSpeed, speedItemCount: speedItems.length };
+});
+
 await page.screenshot({ path: '/tmp/roguelite-mechanics-shop.png' });
 await browser.close();
 server.close();
@@ -157,10 +173,16 @@ const result = {
       r4.completing.name === 'Storm Surge' && r4.completing.completes === true &&
       r4.noneIsNull === true,
   },
+  test5_speedCap: {
+    ...r5,
+    // base is the new 240 floor; stacking many speed items must clamp to maxSpeed (480), not exceed it.
+    pass: r5.base === 240 && r5.maxSpeed === 480 && r5.capped === 480 && r5.speedItemCount > 0,
+  },
   errors,
 };
 console.log(JSON.stringify(result, null, 2));
 const ok = result.test1_baseInterest.pass && result.test2_statLogic.pass &&
-  result.test3_nonStackingExcluded.pass && result.test4_synergyLegible.pass && errors.length === 0;
+  result.test3_nonStackingExcluded.pass && result.test4_synergyLegible.pass &&
+  result.test5_speedCap.pass && errors.length === 0;
 console.log(ok ? 'ALL PASS' : 'FAIL');
 process.exit(ok ? 0 : 1);

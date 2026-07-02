@@ -8,6 +8,35 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-02 (night) — Faster pace + a move-speed ceiling
+
+Felix's ask: *"base player and monster move speed is too low, the game is so slow at the start —
+but also cap max move speed, because when a broken build is live you zoom across the screen."*
+
+**Player-visible**
+- Everything moves faster from wave 1. **Player base speed 200 → 240** (+20%) and **every enemy is
+  20% quicker** (uniform `ENEMY_SPEED_SCALE`, so kiting still feels the same — the whole game just
+  reads faster instead of sluggish).
+- **New hard speed ceiling: 480** (2× base). Speed items, duo bonuses and transformations still
+  stack, but a broken speed build now tops out fast-but-controllable instead of teleporting off a
+  phone screen. A dedicated speed build still hits the cap and feels genuinely fast; it just can't
+  go past playable. The **dash is unaffected** (separate `dashSpeed`) so the burst still pops.
+
+**Under the hood**
+- `PlayerStats.baseSpeed` 240 + new `maxSpeed = 480`; `getSpeed()` clamps its final product with
+  `Math.min(speed, maxSpeed)` after all multipliers.
+- `ENEMY_SPEED_SCALE = 1.2` applied once in the `Enemy` constructor (on the per-enemy `typeData`
+  copy, before the existing wave-scaling), so per-type base speeds stay readable and it's a single
+  knob to retune overall pace. Deliberate fixed special-move speeds (bat lunge, boss phases) are
+  left as-is.
+
+**Verified** `verify-mechanics.mjs` — 5/5 PASS on the shipped `dist` (no-item speed = 240, a
+stacked 9-item speed build clamps to exactly 480, cap = 480). Live at `index-DtOnx2Xz.js`: a
+headless run on production reads player speed 240 / cap 480 / stacked-build 480 and samples live
+slimes at 72 (= 60 base × 1.2), 0 console errors; mobile 390×844 gameplay screenshot clean.
+
+---
+
 ## 2026-07-02 (night) — Own-once items leave the shop + synergy deploy
 
 Felix's ask: *"isn't there limited items — once you've bought one it's not offered anymore? Some
