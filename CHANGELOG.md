@@ -8,6 +8,45 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-02 — Build diversity: banking interest + trade-off items
+
+**Player-visible**
+- **Interest on your gold.** When you reach the shop you now earn interest on your banked gold
+  (base **10%**), shown as a green **"+Xg interest"** line under the shop's gold total. It's
+  **capped** (10 + wave×2, so 12g at wave 1) so hoarding can't snowball, and it plays against the
+  rising shop prices — a real save-now-vs-buy-now decision. Two new **banking items** raise the
+  rate: **Piggy Bank** (+8% interest) and **Golden Vault** (+18% interest, +25% gold) — enabling a
+  greedy economy build.
+- **10 new trade-off items** with genuine downsides that force you into a lane instead of just
+  buying pure upgrades — the point Felix raised (items should have negative side effects):
+  Reckless Charm (+40% dmg / −3 armor), Hair Trigger (+30% fire rate / −12% dmg), Heavy Slugs
+  (+30% dmg / −15% fire rate), Adrenaline (+35% speed / −15 HP), Sharpshooter (+18% crit /
+  −2 armor), Gambler's Dice (+18% dodge / −20 HP), Leech Blade (+18% lifesteal / −15% dmg),
+  Iron Turtle (+10 armor / −20% speed), Blood Pact (+50% dmg / −35 HP), Featherweight (+25%
+  speed & fire rate / −15% dmg). These push distinct builds: glass-cannon melee, dodge-tank,
+  lifesteal-bruiser, armored-turtle, hyper-fire-rate.
+
+**Under the hood**
+- Reviewed hitboxes + pickups per Felix's ask — no fix needed: player hitbox (`radius 15`, drawn
+  at 20) is deliberately forgiving; enemy-contact + health-orb collision are body-contact and
+  already guard `enemy.dead` (from the double-kill fix). Nothing broken; left as-is.
+- `Game.enterShop()`: interest = `min(10 + wave*2, floor(gold * (0.10 + getInterestBonus())))`,
+  granted once on shop entry, stored in `lastInterestGained` for the display. New
+  `PlayerStats.getInterestBonus()` (sums `item.interestBonus`, capped +40% so interest stays
+  bounded); new `interestBonus` field on the Item interface.
+- Design synthesis (Brotato research → what fits our multiplicative-stat model) →
+  `DESIGN-BUILD-DIVERSITY-2026-07-02.md`.
+
+**Commit** `8e67281`
+**Verified** headless regression (`tools/qa/verify-mechanics.mjs`): interest applies **once** and
+respects the cap (200g @ wave 1 → **+12g**, gold 212, state=shop); trade-off items apply **both**
+bonus and penalty (dmg↑, armor = base−3, HP = base−35, interestBonus = 0.08); **zero** console
+errors — ALL PASS. **Live-verified**: prod serves new JS hash `index-DLCbsLoq.js`; portrait shop
+screenshot shows the "+12g interest" line under the gold total and renders clean at 390×844; live
+touch-purchase still works (item owned, gold dropped, 0 errors).
+
+---
+
 ## 2026-07-02 — Fix boss-wave soft-lock (run could stall forever)
 
 **Player-visible**
