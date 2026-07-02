@@ -69,6 +69,7 @@ export interface Item {
   rerollDiscount?: number; // Reduce shop reroll cost
   shopDiscount?: number; // Reduce all shop prices
   recycleBonus?: number; // Increase recycle value
+  interestBonus?: number; // Additional interest rate on banked gold (additive, e.g. 0.05 = +5%)
 }
 
 export interface Weapon {
@@ -1296,6 +1297,170 @@ export class ItemDatabase {
       piercing: 999,
       multishot: 5,
       homing: true
+    },
+
+    // ==================== TRADE-OFF ITEMS (BROTATO-STYLE) ====================
+    // Every one gives a strong bonus with a REAL drawback, forcing you to
+    // commit to a lane / manage risk. This is where build identity comes from:
+    // a glass-cannon player keeps these, a tank recycles them.
+    {
+      id: 'reckless_charm_t2',
+      name: 'Reckless Charm',
+      description: '+40% dmg, -3 armor',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 26,
+      icon: '🔥',
+      unlocked: true,
+      tags: ['melee', 'ranged'],
+      damageMultiplier: 1.4,
+      armor: -3
+    },
+    {
+      id: 'hair_trigger_t2',
+      name: 'Hair Trigger',
+      description: '+30% fire rate, -12% dmg',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 28,
+      icon: '⏱️',
+      unlocked: true,
+      tags: ['ranged'],
+      fireRateMultiplier: 1.3,
+      damageMultiplier: 0.88
+    },
+    {
+      id: 'heavy_slugs_t2',
+      name: 'Heavy Slugs',
+      description: '+30% dmg, -15% fire rate',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 28,
+      icon: '🎱',
+      unlocked: true,
+      tags: ['melee', 'ranged'],
+      damageMultiplier: 1.3,
+      fireRateMultiplier: 0.85
+    },
+    {
+      id: 'adrenaline_t2',
+      name: 'Adrenaline',
+      description: '+35% speed, -15 max HP',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 24,
+      icon: '💉',
+      unlocked: true,
+      tags: ['utility'],
+      speedMultiplier: 1.35,
+      maxHealthBonus: -15
+    },
+    {
+      id: 'sharpshooter_t3',
+      name: 'Sharpshooter Lens',
+      description: '+18% crit, -2 armor',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 52,
+      icon: '🔭',
+      unlocked: true,
+      tags: ['ranged'],
+      critChance: 0.18,
+      armor: -2
+    },
+    {
+      id: 'gamblers_dice_t3',
+      name: "Gambler's Dice",
+      description: '+18% dodge, -20 max HP',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 48,
+      icon: '🎲',
+      unlocked: true,
+      tags: ['defensive', 'utility'],
+      dodge: 0.18,
+      maxHealthBonus: -20
+    },
+    {
+      id: 'leech_blade_t3',
+      name: 'Leech Blade',
+      description: '+18% lifesteal, -15% dmg',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 55,
+      icon: '🦟',
+      unlocked: true,
+      tags: ['melee'],
+      lifesteal: 0.18,
+      damageMultiplier: 0.85
+    },
+    {
+      id: 'iron_turtle_t3',
+      name: 'Iron Turtle',
+      description: '+10 armor, -20% speed',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 50,
+      icon: '🐢',
+      unlocked: true,
+      tags: ['defensive'],
+      armor: 10,
+      speedMultiplier: 0.8
+    },
+    {
+      id: 'blood_pact_t3',
+      name: 'Blood Pact',
+      description: '+50% dmg, -25% max HP',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 58,
+      icon: '🩸',
+      unlocked: true,
+      tags: ['melee', 'ranged'],
+      damageMultiplier: 1.5,
+      maxHealthBonus: -35
+    },
+    {
+      id: 'featherweight_t2',
+      name: 'Featherweight',
+      description: '+25% speed & fire rate, -15% dmg',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 30,
+      icon: '🪶',
+      unlocked: true,
+      tags: ['utility', 'ranged'],
+      speedMultiplier: 1.25,
+      fireRateMultiplier: 1.25,
+      damageMultiplier: 0.85
+    },
+
+    // ==================== BANKING ITEMS (interest economy) ====================
+    // Reward the save-vs-spend playstyle: bank gold, earn interest, buy big later.
+    {
+      id: 'piggy_bank_t2',
+      name: 'Piggy Bank',
+      description: '+8% interest on gold',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 22,
+      icon: '🐷',
+      unlocked: true,
+      tags: ['economic'],
+      interestBonus: 0.08
+    },
+    {
+      id: 'golden_vault_t3',
+      name: 'Golden Vault',
+      description: '+18% interest, +25% gold',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 55,
+      icon: '🏦',
+      unlocked: true,
+      tags: ['economic'],
+      interestBonus: 0.18,
+      goldBonus: 1.25
     }
   ];
 
@@ -1691,6 +1856,15 @@ export class PlayerStats {
       if (item.recycleBonus) bonus += item.recycleBonus;
     });
     return bonus;
+  }
+
+  // Banking: extra interest rate on gold you hold entering the shop
+  getInterestBonus(): number {
+    let bonus = 0;
+    this.items.forEach(item => {
+      if (item.interestBonus) bonus += item.interestBonus;
+    });
+    return Math.min(0.4, bonus); // cap +40% so interest stays bounded
   }
 
   hasPiercing(): boolean {

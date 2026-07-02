@@ -88,6 +88,7 @@ export class Game {
   shopRerolls: number = 0;
   lockedShopItems: Set<number> = new Set(); // FREE locking (no 5g cost)
   itemsPurchasedThisWave: number = 0; // Track for free reroll bonus
+  lastInterestGained: number = 0; // Gold earned from banking interest this shop (for display)
 
   // Stats
   kills: number = 0;
@@ -1342,6 +1343,18 @@ export class Game {
   }
 
   private enterShop(): void {
+    // BANKING INTEREST: reward saving gold — you earn interest on your balance
+    // when you reach the shop. Capped so hoarding can't snowball out of control,
+    // and it plays against rising shop prices (spend now vs. bank for a big buy).
+    if (this.player) {
+      const wave = this.waveManager.currentWave;
+      const rate = 0.10 + this.playerStats.getInterestBonus(); // base 10% + banker items
+      const cap = 10 + wave * 2; // scales with wave so it stays relevant, but bounded
+      const interest = Math.min(cap, Math.floor(this.player.gold * rate));
+      this.lastInterestGained = interest;
+      if (interest > 0) this.player.addGold(interest);
+    }
+
     // BROTATO-INSPIRED: Preserve locked items from previous shop (FREE locking)
     const lockedItems: Item[] = [];
     for (const index of this.lockedShopItems) {
@@ -2257,6 +2270,15 @@ export class Game {
       align: 'center',
       color: '#ffd700'
     });
+
+    // Banking interest earned this shop (save-vs-spend feedback)
+    if (this.lastInterestGained > 0) {
+      this.renderer.drawText(
+        `+${this.lastInterestGained}g interest`,
+        this.canvas.width / 2, s(isMobile ? 46 : 66),
+        { size: s(7), align: 'center', color: '#8ce99a' }
+      );
+    }
 
     // PLAYER STATS PANEL - compact display on the left side (desktop) or top (mobile)
     const statPanelPadding = s(8);
