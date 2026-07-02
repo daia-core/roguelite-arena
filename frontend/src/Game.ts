@@ -1969,21 +1969,23 @@ export class Game {
       size: s(42), align: 'center', color: '#f2d94e', strokeWidth: s(4)
     });
 
+    // Auto-fit long lines to the viewport so they never clip off narrow portrait.
+    const textMax = this.canvas.width - s(24);
     this.renderer.drawText('WASD OR TOUCH JOYSTICK', cx, s(140), {
-      size: s(10), align: 'center', color: '#dfe6ee'
+      size: s(10), align: 'center', color: '#dfe6ee', maxWidth: textMax
     });
     this.renderer.drawText('BUILD A BROKEN BUILD IN THE SHOP. SURVIVE.', cx, s(162), {
-      size: s(10), align: 'center', color: '#dfe6ee'
+      size: s(10), align: 'center', color: '#dfe6ee', maxWidth: textMax
     });
 
     this.renderer.drawText(`SOULS ${this.metaProgression.souls}`, cx, s(196), {
-      size: s(14), align: 'center', color: '#b197fc'
+      size: s(14), align: 'center', color: '#b197fc', maxWidth: textMax
     });
 
     const stats = SaveManager.getStats();
     this.renderer.drawText(
       `BEST WAVE ${stats.highestWave}   RUNS ${stats.totalRuns}   KILLS ${stats.totalKills}`,
-      cx, s(226), { size: s(9), align: 'center', color: '#aab6c3' }
+      cx, s(226), { size: s(9), align: 'center', color: '#aab6c3', maxWidth: textMax }
     );
   }
 

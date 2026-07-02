@@ -250,6 +250,7 @@ export class Renderer {
     bold?: boolean;
     stroke?: boolean;
     strokeWidth?: number;
+    maxWidth?: number;
   } = {}): void {
     // Draw on the game layer — the same layer entities and HUD panels use —
     // so z-order follows call order (text drawn after a panel sits on top of
@@ -257,15 +258,26 @@ export class Renderer {
     const ctx = this.gameCtx || this.ctx;
     ctx.save();
 
-    const size = options.size ?? 16;
+    let size = options.size ?? 16;
     // Pixel font everywhere; 'bold' is meaningless for Press Start 2P but kept
     // as a fallback hint for the monospace fallback fonts
     const family = `'Press Start 2P', 'Courier New', monospace`;
-    const font = options.bold ? `bold ${size}px ${family}` : `${size}px ${family}`;
+    const buildFont = (px: number) =>
+      options.bold ? `bold ${px}px ${family}` : `${px}px ${family}`;
 
-    ctx.font = font;
+    ctx.font = buildFont(size);
     ctx.textAlign = options.align ?? 'left';
     ctx.textBaseline = options.baseline ?? 'top';
+
+    // Auto-shrink to fit maxWidth (prevents long lines clipping off narrow
+    // portrait screens — the pixel font is wide, so long copy overflows 390px).
+    if (options.maxWidth && options.maxWidth > 0) {
+      const measured = ctx.measureText(text).width;
+      if (measured > options.maxWidth) {
+        size = Math.max(1, Math.floor(size * (options.maxWidth / measured)));
+        ctx.font = buildFont(size);
+      }
+    }
 
     // Add stroke for better readability (enabled by default for UI text)
     if (options.stroke !== false) {
