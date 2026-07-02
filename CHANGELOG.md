@@ -8,6 +8,22 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-02 (night) — Build-diversity behavioral verification (no code change)
+
+**Under the hood**
+- New `qa-builddiv.mjs` harness: builds the shipped `frontend/dist`, drives it headless, and
+  asserts the real runtime behavior of the build-diversity features (interest accrual + the
+  10+wave·2 cap, a banking item raising the rate, luck summing across items, and a trade-off
+  item's downside actually lowering its stat). **PASS, 0 console errors.** Complements
+  `qa-magnet.mjs` — both test the *shipped* bundle, not a stale copy.
+- Confirmed prod serves the current reproducible bundle `index-xb5zgS87.js` (matches a fresh
+  local build hash) containing all the new item/interest/luck code — closing the loop that the
+  features are genuinely live, not just committed.
+
+No player-visible change; this entry records verification only.
+
+---
+
 ## 2026-07-02 — Luck stat: the high-roller build
 
 **Player-visible**

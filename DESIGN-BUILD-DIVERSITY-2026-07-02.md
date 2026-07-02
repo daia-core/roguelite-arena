@@ -164,6 +164,8 @@ Each has a natural weakness, so no single build dominates — the point of the e
 - ✅ **5. Luck stat** + 3 luck items (Rabbit's Foot / Four-Leaf Clover / Cosmic Dice) — shipped & live (06df715). The high-roller build now exists.
 - ⏸️ **6. Damage-type split (melee/ranged/elemental) + Range** — **intentionally held for your steer.** This bakes in character-defining per-type numbers I didn't want to set unilaterally. It's the one open item from this design.
 
+**Behavioral verification (2026-07-02 night):** items 1–5 are now proven on the *shipped* build, not just claimed. `qa-builddiv.mjs` builds `frontend/dist`, drives it headless, and asserts the real runtime: interest = floor(gold·10%) added to gold (A), the 10+wave·2 cap holds (12 at wave 1, not 100) (B), a banking item raises the rate (Piggy Bank → 18 vs baseline 10) (C), luck sums additively across items (0.55) (D), and a trade-off downside is genuinely live (Reckless Charm armor −3 actually lowers `getArmor`) (E) — **PASS, 0 console errors.** Prod (`roguelite-game-blush.vercel.app`) confirmed serving the current reproducible bundle (`index-xb5zgS87.js`) containing all the new item/interest/luck code. No dead-stat repeat of the old `xpMagnet` bug: every new field (`interestBonus`, `luck`, `armor`, `maxHealthBonus`) has a live getter and consumption site.
+
 ## Part 6 — Suggested rollout (impact / effort)
 
 1. **Fix the dead magnet + add pickup attraction** (bug + feel). Small, isolated, high payoff. _Can
