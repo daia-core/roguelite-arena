@@ -797,6 +797,7 @@ export class Game {
         const nearbyEnemies = this.enemyQuadtree.retrieve(proj);
 
         for (const enemy of nearbyEnemies) {
+          if (enemy.dead) continue; // Corpse still in this frame's quadtree — don't re-kill
           if (proj.hasHit(enemy.id)) continue; // Already hit (piercing)
 
           if (enemy.collidesWith(proj.x, proj.y, proj.radius)) {
@@ -904,6 +905,7 @@ export class Game {
       const nearbyEnemies = this.enemyQuadtree.retrieve({ x: this.player.x, y: this.player.y, radius: melee.range + 30 });
 
       for (const enemy of nearbyEnemies) {
+        if (enemy.dead) continue; // Corpse still in this frame's quadtree — don't re-kill
         if (melee.hasHit(enemy.id)) continue; // Already hit
 
         if (melee.isPointInArc(enemy.x, enemy.y)) {
