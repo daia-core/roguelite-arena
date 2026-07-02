@@ -2,7 +2,7 @@
 
 import { UISprites } from './UISprites';
 import { OffscreenCanvasCache } from './OffscreenCanvasCache';
-import { BackgroundDecorations } from './BackgroundDecorations';
+import { StardewBackground } from './StardewBackground';
 
 export class Renderer {
   private canvas: HTMLCanvasElement;
@@ -35,7 +35,7 @@ export class Renderer {
   private offscreenCache: OffscreenCanvasCache;
 
   // ATMOSPHERE: Background decorations (gravel, stones, branches)
-  private backgroundDecorations: BackgroundDecorations;
+  private stardewBackground: StardewBackground;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -50,7 +50,7 @@ export class Renderer {
     this.offscreenCache = new OffscreenCanvasCache();
 
     // ATMOSPHERE: Initialize background decorations
-    this.backgroundDecorations = new BackgroundDecorations();
+    this.stardewBackground = new StardewBackground();
 
     // Initialize layer canvases
     this.initializeLayers();
@@ -134,34 +134,8 @@ export class Renderer {
   private cacheBackground(): void {
     if (!this.backgroundCtx || !this.backgroundCanvas) return;
 
-    // Warmer medieval arena ground (Brotato-style, not pure black)
-    this.backgroundCtx.fillStyle = '#1a1410'; // Warm dark brown instead of pure black
-    this.backgroundCtx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-
-    // Subtle stone tile pattern
-    this.backgroundCtx.save();
-    this.backgroundCtx.globalAlpha = 0.03;
-    this.backgroundCtx.strokeStyle = '#1a1a2e';
-    this.backgroundCtx.lineWidth = 1;
-    const gridSize = 40;
-    for (let x = 0; x < this.canvas.width; x += gridSize) {
-      this.backgroundCtx.beginPath();
-      this.backgroundCtx.moveTo(x, 0);
-      this.backgroundCtx.lineTo(x, this.canvas.height);
-      this.backgroundCtx.stroke();
-    }
-    for (let y = 0; y < this.canvas.height; y += gridSize) {
-      this.backgroundCtx.beginPath();
-      this.backgroundCtx.moveTo(0, y);
-      this.backgroundCtx.lineTo(this.canvas.width, y);
-      this.backgroundCtx.stroke();
-    }
-    this.backgroundCtx.restore();
-
-    // MEDIEVAL ATMOSPHERE: Add ground decorations (gravel, stones, branches)
-    this.backgroundDecorations.generate(this.canvas.width, this.canvas.height, 0.25);
-    this.backgroundDecorations.draw(this.backgroundCtx);
-    this.backgroundCtx.restore();
+    // STARDEW VALLEY STYLE: Tiled grass background (clean, organized)
+    this.stardewBackground.draw(this.backgroundCtx, this.canvas.width, this.canvas.height);
 
     // Vignette effect (darker at edges) - cached gradient
     this.vignetteGradient = this.backgroundCtx.createRadialGradient(
