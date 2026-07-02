@@ -8,6 +8,31 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-02 — Fix same-frame double-kill (double XP/gold bug)
+
+**Player-visible**
+- Killing an enemy now awards its XP, gold and kill-count exactly **once**. Previously, when two
+  player shots (or a melee swing + a shot) reached the same enemy in a single frame, the enemy's
+  reward was granted **twice** — so multi-shot / high-fire-rate builds (the whole point of the
+  shop) were quietly handing out roughly double economy on overlapping hits.
+
+**Under the hood**
+- Root cause: the collision quadtree is rebuilt once per frame, so a just-killed enemy stays in
+  its bucket for the rest of that frame. The two main hit loops (`Game.ts` projectile→enemy and
+  melee→enemy) didn't guard against `enemy.dead` before calling `takeDamage`/`handleEnemyKill`,
+  and `handleEnemyKill` isn't idempotent → it re-ran on the corpse (extra kill, XP, gold, particles).
+- Fix: added `if (enemy.dead) continue;` at the top of both hit loops — the same guard already used
+  in the homing, chain-lightning, explosion and thorns paths. Minimal, consistent, no behaviour
+  change for live enemies.
+
+**Commit** `329f764`
+**Live verified** headless regression against the real build: the unfixed build reproduced
+`killDelta=2` / gold ×2 on two same-frame projectiles; the fixed build gives exactly **1** kill,
+`enemy.dead=true`, 0 console errors. 4s autoplay smoke: enemies spawn/die, kills accrue, portrait
+render clean. Live prod serves new JS hash `index-CiAQ6lro.js` (was `index-CeQHY5_n.js`), asset 200.
+
+---
+
 ## 2026-07-02 — Menu polish + favicon
 
 **Player-visible**
