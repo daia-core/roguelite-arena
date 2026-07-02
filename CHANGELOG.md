@@ -8,6 +8,33 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-02 (night) — Floating joystick anchored at your finger
+
+Felix's ask: *"the joystick should start at mousedown — it teleports to the first touch but the
+origin doesn't move as you drag (the knob moves, not the origin)."*
+
+**Player-visible**
+- The touch joystick now spawns its base **wherever your finger first lands** and stays pinned
+  there for the whole drag — only the knob tracks your thumb. Previously the base was glued to a
+  fixed bottom-left corner while your finger controlled it from elsewhere, so the visual origin and
+  the actual control point disagreed.
+- A full-tilt drag now reads as **full move speed** (the tilt divisor was 70 while the drag clamps
+  at 100, so you used to top out at ~70% of a full push). Now they match.
+
+**Under the hood**
+- `Input` touchstart sets `joystick.fixedX/fixedY` to the touch point (was hard-coded 120 /
+  `height−140`); `touchmove` never rewrites them, so the origin is naturally fixed for the gesture.
+  `getMovementVector()` divisor 70 → 100 to match the `touchmove` clamp radius.
+
+**Commit** `<this deploy>`.
+**Verified** headless synthetic-touch harness on the shipped build AND on live
+(`index-D4JSOll_.js`): a `touchstart` at 68%/30% of the canvas anchors the origin exactly at that
+point (fixedX/Y == computed touch coords), a following `touchmove` leaves the origin unchanged while
+the knob delta + movement vector respond (delta 90/20 → move 0.8/0.5), 0 console errors. Mobile
+390×844 screenshot shows the base + knob rendering under the touch, not the old corner.
+
+---
+
 ## 2026-07-02 (night) — Faster pace + a move-speed ceiling
 
 Felix's ask: *"base player and monster move speed is too low, the game is so slow at the start —
