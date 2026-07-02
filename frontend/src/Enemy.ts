@@ -32,7 +32,7 @@ const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
   },
   goblin: {
     health: 60,
-    speed: 120,
+    speed: 100, // BALANCE: Reduced from 120 to be less punishing in Wave 1
     damage: 6,
     radius: 12,
     color: '#7cb342',
@@ -1387,6 +1387,13 @@ export class Enemy {
 
   draw(ctx: CanvasRenderingContext2D): void {
     ctx.save();
+
+    // BROTATO-STYLE: Thick dark outline for all enemies for visibility
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.typeData.radius + 1, 0, Math.PI * 2);
+    ctx.stroke();
 
     const sprite = SpriteSheet.get(this.typeData.spriteName);
 

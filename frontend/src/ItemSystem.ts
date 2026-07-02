@@ -1433,11 +1433,12 @@ export class PlayerStats {
   addItem(item: Item): { newDuos: any[]; newTransformations: any[] } {
     this.items.push(item);
     // Track for transformations
-    this.transformations.trackItemPickup(item.tags);
+    const transformationId = this.transformations.trackItemPickup(item.tags);
+    const newTransformations = transformationId ? [transformationId] : [];
     // Track for duo combos
     const newDuos = this.duos.updateDuos(this.items);
     // Return newly unlocked combos for Game.ts to show effects/UI
-    return { newDuos, newTransformations: [] }; // TODO: track transformations too
+    return { newDuos, newTransformations };
   }
 
   removeItem(itemId: string): Item | null {

@@ -25,8 +25,8 @@ export class Input {
   // Touch joystick
   joystick: TouchJoystick = {
     active: false,
-    fixedX: 100,  // Fixed position bottom-left
-    fixedY: 0,    // Will be set to canvas.height - 100 dynamically
+    fixedX: 120,  // Fixed position bottom-left (bigger margin for mobile)
+    fixedY: 0,    // Will be set to canvas.height - 120 dynamically
     startX: 0,
     startY: 0,
     currentX: 0,
@@ -111,9 +111,9 @@ export class Input {
         if (canActivateJoystick && !this.joystick.active) {
           this.joystick.active = true;
           this.joystick.identifier = touch.identifier;
-          // Set fixed position in bottom-left
-          this.joystick.fixedX = 100;
-          this.joystick.fixedY = this.canvas.height - 100;
+          // Set fixed position in bottom-left (optimized for mobile)
+          this.joystick.fixedX = 120;
+          this.joystick.fixedY = this.canvas.height - 140;
           // Track where touch started
           this.joystick.startX = x;
           this.joystick.startY = y;
@@ -139,10 +139,10 @@ export class Input {
           this.joystick.currentX = x;
           this.joystick.currentY = y;
 
-          // Calculate delta
+          // Calculate delta (bigger radius for mobile comfort)
           const dx = this.joystick.currentX - this.joystick.startX;
           const dy = this.joystick.currentY - this.joystick.startY;
-          const maxRadius = 70;
+          const maxRadius = 100; // Increased from 70 for better mobile control
           const dist = Math.sqrt(dx * dx + dy * dy);
 
           if (dist > maxRadius) {
@@ -250,31 +250,31 @@ export class Input {
 
     ctx.save();
 
-    // Draw base outer ring at FIXED position
-    ctx.globalAlpha = 0.25;
+    // Draw base outer ring at FIXED position (bigger for mobile)
+    ctx.globalAlpha = 0.3;
     ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 4;
+    ctx.lineWidth = 5;
     ctx.beginPath();
-    ctx.arc(this.joystick.fixedX, this.joystick.fixedY, 70, 0, Math.PI * 2);
+    ctx.arc(this.joystick.fixedX, this.joystick.fixedY, 100, 0, Math.PI * 2);
     ctx.stroke();
 
     // Draw base at FIXED position
-    ctx.globalAlpha = 0.35;
+    ctx.globalAlpha = 0.4;
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
-    ctx.arc(this.joystick.fixedX, this.joystick.fixedY, 65, 0, Math.PI * 2);
+    ctx.arc(this.joystick.fixedX, this.joystick.fixedY, 95, 0, Math.PI * 2);
     ctx.fill();
 
-    // Draw stick with glow - offset from FIXED position based on delta
-    ctx.globalAlpha = 0.85;
-    ctx.shadowBlur = 18;
+    // Draw stick with glow - offset from FIXED position based on delta (bigger for touch)
+    ctx.globalAlpha = 0.9;
+    ctx.shadowBlur = 20;
     ctx.shadowColor = '#00ffff';
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
     ctx.arc(
       this.joystick.fixedX + this.joystick.deltaX,
       this.joystick.fixedY + this.joystick.deltaY,
-      32,
+      42, // Increased from 32 for easier touch control
       0,
       Math.PI * 2
     );

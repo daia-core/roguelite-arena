@@ -134,8 +134,8 @@ export class Renderer {
   private cacheBackground(): void {
     if (!this.backgroundCtx || !this.backgroundCanvas) return;
 
-    // Dark medieval stone ground
-    this.backgroundCtx.fillStyle = '#0a0a0a';
+    // Warmer medieval arena ground (Brotato-style, not pure black)
+    this.backgroundCtx.fillStyle = '#1a1410'; // Warm dark brown instead of pure black
     this.backgroundCtx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
     // Subtle stone tile pattern

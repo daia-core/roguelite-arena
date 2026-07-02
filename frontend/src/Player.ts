@@ -290,6 +290,13 @@ export class Player {
 
     const sprite = SpriteSheet.get('player');
 
+    // BROTATO-STYLE: Extra thick dark outline for maximum visibility
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 4.5;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, 20, 0, Math.PI * 2);
+    ctx.stroke();
+
     // Outer glow effect (pulsing)
     const pulseOffset = Math.sin(Date.now() / 200) * 2;
     ctx.shadowBlur = 20 + pulseOffset;

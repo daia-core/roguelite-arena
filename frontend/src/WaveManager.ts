@@ -70,8 +70,8 @@ export class WaveManager {
     }
 
     // Calculate enemy count based on modifier - BALANCE: More enemies for swarm feel
-    // Wave 1: 20 enemies (Vampire Survivors density)
-    let baseCount = waveNumber === 1 ? 20 : 15 + waveNumber * 2;
+    // Wave 1: 12 enemies (gentler intro, ramps up fast)
+    let baseCount = waveNumber === 1 ? 12 : 15 + waveNumber * 2;
 
     if (this.isBossWave) {
       this.totalEnemiesInWave = 10 + waveNumber;
@@ -273,8 +273,12 @@ export class WaveManager {
       ] as EnemyType[]);
     }
 
-    // Wave 1-2: Only slimes and goblins
-    if (wave <= 2) {
+    // Wave 1: Mostly slimes with few goblins (easier intro)
+    if (wave === 1) {
+      return randomChoice(['slime', 'slime', 'slime', 'goblin'] as EnemyType[]);
+    }
+    // Wave 2: Even mix of slimes and goblins
+    else if (wave === 2) {
       return randomChoice(['slime', 'slime', 'goblin', 'goblin'] as EnemyType[]);
     }
     // Wave 3-4: Add bats, ghosts, swarms, dashers
