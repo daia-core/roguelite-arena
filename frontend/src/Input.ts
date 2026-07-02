@@ -113,9 +113,12 @@ export class Input {
         if (canActivateJoystick && !this.joystick.active) {
           this.joystick.active = true;
           this.joystick.identifier = touch.identifier;
-          // Set fixed position in bottom-left (optimized for mobile)
-          this.joystick.fixedX = 120;
-          this.joystick.fixedY = this.canvas.height - 140;
+          // Anchor the joystick's visual origin to where the finger actually
+          // landed, so the base appears under the touch and only the knob moves
+          // as you drag (was pinned to a fixed bottom-left corner, which made
+          // the base teleport away from the finger).
+          this.joystick.fixedX = x;
+          this.joystick.fixedY = y;
           // Track where touch started
           this.joystick.startX = x;
           this.joystick.startY = y;
@@ -206,9 +209,10 @@ export class Input {
     if (this.isKeyDown('a') || this.isKeyDown('arrowleft')) x -= 1;
     if (this.isKeyDown('d') || this.isKeyDown('arrowright')) x += 1;
 
-    // Touch joystick
+    // Touch joystick — divisor MUST match the clamp radius used in touchmove
+    // (100) so a full-tilt drag reads as full-speed movement, not ~70%.
     if (this.joystick.active) {
-      const maxRadius = 70;
+      const maxRadius = 100;
       x = this.joystick.deltaX / maxRadius;
       y = this.joystick.deltaY / maxRadius;
     }
