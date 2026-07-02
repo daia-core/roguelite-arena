@@ -74,3 +74,29 @@ L15 @ w14, no soft-locks. Screenshots in shots/ dirs; build + tsc clean.
 - Duo-completion surfacing in the shop (research item #8, not yet done).
 - Web-research report on genre balance numbers was still in flight at session
   end; fold its findings in when it lands.
+
+## Addendum: genre-research refinements (report landed after the main round)
+
+The web-research agent's report (verified against decompiled Brotato game
+data) confirmed the sim-driven direction and drove five more changes:
+- **Enemy speed no longer scales past ×1.25** — Brotato never wave-scales
+  speed; composition is the ramp. Ours compounded to ×1.6 by wave 14, letting
+  late bats outrun the player.
+- **Per-enemy gold is flat again** — Brotato actively *decays* per-kill income
+  to damp snowballing; income growth now comes from enemy count and (as a
+  deliberate build axis) gold-bonus items.
+- **Elite/tank spike waves gated to wave 6+** (Brotato's first challenge wave
+  sits ~55% through a run).
+- **Duo surfacing**: owning half a duo gives a 25% chance the shop's first
+  slot offers the missing partner, and duo-completing cards get a gold border
+  + "DUO COMBO!" label — threshold moments are now discoverable.
+- **Boss stalemate fixed**: player shots live 4.5s (they could not physically
+  cross the arena to reach a kited boss), and bosses enrage when the wave
+  timer expires. Sim: 3/3 runs through the boss wave, no soft-locks.
+
+Full research report artifacts: the agent verified 16/19 claims against
+primary sources (Brotato wiki + decompiled GDScript, VS wiki, dev interviews).
+Key numbers worth keeping for future tuning: Brotato waves 20→60s (+5s/wave),
+reroll = floor(0.75×wave) + floor(0.4×wave) per press, T4 items from wave 8 at
+sub-1% chance, trash TTK at debut 1-3 hits, one trash hit ≈ 5-10% of the
+player HP pool.

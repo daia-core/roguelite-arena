@@ -68,7 +68,9 @@ export class Projectile {
     this.color = fromPlayer ? '#00ffff' : '#ff0000';
     this.fromPlayer = fromPlayer;
     this.piercing = piercing;
-    this.lifetime = 3000;
+    // Player shots live long enough to cross the arena (a kiting player at
+    // one edge could otherwise never reach a boss at the other)
+    this.lifetime = fromPlayer ? 4500 : 3000;
     this.dead = false;
     this.hitEnemies.clear();
     this.trail = [];

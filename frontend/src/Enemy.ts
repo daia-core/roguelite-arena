@@ -652,11 +652,12 @@ export class Enemy {
     // Scale with wave
     this.typeData.health *= waveMultiplier;
     this.typeData.damage *= waveMultiplier;
-    this.typeData.speed *= (1 + (waveMultiplier - 1) * 0.3); // Speed scales slower
+    this.typeData.speed *= Math.min(1.25, 1 + (waveMultiplier - 1) * 0.3); // Speed barely scales (genre norm: composition ramps, not velocity)
     // Rewards scale too (slower than stats) so income and level-ups keep
     // pace with rising shop prices instead of stalling mid-game
     this.typeData.xpValue = Math.round(this.typeData.xpValue * (1 + (waveMultiplier - 1) * 0.5));
-    this.typeData.goldValue = Math.round(this.typeData.goldValue * (1 + (waveMultiplier - 1) * 0.15));
+    // goldValue stays flat per enemy — income grows via enemy count only
+    // (Brotato actively DECAYS per-kill income to damp snowballing)
 
     this.maxHealth = this.typeData.health;
     this.health = this.maxHealth;

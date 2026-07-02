@@ -56,13 +56,13 @@ export class WaveManager {
         this.waveModifier = 'horde';
         this.waveModifierText = 'HORDE WAVE - Swarm incoming!';
         this.isHordeWave = true;
-      } else if (roll < 0.25 && waveNumber >= 4) {
+      } else if (roll < 0.25 && waveNumber >= 6) {
         this.waveModifier = 'elite';
         this.waveModifierText = 'ELITE WAVE - Tougher enemies!';
       } else if (roll < 0.33) {
         this.waveModifier = 'speed';
         this.waveModifierText = 'SPEED WAVE - Fast enemies!';
-      } else if (roll < 0.4 && waveNumber >= 4) {
+      } else if (roll < 0.4 && waveNumber >= 6) {
         this.waveModifier = 'tank';
         this.waveModifierText = 'TANK WAVE - Heavily armored!';
       } else if (roll < 0.44) {
@@ -146,6 +146,8 @@ export class WaveManager {
     if (this.waveTimer <= 0) {
       for (const enemy of enemies) {
         if (!enemy.typeData.isBoss) enemy.dead = true;
+        // Once the timer runs out the boss hunts you down — no stalemates
+        else enemy.enraged = true;
       }
       this.waveEnemiesRemaining = 0;
       if (!this.isBossWave) {

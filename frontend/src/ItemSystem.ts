@@ -1,7 +1,7 @@
 // Advanced item and upgrade system with tiers, tags, and Brotato-inspired mechanics
 
 import { TransformationTracker } from './TransformationSystem';
-import { DuoTracker } from './DuoSystem';
+import { DuoTracker, DUO_COMBOS } from './DuoSystem';
 
 export const ItemTier = {
   Common: 1,
@@ -1338,11 +1338,31 @@ export class ItemDatabase {
     const ownedItemIds = playerItems.map(i => i.id);
     const ownedTags = [...new Set(playerItems.flatMap(i => i.tags))];
 
+    // Duo surfacing: owning one half of a duo gives a 25% chance that the
+    // first slot offers the missing partner — threshold moments need to be
+    // discoverable, not stumbled into
+    const duoTargets: Item[] = [];
+    for (const duo of DUO_COMBOS) {
+      const hasFirst = ownedItemIds.includes(duo.item1Id);
+      const hasSecond = ownedItemIds.includes(duo.item2Id);
+      if (hasFirst !== hasSecond) {
+        const missing = this.getItemById(hasFirst ? duo.item2Id : duo.item1Id);
+        if (missing) duoTargets.push(missing);
+      }
+    }
+
     for (let i = 0; i < count; i++) {
       const roll = Math.random();
       let selectedItem: Item | null = null;
 
-      if (roll < 0.20 && ownedItemIds.length > 0) {
+      if (i === 0 && duoTargets.length > 0 && Math.random() < 0.25) {
+        const candidate = duoTargets[Math.floor(Math.random() * duoTargets.length)];
+        if (!result.some(r => r.id === candidate.id)) {
+          selectedItem = candidate;
+        }
+      }
+
+      if (!selectedItem && roll < 0.20 && ownedItemIds.length > 0) {
         // 20% - EXACT same item you own (stacking/duplicates)
         const randomOwnedItem = playerItems[Math.floor(Math.random() * playerItems.length)];
         const candidates = getWaveAppropriteItems().filter(item => item.id === randomOwnedItem.id);

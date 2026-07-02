@@ -23,6 +23,7 @@ import { PathfindingSystem } from './PathfindingSystem';
 import { ScreenEffects, ShakePresets } from './ScreenEffects';
 import { ParticleBatchRenderer } from './ParticleBatchRenderer';
 import { drawPanel, DARK_WOOD_THEME } from './pixel/panel';
+import { DUO_COMBOS } from './DuoSystem';
 import { UISprites } from './UISprites';
 
 export type GameState = 'menu' | 'playing' | 'shop' | 'paused' | 'gameover' | 'upgrades';
@@ -2406,12 +2407,23 @@ export class Game {
       const matchingTags = item.tags.filter(tag => ownedTags.includes(tag));
       const hasTagMatch = matchingTags.length > 0;
       const isDuplicate = this.playerStats.items.some(owned => owned.id === item.id);
+      // Buying this would complete a duo combo — the game's biggest
+      // threshold moment, so it gets the loudest highlight
+      const completesDuo = DUO_COMBOS.some((duo) => {
+        const ownsFirst = this.playerStats.items.some((o) => o.id === duo.item1Id);
+        const ownsSecond = this.playerStats.items.some((o) => o.id === duo.item2Id);
+        return (
+          (ownsFirst && !ownsSecond && item.id === duo.item2Id) ||
+          (ownsSecond && !ownsFirst && item.id === duo.item1Id)
+        );
+      });
 
       // Card: wood panel with a crisp rarity/synergy-colored inner border
       // (pixel-art treatment — no glows, no gradients)
       drawPanel(ctx, x, y, itemWidth, itemHeight, DARK_WOOD_THEME, 4, i);
       let borderColor = rarityColor;
-      if (isDuplicate) borderColor = '#4a9eff';
+      if (completesDuo) borderColor = '#ffd43b';
+      else if (isDuplicate) borderColor = '#4a9eff';
       else if (hasTagMatch || hasSynergy) borderColor = '#7bd94a';
       ctx.save();
       ctx.strokeStyle = borderColor;
@@ -2463,9 +2475,13 @@ export class Game {
       }
 
       // BROTATO-INSPIRED: Enhanced synergy indicator showing type
-      if (isDuplicate || hasTagMatch || hasSynergy) {
+      if (completesDuo || isDuplicate || hasTagMatch || hasSynergy) {
         let indicatorText = '';
         let indicatorColor = '#00ff00';
+        if (completesDuo) {
+          indicatorText = 'DUO COMBO!';
+          indicatorColor = '#ffd43b';
+        } else
 
         // Don't show "DUPLICATE" text - just show synergy indicators
         if (hasTagMatch) {
