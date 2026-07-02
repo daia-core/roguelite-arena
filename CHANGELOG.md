@@ -29,7 +29,7 @@ Live: https://roguelite-game-blush.vercel.app
   instant XP/gold-on-kill economy. Complements the same-day build-diversity deploy below (that
   pass reviewed pickups but didn't catch the dead magnet stat).
 
-**Commit** `TBD`
+**Commit** `84b3f54`
 **Verified on the shipped `frontend/dist`** via a new deterministic harness (`qa-magnet.mjs`) that
 steps the real game loop with fixed dt: baseline (no items) vacuums a 55px orb → collected + player
 healed; a 200px orb stays put (range is bounded, not global); a magnet item (2×) pulls a 100px orb;
