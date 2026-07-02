@@ -1405,17 +1405,18 @@ export class ItemDatabase {
       maxHealthBonus: -20
     },
     {
-      id: 'leech_blade_t3',
-      name: 'Leech Blade',
-      description: '+18% lifesteal, -15% dmg',
+      id: 'siphon_rounds_t3',
+      name: 'Siphon Rounds',
+      description: '+15% lifesteal, +20% ranged dmg, -15% fire rate',
       rarity: 'epic',
       tier: ItemTier.Rare,
       cost: 55,
-      icon: '🦟',
+      icon: '🧛',
       unlocked: true,
-      tags: ['melee'],
-      lifesteal: 0.18,
-      damageMultiplier: 0.85
+      tags: ['ranged'],
+      lifesteal: 0.15,
+      rangedDamageMult: 1.2,
+      fireRateMultiplier: 0.85
     },
     {
       id: 'iron_turtle_t3',

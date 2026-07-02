@@ -8,6 +8,28 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-02 (late night) — Build-diversity audit: dup-item bug fixed + new ranged-lifesteal item
+
+Ran a full item-roster audit (`tools/qa/_audit-items.mjs`) against Felix's ask to *"review all
+broken build possibilities to make sure there are many diverse builds."* Findings:
+
+- **Bug fixed — two different items shared the id `leech_blade_t3`.** A legacy generic "Leech Blade"
+  (+18% lifesteal, −15% dmg) and the newer melee-lane "Leech Blade" (+30% melee, +18% lifesteal,
+  −15 HP) collided on one id, so one silently shadowed the other in lookups/own-once logic.
+- **Fix + new item in one move:** the legacy version was strictly dominated by the melee one, so it
+  was repurposed into **Siphon Rounds** (`siphon_rounds_t3`) — **the game's first ranged+lifesteal
+  item** (+15% lifesteal, +20% ranged dmg, −15% fire rate). This enables a "vampiric sniper" build
+  that didn't exist, and keeps the melee "Leech Blade" as the canonical one.
+- **No other broken builds found:** dodge is hard-capped at 75% (`Math.min(0.75, …)`), so the raw
+  111%-if-you-buy-everything is not exploitable; every other stat's stack is bounded or intended
+  (piercing 999 = legendary by design). No further dup ids.
+
+Uses only already-wired stats (rangedDamageMult / lifesteal / fireRate — all proven live), so no
+dead-stat risk. **Verified:** clean `tsc`+vite build; `qa-damagetype.mjs` and `qa-builddiv.mjs`
+both PASS on the freshly-built `dist`, 0 console errors.
+
+---
+
 ## 2026-07-02 (night) — Weapons that STACK: orbs, bombs, novas & whirling blades
 
 Felix's ask: *"add more diverse weapons and make sure weapons stack — melee arc should not
