@@ -8,6 +8,35 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-02 (night) — Own-once items leave the shop + synergy deploy
+
+Felix's ask: *"isn't there limited items — once you've bought one it's not offered anymore? Some
+items don't make sense to buy more than once. Handle it."*
+
+**Player-visible**
+- Items whose *only* effect is a boolean/weapon flag — **Seeking Rune** (homing), **Guardian
+  Shield** (shield), and every weapon swap — vanish from the shop once owned. A second copy did
+  literally nothing (the flag is read with `.some()`/`.find()`), so re-offering them was a gold
+  trap. Items that genuinely stack (any +damage, +armor, crit%, multishot, interest, …) still
+  appear as often as before.
+- The missing half of a duo you're building is *still* offered even if it's a boolean item — the
+  synergy pull overrides the own-once hide, so you can always complete a combo.
+
+**Under the hood**
+- `ItemDatabase.itemStacks(item)` classifies every item: true if any multiplicative field ≠ 1 or
+  additive field ≠ 0, else false (only flags left → a dupe is wasted). `getWeightedShopItems`
+  builds a `nonStackOwned` set and filters it at the single `getWaveAppropriteItems` chokepoint all
+  pools flow through, so the general roll, the duplicate roll, and tier-fill all respect it.
+
+**Commit** `734c5ae` (shipped alongside the per-card synergy legibility below).
+**Verified** `verify-mechanics.mjs` — 4/4 PASS on the shipped `dist`: owned non-stacking item
+offered 0× across 400 rolled end-game shops, a stacking item still offered hundreds of times, and
+the duo-info card data is correct. Live at `index-BPlOYfQO.js` (this deploy also promoted the
+COMBOS-guide overlay below to production); mobile 390×844 screenshot confirms Seeking Rune absent
+from a fresh shop and the synergy badges rendering, 0 console errors.
+
+---
+
 ## 2026-07-02 (night) — Synergies made understandable
 
 Felix's ask: *"synergies need to be more easily understood — what a synergy does / what items combo."*
