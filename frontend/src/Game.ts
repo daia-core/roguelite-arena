@@ -13,6 +13,7 @@ import { Renderer } from './Renderer';
 import { AudioManager } from './AudioManager';
 import { pointInRect } from './utils';
 import { HealthOrb, XPOrb } from './Pickup';
+import { OrbitingOrb, Bomb, Shockwave } from './Weapons';
 import { MetaProgression } from './MetaProgression';
 import { ObjectPool } from './ObjectPool';
 import { Quadtree } from './Quadtree';
@@ -45,6 +46,14 @@ export class Game {
   damageNumbers: DamageNumber[] = [];
   healthOrbs: HealthOrb[] = [];
   xpOrbs: XPOrb[] = [];
+
+  // AUXILIARY STACKING WEAPONS — run alongside the primary weapon (never replace it).
+  orbitingOrbs: OrbitingOrb[] = [];
+  bombs: Bomb[] = [];
+  shockwaves: Shockwave[] = [];
+  private bombTimer: number = 0;
+  private novaTimer: number = 0;
+  private auxMeleeTimer: number = 0;
 
   // ZOOM-OUT: the simulation runs in a world 2x the canvas in each dimension and
   // is rendered at 1/scale, so the play area is larger and the player/monsters
@@ -356,6 +365,7 @@ export class Game {
     this.damageNumbers = [];
     this.healthOrbs = [];
     this.xpOrbs = [];
+    this.resetAuxWeapons();
     this.kills = 0;
     this.bossKills = 0;
     this.soulsEarnedThisRun = 0;
@@ -403,6 +413,7 @@ export class Game {
     this.damageNumbers = [];
     this.healthOrbs = [];
     this.xpOrbs = [];
+    this.resetAuxWeapons();
     this.kills = 0;
 
     const wave = save.wave ?? 1;
@@ -979,6 +990,10 @@ export class Game {
       }
     }
 
+    // AUXILIARY STACKING WEAPONS — orbiting orbs, dropped bombs, nova pulses and a
+    // whirling melee arc. These run in ADDITION to the primary weapon each frame.
+    this.updateAuxWeapons(scaledDt);
+
     // Particles
     for (const particle of this.particles) {
       particle.update(scaledDt);
@@ -1099,6 +1114,8 @@ export class Game {
     this.removeDeadEntities(this.meleeAttacks);
     this.removeDeadEntities(this.healthOrbs);
     this.removeDeadEntities(this.xpOrbs);
+    this.removeDeadEntities(this.bombs);
+    this.removeDeadEntities(this.shockwaves);
 
     // Check wave completion
     if (this.waveManager.isWaveComplete()) {
@@ -1153,6 +1170,170 @@ export class Game {
 
   // Grant XP (from a collected orb) and fire the level-up juice if it triggered.
   // Called at pickup time now that XP drops as gems instead of applying on kill.
+  private resetAuxWeapons(): void {
+    this.orbitingOrbs = [];
+    this.bombs = [];
+    this.shockwaves = [];
+    this.bombTimer = 0;
+    this.novaTimer = 0;
+    this.auxMeleeTimer = 0;
+  }
+
+  // Apply damage from an auxiliary weapon to one enemy, reusing the same crit /
+  // boss-mult / lifesteal / particle / kill flow the primary weapons use so the
+  // stacked weapons feel identical in impact.
+  private dealAuxDamage(enemy: Enemy, baseDamage: number, hitColor: string): void {
+    if (!this.player || enemy.dead) return;
+    const isCrit = this.player.rollCrit();
+    let damage = isCrit ? this.player.getCritDamage(baseDamage) : baseDamage;
+    if (enemy.typeData.isBoss) damage *= this.metaProgression.getBossDamageMultiplier();
+
+    const splits = enemy.takeDamage(damage);
+    if (splits && splits.length > 0) this.enemies.push(...splits);
+
+    const lifesteal = this.playerStats.getLifesteal();
+    if (lifesteal > 0) this.player.heal(damage * lifesteal);
+
+    this.damageNumbers.push(this.createDamageNumber(enemy.x, enemy.y - 20, damage, isCrit));
+    this.renderer.addImpactFlash(enemy.x, enemy.y);
+    const pc = this.getParticleCount(5);
+    for (let i = 0; i < pc; i++) {
+      const a = (Math.PI * 2 * i) / Math.max(1, pc);
+      const speed = 120 + Math.random() * 90;
+      this.particles.push(this.createParticle({
+        x: enemy.x, y: enemy.y,
+        vx: Math.cos(a) * speed, vy: Math.sin(a) * speed,
+        color: i % 2 === 0 ? hitColor : '#ffffff',
+        size: 3 + Math.random() * 3,
+        lifetime: 300 + Math.random() * 200,
+        gravity: 120
+      }));
+    }
+    if (enemy.dead) this.handleEnemyKill(enemy);
+  }
+
+  private updateAuxWeapons(dt: number): void {
+    if (!this.player) return;
+    const px = this.player.x;
+    const py = this.player.y;
+
+    // --- Orbiting orbs: keep the live array sized to the item count, spin them,
+    //     and grind any enemy they overlap (per-enemy re-hit cooldown). ---
+    const orbCount = this.playerStats.getOrbitOrbCount();
+    if (orbCount !== this.orbitingOrbs.length) {
+      // Rebuild with evenly-spaced angles, preserving current spin phase.
+      const phase = this.orbitingOrbs[0]?.angle ?? 0;
+      this.orbitingOrbs = [];
+      for (let i = 0; i < orbCount; i++) {
+        this.orbitingOrbs.push(new OrbitingOrb(phase + (Math.PI * 2 * i) / orbCount, 0, 0));
+      }
+    }
+    if (this.orbitingOrbs.length > 0) {
+      const orbitRadius = 72;
+      const spin = 2.4; // rad/s
+      const orbDamage = this.playerStats.getOrbitDamage();
+      // All orbs spin at the same rate from evenly-spaced starts, so the ring
+      // stays symmetric without re-imposing spacing each frame.
+      for (const orb of this.orbitingOrbs) {
+        orb.update(dt, px, py, spin, orbitRadius, orbDamage);
+      }
+      const nearby = this.enemyQuadtree.retrieve({ x: px, y: py, radius: orbitRadius + 40 });
+      for (const orb of this.orbitingOrbs) {
+        for (const enemy of nearby) {
+          if (enemy.dead || !orb.canHit(enemy.id)) continue;
+          if (orb.collidesWith(enemy.x, enemy.y, enemy.radius)) {
+            orb.markHit(enemy.id);
+            this.dealAuxDamage(enemy, orb.damage, '#22e0ff');
+          }
+        }
+      }
+    }
+
+    // --- Dropped bombs: on a cooldown, drop one at the player's feet; resolve the
+    //     AoE blast the frame the fuse hits zero. ---
+    if (this.playerStats.hasBombDrop()) {
+      this.bombTimer -= dt;
+      if (this.bombTimer <= 0) {
+        this.bombs.push(new Bomb(px, py, 0.9, 110, this.playerStats.getBombDamage()));
+        this.bombTimer = this.playerStats.getBombCooldown();
+      }
+    }
+    for (const bomb of this.bombs) {
+      bomb.update(dt);
+      if (bomb.detonated && !bomb.dead) {
+        this.detonateBomb(bomb);
+        bomb.dead = true;
+      }
+    }
+
+    // --- Nova pulse: expanding shockwave ring damaging each enemy once. ---
+    if (this.playerStats.hasNova()) {
+      this.novaTimer -= dt;
+      if (this.novaTimer <= 0) {
+        this.shockwaves.push(new Shockwave(px, py, 240, this.playerStats.getNovaDamage()));
+        this.novaTimer = this.playerStats.getNovaCooldown();
+        this.audio.playShoot();
+      }
+    }
+    for (const wave of this.shockwaves) {
+      wave.update(dt);
+      const nearby = this.enemyQuadtree.retrieve({ x: wave.x, y: wave.y, radius: wave.radius + wave.band });
+      for (const enemy of nearby) {
+        if (enemy.dead || !wave.canHit(enemy.id)) continue;
+        if (wave.ringContains(enemy.x, enemy.y, enemy.radius)) {
+          wave.markHit(enemy.id);
+          this.dealAuxDamage(enemy, wave.damage, '#a0f0ff');
+        }
+      }
+    }
+
+    // --- Whirling melee arc: swings on its OWN timer toward the nearest enemy,
+    //     independent of the primary weapon, so a gun build still gets a blade. ---
+    this.auxMeleeTimer -= dt;
+    if (this.playerStats.hasAuxMelee() && this.auxMeleeTimer <= 0 && this.enemies.length > 0) {
+      let nearest: Enemy | null = null;
+      let nd = Infinity;
+      for (const e of this.enemies) {
+        const d = (e.x - px) ** 2 + (e.y - py) ** 2;
+        if (d < nd) { nd = d; nearest = e; }
+      }
+      if (nearest) {
+        const angle = Math.atan2(nearest.y - py, nearest.x - px);
+        const dmg = this.playerStats.getAuxMeleeDamage();
+        // Wide sweeping arc, pushed through the existing meleeAttacks pipeline so
+        // its collision/knockback/kill handling is shared with real melee.
+        this.meleeAttacks.push(new MeleeAttack(px, py, angle, Math.PI * 0.9, 95, dmg, 120));
+      }
+      this.auxMeleeTimer = 1.1;
+    }
+  }
+
+  private detonateBomb(bomb: Bomb): void {
+    const rSq = bomb.blastRadius * bomb.blastRadius;
+    const nearby = this.enemyQuadtree.retrieve({ x: bomb.x, y: bomb.y, radius: bomb.blastRadius + 30 });
+    for (const enemy of nearby) {
+      if (enemy.dead) continue;
+      const distSq = (enemy.x - bomb.x) ** 2 + (enemy.y - bomb.y) ** 2;
+      if (distSq < rSq) this.dealAuxDamage(enemy, bomb.damage, '#ffaa00');
+    }
+    // Blast VFX + feedback.
+    this.renderer.addScreenShake(0.35);
+    this.audio.playHit();
+    const pc = this.getParticleCount(24);
+    for (let i = 0; i < pc; i++) {
+      const a = (Math.PI * 2 * i) / Math.max(1, pc);
+      const speed = 180 + Math.random() * 160;
+      this.particles.push(this.createParticle({
+        x: bomb.x, y: bomb.y,
+        vx: Math.cos(a) * speed, vy: Math.sin(a) * speed,
+        color: i % 3 === 0 ? '#ffffff' : (i % 3 === 1 ? '#ffaa00' : '#ff4400'),
+        size: 5 + Math.random() * 5,
+        lifetime: 400 + Math.random() * 300,
+        gravity: 60
+      }));
+    }
+  }
+
   private grantXP(amount: number): void {
     if (!this.player) return;
     const leveledUp = this.player.addXP(amount);
@@ -2133,6 +2314,10 @@ export class Game {
       }
     }
 
+    // Ground-level aux weapons (under enemies): nova rings + armed bombs.
+    for (const wave of this.shockwaves) wave.draw(ctx);
+    for (const bomb of this.bombs) bomb.draw(ctx);
+
     for (const enemy of this.enemies) {
       if (this.entityCuller.isVisible(enemy)) {
         enemy.draw(ctx);
@@ -2152,6 +2337,9 @@ export class Game {
     }
 
     this.player.draw(ctx);
+
+    // Orbiting orbs draw over the player so the ring reads clearly.
+    for (const orb of this.orbitingOrbs) orb.draw(ctx);
 
     for (const num of this.damageNumbers) {
       num.draw(ctx);

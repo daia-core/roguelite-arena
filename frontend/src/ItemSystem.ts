@@ -38,6 +38,21 @@ export interface Item {
   weaponRange?: number; // For melee weapons
   weaponArc?: number; // For melee sweep angle (radians)
 
+  // AUXILIARY STACKING WEAPONS — these run ALONGSIDE the primary weapon (they do
+  // NOT replace weaponType), so a gun build can also spin blades, orbit orbs,
+  // drop bombs and pulse novas. Additive/count fields stack across copies;
+  // boolean fields don't (a duplicate is wasted, so the shop stops offering it).
+  orbitOrbs?: number; // extra energy orbs circling the player (additive)
+  orbitDamageMult?: number; // scales orbit-orb contact damage
+  auxMelee?: boolean; // a whirling melee arc that swings on its own timer
+  auxMeleeDamageMult?: number; // scales the aux melee damage
+  bombDrop?: boolean; // periodically drop a bomb at the player's feet
+  bombDamageMult?: number; // scales bomb blast damage
+  bombCooldownMult?: number; // <1 = bombs drop faster (multiplies the base cooldown)
+  novaPulse?: boolean; // periodic expanding shockwave from the player
+  novaDamageMult?: number; // scales nova damage
+  novaCooldownMult?: number; // <1 = novas fire faster
+
   // Stat modifiers
   damageMultiplier?: number;
   // Per-damage-type multipliers (Brotato-style). These layer ON TOP of the global
@@ -1611,6 +1626,248 @@ export class ItemDatabase {
       unlocked: true,
       tags: ['economic', 'utility'],
       luck: 0.80
+    },
+
+    // ============ UNIQUE IMPACTFUL ITEMS (build-defining, 2026-07-02) ============
+    // Felix asked for "more unique items that feel impactful". These grant already-wired
+    // combat MECHANICS (explosion, poison, homing, freeze+chain, lifesteal, shield, thorns,
+    // multishot, pierce) rather than flat stat sticks, so each visibly changes how a run
+    // plays and anchors a distinct build. Every flag effect is paired with a positive
+    // stackable stat so a second copy is never dead gold (see itemStacks()).
+    {
+      id: 'volatile_rounds_t2',
+      name: 'Volatile Rounds',
+      description: 'Attacks explode on hit, +20% elemental dmg',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 40,
+      icon: '💥',
+      unlocked: true,
+      tags: ['elemental', 'ranged'],
+      explosionOnHit: true,
+      elementalDamageMult: 1.2
+    },
+    {
+      id: 'venom_coating_t2',
+      name: 'Venom Coating',
+      description: 'Attacks poison enemies, +15% elemental dmg',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 38,
+      icon: '🧪',
+      unlocked: true,
+      tags: ['elemental'],
+      poison: true,
+      elementalDamageMult: 1.15
+    },
+    {
+      id: 'seeker_rounds_t3',
+      name: 'Seeker Rounds',
+      description: 'Bullets curve into enemies, +25% ranged dmg',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 80,
+      icon: '🎯',
+      unlocked: true,
+      tags: ['ranged', 'utility'],
+      homing: true,
+      rangedDamageMult: 1.25
+    },
+    {
+      id: 'cryo_capacitor_t3',
+      name: 'Cryo Capacitor',
+      description: '40% freeze + arcs to nearby, +20% elemental dmg',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 88,
+      icon: '❄️',
+      unlocked: true,
+      tags: ['elemental'],
+      freeze: 0.4,
+      chainLightning: 0.25,
+      elementalDamageMult: 1.2
+    },
+    {
+      id: 'leech_blade_t3',
+      name: 'Leech Blade',
+      description: 'Heal 18% of melee dmg, +30% melee, -15 HP',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 84,
+      icon: '🩸',
+      unlocked: true,
+      tags: ['melee'],
+      lifesteal: 0.18,
+      meleeDamageMult: 1.3,
+      maxHealthBonus: -15
+    },
+    {
+      id: 'bullet_hurricane_t4',
+      name: 'Bullet Hurricane',
+      description: '+2 homing, piercing shots, -15% ranged dmg',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 160,
+      icon: '🌀',
+      unlocked: true,
+      tags: ['ranged'],
+      multishot: 2,
+      homing: true,
+      piercing: 3,
+      rangedDamageMult: 0.85
+    },
+    {
+      id: 'supernova_core_t4',
+      name: 'Supernova Core',
+      description: 'Shots explode + arc to all nearby, +40% elemental, -25 HP',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 168,
+      icon: '🌟',
+      unlocked: true,
+      tags: ['elemental', 'ranged'],
+      explosionOnHit: true,
+      chainLightning: 0.4,
+      elementalDamageMult: 1.4,
+      maxHealthBonus: -25
+    },
+    {
+      id: 'bloodmoon_pact_t4',
+      name: 'Bloodmoon Pact',
+      description: 'Heal 30% of melee dmg, +50% melee, reflect 40%, -30 HP',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 162,
+      icon: '🌑',
+      unlocked: true,
+      tags: ['melee', 'defensive'],
+      lifesteal: 0.3,
+      meleeDamageMult: 1.5,
+      thorns: 0.4,
+      maxHealthBonus: -30
+    },
+    {
+      id: 'aegis_protocol_t4',
+      name: 'Aegis Protocol',
+      description: 'Recharging shield, reflect 50%, +6 armor & regen, -20% dmg',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 150,
+      icon: '🛡️',
+      unlocked: true,
+      tags: ['defensive'],
+      shield: true,
+      thorns: 0.5,
+      armor: 6,
+      healthRegen: 6,
+      damageMultiplier: 0.8
+    },
+
+    // ==================== AUXILIARY STACKING WEAPONS (2026-07-02) ====================
+    // A SECOND source of damage that runs alongside whatever primary weapon you carry
+    // — the whole point is they STACK (a gun build can also spin blades, orbit orbs,
+    // drop bombs, pulse novas). Each anchors a distinct new build axis.
+    {
+      id: 'orbit_orb_t2',
+      name: 'Guardian Orb',
+      description: 'An energy orb circles you, shredding anything it touches',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 34,
+      icon: '🔵',
+      unlocked: true,
+      tags: ['utility', 'elemental'],
+      orbitOrbs: 1
+    },
+    {
+      id: 'orbit_orb_swarm_t3',
+      name: 'Orbital Swarm',
+      description: '+2 orbiting orbs and they hit harder',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 78,
+      icon: '🌐',
+      unlocked: true,
+      tags: ['utility', 'elemental'],
+      orbitOrbs: 2,
+      orbitDamageMult: 1.4
+    },
+    {
+      id: 'whirl_blades_t2',
+      name: 'Whirling Blades',
+      description: 'A blade arc sweeps you constantly — your gun keeps firing too',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 36,
+      icon: '🌪️',
+      unlocked: true,
+      tags: ['melee'],
+      auxMelee: true
+    },
+    {
+      id: 'blade_storm_t4',
+      name: 'Blade Storm',
+      description: 'A faster, deadlier whirl of blades around you',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 150,
+      icon: '⚔️',
+      unlocked: true,
+      tags: ['melee'],
+      auxMelee: true,
+      auxMeleeDamageMult: 1.8
+    },
+    {
+      id: 'bomb_bandolier_t2',
+      name: 'Bomb Bandolier',
+      description: 'Drop a bomb at your feet every few seconds — big AoE blast',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 40,
+      icon: '💣',
+      unlocked: true,
+      tags: ['elemental', 'utility'],
+      bombDrop: true
+    },
+    {
+      id: 'cluster_charges_t4',
+      name: 'Cluster Charges',
+      description: 'Bombs drop twice as fast and hit far harder',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 158,
+      icon: '🧨',
+      unlocked: true,
+      tags: ['elemental'],
+      bombDrop: true,
+      bombCooldownMult: 0.5,
+      bombDamageMult: 1.6
+    },
+    {
+      id: 'nova_core_t3',
+      name: 'Nova Core',
+      description: 'A shockwave ripples out from you on a timer',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 72,
+      icon: '💠',
+      unlocked: true,
+      tags: ['elemental', 'utility'],
+      novaPulse: true
+    },
+    {
+      id: 'pulsar_t4',
+      name: 'Pulsar',
+      description: 'Novas fire relentlessly and hit like a truck',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 160,
+      icon: '✴️',
+      unlocked: true,
+      tags: ['elemental'],
+      novaPulse: true,
+      novaCooldownMult: 0.5,
+      novaDamageMult: 1.7
     }
   ];
 
@@ -1647,7 +1904,8 @@ export class ItemDatabase {
   private static readonly ADD_KEYS: (keyof Item)[] = [
     'critChance', 'maxHealthBonus', 'healthRegen', 'armor', 'lifesteal', 'thorns',
     'multishot', 'piercing', 'projectileSpeed', 'knockback', 'dodge', 'chainLightning',
-    'freeze', 'rerollDiscount', 'shopDiscount', 'recycleBonus', 'interestBonus', 'luck', 'xpMagnet'
+    'freeze', 'rerollDiscount', 'shopDiscount', 'recycleBonus', 'interestBonus', 'luck', 'xpMagnet',
+    'orbitOrbs'
   ];
 
   static itemStacks(item: Item): boolean {
@@ -2254,5 +2512,65 @@ export class PlayerStats {
 
   hasWeapon(): boolean {
     return this.items.some(item => item.weaponType);
+  }
+
+  // ==================== AUXILIARY STACKING WEAPONS ====================
+  // These layer ON TOP of the primary weaponType (they never replace it).
+
+  /** Number of orbs circling the player (sum across items). */
+  getOrbitOrbCount(): number {
+    return this.items.reduce((n, i) => n + (i.orbitOrbs ?? 0), 0);
+  }
+
+  /** Contact damage per orbit orb — scaled off the player's base damage. */
+  getOrbitDamage(): number {
+    let mult = 1;
+    for (const i of this.items) if (i.orbitDamageMult) mult *= i.orbitDamageMult;
+    return this.getDamage() * 0.9 * mult;
+  }
+
+  hasAuxMelee(): boolean {
+    return this.items.some(i => i.auxMelee);
+  }
+
+  /** Whirling-arc damage — leans on melee scaling so melee builds amplify it. */
+  getAuxMeleeDamage(): number {
+    let mult = 1;
+    for (const i of this.items) if (i.auxMeleeDamageMult) mult *= i.auxMeleeDamageMult;
+    return this.getMeleeDamage() * 1.1 * mult;
+  }
+
+  hasBombDrop(): boolean {
+    return this.items.some(i => i.bombDrop);
+  }
+
+  getBombDamage(): number {
+    let mult = 1;
+    for (const i of this.items) if (i.bombDamageMult) mult *= i.bombDamageMult;
+    return this.getDamage() * 3.0 * mult;
+  }
+
+  /** Seconds between bomb drops (base 3.5s, faster with cooldown items). */
+  getBombCooldown(): number {
+    let mult = 1;
+    for (const i of this.items) if (i.bombCooldownMult) mult *= i.bombCooldownMult;
+    return Math.max(0.6, 3.5 * mult);
+  }
+
+  hasNova(): boolean {
+    return this.items.some(i => i.novaPulse);
+  }
+
+  getNovaDamage(): number {
+    let mult = 1;
+    for (const i of this.items) if (i.novaDamageMult) mult *= i.novaDamageMult;
+    return this.getDamage() * 1.6 * mult;
+  }
+
+  /** Seconds between nova pulses (base 4s, faster with cooldown items). */
+  getNovaCooldown(): number {
+    let mult = 1;
+    for (const i of this.items) if (i.novaCooldownMult) mult *= i.novaCooldownMult;
+    return Math.max(0.8, 4.0 * mult);
   }
 }
