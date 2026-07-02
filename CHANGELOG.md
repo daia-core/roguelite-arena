@@ -8,6 +8,50 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-02 (night) — Weapons that STACK: orbs, bombs, novas & whirling blades
+
+Felix's ask: *"add more diverse weapons and make sure weapons stack — melee arc should not
+replace shot projectiles. Add AoE weapons and unique ones like orbs rotating around the player or
+bombs dropped at your location with an X-second cooldown. Be really creative so the game is more
+diverse than just shooting projectiles."*
+
+**Player-visible — four new stacking weapon systems that run ALONGSIDE your gun**
+- **Whirling melee arc** — a blade sweeps around you on its own timer *while your gun keeps firing*.
+  This is the headline fix: melee no longer replaces your shots — the two stack. (Item: **Whirling
+  Blades**, and legendary **Blade Storm** for a faster, deadlier sweep.)
+- **Orbiting orbs** — energy orbs circle you and shred anything they touch, with a short per-enemy
+  re-hit cooldown so they grind crowds. They **stack additively** — buy more to add more orbs.
+  (Items: **Guardian Orb** +1, **Orbital Swarm** +2 & harder-hitting.)
+- **Dropped bombs** — a bomb lands at your feet on a cooldown, blinks, then detonates for a big AoE
+  blast. (Items: **Bomb Bandolier**, legendary **Cluster Charges** — 2× drop rate, +60% blast.)
+- **Nova pulses** — a shockwave ring ripples out from you on a timer, hitting every enemy it sweeps
+  once. (Items: **Nova Core**, legendary **Pulsar** — relentless, hard-hitting.)
+
+Any of these layer on top of any primary weapon (auto-aim, shotgun, laser, melee…) and on top of
+each other — a gun build can now also spin blades, orbit orbs, drop bombs and pulse novas at once,
+opening whole new build axes.
+
+**Under the hood**
+- New `Weapons.ts` with `OrbitingOrb` / `Bomb` / `Shockwave` entities (kinematic + collision-query,
+  in the `MeleeAttack` mould — Game owns damage application).
+- Aux weapons run each frame in `Game.updateAuxWeapons()` on independent cooldown timers, fully
+  decoupled from the exclusive `weaponType`. Shared `dealAuxDamage()` reuses the same crit / boss-
+  mult / lifesteal / particle / kill flow the primary weapons use, so stacked hits feel identical.
+- 8 new items + `PlayerStats` accessors (`getOrbitOrbCount`, `hasBombDrop`, `hasNova`,
+  `hasAuxMelee`, damage/cooldown scalers). `orbitOrbs` added to the stackable ADD_KEYS so duplicates
+  keep granting more orbs (and stay rebuyable in the shop).
+
+**Verification**
+- Commit `4e16125`. Live build `index-BnewURM8.js` (hash matches local exactly; all 6 item names
+  present in the shipped bundle).
+- `qa-stacking-weapons.mjs` (headless, real `g.update` loop): 3 orbs alive & grinding (976 dmg),
+  bombs drop + detonate (1050 dmg), novas pulse (840 dmg), and **melee arcs + projectiles coexist**
+  in the same run with an auto-aim primary. Prior `qa-zoom-xporbs.mjs` still green. 0 console errors.
+- Mobile 390×844 screenshot (`shots/aux-weapons-390.png`): whirling arc + orbiting orbs visible
+  around the player, HUD/joystick intact.
+
+---
+
 ## 2026-07-02 (night) — XP gems, a zoomed-out arena, and a real swarm
 
 Felix's asks: *"shouldn't XP drop as tiny orbs as well?"* and *"zoom out the game 2x (map,
