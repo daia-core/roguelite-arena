@@ -8,6 +8,41 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-02 (night) — XP gems, a zoomed-out arena, and a real swarm
+
+Felix's asks: *"shouldn't XP drop as tiny orbs as well?"* and *"zoom out the game 2x (map,
+player, monsters — not the GUI) so the play area is larger, then revamp spawning so more
+monsters spawn, more like Vampire Survivors."*
+
+**Player-visible**
+- **XP now drops as tiny cyan gems** instead of being granted the instant an enemy dies. The gems
+  pop out of the kill, then vacuum toward you once you're in magnet range and grant their XP on
+  contact — the satisfying Vampire-Survivors collection loop. This also **revives the magnet stat**:
+  Small Magnet, Soul Collector and Experience Gem now do something real (wider pickup range).
+- **The whole battlefield is zoomed out 2×.** The arena is twice as large in each dimension, so
+  the player and monsters read smaller and you see much more of the field. The HUD/joystick/shop
+  are unchanged (drawn in screen space).
+- **A real swarm.** Enemy counts are up and they now arrive in **bursts** (4-6 at a time) instead
+  of one-at-a-time, so the bigger arena actually fills with a crowd. Live wave 1 already peaks at
+  20+ enemies with a steady stream of XP gems trailing in.
+
+**Under the hood**
+- `Game` runs the simulation in a world `2×` the canvas (`worldWidth/worldHeight` getters); bounds,
+  spawns, quadtree and pathfinding all use world dims, and the entity draw pass is wrapped in a
+  `ctx.scale(1/2)` transform (GUI is drawn after it's restored). Mouse is only used for menus, so no
+  gameplay aim remapping was needed.
+- `XPOrb` entity in `Pickup.ts` (pop → home → collect); kill handler splits the award into up to 4
+  gems; `grantXP()` extracted so the level-up juice fires at pickup, not on kill.
+- `WaveManager` spawns a burst per tick; base counts raised (`wave1` 18→28, `20 + wave*3`).
+
+**Commit** `750e96a` (+ `qa-zoom-xporbs.mjs` regression: world 2×, player centred, orbs
+spawn/defer/collect, peak crowd — all PASS on the shipped bundle).
+**Verified & LIVE** at `index-B27vLA69.js` (live hash matches the local build exactly). Headless
+mobile check (390×844): world 2×, peak 23 enemies, 9 XP gems on screen mid-wave, 0 console errors;
+screenshot confirms the zoomed-out field, the swarm, and the gem stream.
+
+---
+
 ## 2026-07-02 (night) — Floating joystick anchored at your finger
 
 Felix's ask: *"the joystick should start at mousedown — it teleports to the first touch but the
