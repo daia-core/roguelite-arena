@@ -8,6 +8,38 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-02 — Luck stat: the high-roller build
+
+**Player-visible**
+- **New Luck stat** — raises the chance the shop offers higher-rarity items **and** the chance
+  enemies drop health orbs. It powers a distinct "high-roller" playstyle: trade a little raw power
+  for a shop stuffed with epics and legendaries (and more heals to survive the gamble).
+- **Three new luck items:** **Rabbit's Foot** (T1, +15% luck), **Four-Leaf Clover** (T3, +40%
+  luck, −10% dmg — the tradeoff that stops pure luck-stacking from being free), and **Cosmic Dice**
+  (Legendary, +80% luck). Stack them and the shop visibly tilts toward the top tiers.
+- This completes the economy build pair started by the interest mechanic: **banker** (hoard gold for
+  interest) and **high-roller** (spend luck for rarity) are now two mechanically different economy
+  routes, on top of the existing damage/tank/lifesteal lanes.
+
+**Under the hood**
+- `PlayerStats.getLuck()` sums each item's `luck` (new optional Item field), capped at **+200%** so a
+  fully stacked luck build stays bounded. `getWeightedShopItems()` now takes a `luck` arg and scales
+  the **Rare/Legendary** tier weights by `(1 + luck)` — reusing the existing rarity-weighted shop
+  rather than adding a parallel system. Health-orb drop is `0.18 × (1 + luck)` on kill.
+- Completed the dangling `window.__ItemDatabase` QA hook that `verify-mechanics.mjs` already
+  referenced but was never wired — lets the shop weighting be tested deterministically.
+- Damage-type split (melee/ranged/elemental) from the design doc is **intentionally still held** for
+  Felix's steer — that one bakes in character-defining numbers I didn't want to set unilaterally.
+
+**Commit** `PENDING`
+**Verified on the shipped `frontend/dist`** via a new harness (`tools/qa/verify-luck.mjs`) that drives
+the real game: `getLuck()` sums to 0.55 and caps at 2.0; sampling 400 shops at wave 15, the
+Rare+Legendary offer rate climbs **30% → 54%** from luck 0 → max; all three items load with the
+expected luck/tradeoff/tier; **0 console errors**. Existing `verify-mechanics.mjs` (interest +
+tradeoff items) and the standard smoke both still **PASS** with 0 errors — no regression.
+
+---
+
 ## 2026-07-02 — Pickup magnet now works (dead stat fixed) + orb vacuum
 
 **Player-visible**

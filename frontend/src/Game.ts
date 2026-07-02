@@ -120,6 +120,7 @@ export class Game {
     // Dev/QA hook: lets tooling (screenshot scripts, the shots-qa harness)
     // inspect and force game state. Not a public API.
     (window as unknown as { __game: Game }).__game = this;
+    (window as unknown as { __ItemDatabase: typeof ItemDatabase }).__ItemDatabase = ItemDatabase;
     this.canvas = canvas;
     this.renderer = new Renderer(canvas);
     this.input = new Input(canvas);
@@ -1304,8 +1305,8 @@ export class Game {
       }
     }
 
-    // Health orb drop (18% chance)
-    if (Math.random() < 0.18) {
+    // Health orb drop (18% base, raised by luck)
+    if (Math.random() < 0.18 * (1 + this.playerStats.getLuck())) {
       this.healthOrbs.push(new HealthOrb(enemy.x, enemy.y));
     }
 
@@ -1384,7 +1385,8 @@ export class Game {
     const newItems = ItemDatabase.getWeightedShopItems(
       shopSlotCount - lockedItems.length,
       currentWave,
-      this.playerStats.items // Pass owned items for weighted generation
+      this.playerStats.items, // Pass owned items for weighted generation
+      this.playerStats.getLuck() // Luck tilts the shop toward higher rarities
     );
     this.shopItems = [];
 
@@ -1770,7 +1772,8 @@ export class Game {
         const newItems = ItemDatabase.getWeightedShopItems(
           unlockedSlotCount,
           this.waveManager.currentWave,
-          this.playerStats.items // Pass owned items for tag weighting
+          this.playerStats.items, // Pass owned items for tag weighting
+          this.playerStats.getLuck() // Luck tilts the shop toward higher rarities
         );
 
         // Rebuild shop: place locked items at their positions, fill rest with new items

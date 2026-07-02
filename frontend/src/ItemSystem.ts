@@ -70,6 +70,7 @@ export interface Item {
   shopDiscount?: number; // Reduce all shop prices
   recycleBonus?: number; // Increase recycle value
   interestBonus?: number; // Additional interest rate on banked gold (additive, e.g. 0.05 = +5%)
+  luck?: number; // Raises shop rarity + health-orb drop chance (additive, e.g. 0.15 = +15%)
 }
 
 export interface Weapon {
@@ -1461,6 +1462,48 @@ export class ItemDatabase {
       tags: ['economic'],
       interestBonus: 0.18,
       goldBonus: 1.25
+    },
+
+    // ==================== LUCK ITEMS (rarity / high-roll economy) ====================
+    // Luck raises the odds the shop offers higher-tier items and that enemies drop
+    // health orbs. Enables a "high-roller" build: trade raw power for a legendary-stuffed
+    // shop. The T3/T4 luck items carry a real damage cost so pure luck stacking is a gamble.
+    {
+      id: 'rabbits_foot_t1',
+      name: "Rabbit's Foot",
+      description: '+15% luck (better shop rarity & orb drops)',
+      rarity: 'common',
+      tier: ItemTier.Common,
+      cost: 14,
+      icon: '🐇',
+      unlocked: true,
+      tags: ['economic', 'utility'],
+      luck: 0.15
+    },
+    {
+      id: 'four_leaf_clover_t3',
+      name: 'Four-Leaf Clover',
+      description: '+40% luck, -10% dmg',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 48,
+      icon: '🍀',
+      unlocked: true,
+      tags: ['economic', 'utility'],
+      luck: 0.40,
+      damageMultiplier: 0.90
+    },
+    {
+      id: 'cosmic_dice_t4',
+      name: 'Cosmic Dice',
+      description: '+80% luck — the shop turns legendary',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 95,
+      icon: '🎲',
+      unlocked: true,
+      tags: ['economic', 'utility'],
+      luck: 0.80
     }
   ];
 
@@ -1486,7 +1529,7 @@ export class ItemDatabase {
 
   // BROTATO-INSPIRED WEIGHTED SHOP SYSTEM
   // Promotes synergistic builds by weighting shop offerings based on owned items
-  static getWeightedShopItems(count: number, wave: number, playerItems: Item[]): Item[] {
+  static getWeightedShopItems(count: number, wave: number, playerItems: Item[], luck: number = 0): Item[] {
     const result: Item[] = [];
 
     // Get tier-appropriate items for this wave
@@ -1554,10 +1597,13 @@ export class ItemDatabase {
           !result.some(r => r.id === item.id)
         );
         if (candidates.length > 0) {
+          // Luck tilts the roll toward the top tiers: Rare/Legendary weights scale with
+          // (1 + luck), so a high-roll build sees far more epics/legendaries per shop.
+          const luckMult = 1 + Math.max(0, luck);
           const weightOf = (item: Item): number =>
             item.tier === ItemTier.Common ? 100 :
             item.tier === ItemTier.Uncommon ? 60 :
-            item.tier === ItemTier.Rare ? 30 : 10;
+            item.tier === ItemTier.Rare ? 30 * luckMult : 10 * luckMult;
           let total = 0;
           for (const c of candidates) total += weightOf(c);
           let pick = Math.random() * total;
@@ -1865,6 +1911,15 @@ export class PlayerStats {
       if (item.interestBonus) bonus += item.interestBonus;
     });
     return Math.min(0.4, bonus); // cap +40% so interest stays bounded
+  }
+
+  // Luck: raises shop rarity weighting + health-orb drop chance (additive across items)
+  getLuck(): number {
+    let luck = 0;
+    this.items.forEach(item => {
+      if (item.luck) luck += item.luck;
+    });
+    return Math.min(2.0, luck); // cap +200% so a stacked luck build stays bounded
   }
 
   hasPiercing(): boolean {
