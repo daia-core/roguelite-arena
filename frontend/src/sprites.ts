@@ -1458,18 +1458,6 @@ export class SpriteSheet {
     this.sprites.set('spiraler', canvas);
   }
 
-  private static createPlaceholderSprite(name: string, size: number, color: string) {
-    const canvas = this.createCanvas(size, size);
-    const ctx = canvas.getContext('2d')!;
-
-    // Simple circle placeholder
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.arc(size / 2, size / 2, size / 3, 0, Math.PI * 2);
-    ctx.fill();
-
-    this.sprites.set(name, canvas);
-  }
 
   // ==================== PROJECTILES ====================
   private static createProjectileSprites() {

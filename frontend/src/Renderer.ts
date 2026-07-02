@@ -2,6 +2,7 @@
 
 import { UISprites } from './UISprites';
 import { OffscreenCanvasCache } from './OffscreenCanvasCache';
+import { BackgroundDecorations } from './BackgroundDecorations';
 
 export class Renderer {
   private canvas: HTMLCanvasElement;
@@ -33,6 +34,9 @@ export class Renderer {
   // PERFORMANCE: Offscreen canvas cache for static UI elements
   private offscreenCache: OffscreenCanvasCache;
 
+  // ATMOSPHERE: Background decorations (gravel, stones, branches)
+  private backgroundDecorations: BackgroundDecorations;
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     const ctx = canvas.getContext('2d');
@@ -44,6 +48,9 @@ export class Renderer {
 
     // PERFORMANCE: Initialize offscreen canvas cache
     this.offscreenCache = new OffscreenCanvasCache();
+
+    // ATMOSPHERE: Initialize background decorations
+    this.backgroundDecorations = new BackgroundDecorations();
 
     // Initialize layer canvases
     this.initializeLayers();
@@ -127,11 +134,11 @@ export class Renderer {
   private cacheBackground(): void {
     if (!this.backgroundCtx || !this.backgroundCanvas) return;
 
-    // Dark background
+    // Dark medieval stone ground
     this.backgroundCtx.fillStyle = '#0a0a0a';
     this.backgroundCtx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-    // Subtle pixel art grid pattern for depth
+    // Subtle stone tile pattern
     this.backgroundCtx.save();
     this.backgroundCtx.globalAlpha = 0.03;
     this.backgroundCtx.strokeStyle = '#1a1a2e';
@@ -149,6 +156,11 @@ export class Renderer {
       this.backgroundCtx.lineTo(this.canvas.width, y);
       this.backgroundCtx.stroke();
     }
+    this.backgroundCtx.restore();
+
+    // MEDIEVAL ATMOSPHERE: Add ground decorations (gravel, stones, branches)
+    this.backgroundDecorations.generate(this.canvas.width, this.canvas.height, 0.25);
+    this.backgroundDecorations.draw(this.backgroundCtx);
     this.backgroundCtx.restore();
 
     // Vignette effect (darker at edges) - cached gradient

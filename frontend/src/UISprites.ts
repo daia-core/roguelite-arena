@@ -213,14 +213,11 @@ export class UISprites {
   }
 
   /**
-   * Create pixel art buttons (medieval stone/wood with metal trim)
+   * Create pixel art buttons (medieval stone/wood with metal trim and rounded corners)
    */
   private static createButtons() {
     const createButton = (
-      baseColor: string,
-      highlightColor: string,
-      shadowColor: string,
-      glowColor: string
+      material: 'stone' | 'wood'
     ): UIButton => {
       const width = 200;
       const height = 50;
@@ -228,65 +225,158 @@ export class UISprites {
       // Normal state
       const normal = this.createCanvas(width, height);
       const nCtx = normal.getContext('2d')!;
-
-      // Base (stone texture)
-      nCtx.fillStyle = shadowColor;
-      nCtx.fillRect(0, 0, width, height);
-      nCtx.fillStyle = baseColor;
-      nCtx.fillRect(2, 2, width - 4, height - 4);
-
-      // Top highlight
-      nCtx.fillStyle = highlightColor;
-      nCtx.fillRect(4, 4, width - 8, height / 3);
-
-      // Border trim (metal)
-      nCtx.fillStyle = '#a0a0a0';
-      nCtx.fillRect(0, 0, width, 2);
-      nCtx.fillRect(0, height - 2, width, 2);
-      nCtx.fillRect(0, 0, 2, height);
-      nCtx.fillRect(width - 2, 0, 2, height);
+      this.drawMedievalButton(nCtx, width, height, material, 'normal');
 
       // Hover state (brighter with glow)
       const hover = this.createCanvas(width, height);
       const hCtx = hover.getContext('2d')!;
-
-      hCtx.fillStyle = shadowColor;
-      hCtx.fillRect(0, 0, width, height);
-      hCtx.fillStyle = highlightColor;
-      hCtx.fillRect(2, 2, width - 4, height - 4);
-
-      hCtx.fillStyle = this.lightenColor(highlightColor, 1.3);
-      hCtx.fillRect(4, 4, width - 8, height / 2);
-
-      // Glowing border
-      hCtx.fillStyle = glowColor;
-      hCtx.fillRect(0, 0, width, 3);
-      hCtx.fillRect(0, height - 3, width, 3);
-      hCtx.fillRect(0, 0, 3, height);
-      hCtx.fillRect(width - 3, 0, 3, height);
+      this.drawMedievalButton(hCtx, width, height, material, 'hover');
 
       // Disabled state (grayscale, darker)
       const disabled = this.createCanvas(width, height);
       const dCtx = disabled.getContext('2d')!;
-
-      dCtx.fillStyle = '#1a1a1a';
-      dCtx.fillRect(0, 0, width, height);
-      dCtx.fillStyle = '#2a2a2a';
-      dCtx.fillRect(2, 2, width - 4, height - 4);
-
-      dCtx.fillStyle = '#555555';
-      dCtx.fillRect(0, 0, width, 2);
-      dCtx.fillRect(0, height - 2, width, 2);
-      dCtx.fillRect(0, 0, 2, height);
-      dCtx.fillRect(width - 2, 0, 2, height);
+      this.drawMedievalButton(dCtx, width, height, material, 'disabled');
 
       return { normal, hover, disabled, width, height };
     };
 
     // Different button types
-    this.buttons.set('primary', createButton('#3a3a3a', '#4a4a4a', '#1a1a1a', '#4ade80'));
-    this.buttons.set('danger', createButton('#7f1d1d', '#991b1b', '#450a0a', '#ef4444'));
-    this.buttons.set('success', createButton('#14532d', '#166534', '#052e16', '#22c55e'));
+    this.buttons.set('primary', createButton('stone'));
+    this.buttons.set('danger', createButton('stone'));
+    this.buttons.set('success', createButton('wood'));
+  }
+
+  /**
+   * Draw a medieval button with proper pixel art rounded corners and texture
+   */
+  private static drawMedievalButton(
+    ctx: CanvasRenderingContext2D,
+    width: number,
+    height: number,
+    material: 'stone' | 'wood',
+    state: 'normal' | 'hover' | 'disabled'
+  ) {
+    const cornerRadius = 6; // Pixel art rounded corners
+
+    // Material color palettes
+    const stonePalette = {
+      normal: { base: '#57534e', mid: '#78716c', highlight: '#a8a29e', shadow: '#292524', trim: '#eab308' },
+      hover: { base: '#78716c', mid: '#a8a29e', highlight: '#d6d3d1', shadow: '#44403c', trim: '#fde047' },
+      disabled: { base: '#1c1917', mid: '#292524', highlight: '#44403c', shadow: '#0c0a09', trim: '#52525b' }
+    };
+    const woodPalette = {
+      normal: { base: '#78350f', mid: '#92400e', highlight: '#b45309', shadow: '#451a03', trim: '#d97706' },
+      hover: { base: '#92400e', mid: '#b45309', highlight: '#d97706', shadow: '#78350f', trim: '#f59e0b' },
+      disabled: { base: '#27272a', mid: '#3f3f46', highlight: '#52525b', shadow: '#18181b', trim: '#71717a' }
+    };
+
+    const palette = material === 'stone' ? stonePalette[state] : woodPalette[state];
+
+    // Draw rounded rectangle outline (shadow)
+    ctx.fillStyle = palette.shadow;
+    this.drawRoundedRect(ctx, 0, 0, width, height, cornerRadius);
+
+    // Main body (base color with texture)
+    ctx.fillStyle = palette.base;
+    this.drawRoundedRect(ctx, 2, 2, width - 4, height - 4, cornerRadius - 2);
+
+    // Add texture pattern (medieval stone/wood grain)
+    if (material === 'stone') {
+      // Stone texture: random pixel noise
+      ctx.fillStyle = palette.mid;
+      for (let y = 6; y < height - 6; y += 4) {
+        for (let x = 6; x < width - 6; x += 4) {
+          if (Math.random() < 0.4) {
+            ctx.fillRect(x, y, 2, 2);
+          }
+        }
+      }
+      // Cracks/details
+      ctx.fillStyle = palette.shadow;
+      const crackY1 = Math.floor(height * 0.4);
+      const crackY2 = Math.floor(height * 0.7);
+      for (let x = 10; x < width - 10; x += 16) {
+        if (Math.random() < 0.5) {
+          ctx.fillRect(x, crackY1, 2, 1);
+          ctx.fillRect(x + 4, crackY2, 2, 1);
+        }
+      }
+    } else {
+      // Wood texture: horizontal grain lines
+      ctx.fillStyle = palette.mid;
+      for (let y = 8; y < height - 8; y += 6) {
+        ctx.fillRect(6, y, width - 12, 2);
+        // Knots/details
+        if (y % 12 === 2) {
+          ctx.fillStyle = palette.shadow;
+          ctx.fillRect(width / 2 - 4, y, 8, 3);
+          ctx.fillStyle = palette.mid;
+        }
+      }
+    }
+
+    // Top highlight (beveled edge)
+    ctx.fillStyle = palette.highlight;
+    this.drawRoundedRect(ctx, 4, 4, width - 8, height / 3, cornerRadius - 3);
+
+    // Metal trim border (ornate frame)
+    ctx.fillStyle = palette.trim;
+    // Top
+    ctx.fillRect(cornerRadius, 0, width - cornerRadius * 2, 2);
+    // Bottom
+    ctx.fillRect(cornerRadius, height - 2, width - cornerRadius * 2, 2);
+    // Left
+    ctx.fillRect(0, cornerRadius, 2, height - cornerRadius * 2);
+    // Right
+    ctx.fillRect(width - 2, cornerRadius, 2, height - cornerRadius * 2);
+
+    // Corner trim pieces (pixel art rounded)
+    const corners = [
+      { x: 2, y: 2 }, { x: width - 4, y: 2 },
+      { x: 2, y: height - 4 }, { x: width - 4, y: height - 4 }
+    ];
+    for (const corner of corners) {
+      ctx.fillRect(corner.x, corner.y, 2, 2);
+    }
+
+    // Hover glow effect
+    if (state === 'hover') {
+      ctx.fillStyle = palette.trim;
+      ctx.globalAlpha = 0.3;
+      this.drawRoundedRect(ctx, 0, 0, width, height, cornerRadius);
+      ctx.globalAlpha = 1.0;
+    }
+  }
+
+  /**
+   * Draw a pixel-art rounded rectangle
+   */
+  private static drawRoundedRect(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    radius: number
+  ) {
+    // Main body
+    ctx.fillRect(x + radius, y, width - radius * 2, height);
+    ctx.fillRect(x, y + radius, radius, height - radius * 2);
+    ctx.fillRect(x + width - radius, y + radius, radius, height - radius * 2);
+
+    // Rounded corners (pixel art style)
+    // Top-left
+    ctx.fillRect(x + 2, y + radius - 2, 2, 2);
+    ctx.fillRect(x + radius - 2, y + 2, 2, 2);
+    // Top-right
+    ctx.fillRect(x + width - radius, y + 2, 2, 2);
+    ctx.fillRect(x + width - 4, y + radius - 2, 2, 2);
+    // Bottom-left
+    ctx.fillRect(x + 2, y + height - radius, 2, 2);
+    ctx.fillRect(x + radius - 2, y + height - 4, 2, 2);
+    // Bottom-right
+    ctx.fillRect(x + width - radius, y + height - 4, 2, 2);
+    ctx.fillRect(x + width - 4, y + height - radius, 2, 2);
   }
 
   /**
@@ -415,13 +505,5 @@ export class UISprites {
         }
       });
     });
-  }
-
-  private static lightenColor(color: string, factor: number): string {
-    const hex = color.replace('#', '');
-    const r = Math.min(255, Math.floor(parseInt(hex.substring(0, 2), 16) * factor));
-    const g = Math.min(255, Math.floor(parseInt(hex.substring(2, 4), 16) * factor));
-    const b = Math.min(255, Math.floor(parseInt(hex.substring(4, 6), 16) * factor));
-    return `rgb(${r}, ${g}, ${b})`;
   }
 }
