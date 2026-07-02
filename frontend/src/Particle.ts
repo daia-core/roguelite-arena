@@ -68,59 +68,78 @@ export class Particle {
 
   draw(ctx: CanvasRenderingContext2D): void {
     ctx.save();
-
-    if (this.fadeOut) {
-      const alpha = this.lifetime / this.maxLifetime;
-      ctx.globalAlpha = alpha;
-    }
+    ctx.imageSmoothingEnabled = false;
 
     // Detect mobile and scale particle size
     const isMobile = ctx.canvas.width < ctx.canvas.height;
     const sizeScale = isMobile ? 1.5 : 1;
     const pixelSize = Math.max(2, Math.round(this.size * sizeScale));
 
-    // PIXEL ART PARTICLES: Draw as crisp pixel squares with dithering, not smooth circles
-    ctx.imageSmoothingEnabled = false;
-
-    // Core pixel
     const x = Math.floor(this.x);
     const y = Math.floor(this.y);
+
+    // PURE PIXEL ART: No alpha blending, no additive glow - use dithering for ALL effects
+    const fadeProgress = this.fadeOut ? (1 - this.lifetime / this.maxLifetime) : 0;
+
+    // Dithered fade: as particle ages, use sparser dither patterns
     ctx.fillStyle = this.color;
-    ctx.fillRect(x - pixelSize / 2, y - pixelSize / 2, pixelSize, pixelSize);
 
-    // Dithered edge pixels for larger particles (creates gradient effect)
-    if (pixelSize >= 6) {
-      // Parse color to create darker shade for dither
-      const darkenColor = (color: string, factor: number = 0.7): string => {
-        const hex = color.replace('#', '');
-        const r = parseInt(hex.substring(0, 2), 16);
-        const g = parseInt(hex.substring(2, 4), 16);
-        const b = parseInt(hex.substring(4, 6), 16);
-        return `#${Math.floor(r * factor).toString(16).padStart(2, '0')}${Math.floor(g * factor).toString(16).padStart(2, '0')}${Math.floor(b * factor).toString(16).padStart(2, '0')}`;
-      };
+    if (fadeProgress < 0.25) {
+      // First quarter: full solid square
+      ctx.fillRect(x - pixelSize / 2, y - pixelSize / 2, pixelSize, pixelSize);
 
-      const darkColor = darkenColor(this.color);
-      ctx.fillStyle = darkColor;
+      // Dithered edge pixels for larger particles (shading effect)
+      if (pixelSize >= 6) {
+        const darkenColor = (color: string, factor: number = 0.7): string => {
+          const hex = color.replace('#', '');
+          const r = parseInt(hex.substring(0, 2), 16);
+          const g = parseInt(hex.substring(2, 4), 16);
+          const b = parseInt(hex.substring(4, 6), 16);
+          return `#${Math.floor(r * factor).toString(16).padStart(2, '0')}${Math.floor(g * factor).toString(16).padStart(2, '0')}${Math.floor(b * factor).toString(16).padStart(2, '0')}`;
+        };
 
-      // Checkerboard dither around edges
-      const half = pixelSize / 2;
-      for (let dx = -half - 2; dx <= half + 2; dx += 2) {
-        for (let dy = -half - 2; dy <= half + 2; dy += 2) {
-          if (Math.abs(dx) > half || Math.abs(dy) > half) {
-            if ((Math.floor(dx / 2) + Math.floor(dy / 2)) % 2 === 0) {
-              ctx.fillRect(x + dx, y + dy, 2, 2);
+        const darkColor = darkenColor(this.color);
+        ctx.fillStyle = darkColor;
+
+        // Checkerboard dither around edges
+        const half = pixelSize / 2;
+        for (let dx = -half - 2; dx <= half + 2; dx += 2) {
+          for (let dy = -half - 2; dy <= half + 2; dy += 2) {
+            if (Math.abs(dx) > half || Math.abs(dy) > half) {
+              if ((Math.floor(dx / 2) + Math.floor(dy / 2)) % 2 === 0) {
+                ctx.fillRect(x + dx, y + dy, 2, 2);
+              }
             }
           }
         }
       }
-    }
-
-    // Optional: Subtle additive glow for very bright particles
-    if (this.color.includes('ff')) {
-      ctx.globalCompositeOperation = 'lighter';
-      ctx.globalAlpha = (this.lifetime / this.maxLifetime) * 0.3;
-      ctx.fillStyle = this.color;
-      ctx.fillRect(x - pixelSize / 2 - 1, y - pixelSize / 2 - 1, pixelSize + 2, pixelSize + 2);
+    } else if (fadeProgress < 0.5) {
+      // Second quarter: 75% dithered
+      for (let dx = 0; dx < pixelSize; dx += 2) {
+        for (let dy = 0; dy < pixelSize; dy += 2) {
+          if ((dx + dy) % 4 !== 3) { // Skip 1 in 4
+            ctx.fillRect(x - pixelSize / 2 + dx, y - pixelSize / 2 + dy, 2, 2);
+          }
+        }
+      }
+    } else if (fadeProgress < 0.75) {
+      // Third quarter: 50% checkerboard
+      for (let dx = 0; dx < pixelSize; dx += 2) {
+        for (let dy = 0; dy < pixelSize; dy += 2) {
+          if ((dx + dy) % 4 === 0) {
+            ctx.fillRect(x - pixelSize / 2 + dx, y - pixelSize / 2 + dy, 2, 2);
+          }
+        }
+      }
+    } else {
+      // Final quarter: 25% sparse
+      for (let dx = 0; dx < pixelSize; dx += 2) {
+        for (let dy = 0; dy < pixelSize; dy += 2) {
+          if ((dx + dy) % 8 === 0) {
+            ctx.fillRect(x - pixelSize / 2 + dx, y - pixelSize / 2 + dy, 2, 2);
+          }
+        }
+      }
     }
 
     ctx.restore();

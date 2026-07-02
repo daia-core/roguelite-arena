@@ -68,58 +68,59 @@ export class SpriteSheet {
     const idleFrame1 = this.createCanvas(size, size);
     const idleFrame2 = this.createCanvas(size, size);
 
-    // Stardew Valley style: Simple, clean farmer character (16x16 base)
-    // Frame 1: Neutral stance
+    // IMPROVED: Asymmetric design, hue-shifted shading, light from top-left
+    // Frame 1: Neutral stance with personality
     const idlePixels1 = [
-      [0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0],
-      [0,0,0,0,0,1,2,2,2,2,1,0,0,0,0,0],
-      [0,0,0,0,1,2,2,3,3,2,2,1,0,0,0,0],
-      [0,0,0,0,1,2,3,2,2,3,2,1,0,0,0,0],
-      [0,0,0,0,1,2,2,2,2,2,2,1,0,0,0,0],
-      [0,0,0,0,0,1,2,2,2,2,1,0,0,0,0,0],
-      [0,0,0,0,1,4,4,4,4,4,4,1,0,0,0,0],
-      [0,0,0,1,4,5,4,4,4,4,5,4,1,0,0,0],
-      [0,0,0,1,4,4,4,4,4,4,4,4,1,0,0,0],
-      [0,0,0,0,1,4,4,4,4,4,4,1,0,0,0,0],
-      [0,0,0,0,1,6,6,1,1,6,6,1,0,0,0,0],
-      [0,0,0,0,1,6,7,1,1,7,6,1,0,0,0,0],
-      [0,0,0,0,0,1,7,0,0,7,1,0,0,0,0,0],
-      [0,0,0,0,0,1,7,0,0,7,1,0,0,0,0,0],
-      [0,0,0,0,0,1,8,0,0,8,1,0,0,0,0,0],
-      [0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0],
+      [0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0],  // Head slightly left
+      [0,0,0,0,1,2,2,2,9,2,1,0,0,0,0,0],  // Skin shadow (9) on right (light from left)
+      [0,0,0,1,2,2,3,3,9,2,2,1,0,0,0,0],  // Hair asymmetric
+      [0,0,0,1,2,3,3,2,2,3,2,1,0,0,0,0],  // Face not symmetric
+      [0,0,0,1,2,2,2,9,9,2,2,1,0,0,0,0],  // Face shadow right side
+      [0,0,0,0,1,2,2,2,9,2,1,0,0,0,0,0],  // Neck shadow
+      [0,0,0,1,4,4,4,4,5,5,4,1,0,0,0,0],  // Shirt, shadow right
+      [0,0,1,4,4,4,4,4,5,5,4,4,1,0,0,0],  // Left shoulder higher (asymmetry)
+      [0,0,1,4,4,4,4,4,5,5,5,4,1,0,0,0],  // Body shadow right side
+      [0,0,0,1,4,4,4,4,5,5,4,1,0,0,0,0],  // Torso narrows
+      [0,0,0,1,6,6,6,1,1,7,7,1,0,0,0,0],  // Pants, right leg shadowed
+      [0,0,0,1,6,6,7,1,1,7,7,1,0,0,0,0],  // More shadow on right
+      [0,0,0,0,1,6,7,0,0,7,1,0,0,0,0,0],  // Legs not identical
+      [0,0,0,0,1,6,7,0,0,7,1,0,0,0,0,0],  // Different stance
+      [0,0,0,0,1,8,8,0,0,8,1,0,0,0,0,0],  // Boots
+      [0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0],  // Feet
     ];
 
-    // Frame 2: Slight breathing (body shifts)
+    // Frame 2: Breathing animation with consistent asymmetry
     const idlePixels2 = [
-      [0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0],
-      [0,0,0,0,0,1,2,2,2,2,1,0,0,0,0,0],
-      [0,0,0,0,1,2,2,3,3,2,2,1,0,0,0,0],
-      [0,0,0,0,1,2,3,2,2,3,2,1,0,0,0,0],
-      [0,0,0,0,1,2,2,2,2,2,2,1,0,0,0,0],
-      [0,0,0,0,1,1,2,2,2,2,1,1,0,0,0,0],
-      [0,0,0,1,4,4,4,4,4,4,4,4,1,0,0,0],
-      [0,0,0,1,4,5,4,4,4,4,5,4,1,0,0,0],
-      [0,0,0,1,4,4,4,4,4,4,4,4,1,0,0,0],
-      [0,0,0,0,1,4,4,4,4,4,4,1,0,0,0,0],
-      [0,0,0,0,1,6,6,1,1,6,6,1,0,0,0,0],
-      [0,0,0,0,1,6,7,1,1,7,6,1,0,0,0,0],
-      [0,0,0,0,0,1,7,0,0,7,1,0,0,0,0,0],
-      [0,0,0,0,0,1,7,0,0,7,1,0,0,0,0,0],
-      [0,0,0,0,0,1,8,0,0,8,1,0,0,0,0,0],
-      [0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0],
+      [0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0],
+      [0,0,0,0,1,2,2,2,9,2,1,0,0,0,0,0],
+      [0,0,0,1,2,2,3,3,9,2,2,1,0,0,0,0],
+      [0,0,0,1,2,3,3,2,2,3,2,1,0,0,0,0],
+      [0,0,0,1,2,2,2,9,9,2,2,1,0,0,0,0],
+      [0,0,0,1,1,2,2,2,9,2,1,1,0,0,0,0],  // Body expands (breathing)
+      [0,0,1,4,4,4,4,4,5,5,4,4,1,0,0,0],  // Torso wider
+      [0,0,1,4,4,4,4,4,5,5,5,4,1,0,0,0],
+      [0,0,1,4,4,4,4,4,5,5,4,4,1,0,0,0],
+      [0,0,0,1,4,4,4,4,5,5,4,1,0,0,0,0],
+      [0,0,0,1,6,6,6,1,1,7,7,1,0,0,0,0],
+      [0,0,0,1,6,6,7,1,1,7,7,1,0,0,0,0],
+      [0,0,0,0,1,6,7,0,0,7,1,0,0,0,0,0],
+      [0,0,0,0,1,6,7,0,0,7,1,0,0,0,0,0],
+      [0,0,0,0,1,8,8,0,0,8,1,0,0,0,0,0],
+      [0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0],
     ];
 
-    // Stardew Valley color palette - warm, saturated, clean with pure black outlines
+    // HUE-SHIFTED color palette (Derek Yu principle: shadows shift cooler, highlights warmer)
     const playerColors = [
       'transparent',  // 0
       '#000000',      // 1 - outline (pure black, Stardew style)
-      '#f5a883',      // 2 - skin (peachy, warm)
+      '#f5a883',      // 2 - skin base (peachy, warm)
       '#6b4423',      // 3 - hair (brown)
-      '#7eb4db',      // 4 - shirt (bright blue)
-      '#5a92c4',      // 5 - shirt shadow
-      '#3b6e9e',      // 6 - pants (denim blue)
-      '#2d5478',      // 7 - pants shadow
+      '#7eb4db',      // 4 - shirt base (bright blue)
+      '#4a6b9e',      // 5 - shirt shadow (HUE-SHIFTED toward purple-blue, not just darker)
+      '#3b6e9e',      // 6 - pants base (denim blue)
+      '#2b4e78',      // 7 - pants shadow (HUE-SHIFTED toward navy-purple)
       '#8b5a3c',      // 8 - boots (brown)
+      '#d97c59',      // 9 - skin shadow (HUE-SHIFTED toward pink, not just darker peach)
     ];
 
     this.drawPixels(idleFrame1.getContext('2d')!, idlePixels1, playerColors);
@@ -179,48 +180,49 @@ export class SpriteSheet {
     const frame1 = this.createCanvas(size, size);
     const frame2 = this.createCanvas(size, size);
 
-    // Stardew Valley style: Simple, cute slime (12x12 base)
-    // Frame 1: Normal blob shape
+    // IMPROVED: Asymmetric design, hue-shifted shading, light from top-left
+    // Frame 1: Normal blob shape with personality
     const pixels1 = [
       [0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0],
-      [0,0,0,1,2,2,2,2,2,2,1,0,0,0,0,0],
-      [0,0,1,2,2,2,3,2,2,2,2,1,0,0,0,0],
-      [0,1,2,2,3,3,3,3,3,2,2,2,1,0,0,0],
-      [0,1,2,3,3,4,4,4,3,3,2,2,1,0,0,0],
-      [1,2,2,3,4,4,5,4,4,3,3,2,2,1,0,0],
-      [1,2,3,3,4,5,5,5,4,3,3,2,2,1,0,0],
-      [1,2,3,3,6,6,3,6,6,3,3,2,2,1,0,0],
-      [1,2,2,3,3,3,3,3,3,3,2,2,1,0,0,0],
-      [0,1,2,2,3,3,3,3,3,2,2,1,0,0,0,0],
-      [0,1,1,2,2,2,2,2,2,2,1,1,0,0,0,0],
+      [0,0,0,1,2,2,3,3,3,2,1,0,0,0,0,0],  // Highlight top-left (light source)
+      [0,0,1,2,3,3,3,3,2,2,2,1,0,0,0,0],  // More highlight left
+      [0,1,2,3,3,4,4,3,3,2,2,7,1,0,0,0],  // Shadow right (7)
+      [0,1,2,3,4,4,5,4,3,3,2,7,1,0,0,0],  // Shine top-left, shadow right
+      [1,2,3,3,4,5,5,4,3,3,2,7,7,1,0,0],  // More shadow right
+      [1,2,3,3,4,4,4,3,3,2,7,7,2,1,0,0],  // Shadow increasing right
+      [1,2,3,6,6,3,3,3,6,2,7,7,2,1,0,0],  // Eyes asymmetric (left one higher)
+      [1,2,2,3,3,3,3,3,2,7,7,2,1,0,0,0],  // Shadow bottom-right
+      [0,1,2,2,2,2,2,2,7,7,2,1,0,0,0,0],  // More shadow bottom
+      [0,1,1,2,2,2,7,7,7,7,1,1,0,0,0,0],  // Bottom heavily shadowed
       [0,0,0,1,1,1,1,1,1,1,0,0,0,0,0,0],
     ];
 
-    // Frame 2: Squished (wider, shorter)
+    // Frame 2: Squished with consistent asymmetric shading
     const pixels2 = [
       [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
       [0,0,0,1,1,1,1,1,1,1,1,1,0,0,0,0],
-      [0,0,1,2,2,2,2,2,2,2,2,2,1,0,0,0],
-      [0,1,2,2,2,3,3,2,2,3,2,2,2,1,0,0],
-      [1,2,2,3,3,3,3,3,3,3,3,2,2,2,1,0],
-      [1,2,3,3,4,4,5,4,4,4,3,3,2,2,1,0],
-      [1,2,3,3,4,5,5,5,4,4,3,3,2,2,1,0],
-      [1,2,3,6,6,3,3,3,6,6,3,3,2,2,1,0],
-      [0,1,2,2,3,3,3,3,3,3,2,2,1,0,0,0],
-      [0,1,1,2,2,2,2,2,2,2,2,1,1,0,0,0],
+      [0,0,1,2,3,3,3,3,2,2,2,2,1,0,0,0],  // Highlight left
+      [0,1,2,3,3,3,4,4,3,2,2,7,7,1,0,0],  // Shadow right
+      [1,2,3,3,4,4,5,4,3,3,2,7,7,7,1,0],  // Shine top-left, shadow right
+      [1,2,3,4,4,5,5,4,4,3,2,7,7,2,1,0],  // More shadow right
+      [1,2,3,3,4,4,4,3,3,2,7,7,7,2,1,0],  // Shadow right side
+      [1,2,3,6,6,3,3,6,2,7,7,7,2,2,1,0],  // Eyes asymmetric, shadow right
+      [0,1,2,2,3,3,3,2,7,7,7,2,1,0,0,0],  // Bottom shadow
+      [0,1,1,2,2,2,7,7,7,7,2,1,1,0,0,0],  // Bottom heavily shadowed
       [0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0],
       [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
     ];
 
-    // Stardew Valley slime colors - match the grass green!
+    // HUE-SHIFTED slime colors (Derek Yu principle)
     const slimeColors = [
       'transparent',
       '#000000',     // 1 - outline (pure black)
       '#6ebe30',     // 2 - slime base (grass green)
-      '#8fd649',     // 3 - slime highlight (bright green)
+      '#9ee85e',     // 3 - slime highlight (HUE-SHIFTED toward yellow-green, not just lighter)
       '#ffffff',     // 4 - shine bright
       '#f0fdf4',     // 5 - shine light
       '#000000',     // 6 - eyes (black)
+      '#4a7c2b',     // 7 - slime shadow (HUE-SHIFTED toward blue-green/darker, cooler)
     ];
 
     this.drawPixels(frame1.getContext('2d')!, pixels1, slimeColors);
@@ -242,34 +244,37 @@ export class SpriteSheet {
     const canvas = this.createCanvas(size, size);
     const ctx = canvas.getContext('2d')!;
 
-    // Stardew Valley style: Cute/simple goblin (14x14 base)
+    // IMPROVED: Asymmetric goblin with personality, hue-shifted shading
     const pixels = [
-      [0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0],
-      [0,0,0,0,1,2,2,2,2,2,1,0,0,0,0,0],
-      [0,0,0,1,2,2,3,2,2,3,2,1,0,0,0,0],
-      [0,0,1,2,2,3,3,2,2,3,3,2,1,0,0,0],
-      [0,0,1,2,2,3,4,2,2,3,4,2,1,0,0,0],
-      [0,1,2,2,2,2,2,5,5,2,2,2,2,1,0,0],
-      [0,1,2,2,5,5,5,5,5,5,2,2,2,1,0,0],
-      [0,1,2,2,2,5,6,6,6,5,2,2,2,1,0,0],
-      [0,0,1,2,2,2,2,2,2,2,2,2,1,0,0,0],
-      [0,0,1,7,7,1,1,1,1,1,7,7,1,0,0,0],
-      [0,1,7,8,7,7,0,0,0,7,7,8,7,1,0,0],
-      [0,1,7,8,7,0,0,0,0,0,7,8,7,1,0,0],
-      [0,0,1,7,7,0,0,0,0,0,7,7,1,0,0,0],
-      [0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0],
+      [0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0],  // Head slightly left
+      [0,0,0,1,10,10,2,2,9,9,1,0,0,0,0,0],  // Highlight left (10), shadow right (9)
+      [0,0,1,10,10,3,2,2,9,3,9,1,0,0,0,0],  // Eyes asymmetric - left higher
+      [0,1,10,2,3,3,2,2,9,3,9,9,1,0,0,0],  // One eye bigger
+      [0,1,10,2,3,4,2,2,9,3,4,9,1,0,0,0],  // Eye glow
+      [0,1,2,2,2,2,5,5,5,2,9,9,2,1,0,0],  // Nose asymmetric
+      [0,1,2,5,5,5,5,5,5,5,9,2,2,1,0,0],  // Mouth wider left
+      [0,1,2,2,5,6,6,6,5,5,9,9,2,1,0,0],  // Teeth offset
+      [0,0,1,2,2,2,2,9,9,9,2,9,1,0,0,0],  // Face shadow right
+      [0,0,1,7,7,7,1,1,1,8,8,8,1,0,0,0],  // Vest shadow right
+      [0,1,7,7,7,7,0,0,0,8,8,8,7,1,0,0],  // Right side shadowed
+      [0,1,7,7,8,0,0,0,0,0,8,8,7,1,0,0],  // Vest wrinkles
+      [0,0,1,7,7,0,0,0,0,0,8,8,1,0,0,0],  // Legs different
+      [0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0],  // Feet
     ];
 
+    // HUE-SHIFTED goblin colors (Derek Yu principle)
     const goblinColors = [
       'transparent',
       '#000000',     // 1 - outline (pure black)
-      '#7cb342',     // 2 - skin (lime green, fantasy)
+      '#7cb342',     // 2 - skin base (lime green)
       '#000000',     // 3 - eyes (black)
       '#ffd700',     // 4 - eye glow
       '#654321',     // 5 - mouth/nose
       '#ffffff',     // 6 - teeth
-      '#8b4513',     // 7 - crude vest (brown)
-      '#5a3825',     // 8 - vest shadow
+      '#8b4513',     // 7 - crude vest base (brown)
+      '#6b3518',     // 8 - vest shadow (HUE-SHIFTED toward red-brown, darker & warmer)
+      '#5a8a35',     // 9 - skin shadow (HUE-SHIFTED toward blue-green, cooler)
+      '#9cd65a',     // 10 - skin highlight (HUE-SHIFTED toward yellow-green, warmer)
     ];
 
     this.drawPixels(ctx, pixels, goblinColors);

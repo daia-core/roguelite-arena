@@ -106,28 +106,48 @@ export class Projectile {
 
   draw(ctx: CanvasRenderingContext2D): void {
     ctx.save();
+    ctx.imageSmoothingEnabled = false;
 
-    // STARDEW STYLE: Pixel art trail - square pixels only, no smooth circles
-    const trailPixelSize = 6; // Pixel size for trail
+    // PIXEL ART TRAIL: Use dithering for fade effect, NO alpha blending
+    const trailPixelSize = 6;
     for (let i = 0; i < this.trail.length; i++) {
       const point = this.trail[i];
-      const alpha = 1 - (point.age / 0.12);
+      const fadeProgress = point.age / 0.12; // 0 = new, 1 = old
 
-      // Draw trail as pixel squares
-      ctx.globalAlpha = alpha * 0.6;
-      ctx.fillStyle = this.color;
       const x = Math.floor(point.x);
       const y = Math.floor(point.y);
-      ctx.fillRect(x - trailPixelSize / 2, y - trailPixelSize / 2, trailPixelSize, trailPixelSize);
+      ctx.fillStyle = this.color;
+
+      // Dithered fade: as trail ages, draw fewer pixels in a checkerboard pattern
+      if (fadeProgress < 0.33) {
+        // First third: full square
+        ctx.fillRect(x - trailPixelSize / 2, y - trailPixelSize / 2, trailPixelSize, trailPixelSize);
+      } else if (fadeProgress < 0.66) {
+        // Middle third: 50% checkerboard dither
+        for (let dx = 0; dx < trailPixelSize; dx += 2) {
+          for (let dy = 0; dy < trailPixelSize; dy += 2) {
+            if ((dx + dy) % 4 === 0) {
+              ctx.fillRect(x - trailPixelSize / 2 + dx, y - trailPixelSize / 2 + dy, 2, 2);
+            }
+          }
+        }
+      } else {
+        // Final third: 25% sparse dither
+        for (let dx = 0; dx < trailPixelSize; dx += 2) {
+          for (let dy = 0; dy < trailPixelSize; dy += 2) {
+            if ((dx + dy) % 8 === 0) {
+              ctx.fillRect(x - trailPixelSize / 2 + dx, y - trailPixelSize / 2 + dy, 2, 2);
+            }
+          }
+        }
+      }
     }
-    ctx.globalAlpha = 1;
 
     const spriteName = this.fromPlayer ? 'bullet' : 'enemy_bullet';
     const sprite = SpriteSheet.get(spriteName);
 
     if (sprite) {
       // PIXEL ART: Just draw the sprite, no glow, no outlines, no smooth effects
-      ctx.imageSmoothingEnabled = false;
       ctx.drawImage(
         sprite,
         Math.floor(this.x - sprite.width / 2),

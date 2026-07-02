@@ -45,22 +45,26 @@ export class MeleeAttack {
 
   draw(ctx: CanvasRenderingContext2D): void {
     ctx.save();
+    ctx.imageSmoothingEnabled = false;
 
     const progress = 1 - (this.lifetime / this.maxLifetime);
-    const alpha = Math.sin(progress * Math.PI); // Fade in and out
-
-    // STARDEW STYLE: Pixel art melee slash - draw as pixel arc, not smooth curves
-    ctx.imageSmoothingEnabled = false;
-    ctx.globalAlpha = alpha * 0.8;
+    const fadeStrength = Math.sin(progress * Math.PI); // 0 to 1 to 0 over lifetime
 
     const startAngle = this.angle - this.arc / 2;
     const endAngle = this.angle + this.arc / 2;
 
-    // Draw slash as pixel "pixels" along the arc
-    const pixelSize = 8; // Size of each pixel in the slash
-    const numPixels = Math.floor((this.arc * this.range) / (pixelSize * 1.5)); // How many pixels to draw
+    // PURE PIXEL ART: Use dithering for fade effect instead of alpha
+    const pixelSize = 8;
+    const numPixels = Math.floor((this.arc * this.range) / (pixelSize * 1.5));
 
     for (let i = 0; i < numPixels; i++) {
+      // Dithered visibility: skip pixels based on fade strength
+      // When fadeStrength = 1.0, draw all pixels
+      // When fadeStrength = 0.5, draw 50% in checkerboard
+      // When fadeStrength = 0.0, draw nothing
+      const ditherThreshold = (i % 4) / 4; // 0, 0.25, 0.5, 0.75 pattern
+      if (fadeStrength < ditherThreshold * 0.8) continue; // Skip this pixel
+
       const angleStep = startAngle + (endAngle - startAngle) * (i / numPixels);
       const px = this.x + Math.cos(angleStep) * this.range;
       const py = this.y + Math.sin(angleStep) * this.range;

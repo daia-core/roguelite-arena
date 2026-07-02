@@ -179,26 +179,30 @@ export class Renderer {
   }
 
   endFrame(): void {
-    // Draw impact flashes as PIXEL ART (no smooth arcs)
+    // PURE PIXEL ART: Impact flashes with dithered fade, no smooth alpha
     for (const flash of this.impactFlashes) {
       this.ctx.save();
-      this.ctx.globalAlpha = flash.alpha;
       this.ctx.imageSmoothingEnabled = false;
+      this.ctx.fillStyle = '#ffffff';
 
-      // Draw pixelated expanding ring instead of smooth circle
       const pixelSize = 3;
       const steps = Math.floor(flash.radius / pixelSize);
-      this.ctx.fillStyle = '#ffffff';
+
+      // Use dithering instead of alpha for fade effect
+      const ditherThreshold = 1 - flash.alpha; // 0 = full, 1 = none
 
       // Octagonal approximation with pixels for ring effect
       for (let i = 0; i < 8; i++) {
+        // Skip pixels based on fade (dithered pattern)
+        if ((i % 4) / 4 < ditherThreshold) continue;
+
         const angle = (Math.PI / 4) * i;
         const px = Math.floor(flash.x + Math.cos(angle) * flash.radius);
         const py = Math.floor(flash.y + Math.sin(angle) * flash.radius);
         this.ctx.fillRect(px - pixelSize, py - pixelSize, pixelSize * 2, pixelSize * 2);
 
         // Fill in between points for fuller ring
-        if (steps > 3) {
+        if (steps > 3 && flash.alpha > 0.5) {
           const nextAngle = (Math.PI / 4) * ((i + 1) % 8);
           const midAngle = (angle + nextAngle) / 2;
           const mpx = Math.floor(flash.x + Math.cos(midAngle) * flash.radius);
@@ -210,12 +214,25 @@ export class Renderer {
       this.ctx.restore();
     }
 
-    // Draw hit flash overlay
+    // PURE PIXEL ART: Hit flash overlay with dithering instead of smooth alpha
     if (this.hitFlash > 0) {
       this.ctx.save();
-      this.ctx.globalAlpha = this.hitFlash * 0.3;
+      this.ctx.imageSmoothingEnabled = false;
       this.ctx.fillStyle = '#ffffff';
-      this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+      const ditherSize = 4;
+      const flashDensity = Math.ceil(this.hitFlash * 0.3 * 4); // 0-4 levels
+
+      // Draw dithered pattern
+      for (let x = 0; x < this.canvas.width; x += ditherSize) {
+        for (let y = 0; y < this.canvas.height; y += ditherSize) {
+          const patternValue = ((x / ditherSize) + (y / ditherSize)) % 4;
+          if (patternValue < flashDensity) {
+            this.ctx.fillRect(x, y, ditherSize, ditherSize);
+          }
+        }
+      }
+
       this.ctx.restore();
     }
 

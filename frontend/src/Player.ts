@@ -297,57 +297,84 @@ export class Player {
     ctx.arc(this.x, this.y, 20, 0, Math.PI * 2);
     ctx.stroke();
 
-    // Outer glow effect (pulsing)
-    const pulseOffset = Math.sin(Date.now() / 200) * 2;
-    ctx.shadowBlur = 20 + pulseOffset;
-    ctx.shadowColor = '#4a90e2';
+    // PURE PIXEL ART: No shadow blur, no smooth alpha
+    // Use dithering and solid colors only
 
-    // Dash effect
-    if (this.dashDuration > 0) {
-      ctx.globalAlpha = 0.7;
-      ctx.shadowBlur = 30;
-      ctx.shadowColor = '#00ffff';
-    }
-
-    // GAME FEEL: Invincibility frames visual (blink effect)
-    if (this.invincibilityTimer > 0) {
-      // Blink at 10Hz (5 times per second)
-      const blinkPhase = Math.floor(this.invincibilityTimer * 10) % 2;
-      if (blinkPhase === 0) {
-        ctx.globalAlpha = 0.3; // Make player semi-transparent during blink
-      }
-      ctx.shadowBlur = 25;
-      ctx.shadowColor = '#ffff00'; // Yellow glow during i-frames
-    }
-
-    // Shield effect
+    // Shield effect - solid cyan ring
     if (this.shield) {
       ctx.strokeStyle = '#00ffff';
       ctx.lineWidth = 3;
-      ctx.shadowBlur = 15;
-      ctx.shadowColor = '#00ffff';
       ctx.beginPath();
       ctx.arc(this.x, this.y, this.radius + 8, 0, Math.PI * 2);
       ctx.stroke();
     }
 
-    // Draw player sprite
+    // Draw player sprite with effects
     if (sprite) {
-      ctx.drawImage(
-        sprite,
-        this.x - sprite.width / 2,
-        this.y - sprite.height / 2
-      );
+      // Dash effect: draw with 70% dithered pattern
+      if (this.dashDuration > 0) {
+        const ditherSize = 2;
+        ctx.save();
+        ctx.beginPath();
+        for (let dx = 0; dx < sprite.width; dx += ditherSize) {
+          for (let dy = 0; dy < sprite.height; dy += ditherSize) {
+            if (((dx + dy) / ditherSize) % 10 <= 6) { // 70% of pixels
+              ctx.rect(
+                this.x - sprite.width / 2 + dx,
+                this.y - sprite.height / 2 + dy,
+                ditherSize,
+                ditherSize
+              );
+            }
+          }
+        }
+        ctx.clip();
+        ctx.drawImage(sprite, this.x - sprite.width / 2, this.y - sprite.height / 2);
+        ctx.restore();
+      }
+      // Invincibility blink: alternate between visible and 30% dithered
+      else if (this.invincibilityTimer > 0) {
+        const blinkPhase = Math.floor(this.invincibilityTimer * 10) % 2;
+        if (blinkPhase === 0) {
+          // Blink phase: draw with sparse dither (30%)
+          const ditherSize = 2;
+          ctx.save();
+          ctx.beginPath();
+          for (let dx = 0; dx < sprite.width; dx += ditherSize) {
+            for (let dy = 0; dy < sprite.height; dy += ditherSize) {
+              if (((dx + dy) / ditherSize) % 3 === 0) { // 33% of pixels
+                ctx.rect(
+                  this.x - sprite.width / 2 + dx,
+                  this.y - sprite.height / 2 + dy,
+                  ditherSize,
+                  ditherSize
+                );
+              }
+            }
+          }
+          ctx.clip();
+          ctx.drawImage(sprite, this.x - sprite.width / 2, this.y - sprite.height / 2);
+          ctx.restore();
+        } else {
+          // Normal phase: full sprite
+          ctx.drawImage(sprite, this.x - sprite.width / 2, this.y - sprite.height / 2);
+        }
+      }
+      // Normal draw
+      else {
+        ctx.drawImage(sprite, this.x - sprite.width / 2, this.y - sprite.height / 2);
+      }
     } else {
-      // Fallback to circle
-      const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius);
-      gradient.addColorStop(0, '#88ff88');
-      gradient.addColorStop(0.6, '#00ff00');
-      gradient.addColorStop(1, '#008800');
-      ctx.fillStyle = gradient;
+      // PIXEL ART FALLBACK: Solid green circle, no gradient
+      ctx.fillStyle = '#00ff00';
       ctx.beginPath();
       ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
       ctx.fill();
+
+      // Black outline
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 2;
+      ctx.stroke();
     }
 
     ctx.restore();

@@ -249,36 +249,59 @@ export class Input {
     if (!this.joystick.active) return;
 
     ctx.save();
+    ctx.imageSmoothingEnabled = false;
 
-    // Draw base outer ring at FIXED position (bigger for mobile)
-    ctx.globalAlpha = 0.3;
+    // PURE PIXEL ART: Draw joystick with dithered transparency, no smooth alpha/shadow
+    const ditherSize = 3;
+
+    // Draw base outer ring at FIXED position - dithered 30%
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 5;
     ctx.beginPath();
-    ctx.arc(this.joystick.fixedX, this.joystick.fixedY, 100, 0, Math.PI * 2);
+    for (let angle = 0; angle < Math.PI * 2; angle += 0.15) {
+      // Sparse dither: only draw some segments
+      if (Math.floor(angle * 10) % 3 === 0) {
+        const x = this.joystick.fixedX + Math.cos(angle) * 100;
+        const y = this.joystick.fixedY + Math.sin(angle) * 100;
+        ctx.lineTo(x, y);
+      }
+    }
     ctx.stroke();
 
-    // Draw base at FIXED position
-    ctx.globalAlpha = 0.4;
+    // Draw base circle - dithered 40%
     ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.arc(this.joystick.fixedX, this.joystick.fixedY, 95, 0, Math.PI * 2);
-    ctx.fill();
+    const baseRadius = 95;
+    for (let dx = -baseRadius; dx <= baseRadius; dx += ditherSize) {
+      for (let dy = -baseRadius; dy <= baseRadius; dy += ditherSize) {
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist <= baseRadius) {
+          // 40% dither pattern
+          if (((dx + dy) / ditherSize) % 5 <= 1) {
+            ctx.fillRect(
+              this.joystick.fixedX + dx,
+              this.joystick.fixedY + dy,
+              ditherSize,
+              ditherSize
+            );
+          }
+        }
+      }
+    }
 
-    // Draw stick with glow - offset from FIXED position based on delta (bigger for touch)
-    ctx.globalAlpha = 0.9;
-    ctx.shadowBlur = 20;
-    ctx.shadowColor = '#00ffff';
+    // Draw stick (solid, no glow) - offset from FIXED position based on delta
     ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.arc(
-      this.joystick.fixedX + this.joystick.deltaX,
-      this.joystick.fixedY + this.joystick.deltaY,
-      42, // Increased from 32 for easier touch control
-      0,
-      Math.PI * 2
-    );
-    ctx.fill();
+    const stickRadius = 42;
+    const stickX = this.joystick.fixedX + this.joystick.deltaX;
+    const stickY = this.joystick.fixedY + this.joystick.deltaY;
+
+    for (let dx = -stickRadius; dx <= stickRadius; dx += ditherSize) {
+      for (let dy = -stickRadius; dy <= stickRadius; dy += ditherSize) {
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist <= stickRadius) {
+          ctx.fillRect(stickX + dx, stickY + dy, ditherSize, ditherSize);
+        }
+      }
+    }
 
     ctx.restore();
   }

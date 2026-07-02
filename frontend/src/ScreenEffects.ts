@@ -157,9 +157,24 @@ export class ScreenEffects {
   renderFlash(ctx: CanvasRenderingContext2D, canvasWidth: number, canvasHeight: number): void {
     if (this.flashAlpha > 0) {
       ctx.save();
-      ctx.globalAlpha = this.flashAlpha;
+      ctx.imageSmoothingEnabled = false;
+
+      // PURE PIXEL ART: Use dithered patterns instead of smooth alpha for screen flash
+      const ditherSize = 4; // Size of dither pixels
+      const ditherPattern = Math.ceil(this.flashAlpha * 4); // 0-4 levels of density
+
       ctx.fillStyle = this.flashColor;
-      ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+      // Draw dithered pattern across the screen
+      for (let x = 0; x < canvasWidth; x += ditherSize) {
+        for (let y = 0; y < canvasHeight; y += ditherSize) {
+          const patternValue = ((x / ditherSize) + (y / ditherSize)) % 4;
+          if (patternValue < ditherPattern) {
+            ctx.fillRect(x, y, ditherSize, ditherSize);
+          }
+        }
+      }
+
       ctx.restore();
     }
   }

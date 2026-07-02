@@ -1398,99 +1398,128 @@ export class Enemy {
     const sprite = SpriteSheet.get(this.typeData.spriteName);
 
     if (sprite) {
-      // Glow effect
-      ctx.shadowBlur = 12;
-      ctx.shadowColor = this.typeData.color;
+      // PURE PIXEL ART: No shadows, no blur, no smooth alpha
+      // Use dithering and alternate rendering techniques instead
 
-      // Wraith phasing effect
+      // Wraith phasing: draw with 30% dithered pattern
       if (this.invulnerable) {
-        ctx.globalAlpha = 0.3;
-        ctx.shadowBlur = 20;
-        ctx.shadowColor = '#9370db';
-      }
-
-      // Ghost translucent effect
-      if (this.type === 'ghost') {
-        ctx.globalAlpha = 0.6;
-        ctx.shadowBlur = 18;
-        ctx.shadowColor = '#e0f7fa';
-      }
-
-      // Gargoyle stone form (darker, no glow)
-      if (this.type === 'gargoyle' && this.gargoyleStoneForm) {
-        ctx.shadowBlur = 0;
-        ctx.filter = 'brightness(0.6)';
-      }
-
-      // Phantom invisibility
-      if (this.type === 'phantom' && this.phantomInvisible) {
-        ctx.globalAlpha = 0.2;
-        ctx.filter = 'blur(2px)';
-      }
-
-      // Cyclops stunned (grayed out)
-      if (this.type === 'cyclops' && this.cyclopsStunned) {
-        ctx.filter = 'grayscale(0.7)';
-      }
-
-      // GAME FEEL: White flash on hit
-      if (this.hitFlashTimer > 0) {
-        // Create white flash by drawing a white rectangle with multiply blend
+        const ditherSize = 2;
         ctx.save();
-        ctx.globalCompositeOperation = 'lighter';
-        ctx.globalAlpha = this.hitFlashTimer / 0.032; // Fade based on timer
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(
-          this.x - sprite.width / 2 - 4,
-          this.y - sprite.height / 2 - 4,
-          sprite.width + 8,
-          sprite.height + 8
-        );
+        // Create a dithered clipping mask
+        ctx.beginPath();
+        for (let dx = 0; dx < sprite.width; dx += ditherSize) {
+          for (let dy = 0; dy < sprite.height; dy += ditherSize) {
+            if (((dx + dy) / ditherSize) % 3 !== 0) { // 66% of pixels (skipping 33%)
+              ctx.rect(
+                this.x - sprite.width / 2 + dx,
+                this.y - sprite.height / 2 + dy,
+                ditherSize,
+                ditherSize
+              );
+            }
+          }
+        }
+        ctx.clip();
+        ctx.drawImage(sprite, this.x - sprite.width / 2, this.y - sprite.height / 2);
         ctx.restore();
       }
-
-      // Draw sprite
-      ctx.drawImage(
-        sprite,
-        this.x - sprite.width / 2,
-        this.y - sprite.height / 2
-      );
+      // Ghost translucent: draw with 60% dithered pattern
+      else if (this.type === 'ghost') {
+        const ditherSize = 2;
+        ctx.save();
+        ctx.beginPath();
+        for (let dx = 0; dx < sprite.width; dx += ditherSize) {
+          for (let dy = 0; dy < sprite.height; dy += ditherSize) {
+            if (((dx + dy) / ditherSize) % 5 <= 2) { // 60% of pixels
+              ctx.rect(
+                this.x - sprite.width / 2 + dx,
+                this.y - sprite.height / 2 + dy,
+                ditherSize,
+                ditherSize
+              );
+            }
+          }
+        }
+        ctx.clip();
+        ctx.drawImage(sprite, this.x - sprite.width / 2, this.y - sprite.height / 2);
+        ctx.restore();
+      }
+      // Phantom invisibility: draw with 20% sparse dithered pattern
+      else if (this.type === 'phantom' && this.phantomInvisible) {
+        const ditherSize = 2;
+        ctx.save();
+        ctx.beginPath();
+        for (let dx = 0; dx < sprite.width; dx += ditherSize) {
+          for (let dy = 0; dy < sprite.height; dy += ditherSize) {
+            if (((dx + dy) / ditherSize) % 5 === 0) { // 20% of pixels
+              ctx.rect(
+                this.x - sprite.width / 2 + dx,
+                this.y - sprite.height / 2 + dy,
+                ditherSize,
+                ditherSize
+              );
+            }
+          }
+        }
+        ctx.clip();
+        ctx.drawImage(sprite, this.x - sprite.width / 2, this.y - sprite.height / 2);
+        ctx.restore();
+      }
+      // Normal draw
+      else {
+        // PIXEL ART: Hit flash using color replacement instead of additive blend
+        if (this.hitFlashTimer > 0) {
+          // Draw sprite in white for flash effect
+          const flashStrength = this.hitFlashTimer / 0.032;
+          if (flashStrength > 0.5) {
+            // Full flash: draw white overlay sprite
+            ctx.save();
+            ctx.fillStyle = '#ffffff';
+            // Draw white rectangle at sprite position
+            ctx.fillRect(
+              this.x - sprite.width / 2,
+              this.y - sprite.height / 2,
+              sprite.width,
+              sprite.height
+            );
+            ctx.restore();
+          } else {
+            // Fading: draw normal sprite
+            ctx.drawImage(sprite, this.x - sprite.width / 2, this.y - sprite.height / 2);
+          }
+        } else {
+          // Normal sprite draw
+          ctx.drawImage(sprite, this.x - sprite.width / 2, this.y - sprite.height / 2);
+        }
+      }
     } else {
-      // Fallback to circle if sprite not found
-      const gradient = ctx.createRadialGradient(
-        this.x - this.typeData.radius * 0.3,
-        this.y - this.typeData.radius * 0.3,
-        0,
-        this.x,
-        this.y,
-        this.typeData.radius
-      );
-      gradient.addColorStop(0, this.typeData.color + 'aa');
-      gradient.addColorStop(0.5, this.typeData.color);
-      gradient.addColorStop(1, this.typeData.color + '66');
-
-      ctx.fillStyle = gradient;
+      // PIXEL ART FALLBACK: Solid color circle, no gradient
+      ctx.fillStyle = this.typeData.color;
       ctx.beginPath();
       ctx.arc(this.x, this.y, this.typeData.radius, 0, Math.PI * 2);
       ctx.fill();
+
+      // Add black outline
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 2;
+      ctx.stroke();
     }
 
-    // Health bar (always show, improved styling)
+    // PIXEL ART HEALTH BAR: No smooth gradients or shadows
     const isMobile = ctx.canvas.width < ctx.canvas.height;
     const barWidth = this.typeData.radius * 2.6;
     const barHeight = isMobile ? 6 : 5;
     const barY = this.y - this.typeData.radius - 14;
 
-    // Background with border
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+    // Black border (pixel perfect)
+    ctx.fillStyle = '#000000';
     ctx.fillRect(this.x - barWidth / 2 - 1, barY - 1, barWidth + 2, barHeight + 2);
 
-    // Inner background
-    ctx.fillStyle = 'rgba(60, 0, 0, 0.8)';
+    // Dark red background
+    ctx.fillStyle = '#3c0000';
     ctx.fillRect(this.x - barWidth / 2, barY, barWidth, barHeight);
 
-    // Health with gradient and color coding
+    // Solid color health bar (no gradient)
     const healthPercent = this.health / this.maxHealth;
     let healthColor: string;
     if (healthPercent > 0.6) {
@@ -1501,19 +1530,7 @@ export class Enemy {
       healthColor = '#ef4444'; // Red
     }
 
-    // Health gradient
-    const healthGradient = ctx.createLinearGradient(
-      this.x - barWidth / 2,
-      barY,
-      this.x - barWidth / 2,
-      barY + barHeight
-    );
-    healthGradient.addColorStop(0, healthColor);
-    healthGradient.addColorStop(1, this.adjustColorBrightness(healthColor, 0.7));
-
-    ctx.fillStyle = healthGradient;
-    ctx.shadowBlur = 4;
-    ctx.shadowColor = healthColor;
+    ctx.fillStyle = healthColor;
     ctx.fillRect(this.x - barWidth / 2, barY, barWidth * healthPercent, barHeight);
 
     // Inner highlight for depth
@@ -1527,15 +1544,6 @@ export class Enemy {
     ctx.strokeRect(this.x - barWidth / 2, barY, barWidth, barHeight);
 
     ctx.restore();
-  }
-
-  private adjustColorBrightness(color: string, factor: number): string {
-    // Simple brightness adjustment for gradient
-    const hex = color.replace('#', '');
-    const r = Math.max(0, Math.min(255, parseInt(hex.substring(0, 2), 16) * factor));
-    const g = Math.max(0, Math.min(255, parseInt(hex.substring(2, 4), 16) * factor));
-    const b = Math.max(0, Math.min(255, parseInt(hex.substring(4, 6), 16) * factor));
-    return `rgb(${r}, ${g}, ${b})`;
   }
 
   getAngleToPlayer(playerX: number, playerY: number): number {
