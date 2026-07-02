@@ -31,7 +31,11 @@ Live: https://roguelite-game-blush.vercel.app
 - Damage-type split (melee/ranged/elemental) from the design doc is **intentionally still held** for
   Felix's steer — that one bakes in character-defining numbers I didn't want to set unilaterally.
 
-**Commit** `PENDING`
+**Commit** `06df715` · **live prod deploy** `dpl_3MU2iryFJUo14CyDht3ke6terQDC` (sha 06df715,
+READY/PROMOTED, serving `index-xb5zgS87.js`).
+_Deploy note: this project has **no working GitHub auto-deploy** — production only updates via
+`vercel --prod` CLI. A push to `main` alone leaves prod on the previous build (that gap cost a
+confused verification pass tonight). Always CLI-deploy, then confirm the live sha before claiming it._
 **Verified on the shipped `frontend/dist`** via a new harness (`tools/qa/verify-luck.mjs`) that drives
 the real game: `getLuck()` sums to 0.55 and caps at 2.0; sampling 400 shops at wave 15, the
 Rare+Legendary offer rate climbs **30% → 54%** from luck 0 → max; all three items load with the

@@ -155,6 +155,15 @@ Each has a natural weakness, so no single build dominates — the point of the e
 
 ---
 
+## Rollout status (updated 2026-07-02 eve — shipped autonomously while Felix is away)
+
+- ✅ **1. Dead magnet fix + pickup attraction** — shipped & live (commit 84b3f54).
+- ✅ **2. Projectile hurtbox** — reviewed; the existing 15px body (drawn at 20) is already forgiving, no change made.
+- ✅ **3. Interest on banked gold** + 2 banking items — shipped & live (8e67281).
+- ✅ **4. Trade-off item tranche** (10 items) — shipped & live (8e67281).
+- ✅ **5. Luck stat** + 3 luck items (Rabbit's Foot / Four-Leaf Clover / Cosmic Dice) — shipped & live (06df715). The high-roller build now exists.
+- ⏸️ **6. Damage-type split (melee/ranged/elemental) + Range** — **intentionally held for your steer.** This bakes in character-defining per-type numbers I didn't want to set unilaterally. It's the one open item from this design.
+
 ## Part 6 — Suggested rollout (impact / effort)
 
 1. **Fix the dead magnet + add pickup attraction** (bug + feel). Small, isolated, high payoff. _Can
