@@ -27,7 +27,7 @@ Live: https://roguelite-game-blush.vercel.app
   consistent with existing behaviour, no effect on normal play (a fair build kills the boss well
   inside the window).
 
-**Commit** `PENDING`
+**Commit** `3a5a2e9`
 **Sim-verified** post-fix re-run: **8/8 runs reached wave 15, zero STUCK** (was 1/5 soft-locked);
 wave-10 boss now resolves in a bounded ~44 s. Full analysis + two staged balance-feel findings
 (inverted difficulty curve, runaway gold economy) → `BALANCE-SIM-2026-07-02.md`.
