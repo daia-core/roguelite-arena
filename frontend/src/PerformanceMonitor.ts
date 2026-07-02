@@ -16,6 +16,7 @@ export interface PerformanceStats {
   damageNumbers: number;
   meleeAttacks: number;
   healthOrbs: number;
+  xpOrbs?: number;
   quadtreeNodes?: number;
   quadtreeDepth?: number;
   quadtreeObjects?: number;

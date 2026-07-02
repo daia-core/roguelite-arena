@@ -78,12 +78,13 @@ export class WaveManager {
       }
     }
 
-    // Calculate enemy count based on modifier - BALANCE: More enemies for swarm feel
-    // Wave 1: 12 enemies (gentler intro, ramps up fast)
-    let baseCount = waveNumber === 1 ? 18 : 15 + waveNumber * 2;
+    // Calculate enemy count based on modifier - BALANCE: More enemies for swarm feel.
+    // VAMPIRE-SURVIVORS DENSITY: counts raised (the arena is now 2x, so it takes a
+    // real crowd to fill it) and enemies arrive in bursts (see update()).
+    let baseCount = waveNumber === 1 ? 28 : 20 + waveNumber * 3;
 
     if (this.isBossWave) {
-      this.totalEnemiesInWave = 10 + waveNumber;
+      this.totalEnemiesInWave = 18 + waveNumber * 2;
       this.waveModifierText = 'BOSS WAVE - BOSS APPROACHING';
     } else if (this.waveModifier === 'reward') {
       this.totalEnemiesInWave = Math.floor(baseCount * 0.7); // Fewer enemies, more rewards
@@ -130,16 +131,20 @@ export class WaveManager {
       this.bossSpawned = true;
     }
 
-    // Spawn enemies — cadence derived from wave duration so the full budget
-    // lands within ~65% of the wave and density scales with the timer
+    // Spawn enemies — VAMPIRE-SURVIVORS cadence: each tick releases a small BURST
+    // rather than a single enemy, so the (now 2x-larger) arena fills with a crowd.
+    // The full budget still lands within ~70% of the wave; the interval derives
+    // from duration/count so density scales with the timer.
     if (this.spawnTimer <= 0 && this.waveEnemiesRemaining > 0) {
-      const newEnemy = this.spawnEnemy(canvasWidth, canvasHeight);
-      enemies.push(newEnemy);
-      this.waveEnemiesRemaining--;
+      const batch = Math.min(this.waveEnemiesRemaining, this.isHordeWave ? 6 : 4);
+      for (let i = 0; i < batch; i++) {
+        enemies.push(this.spawnEnemy(canvasWidth, canvasHeight));
+        this.waveEnemiesRemaining--;
+      }
 
       let baseInterval = Math.min(
-        1.2,
-        Math.max(0.25, (this.waveDuration * 0.65) / this.totalEnemiesInWave)
+        0.9,
+        Math.max(0.12, (this.waveDuration * 0.7 * batch) / this.totalEnemiesInWave)
       );
       if (this.isHordeWave) {
         baseInterval *= 0.6; // 40% faster spawning on horde waves

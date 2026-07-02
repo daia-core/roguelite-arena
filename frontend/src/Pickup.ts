@@ -60,3 +60,78 @@ export class HealthOrb {
     );
   }
 }
+
+// Tiny XP gem dropped by a slain enemy (Vampire Survivors style). It pops out a
+// little on spawn, then — once the player is within magnet range — homes in and
+// accelerates until collected. Carries the XP value so it's granted on pickup,
+// not on kill, which is what makes the collection loop feel good.
+export class XPOrb {
+  static nextId = 0;
+
+  id: number;
+  x: number;
+  y: number;
+  radius: number = 4;
+  xpAmount: number;
+  dead: boolean = false;
+
+  private vx: number;
+  private vy: number;
+  private homing: boolean = false;
+  private homeSpeed: number = 260; // ramps up once homing so it always catches the player
+  pulseOffset: number = 0;
+
+  constructor(x: number, y: number, xpAmount: number) {
+    this.id = XPOrb.nextId++;
+    this.x = x;
+    this.y = y;
+    this.xpAmount = xpAmount;
+    // Small random outward pop so a cluster of orbs scatters instead of stacking.
+    const a = Math.random() * Math.PI * 2;
+    const pop = 40 + Math.random() * 60;
+    this.vx = Math.cos(a) * pop;
+    this.vy = Math.sin(a) * pop;
+    this.pulseOffset = Math.random() * Math.PI * 2;
+  }
+
+  // Returns true when it has reached the player and should be collected.
+  update(dt: number, px: number, py: number, magnetRadius: number): boolean {
+    this.pulseOffset += dt * 8;
+    const dx = px - this.x;
+    const dy = py - this.y;
+    const dist = Math.hypot(dx, dy) || 1;
+
+    if (this.homing || dist < magnetRadius) {
+      this.homing = true;
+      // Accelerate while homing so a moving player can't outrun its own gems.
+      this.homeSpeed = Math.min(900, this.homeSpeed + 900 * dt);
+      this.vx = (dx / dist) * this.homeSpeed;
+      this.vy = (dy / dist) * this.homeSpeed;
+    } else {
+      // Friction on the spawn pop until the player comes into range.
+      this.vx *= 0.9;
+      this.vy *= 0.9;
+    }
+
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+    return dist < this.radius + 14; // generous pickup contact vs the player body
+  }
+
+  draw(ctx: CanvasRenderingContext2D): void {
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    const pulse = Math.sin(this.pulseOffset) * 0.2 + 1;
+    const r = Math.max(2, Math.round(this.radius * pulse));
+    const cx = Math.round(this.x);
+    const cy = Math.round(this.y);
+    // Small cyan gem: bright core + darker edge, pure pixel blocks (no glow).
+    ctx.fillStyle = '#1c6fb0';
+    ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+    ctx.fillStyle = '#4dc3ff';
+    ctx.fillRect(cx - r + 1, cy - r + 1, r * 2 - 2, r * 2 - 2);
+    ctx.fillStyle = '#bff0ff';
+    ctx.fillRect(cx - 1, cy - 1, 2, 2);
+    ctx.restore();
+  }
+}

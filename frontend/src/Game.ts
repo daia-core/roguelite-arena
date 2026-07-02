@@ -12,7 +12,7 @@ import { Input } from './Input';
 import { Renderer } from './Renderer';
 import { AudioManager } from './AudioManager';
 import { pointInRect } from './utils';
-import { HealthOrb } from './Pickup';
+import { HealthOrb, XPOrb } from './Pickup';
 import { MetaProgression } from './MetaProgression';
 import { ObjectPool } from './ObjectPool';
 import { Quadtree } from './Quadtree';
@@ -44,6 +44,16 @@ export class Game {
   particles: Particle[] = [];
   damageNumbers: DamageNumber[] = [];
   healthOrbs: HealthOrb[] = [];
+  xpOrbs: XPOrb[] = [];
+
+  // ZOOM-OUT: the simulation runs in a world 2x the canvas in each dimension and
+  // is rendered at 1/scale, so the play area is larger and the player/monsters
+  // read smaller (a wider Vampire-Survivors-style battlefield). Gameplay bounds,
+  // spawns and the render transform all derive from these — the GUI/HUD is drawn
+  // untransformed in screen space.
+  private readonly WORLD_SCALE = 2;
+  private get worldWidth(): number { return this.canvas.width * this.WORLD_SCALE; }
+  private get worldHeight(): number { return this.canvas.height * this.WORLD_SCALE; }
 
   // Systems
   waveManager: WaveManager;
@@ -160,9 +170,9 @@ export class Game {
       100 // Max pool size
     );
 
-    // PERFORMANCE: Initialize quadtrees
-    this.enemyQuadtree = new Quadtree({ x: 0, y: 0, width: canvas.width, height: canvas.height });
-    this.projectileQuadtree = new Quadtree({ x: 0, y: 0, width: canvas.width, height: canvas.height });
+    // PERFORMANCE: Initialize quadtrees (world-sized, not canvas-sized — the arena is 2x)
+    this.enemyQuadtree = new Quadtree({ x: 0, y: 0, width: this.worldWidth, height: this.worldHeight });
+    this.projectileQuadtree = new Quadtree({ x: 0, y: 0, width: this.worldWidth, height: this.worldHeight });
 
     // PERFORMANCE: Initialize performance monitor (F2 to toggle)
     this.performanceMonitor = new PerformanceMonitor();
@@ -173,8 +183,8 @@ export class Game {
     // PERFORMANCE: Initialize entity culler (off-screen culling)
     this.entityCuller = new EntityCuller();
 
-    // PATHFINDING: Initialize pathfinding system (32px cells for navigation grid)
-    this.pathfindingSystem = new PathfindingSystem(canvas.width, canvas.height, 32);
+    // PATHFINDING: Initialize pathfinding system (32px cells over the full world)
+    this.pathfindingSystem = new PathfindingSystem(this.worldWidth, this.worldHeight, 32);
 
     // GAME FEEL: Initialize screen effects
     this.screenEffects = new ScreenEffects();
@@ -182,7 +192,8 @@ export class Game {
     // Quadtree bounds and the pathfinding grid depend on canvas size, which is
     // only set by resizeCanvas() after construction — main.ts calls this on every resize
     window.addEventListener('game-resize', () => {
-      const { width, height } = this.canvas;
+      const width = this.worldWidth;
+      const height = this.worldHeight;
       this.enemyQuadtree = new Quadtree({ x: 0, y: 0, width, height });
       this.projectileQuadtree = new Quadtree({ x: 0, y: 0, width, height });
       this.pathfindingSystem = new PathfindingSystem(width, height, 32);
@@ -305,7 +316,7 @@ export class Game {
       }
     }
 
-    this.player = new Player(this.canvas.width / 2, this.canvas.height / 2, this.playerStats);
+    this.player = new Player(this.worldWidth / 2, this.worldHeight / 2, this.playerStats);
 
     // Apply meta-progression bonuses
     const damageBonus = this.metaProgression.getStartingDamageBonus();
@@ -344,6 +355,7 @@ export class Game {
     this.particles = [];
     this.damageNumbers = [];
     this.healthOrbs = [];
+    this.xpOrbs = [];
     this.kills = 0;
     this.bossKills = 0;
     this.soulsEarnedThisRun = 0;
@@ -368,7 +380,7 @@ export class Game {
       });
     }
 
-    this.player = new Player(this.canvas.width / 2, this.canvas.height / 2, this.playerStats);
+    this.player = new Player(this.worldWidth / 2, this.worldHeight / 2, this.playerStats);
 
     // Restore stats
     if (save.level) {
@@ -390,6 +402,7 @@ export class Game {
     this.particles = [];
     this.damageNumbers = [];
     this.healthOrbs = [];
+    this.xpOrbs = [];
     this.kills = 0;
 
     const wave = save.wave ?? 1;
@@ -462,7 +475,7 @@ export class Game {
     const movement = this.input.getMovementVector();
 
     // Player update
-    this.player.update(scaledDt, movement.x, movement.y, this.canvas.width, this.canvas.height);
+    this.player.update(scaledDt, movement.x, movement.y, this.worldWidth, this.worldHeight);
 
     // Health regen (items + meta) — previously sold but never ticked
     const regen = this.playerStats.getHealthRegen() + this.metaProgression.getStartingRegenBonus();
@@ -522,7 +535,7 @@ export class Game {
     // }
 
     // Wave manager
-    this.enemies = this.waveManager.update(scaledDt, this.enemies, this.canvas.width, this.canvas.height);
+    this.enemies = this.waveManager.update(scaledDt, this.enemies, this.worldWidth, this.worldHeight);
 
     // Enemies
     for (const enemy of this.enemies) {
@@ -711,7 +724,7 @@ export class Game {
       }
 
       // Check wall collision for cyclops
-      enemy.checkWallCollision(this.canvas.width, this.canvas.height);
+      enemy.checkWallCollision(this.worldWidth, this.worldHeight);
 
       // Enemy-player collision — enemies persist and keep attacking on a
       // cooldown (kamikaze contact made melee pressure evaporate); only
@@ -790,7 +803,7 @@ export class Game {
         proj.vx = Math.cos(current + turn) * speed;
         proj.vy = Math.sin(current + turn) * speed;
       }
-      proj.update(scaledDt, this.canvas.width, this.canvas.height);
+      proj.update(scaledDt, this.worldWidth, this.worldHeight);
 
       // Skip collision detection for projectiles that are already dead
       if (proj.dead) continue;
@@ -1016,6 +1029,16 @@ export class Game {
       }
     }
 
+    // XP orbs — the same magnet stat sets how far they start homing. XPOrb.update
+    // does the pop-then-home motion itself and returns true once it reaches the player.
+    const xpMagnetRadius = 95 * pickupMagnet;
+    for (const orb of this.xpOrbs) {
+      if (orb.update(scaledDt, this.player.x, this.player.y, xpMagnetRadius)) {
+        this.grantXP(orb.xpAmount);
+        orb.dead = true;
+      }
+    }
+
     // PERFORMANCE: Cleanup dead entities using swap-and-pop (zero allocation)
     // Old approach: .filter() creates new arrays every frame = GC pressure
     // New approach: in-place removal = no GC, ~30% faster for entity cleanup
@@ -1075,6 +1098,7 @@ export class Game {
     this.removeDeadEntities(this.enemies);
     this.removeDeadEntities(this.meleeAttacks);
     this.removeDeadEntities(this.healthOrbs);
+    this.removeDeadEntities(this.xpOrbs);
 
     // Check wave completion
     if (this.waveManager.isWaveComplete()) {
@@ -1126,6 +1150,37 @@ export class Game {
   //   // Visual effect
   //   this.particles.push(...spawnHitParticles(this.player.x, this.player.y, 30));
   // }
+
+  // Grant XP (from a collected orb) and fire the level-up juice if it triggered.
+  // Called at pickup time now that XP drops as gems instead of applying on kill.
+  private grantXP(amount: number): void {
+    if (!this.player) return;
+    const leveledUp = this.player.addXP(amount);
+    if (!leveledUp) return;
+    this.audio.playLevelUp();
+    // VAMPIRE SURVIVORS JUICE: Make level-ups feel MASSIVE
+    this.renderer.addScreenShake(0.6);
+    this.renderer.addHitFlash(0.4);
+    this.screenEffects.addShake(ShakePresets.LEVEL_UP.intensity, ShakePresets.LEVEL_UP.duration);
+    this.screenEffects.setZoom(1.05, 0.3);
+    this.screenEffects.flash('#ffff00', 0.25);
+    const colors = ['#ffff00', '#00ffff', '#ff00ff', '#ff6600', '#00ff00', '#ff0000', '#ffffff'];
+    const levelUpParticleCount = this.getParticleCount(20);
+    for (let i = 0; i < levelUpParticleCount; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 150 + Math.random() * 300;
+      this.particles.push(this.createParticle({
+        x: this.player.x,
+        y: this.player.y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 120,
+        color: colors[i % colors.length],
+        size: 10 + Math.random() * 8,
+        lifetime: 1200 + Math.random() * 600,
+        gravity: -100
+      }));
+    }
+  }
 
   private handleEnemyKill(enemy: Enemy): void {
     if (!this.player) return;
@@ -1206,36 +1261,19 @@ export class Game {
       finalGold *= 2;
     }
 
-    const leveledUp = this.player.addXP(Math.floor(finalXP));
-    this.player.addGold(Math.floor(finalGold));
-
-    if (leveledUp) {
-      this.audio.playLevelUp();
-      // VAMPIRE SURVIVORS JUICE: Make level-ups feel MASSIVE
-      this.renderer.addScreenShake(0.6); // Much bigger shake
-      this.renderer.addHitFlash(0.4); // Screen flash
-      // GAME FEEL: Enhanced screen effects
-      this.screenEffects.addShake(ShakePresets.LEVEL_UP.intensity, ShakePresets.LEVEL_UP.duration);
-      this.screenEffects.setZoom(1.05, 0.3); // Slight zoom in
-      this.screenEffects.flash('#ffff00', 0.25); // Golden flash
-      // Spawn huge particle explosion at player - PERFORMANCE: Use pooled particles (quality-adjusted)
-      const colors = ['#ffff00', '#00ffff', '#ff00ff', '#ff6600', '#00ff00', '#ff0000', '#ffffff'];
-      const levelUpParticleCount = this.getParticleCount(20);
-      for (let i = 0; i < levelUpParticleCount; i++) {
-        const angle = Math.random() * Math.PI * 2;
-        const speed = 150 + Math.random() * 300;
-        this.particles.push(this.createParticle({
-          x: this.player.x,
-          y: this.player.y,
-          vx: Math.cos(angle) * speed,
-          vy: Math.sin(angle) * speed - 120,
-          color: colors[i % colors.length],
-          size: 10 + Math.random() * 8,
-          lifetime: 1200 + Math.random() * 600,
-          gravity: -100
-        }));
-      }
+    // XP now drops as collectable gems (granted on pickup, not on kill). Gold
+    // stays instant. Split larger rewards into a few orbs for a satisfying pop,
+    // capped so a dense wave can't flood the screen with pickups.
+    const xpAward = Math.max(1, Math.floor(finalXP));
+    const orbCount = Math.min(4, Math.max(1, Math.round(xpAward / 4)));
+    const per = Math.floor(xpAward / orbCount);
+    let remainder = xpAward - per * orbCount;
+    for (let i = 0; i < orbCount; i++) {
+      const share = per + (remainder > 0 ? 1 : 0);
+      if (remainder > 0) remainder--;
+      this.xpOrbs.push(new XPOrb(enemy.x, enemy.y, share));
     }
+    this.player.addGold(Math.floor(finalGold));
 
     // Mushroom explodes on death - PERFORMANCE: Use pooled particles
     if (enemy.type === 'mushroom') {
@@ -2064,7 +2102,13 @@ export class Game {
     this.screenEffects.applyToContext(ctx, this.canvas.width, this.canvas.height);
 
     // PERFORMANCE: Update entity culler viewport
-    this.entityCuller.updateViewport(0, 0, this.canvas.width, this.canvas.height, 100);
+    this.entityCuller.updateViewport(0, 0, this.worldWidth, this.worldHeight, 100);
+
+    // ZOOM-OUT: render the world at 1/scale so the 2x-larger arena fits the screen
+    // (player/monsters read smaller, more battlefield visible). GUI is drawn after
+    // this transform is restored, so it stays full-size in screen space.
+    ctx.save();
+    ctx.scale(1 / this.WORLD_SCALE, 1 / this.WORLD_SCALE);
 
     // PERFORMANCE: Batch render particles (40-60% faster than individual draws)
     const isMobile = this.canvas.width < this.canvas.height;
@@ -2101,11 +2145,20 @@ export class Game {
       }
     }
 
+    for (const orb of this.xpOrbs) {
+      if (this.entityCuller.isVisible(orb)) {
+        orb.draw(ctx);
+      }
+    }
+
     this.player.draw(ctx);
 
     for (const num of this.damageNumbers) {
       num.draw(ctx);
     }
+
+    // ZOOM-OUT: end the world transform — everything below is screen-space GUI.
+    ctx.restore();
 
     // Draw joystick
     this.input.drawJoystick(ctx);
@@ -2145,7 +2198,8 @@ export class Game {
       ...this.projectiles,
       ...this.particles,
       ...this.meleeAttacks,
-      ...this.healthOrbs
+      ...this.healthOrbs,
+      ...this.xpOrbs
     ];
     const visibleCount = allEntities.filter(e => this.entityCuller.isVisible(e)).length;
     const culledCount = allEntities.length - visibleCount;
@@ -2157,6 +2211,7 @@ export class Game {
       damageNumbers: this.damageNumbers.length,
       meleeAttacks: this.meleeAttacks.length,
       healthOrbs: this.healthOrbs.length,
+      xpOrbs: this.xpOrbs.length,
       quadtreeNodes: quadtreeStats.nodeCount,
       quadtreeDepth: quadtreeStats.maxDepth,
       quadtreeObjects: quadtreeStats.totalObjects,
