@@ -8,6 +8,40 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-02 (night) — Synergies made understandable
+
+Felix's ask: *"synergies need to be more easily understood — what a synergy does / what items combo."*
+
+**Player-visible**
+- New **COMBOS** button in the shop header (shows `COMBOS 1★` etc. with your active-duo count).
+  Tap it for a full-screen **COMBOS GUIDE** that spells out, in plain language:
+  - **ACTIVE NOW** — every duo you've completed and what it actually does.
+  - **ONE ITEM AWAY** — each combo you're a single item from, written as
+    *"have Storm Essence + get Toxic Vial → Poisoned enemies arc lightning to others"* so you
+    know which two items pair AND the payoff before you buy.
+  - **CARD BORDERS** legend — gold = completes a combo, green = fits your build, blue = you own it.
+  - Opened and dismissed by a tap (mobile-safe — no hover, since a tap on a card buys it).
+- Shop cards now say it in words instead of a cryptic badge: a card that completes a combo names
+  it (`⚡ STORM SURGE`) and swaps its description for the combo's effect; a card that teaches an
+  unowned pairing shows `🔗 + <partner>`; a card that fits your build reads `FITS BUILD` / `GOOD FIT`
+  (was the vague `SYNERGY`).
+
+**Under the hood**
+- `PlayerStats.getActiveDuos()` / `getPotentialDuos()` (owned + still-needed partner item) feed the
+  guide; `Game.getCardDuoInfo()` drives the per-card naming. No gameplay numbers changed — this is
+  a pure clarity/UX layer over the existing duo + tag-affinity systems.
+- New overlay state `showCombosOverlay`; `updateShop()` gives the overlay first claim on input so a
+  tap can't leak through to a purchase; `enterShop()` always opens on the buy screen.
+
+**Commits** `734c5ae` (per-card legibility) + this commit (COMBOS guide overlay)
+**Verified** `qa-synergy.mjs` builds the shipped `frontend/dist` and drives it headless: active
+duos only fire with both items; potential duos list the right owned+needed item names; completing
+a card reports `completes:true` + the effect; the overlay opens/closes cleanly with no purchase
+leak — 6/6 PASS, 0 console errors. Mobile (390×844) + desktop screenshots reviewed: guide renders
+on a solid wood panel, no shop bleed-through, all text legible at phone size.
+
+---
+
 ## 2026-07-02 (night) — Damage-type split (melee / ranged / elemental)
 
 **Player-visible**

@@ -2612,11 +2612,11 @@ export class Game {
             utility: '🔧'
           };
           const matchIcons = matchingTags.map(t => tagIcons[t] || '⚡').join('');
-          indicatorText = `${matchIcons} SYNERGY`;
-          indicatorColor = '#00ff00';
+          indicatorText = `${matchIcons} FITS BUILD`;
+          indicatorColor = '#7bd94a';
         } else if (hasSynergy) {
-          indicatorText = '⚡ SYNERGY';
-          indicatorColor = '#ffff00';
+          indicatorText = '⚡ GOOD FIT';
+          indicatorColor = '#7bd94a';
         }
 
         if (indicatorText) {
@@ -2696,6 +2696,143 @@ export class Game {
       canAffordReroll,
       isMobile
     );
+
+    // COMBOS guide overlay draws last so it sits on top of the whole shop.
+    if (this.showCombosOverlay) this.drawCombosOverlay();
+  }
+
+  // Full-screen synergy guide: explains, in plain language, what your active
+  // duos do and which owned item + one more item completes another combo, plus
+  // a legend for the shop-card highlight colours. Mobile-safe (opened by a tap,
+  // dismissed by a tap) — no hover needed.
+  private drawCombosOverlay(): void {
+    const ctx = this.renderer.getContext();
+    const zoom = this.canvas.clientWidth ? this.canvas.width / this.canvas.clientWidth : 1;
+    const s = (v: number) => Math.round(v * zoom);
+    const W = this.canvas.width;
+    const H = this.canvas.height;
+    const isMobile = W / zoom < 800;
+
+    const active = this.playerStats.getActiveDuos();
+    const potential = this.playerStats.getPotentialDuos();
+
+    // Word-wrap helper (drawText auto-shrinks but doesn't wrap).
+    const wrap = (text: string, px: number, maxW: number): string[] => {
+      ctx.save();
+      ctx.font = `${px}px 'Press Start 2P', 'Courier New', monospace`;
+      const words = text.split(' ');
+      const lines: string[] = [];
+      let line = '';
+      for (const w of words) {
+        const test = line ? `${line} ${w}` : w;
+        if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = w; }
+        else line = test;
+      }
+      if (line) lines.push(line);
+      ctx.restore();
+      return lines;
+    };
+
+    const pad = s(16);
+    const contentW = Math.min(W - pad * 2, s(isMobile ? 360 : 560));
+    const x0 = (W - contentW) / 2;
+    let y = s(isMobile ? 20 : 30);
+    const bodySize = s(isMobile ? 8 : 9);
+    const headSize = s(isMobile ? 11 : 14);
+    const lineH = bodySize + s(4);
+
+    // Opaque backdrop — a translucent dim let the shop cards bleed through and
+    // fight the text (2026-07-02 QA), so fill the screen solid, then frame the
+    // content column in a wood panel so the guide reads as its own screen.
+    ctx.save();
+    ctx.fillStyle = '#120b05';
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+    drawPanel(ctx, x0 - s(8), s(10), contentW + s(16), H - s(20), DARK_WOOD_THEME, 4, 77);
+
+    // Title
+    this.renderer.drawText('COMBOS GUIDE', W / 2, y, { size: headSize, align: 'center', color: '#ffd700' });
+    y += headSize + s(6);
+    this.renderer.drawText('Tap anywhere to close', W / 2, y, { size: s(7), align: 'center', color: '#9a8a6a' });
+    y += s(7) + s(12);
+
+    // ── Active duos ──
+    this.renderer.drawText('ACTIVE NOW', x0, y, { size: bodySize, align: 'left', color: '#8ce99a' });
+    y += lineH;
+    if (active.length === 0) {
+      this.renderer.drawText('None yet — pair items below to trigger one.', x0, y, {
+        size: bodySize, align: 'left', color: '#c8b998', maxWidth: contentW
+      });
+      y += lineH;
+    } else {
+      for (const duo of active) {
+        this.renderer.drawText(`${duo.icon} ${duo.name}`, x0, y, {
+          size: bodySize, align: 'left', color: '#ffe066', maxWidth: contentW
+        });
+        y += lineH;
+        for (const l of wrap(duo.specialEffect || duo.description, bodySize, contentW - s(10))) {
+          this.renderer.drawText(l, x0 + s(10), y, { size: bodySize, align: 'left', color: '#e5d9c3' });
+          y += lineH;
+        }
+        y += s(3);
+      }
+    }
+    y += s(8);
+
+    // ── Almost-there duos (own one half) ──
+    this.renderer.drawText('ONE ITEM AWAY', x0, y, { size: bodySize, align: 'left', color: '#74c0fc' });
+    y += lineH;
+    if (potential.length === 0) {
+      this.renderer.drawText('Buy items to start a combo pairing.', x0, y, {
+        size: bodySize, align: 'left', color: '#c8b998', maxWidth: contentW
+      });
+      y += lineH;
+    } else {
+      // Cap the list so it never overflows the screen on tiny devices.
+      const maxShown = isMobile ? 4 : 6;
+      for (const { duo, owned, needed } of potential.slice(0, maxShown)) {
+        this.renderer.drawText(`${duo.icon} ${duo.name}`, x0, y, {
+          size: bodySize, align: 'left', color: '#74c0fc', maxWidth: contentW
+        });
+        y += lineH;
+        const pairLine = `have ${owned?.name ?? '?'} + get ${needed?.name ?? '?'}`;
+        for (const l of wrap(pairLine, bodySize, contentW - s(10))) {
+          this.renderer.drawText(l, x0 + s(10), y, { size: bodySize, align: 'left', color: '#a9c9ff' });
+          y += lineH;
+        }
+        for (const l of wrap(`→ ${duo.specialEffect || duo.description}`, bodySize, contentW - s(10))) {
+          this.renderer.drawText(l, x0 + s(10), y, { size: bodySize, align: 'left', color: '#e5d9c3' });
+          y += lineH;
+        }
+        y += s(3);
+      }
+      if (potential.length > maxShown) {
+        this.renderer.drawText(`+${potential.length - maxShown} more…`, x0 + s(10), y, {
+          size: s(7), align: 'left', color: '#9a8a6a'
+        });
+        y += lineH;
+      }
+    }
+    y += s(10);
+
+    // ── Legend for the card highlight colours ──
+    const legend: Array<[string, string]> = [
+      ['#ffd43b', 'Gold border = completes a COMBO'],
+      ['#7bd94a', 'Green border = fits your build (tag synergy)'],
+      ['#4a9eff', 'Blue border = you already own it (stacks)'],
+    ];
+    this.renderer.drawText('CARD BORDERS', x0, y, { size: bodySize, align: 'left', color: '#ffd43b' });
+    y += lineH;
+    for (const [color, text] of legend) {
+      ctx.save();
+      ctx.fillStyle = color;
+      ctx.fillRect(x0, y, s(10), s(10));
+      ctx.restore();
+      this.renderer.drawText(text, x0 + s(16), y, {
+        size: bodySize, align: 'left', color: '#e5d9c3', maxWidth: contentW - s(16)
+      });
+      y += lineH;
+    }
   }
 
   private drawPaused(): void {
