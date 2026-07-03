@@ -8,6 +8,33 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-03 (evening) — batch-3 enemy sprites: bombardier (was a bare disc) + swarm hand-crafted
+
+- **Bombardier now looks like an enemy, not a red dot.** It was the single worst-reading thing in
+  the game: its `spriteName` was empty AND it had no custom draw method, so it fell through to the
+  raw fallback — a flat red circle with a black outline. It spawns from **wave 7 onward (in pairs
+  at high waves)**, i.e. exactly the wave Felix was play-testing. Hand-drawn from scratch as a
+  stout **iron-helmed artillery brute cradling a lit black bomb** — the orange fuse spark is the
+  readable "this thing lobs explosives" tell. Red armor plate with a steel rivet accent, amber
+  eyes glowing under the helm rim, distinct silhouette from the olive goblin and the round exploder.
+  Wired `Enemy.ts` bombardier `spriteName: '' → 'bombardier'`.
+- **Swarm no longer reads as broken fragments.** The auto-enhancer had left it as disconnected
+  floating bee-parts plus a stray beak — it looked like a rendering bug, not a creature. Redrawn as
+  a tight **buzzing cluster**: a bumpy orange/black ball, multiple angry red eyes (the "many small
+  things" tell), pale wing-haze motion flecks around the rim, and a 2-frame buzz-jitter so the mass
+  vibrates in place. Fits its in-game role (fast, small, shared HP pool).
+- Both drawn per `SPRITE-STYLE.md` (black outline, top-left light, hue-shifted warm-hi/cool-shadow
+  ramps, asymmetry, catch-lit eyes, readable chunky silhouette) over 2 render→look→fix cycles and
+  eyeballed on the real grass background before shipping. This closes the last enemy on the fallback
+  disc; the rest of the roster was re-audited on grass and reads decently (tracker updated — no
+  padding redraws).
+- QA: `qa-new-enemies` PASS (lifecycle invariant holds over 120 frames), `qa-sprite-conversion`
+  PASS (0 console errors), `tsc` clean, `vite build` clean. spriteData rebuilt 41 → **42 sprites**
+  (bombardier added; both new sprites confirmed present, overriding legacy).
+- **Live:** verified serving on production (HTTP 200) — sha below.
+
+---
+
 ## 2026-07-03 (evening) — cap health regen + armor (close the late-game immortality)
 
 - **Armor no longer trends to immortal.** Armor mitigation (`20/(20+armor)`) was unbounded and no

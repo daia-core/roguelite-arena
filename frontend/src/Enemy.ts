@@ -474,7 +474,7 @@ export const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     color: '#c0392b',
     xpValue: 20,
     goldValue: 6,
-    spriteName: ''
+    spriteName: 'bombardier'
   },
 
   // ==================== BOSS ENEMIES ====================

@@ -18,16 +18,26 @@ Pipeline: source in `handcraft/batchN.mjs` → JSON in `sprites/<name>.json` →
 gargoyle, golem, construct, dasher, phaser, spinner, druid, cyclops
 **Batch-2** (`handcraft/batch2.mjs`, commit 5a3eb5e) — most-seen + worst red:
 slime, goblin, blob
+**Batch-3** (`handcraft/batch3.mjs`) — the two genuinely-broken cases (not just "flat"):
+- **bombardier** — was the single worst enemy in the game: `spriteName: ''` with NO custom
+  draw, so it rendered as the raw fallback flat red DISC. Spawns wave 7+ (often in pairs late) —
+  exactly Felix's play-test wave. Now a stout iron-helmed artillery brute cradling a lit black
+  bomb (fuse spark = the readable "throws explosives" identity), red plate + steel rivet accent,
+  amber eyes under the helm rim. Also wired `Enemy.ts` bombardier `spriteName: ''` → `'bombardier'`.
+- **swarm** — the auto-enhancer left it reading as disconnected fragments (floating bee parts +
+  a stray beak), not one creature. Redrawn as a tight buzzing CLUSTER: bumpy orange/black ball,
+  multiple red eyes (the "many creatures" tell), pale wing-haze motion flecks, 2-frame buzz jitter.
 
 ## Still auto-enhanced — future batches, worst-first
 
-Assessed on grass contact sheets 2026-07-03. Rough priority (ugliest / least-readable first);
-re-audit before each batch since "worst" is subjective and the roster shifts.
+Re-audited on grass contact sheets 2026-07-03 (evening, after batch-3). The genuinely-broken
+cases are now fixed; what remains all reads decently — this is now polish, so pick only clear wins.
 
-**Next up (candidates worth a redraw):**
-- bat, spider — passable but flat/small silhouettes; would benefit from a bespoke pass
-- swarm, exploder, evader, orbiter, spiraler — abstract shapes, check readability
-- mushroom, necroegg — simple, low priority
+**Reassessed as already-decent (do NOT redraw for its own sake):**
+- bat (purple, red eyes — good), spider (black + red abdomen, green eyes — good), evader
+  (blue cat — fine), exploder (round bomb-creature — fine, distinct from bombardier), mushroom,
+  orbiter (eye-diamond), spiraler (snail) — all read clearly on grass.
+- necroegg — simple, low priority
 
 **Already decent (leave unless a clear win):**
 - imp — genuinely good after auto-enhance; do NOT redraw for its own sake
