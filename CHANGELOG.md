@@ -8,6 +8,37 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-03 (night) — all 5 bosses hand-drawn from scratch
+
+- **Every boss is now a bespoke, hand-crafted sprite instead of a filtered auto-enhance.** The five
+  bosses were the last enemies still riding the batch auto-enhancer, and they missed the one thing a
+  boss must do: read as a BOSS — regalia and a silhouette you can't confuse with any regular enemy.
+  Each was redrawn from scratch at 24×24 (double the 16×16 regular-enemy grid, their own tier) and
+  grass-verified as five clearly-different silhouettes:
+  - **Necrolord** — a bone LICH KING: gold spiked crown + red gem, skull face with glowing green
+    soul-eyes, broad navy robe, a gold soul-staff at his side.
+  - **Flamefiend** — a hulking FIRE DEMON: two bold up-curving horns (asymmetric), a flame mane,
+    snarling fanged face, molten cracks glowing across a red hulk, blazing fists.
+  - **Voidbeast** — a floating ELDRITCH EYE-HORROR: one huge magenta central eye + lesser eyes, a
+    jagged void-maw, writhing tentacles, cosmic sparkle accents.
+  - **Stormking** — an armored STORM SOVEREIGN: gold spiked crown, plated blue armor with a lightning
+    emblem, a shoulder cape, a bright thunder-bolt scepter raised at his side.
+  - **Ancientgolem** — a colossal rune STONE TITAN: blocky shoulders + heavy fists, cracked body with
+    a glowing amber core + rune eyes, moss-green "ancient" accents.
+- **Why it matters:** the boss is the wave's climax; a boss that looks like a recolored mob undersells
+  the moment. These give each fight a distinct, memorable face. Idle frames are a living-glow pulse
+  (crown gems, soul-eyes, molten cracks, the golem's core breathing) rather than a static image.
+- **Under the hood:** batch-5 in the hand-craft pipeline (`handcraft/batch5-bosses.mjs` → per-boss
+  JSON → `build-sprite-data.mjs` → `spriteData.ts`, overriding the legacy sprites). With this, **every
+  enemy that read poorly is now hand-crafted**; the rest of the roster reads decently on the
+  auto-enhance pass.
+- Commit `dc5ee98`. **Live-verified:** production `roguelite-game-blush.vercel.app` serving bundle
+  `index-CunqjopW.js` (HTTP 200, byte-identical md5 to local `dist`, all five boss sprite names +
+  new palettes baked into the shipped bundle). Grass contact sheet confirmed all five read as
+  distinct boss silhouettes with no camouflage before ship.
+
+---
+
 ## 2026-07-03 (night) — items that reward how you PLAY (first conditional/triggered layer)
 
 - **Five new items whose power depends on the moment, not just owning them.** Until now every item in
