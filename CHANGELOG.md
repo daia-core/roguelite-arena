@@ -8,6 +8,27 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-03 (morning, hygiene) — commit the abbreviated floating damage numbers already live in index-DrFjavMF.js
+
+No new deploy — this locks the git source to what's *already* serving live. Earlier this morning
+the floating damage numbers were switched to `formatShort()` (K/M/B/T abbreviation) so a wave-13+
+build reads `515M` / `2.4B` instead of a screen-filling `515000000` — matching the HUD, which
+already abbreviates. That change (`Particle.ts`: `formatShort` on both DamageNumber paths + the
+`K/M/B/T/.` pixel glyphs the abbreviations render with) rode into the live `index-DrFjavMF.js` bundle
+because the 09:38 batch build picked it up from the working tree — but it was **never committed**.
+
+**Why this matters:** a clean build from HEAD would have produced a *different* bundle
+(`index-t-c53qeH.js`, verified by a revert-and-rebuild diff) that silently **regresses** damage
+numbers back to raw digits. Committing the source removes that latent regression so the next
+deploy-from-HEAD keeps the abbreviated numbers.
+
+**Verified:** `qa-numberformat.mjs` PASS on the shipped bundle — 515000000→`515M`, 1500→`1.5K`,
+12345→`12K`, 2400000000→`2.4B`, 999→`999`, 1000000→`1M`; every glyph renderable, console clean;
+HUD `formatShort` applied in `drawHUD`. Live still serves `index-DrFjavMF.js`, HTTP 200 (rebuild
+from the committed tree reproduces the identical bundle hash).
+
+---
+
 ## 2026-07-03 (morning, follow-up) — projectile pass-through: widen collision candidate query (live index-DrFjavMF.js)
 
 Closes the residual gap in the earlier tunneling fix. The swept-collision test

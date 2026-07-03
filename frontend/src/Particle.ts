@@ -1,5 +1,7 @@
 // Particle system for visual effects
 
+import { formatShort } from './utils';
+
 export interface ParticleConfig {
   x: number;
   y: number;
@@ -124,7 +126,7 @@ export class DamageNumber {
   constructor(x: number = 0, y: number = 0, damage: number = 0, isCrit: boolean = false) {
     this.x = x;
     this.y = y;
-    this.text = Math.round(damage).toString();
+    this.text = formatShort(damage);
     this.lifetime = 1000;
     this.maxLifetime = this.lifetime;
     // GAME FEEL: Physics-based movement (arc like projectiles)
@@ -144,7 +146,7 @@ export class DamageNumber {
   init(x: number, y: number, damage: number | string, isCrit: boolean = false, color?: string): void {
     this.x = x;
     this.y = y;
-    this.text = typeof damage === 'number' ? Math.round(damage).toString() : damage;
+    this.text = typeof damage === 'number' ? formatShort(damage) : damage;
     this.lifetime = 1000;
     this.maxLifetime = this.lifetime;
     this.vx = (Math.random() - 0.5) * 40;
@@ -205,6 +207,12 @@ export class DamageNumber {
       '7': [[1,1,1],[0,0,1],[0,0,1],[0,0,1],[0,0,1]],
       '8': [[1,1,1],[1,0,1],[1,1,1],[1,0,1],[1,1,1]],
       '9': [[1,1,1],[1,0,1],[1,1,1],[0,0,1],[1,1,1]],
+      // Suffix glyphs for abbreviated values (515M, 1.5K) + decimal point.
+      'K': [[1,0,1],[1,1,0],[1,0,0],[1,1,0],[1,0,1]],
+      'M': [[1,0,1],[1,1,1],[1,0,1],[1,0,1],[1,0,1]],
+      'B': [[1,1,0],[1,0,1],[1,1,0],[1,0,1],[1,1,0]],
+      'T': [[1,1,1],[0,1,0],[0,1,0],[0,1,0],[0,1,0]],
+      '.': [[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,1,0]],
     };
 
     const digitWidth = 3 * pixelScaleFinal;
