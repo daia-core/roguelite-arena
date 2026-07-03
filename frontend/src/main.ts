@@ -30,7 +30,7 @@ app.innerHTML = `
     <div id="menu-ui">
       <button id="startBtn" class="menu-btn">New Game</button>
       <button id="continueBtn" class="menu-btn" style="display: none;">Continue</button>
-      <button id="upgradesBtn" class="menu-btn">Upgrades</button>
+      <button id="upgradesBtn" class="menu-btn">Village</button>
     </div>
     <div id="joystick-zone"></div>
   </div>

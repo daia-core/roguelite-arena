@@ -108,7 +108,7 @@ export class Input {
 
         // Anywhere on screen activates joystick (ONLY during gameplay, not in shop/menu/gameover)
         const gameState = this.gameStateGetter ? this.gameStateGetter() : 'menu';
-        const canActivateJoystick = gameState === 'playing';
+        const canActivateJoystick = gameState === 'playing' || gameState === 'village';
 
         if (canActivateJoystick && !this.joystick.active) {
           this.joystick.active = true;

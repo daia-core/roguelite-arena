@@ -30,6 +30,7 @@ import { UISprites } from './UISprites';
 import { MapSystem, nodeIcon, nodeLabel, serializeMap, deserializeMap, type NodeType } from './MapSystem';
 import { ArtifactSystem, ARTIFACTS, getArtifactById, type Artifact } from './ArtifactSystem';
 import { randomEvent, type GameEvent, type EventEffect } from './EventSystem';
+import { VillageScene } from './VillageScene';
 
 // The map/node meta-layer adds three between-wave screens on top of the core loop:
 //   'map'    — the Slay-the-Spire-style branching node picker (route your run)
@@ -37,7 +38,7 @@ import { randomEvent, type GameEvent, type EventEffect } from './EventSystem';
 //   'reward' — a "pick 1 of 3 artifacts" screen (treasure / elite / boss spoils)
 //   'rest'   — a campfire node: heal or upgrade
 export type GameState =
-  | 'menu' | 'playing' | 'shop' | 'paused' | 'gameover' | 'upgrades'
+  | 'menu' | 'playing' | 'shop' | 'paused' | 'gameover' | 'village'
   | 'map' | 'event' | 'reward' | 'rest';
 
 export class Game {
@@ -45,6 +46,10 @@ export class Game {
   private renderer: Renderer;
   private input: Input;
   private audio: AudioManager;
+
+  // Hidden probe that reads the device safe-area insets (notch / status bar) so the
+  // top-anchored canvas HUD can be pushed clear of them in portrait on phones.
+  private safeAreaProbe: HTMLElement | null = null;
 
   state: GameState = 'menu';
 
@@ -83,6 +88,7 @@ export class Game {
   playerStats: PlayerStats;
   metaProgression: MetaProgression;
   mapSystem: MapSystem = new MapSystem();
+  private villageScene: VillageScene | null = null;
   artifacts: ArtifactSystem = new ArtifactSystem();
 
   // PERFORMANCE: Object pools
@@ -331,11 +337,11 @@ export class Game {
       continueBtn.style.display = SaveManager.hasSavedRun() ? 'block' : 'none';
     }
 
-    // Upgrades button
+    // Village button (the walkable base — replaces the flat upgrades grid)
     const upgradesBtn = document.getElementById('upgradesBtn');
     if (upgradesBtn) {
       upgradesBtn.addEventListener('click', () => {
-        this.state = 'upgrades';
+        this.enterVillage();
       });
     }
   }
@@ -518,8 +524,8 @@ export class Game {
       case 'gameover':
         this.updateGameOver();
         break;
-      case 'upgrades':
-        this.updateUpgrades();
+      case 'village':
+        this.updateVillage(dt);
         break;
       case 'map':
         this.updateMap();
@@ -2457,21 +2463,23 @@ export class Game {
     return rects;
   }
 
-  /** Word-wrap `text` to `maxWidth` px at the given font size (approximate measure). */
+  /** Word-wrap `text` to `maxWidth` px at the given font size. The renderer draws
+   *  in `Press Start 2P`, a MONOSPACE pixel font whose advance is ~1em/char and
+   *  ~2x wider than sans-serif — so we wrap on a deterministic 1em/char estimate
+   *  rather than `measureText` (which mis-measures before the webfont loads and
+   *  in headless QA, letting body copy overflow the panel in narrow portrait). */
   private wrapText(text: string, maxWidth: number, fontPx: number): string[] {
-    const ctx = this.renderer.getContext();
-    ctx.save();
-    ctx.font = `${fontPx}px sans-serif`;
+    const charW = fontPx; // Press Start 2P: one em per glyph (incl. spaces)
+    const maxChars = Math.max(1, Math.floor(maxWidth / charW));
     const words = text.split(' ');
     const lines: string[] = [];
     let line = '';
     for (const w of words) {
       const test = line ? `${line} ${w}` : w;
-      if (ctx.measureText(test).width > maxWidth && line) { lines.push(line); line = w; }
+      if (test.length > maxChars && line) { lines.push(line); line = w; }
       else line = test;
     }
     if (line) lines.push(line);
-    ctx.restore();
     return lines;
   }
 
@@ -2839,44 +2847,25 @@ export class Game {
     }
   }
 
-  /** Shared grid layout for the meta-upgrades screen (draw + clicks). */
-  private getUpgradesLayout() {
-    const zoom = this.canvas.clientWidth ? this.canvas.width / this.canvas.clientWidth : 1;
-    const s = (v: number) => Math.round(v * zoom);
-    const cssW = this.canvas.width / zoom;
-    const cols = cssW >= 900 ? 3 : 2;
-    const gap = s(6);
-    const cellW = Math.min(s(300), Math.floor((this.canvas.width - s(20) - gap * (cols - 1)) / cols));
-    const cellH = cols === 3 ? s(80) : s(72);
-    const gridW = cellW * cols + gap * (cols - 1);
-    const startX = Math.round((this.canvas.width - gridW) / 2);
-    const startY = s(96);
-    const backBtn = { x: s(10), y: s(10), width: s(120), height: s(36) };
-    return { s, cols, cellW, cellH, gap, startX, startY, backBtn };
+  /** Lazily build the walkable village and enter it (replaces the old grid). */
+  private enterVillage(): void {
+    if (!this.villageScene) {
+      this.villageScene = new VillageScene({
+        canvas: this.canvas,
+        renderer: this.renderer,
+        input: this.input,
+        audio: this.audio,
+        meta: this.metaProgression,
+        onEmbark: () => this.startNewGame(),
+        onBack: () => { this.state = 'menu'; },
+      });
+    }
+    this.villageScene.enter();
+    this.state = 'village';
   }
 
-  private updateUpgrades(): void {
-    const mouseX = this.input.mouseX;
-    const mouseY = this.input.mouseY;
-    const { cols, cellW, cellH, gap, startX, startY, backBtn } = this.getUpgradesLayout();
-
-    const upgrades = this.metaProgression.getAllUpgrades();
-    for (let i = 0; i < upgrades.length; i++) {
-      const x = startX + (i % cols) * (cellW + gap);
-      const y = startY + Math.floor(i / cols) * (cellH + gap);
-      if (pointInRect(mouseX, mouseY, { x, y, width: cellW, height: cellH })) {
-        if (this.input.mouseDown && this.metaProgression.canPurchaseUpgrade(upgrades[i].id)) {
-          this.metaProgression.purchaseUpgrade(upgrades[i].id);
-          this.audio.playPurchase();
-          this.input.mouseDown = false;
-        }
-      }
-    }
-
-    if (pointInRect(mouseX, mouseY, backBtn) && this.input.mouseDown) {
-      this.state = 'menu';
-      this.input.mouseDown = false;
-    }
+  private updateVillage(dt: number): void {
+    this.villageScene?.update(dt);
   }
 
   private updateGameOver(): void {
@@ -2901,7 +2890,7 @@ export class Game {
     }
 
     if (pointInRect(mouseX, mouseY, upgradesBtn) && this.input.mouseDown) {
-      this.state = 'upgrades';
+      this.enterVillage();
       this.input.mouseDown = false;
     }
 
@@ -2971,8 +2960,8 @@ export class Game {
       case 'gameover':
         this.drawGameOver();
         break;
-      case 'upgrades':
-        this.drawUpgrades();
+      case 'village':
+        this.drawVillage();
         break;
       case 'map':
         this.drawMap();
@@ -3189,6 +3178,22 @@ export class Game {
     this.screenEffects.renderFlash(ctx, this.canvas.width, this.canvas.height);
   }
 
+  // Reads the device's top safe-area inset (notch / status bar) in *canvas* pixels.
+  // The HTML controls already respect env(safe-area-inset-*); the canvas HUD didn't,
+  // so on a notched phone in portrait the top panels were drawn under the status bar.
+  private safeAreaTop(zoom: number): number {
+    if (!this.safeAreaProbe) {
+      const el = document.createElement('div');
+      el.style.cssText =
+        'position:fixed;top:0;left:0;width:0;height:env(safe-area-inset-top,0px);' +
+        'pointer-events:none;visibility:hidden;';
+      document.body.appendChild(el);
+      this.safeAreaProbe = el;
+    }
+    const cssInset = this.safeAreaProbe.getBoundingClientRect().height; // display px
+    return Math.round(cssInset * zoom);
+  }
+
   private drawHUD(): void {
     if (!this.player) return;
 
@@ -3200,6 +3205,9 @@ export class Game {
     const s = (v: number) => Math.round(v * zoom);
     const art = Math.max(2, s(3));
     const isPortrait = this.canvas.width < this.canvas.height;
+    // Top origin for HUD panels: base margin plus the device safe-area inset so the
+    // notch / status bar never clips the HP/wave panels in portrait.
+    const topY = s(6) + this.safeAreaTop(zoom);
 
     const pad = s(8);
     const iconS = s(20);
@@ -3224,10 +3232,10 @@ export class Game {
     const rowH = Math.max(iconS, barH) + rowGap;
     const panelW = pad * 2 + iconS + s(6) + barW + s(isPortrait ? 64 : 78);
     const panelH = pad * 2 + rowH * 3 - rowGap;
-    drawPanel(ctx, s(6), s(6), panelW, panelH, DARK_WOOD_THEME, art);
+    drawPanel(ctx, s(6), topY, panelW, panelH, DARK_WOOD_THEME, art);
 
     const x0 = s(6) + pad + s(2);
-    let y = s(6) + pad + s(2);
+    let y = topY + pad + s(2);
     const barX = x0 + iconS + s(6);
     const textX = barX + barW + s(8);
 
@@ -3266,15 +3274,15 @@ export class Game {
     const rPanelW = pad * 2 + s(isPortrait ? 118 : 150);
     const rPanelH = pad * 2 + s(34);
     const rx = this.canvas.width - rPanelW - s(6);
-    drawPanel(ctx, rx, s(6), rPanelW, rPanelH, DARK_WOOD_THEME, art, 3);
-    this.renderer.drawText(waveText, rx + rPanelW / 2, s(6) + pad + s(4), {
+    drawPanel(ctx, rx, topY, rPanelW, rPanelH, DARK_WOOD_THEME, art, 3);
+    this.renderer.drawText(waveText, rx + rPanelW / 2, topY + pad + s(4), {
       size: s(isPortrait ? 9 : 11), align: 'center', color: waveColor
     });
     const t = Math.max(0, Math.ceil(this.waveManager.waveTimer));
     const timerText = `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
     this.renderer.drawText(
       `${timerText}  ·  ${this.enemies.length + this.waveManager.waveEnemiesRemaining}`,
-      rx + rPanelW / 2, s(6) + pad + s(22),
+      rx + rPanelW / 2, topY + pad + s(22),
       { size: s(8), align: 'center', color: t <= 5 ? '#ffd43b' : '#cfd8e3' }
     );
 
@@ -3300,7 +3308,7 @@ export class Game {
     }
 
     // --- Status callouts under the left panel ---
-    let statusY = s(6) + panelH + s(8);
+    let statusY = topY + panelH + s(8);
     if (this.player.shield) {
       this.renderer.drawText('SHIELD ACTIVE', s(10), statusY, { size: s(8), color: '#4a9eff' });
       statusY += s(14);
@@ -4065,59 +4073,8 @@ export class Game {
     );
   }
 
-  private drawUpgrades(): void {
-    const { s, cols, cellW, cellH, gap, startX, startY, backBtn } = this.getUpgradesLayout();
-    const ctx = this.renderer.getContext();
-
-    this.renderer.drawText('PERMANENT UPGRADES', this.canvas.width / 2 + s(2), s(22) + s(2), {
-      size: s(16), align: 'center', color: '#241407', stroke: false
-    });
-    this.renderer.drawText('PERMANENT UPGRADES', this.canvas.width / 2, s(22), {
-      size: s(16), align: 'center', color: '#b197fc'
-    });
-    this.renderer.drawText(`SOULS ${this.metaProgression.souls}`, this.canvas.width / 2, s(52), {
-      size: s(11), align: 'center', color: '#ffd43b'
-    });
-
-    const upgrades = this.metaProgression.getAllUpgrades();
-    for (let i = 0; i < upgrades.length; i++) {
-      const upgrade = upgrades[i];
-      const x = startX + (i % cols) * (cellW + gap);
-      const y = startY + Math.floor(i / cols) * (cellH + gap);
-
-      const isMaxLevel = upgrade.currentLevel >= upgrade.maxLevel;
-      const canAfford = this.metaProgression.canPurchaseUpgrade(upgrade.id);
-
-      drawPanel(ctx, x, y, cellW, cellH, DARK_WOOD_THEME, 4, i);
-      ctx.save();
-      ctx.strokeStyle = isMaxLevel ? '#ffd43b' : canAfford ? '#7bd94a' : '#55534c';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(x + 5, y + 5, cellW - 10, cellH - 10);
-      ctx.restore();
-
-      this.renderer.drawText(upgrade.icon, x + s(10), y + s(10), { size: s(14) });
-      this.renderer.drawText(upgrade.name.toUpperCase(), x + s(32), y + s(12), {
-        size: s(8), color: '#f4e6c2'
-      });
-      this.renderer.drawText(`${upgrade.currentLevel}/${upgrade.maxLevel}`, x + cellW - s(10), y + s(12), {
-        size: s(8), align: 'right', color: isMaxLevel ? '#ffd43b' : '#aab6c3'
-      });
-      this.renderer.drawText(upgrade.description, x + s(10), y + s(32), {
-        size: s(7), color: '#c8b998'
-      });
-      if (!isMaxLevel) {
-        const cost = upgrade.costs[upgrade.currentLevel];
-        this.renderer.drawText(`${cost} SOULS`, x + s(10), y + cellH - s(18), {
-          size: s(8), color: canAfford ? '#7bd94a' : '#ff8787'
-        });
-      } else {
-        this.renderer.drawText('MAX', x + s(10), y + cellH - s(18), {
-          size: s(8), color: '#ffd43b'
-        });
-      }
-    }
-
-    this.renderer.drawButton(backBtn.x, backBtn.y, backBtn.width, backBtn.height, 'Back', false);
+  private drawVillage(): void {
+    this.villageScene?.draw();
   }
 
   private drawGameOver(): void {
