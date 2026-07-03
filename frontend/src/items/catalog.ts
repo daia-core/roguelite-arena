@@ -539,15 +539,17 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'immortal_t4',
       name: 'Phoenix Feather',
-      description: '+100 HP, +10 HP/s',
+      description: 'Reborn in flame: near death you rage harder (+dmg & fire rate) and your hits ignite. +60 HP, +6 HP/s',
       rarity: 'legendary',
       tier: ItemTier.Legendary,
       cost: 142,
       icon: '🔥',
       unlocked: true,
-      tags: ['defensive'],
-      maxHealthBonus: 100,
-      healthRegen: 10
+      tags: ['defensive', 'elemental'],
+      maxHealthBonus: 60,
+      healthRegen: 6,
+      lowHpPower: 0.5,
+      burn: 0.3
     },
     {
       id: 'mega_knockback_t4',
@@ -577,15 +579,16 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'gold_rush_t4',
       name: 'Midas Touch',
-      description: '+100% gold, -15% shop',
+      description: 'Your hoard is a weapon: damage climbs with unspent gold on hand. +80% gold, +10% luck',
       rarity: 'legendary',
       tier: ItemTier.Legendary,
-      cost: 125,
+      cost: 130,
       icon: '✨',
       unlocked: true,
       tags: ['economic'],
-      goldBonus: 2.0,
-      shopDiscount: 0.15
+      goldBonus: 1.8,
+      goldScaleDamage: 0.15,
+      luck: 0.1
     },
 
     // ==================== WEAPON ITEMS (BROTATO-INSPIRED) ====================
@@ -1248,7 +1251,7 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'crit_synergy_t3',
       name: 'Critical Synergy',
-      description: '+15% crit, +50% crit dmg',
+      description: 'Crits that cut deep: high crit chance opens bleeding wounds. +15% crit, +35% crit dmg, 40% bleed',
       rarity: 'epic',
       tier: ItemTier.Rare,
       cost: 70,
@@ -1256,7 +1259,8 @@ export const ITEM_CATALOG: Item[] = [
       unlocked: true,
       tags: ['melee', 'ranged'],
       critChance: 0.15,
-      critDamageMultiplier: 1.5
+      critDamageMultiplier: 1.35,
+      bleed: 0.4
     },
     {
       id: 'glass_blade_t2',
@@ -1343,15 +1347,18 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'guardian_aura_t3',
       name: 'Guardian Aura',
-      description: '+12 armor, +50 HP',
+      description: 'A protective aura pulses outward, punishing attackers. +50 HP, +8 armor, 30% thorns, periodic shockwave',
       rarity: 'epic',
       tier: ItemTier.Rare,
-      cost: 75,
+      cost: 78,
       icon: '🛡️',
       unlocked: true,
       tags: ['defensive'],
-      armor: 12,
-      maxHealthBonus: 50
+      maxHealthBonus: 50,
+      armor: 8,
+      thorns: 0.3,
+      novaPulse: true,
+      novaDamageMult: 0.55
     },
     {
       id: 'vampire_armor_t3',
@@ -1463,15 +1470,16 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'merchants_ring_t3',
       name: 'Merchant\'s Ring',
-      description: '+50% gold, -10% prices',
+      description: 'The master shopper: sell high, buy low. +40% gold, +35% recycle value, -12% prices',
       rarity: 'epic',
       tier: ItemTier.Rare,
       cost: 58,
       icon: '💍',
       unlocked: true,
       tags: ['economic'],
-      goldBonus: 1.5,
-      shopDiscount: 0.1
+      goldBonus: 1.4,
+      recycleBonus: 0.35,
+      shopDiscount: 0.12
     },
     {
       id: 'experience_gem_t2',
@@ -1503,7 +1511,7 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'berserker_soul_t4',
       name: 'Berserker Soul',
-      description: 'Lower HP = more damage',
+      description: 'Feed on slaughter: each kill stacks damage and blood heals you — but you are frail. +40% dmg, 6% lifesteal, -20 HP',
       rarity: 'legendary',
       tier: ItemTier.Legendary,
       cost: 145,
@@ -1511,7 +1519,9 @@ export const ITEM_CATALOG: Item[] = [
       unlocked: true,
       tags: ['melee'],
       damageMultiplier: 1.4,
-      speedMultiplier: 1.3
+      killStackDamage: 0.045,
+      lifesteal: 0.06,
+      maxHealthBonus: -20
     },
     {
       id: 'elemental_mastery_t4',
@@ -1811,15 +1821,16 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'golden_vault_t3',
       name: 'Golden Vault',
-      description: '+18% interest, +25% gold',
+      description: 'The bank vault: heavy interest and luck compound your fortune. +18% interest, +25% luck, +20% gold',
       rarity: 'epic',
       tier: ItemTier.Rare,
       cost: 55,
       icon: '🏦',
       unlocked: true,
-      tags: ['economic'],
+      tags: ['economic', 'utility'],
       interestBonus: 0.18,
-      goldBonus: 1.25
+      luck: 0.25,
+      goldBonus: 1.2
     },
 
     // ==================== LUCK ITEMS (rarity / high-roll economy) ====================
@@ -1854,16 +1865,17 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'cosmic_dice_t4',
       name: 'Cosmic Dice',
-      description: '+80% luck, +40% gold & +10% crit chance (fortune\'s gambit)',
+      description: 'Reality rolls twice: a chance to fire a bonus volley the same frame. +80% luck, +40% gold, +10% crit',
       rarity: 'legendary',
       tier: ItemTier.Legendary,
-      cost: 95,
+      cost: 110,
       icon: '🎲',
       unlocked: true,
       tags: ['economic', 'utility'],
       luck: 0.80,
       goldBonus: 1.40,
-      critChance: 0.10
+      critChance: 0.10,
+      multicast: 0.25
     },
 
     // ============ UNIQUE IMPACTFUL ITEMS (build-defining, 2026-07-02) ============
@@ -2346,7 +2358,7 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'deadly_precision_t3',
       name: 'Deadly Precision',
-      description: '+15% crit, +60% crit dmg',
+      description: 'Surgical shots: piercing crits at the cost of fire rate. +15% crit, +60% crit dmg, pierce 3, -15% fire rate',
       rarity: 'epic',
       tier: ItemTier.Rare,
       cost: 68,
@@ -2354,7 +2366,9 @@ export const ITEM_CATALOG: Item[] = [
       unlocked: true,
       tags: ['ranged'],
       critChance: 0.15,
-      critDamageMultiplier: 1.6
+      critDamageMultiplier: 1.6,
+      piercing: 3,
+      fireRateMultiplier: 0.85
     },
     {
       id: 'executioners_mark_t4',
@@ -2743,56 +2757,60 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'compound_interest_t3',
       name: 'Compound Interest',
-      description: '+12% bank interest, +20% gold',
+      description: 'Wealth becomes firepower: damage scales with unspent gold on hand. +30% gold',
       rarity: 'epic',
       tier: ItemTier.Rare,
       cost: 55,
-      icon: '🏦',
+      icon: '📈',
       unlocked: true,
       tags: ['economic'],
-      interestBonus: 0.12,
-      goldBonus: 1.2
+      goldBonus: 1.3,
+      goldScaleDamage: 0.10
     },
     {
       id: 'treasure_map_t3',
       name: 'Treasure Map',
-      description: '+40% gold, +10% luck',
+      description: 'Chart the riches: big luck, gold and a wider pickup range. +30% gold, +35% luck, +50% pickup range',
       rarity: 'epic',
       tier: ItemTier.Rare,
       cost: 58,
       icon: '🗺️',
       unlocked: true,
-      tags: ['economic'],
-      goldBonus: 1.4,
-      luck: 0.1
+      tags: ['economic', 'utility'],
+      goldBonus: 1.3,
+      luck: 0.35,
+      xpMagnet: 1.5
     },
     {
       id: 'philosophers_stone_t4',
       name: "Philosopher's Stone",
-      description: '+60% gold, +15% interest, +15% luck',
+      description: 'Transmute wealth into life: heavy interest & luck, plus regeneration and lifesteal. +30% gold, +15% interest, +35% luck, +5 HP/s, 5% lifesteal',
       rarity: 'legendary',
       tier: ItemTier.Legendary,
       cost: 150,
       icon: '🔮',
       unlocked: true,
-      tags: ['economic'],
-      goldBonus: 1.6,
+      tags: ['economic', 'defensive'],
+      goldBonus: 1.3,
       interestBonus: 0.15,
-      luck: 0.15
+      luck: 0.35,
+      healthRegen: 5,
+      lifesteal: 0.05
     },
     {
       id: 'jackpot_t4',
       name: 'Jackpot',
-      description: '+25% luck, +40% gold, +10% crit',
+      description: 'Hit the jackpot: massive crits that burst on impact. +20% crit, 2.0x crit dmg, +30% luck',
       rarity: 'legendary',
       tier: ItemTier.Legendary,
       cost: 142,
       icon: '🎰',
       unlocked: true,
-      tags: ['economic', 'utility'],
-      luck: 0.25,
-      goldBonus: 1.4,
-      critChance: 0.1
+      tags: ['ranged', 'utility'],
+      critChance: 0.20,
+      critDamageMultiplier: 2.0,
+      explosionOnHit: true,
+      luck: 0.3
     },
 
     // ---- AUX-WEAPON deepeners (stack alongside the primary gun) ----

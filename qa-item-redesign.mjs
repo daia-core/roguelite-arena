@@ -50,7 +50,20 @@ const SPEC = {
   soul_collector_t3:{ xpMagnet: 1.5, lifesteal: 0.05 },
   berserker_rage_t4:{ damageMultiplier: 1.75, fireRateMultiplier: 1.15, maxHealthBonus: -25 },
   rapid_fire_t4:    { fireRateMultiplier: 1.70, multishot: 2, damageMultiplier: 0.85 },
-  cosmic_dice_t4:   { luck: 0.80, goldBonus: 1.40, critChance: 0.10 },
+  cosmic_dice_t4:   { luck: 0.80, goldBonus: 1.40, critChance: 0.10, multicast: 0.25 },
+  // --- Batch 2 (2026-07-04): the 6 remaining Legendary + 7 Rare pure-upside blands ---
+  immortal_t4:          { maxHealthBonus: 60, healthRegen: 6, lowHpPower: 0.5, burn: 0.3 },
+  gold_rush_t4:         { goldBonus: 1.8, goldScaleDamage: 0.15, luck: 0.1 },
+  berserker_soul_t4:    { damageMultiplier: 1.4, killStackDamage: 0.045, lifesteal: 0.06, maxHealthBonus: -20 },
+  philosophers_stone_t4:{ goldBonus: 1.3, interestBonus: 0.15, luck: 0.35, healthRegen: 5, lifesteal: 0.05 },
+  jackpot_t4:           { critChance: 0.20, critDamageMultiplier: 2.0, explosionOnHit: true, luck: 0.3 },
+  crit_synergy_t3:      { critChance: 0.15, critDamageMultiplier: 1.35, bleed: 0.4 },
+  guardian_aura_t3:     { maxHealthBonus: 50, armor: 8, thorns: 0.3, novaPulse: true, novaDamageMult: 0.55 },
+  merchants_ring_t3:    { goldBonus: 1.4, recycleBonus: 0.35, shopDiscount: 0.12 },
+  golden_vault_t3:      { interestBonus: 0.18, luck: 0.25, goldBonus: 1.2 },
+  deadly_precision_t3:  { critChance: 0.15, critDamageMultiplier: 1.6, piercing: 3, fireRateMultiplier: 0.85 },
+  compound_interest_t3: { goldBonus: 1.3, goldScaleDamage: 0.10 },
+  treasure_map_t3:      { goldBonus: 1.3, luck: 0.35, xpMagnet: 1.5 },
 };
 
 const result = await page.evaluate((SPEC) => {
@@ -83,7 +96,15 @@ const result = await page.evaluate((SPEC) => {
   // --- 2. BEHAVIORAL AGGREGATION: getters move as the trade-off dictates ---
   let __tn = 0;
   const ps = g.playerStats;
-  const clearItems = () => { for (const it of ps.items.filter(i => i.__test)) ps.removeItem(it.id); };
+  // Remove test items AND reset the transformation tracker to a fresh instance.
+  // Transformations key off a CUMULATIVE itemsPickedUp counter that removeItem()
+  // never decrements, so without this reset cross-check pickups eventually trip a
+  // tag transformation (e.g. FORTRESS +100 HP at 3 `defensive` items) and pollute
+  // per-item behavioral deltas. Each check must measure the item's own contribution.
+  const clearItems = () => {
+    for (const it of ps.items.filter(i => i.__test)) ps.removeItem(it.id);
+    ps.transformations = new ps.transformations.constructor();
+  };
   // Add a REAL catalog item (clone) through the API so aggregation runs on true data.
   const giveReal = (id) => {
     const item = DB.getItemById(id);
@@ -157,6 +178,93 @@ const result = await page.evaluate((SPEC) => {
     giveReal('attack_speed_t3');
     chk('attack_speed_t3: chainLightning +0.15', approx(ps.getChainLightningChance(), cl0 + 0.15));
   }
+  clearItems();
+
+  // ===== BATCH 2 behavioral checks (2026-07-04) =====
+  // Phoenix Feather: max HP +60, Last-Stand power aggregates, burn chance up.
+  clearItems();
+  h0 = ps.getMaxHealth(); let lhp0 = ps.getLowHpPower(), bn0 = ps.getBurnChance();
+  giveReal('immortal_t4');
+  chk('immortal_t4: getMaxHealth +60', ps.getMaxHealth() === h0 + 60);
+  chk('immortal_t4: getLowHpPower +0.5', approx(ps.getLowHpPower(), lhp0 + 0.5));
+  chk('immortal_t4: getBurnChance +0.3', approx(ps.getBurnChance(), bn0 + 0.3));
+
+  // Midas Touch: gold ×1.8, gold-scale-damage aggregates.
+  clearItems();
+  g0 = ps.getGoldBonus(); let gs0 = ps.getGoldScaleDamage();
+  giveReal('gold_rush_t4');
+  chk('gold_rush_t4: getGoldBonus ×1.8', approx(ps.getGoldBonus(), g0 * 1.8));
+  chk('gold_rush_t4: getGoldScaleDamage +0.15', approx(ps.getGoldScaleDamage(), gs0 + 0.15));
+
+  // Berserker Soul: max HP -20, kill-stack power aggregates, lifesteal +0.06.
+  clearItems();
+  h0 = ps.getMaxHealth(); let ks0 = ps.getKillStackDamage(); l0 = ps.getLifesteal();
+  giveReal('berserker_soul_t4');
+  chk('berserker_soul_t4: getMaxHealth -20', ps.getMaxHealth() === h0 - 20);
+  chk('berserker_soul_t4: getKillStackDamage +0.045', approx(ps.getKillStackDamage(), ks0 + 0.045));
+  chk('berserker_soul_t4: getLifesteal +0.06', approx(ps.getLifesteal(), l0 + 0.06));
+
+  // Cosmic Dice: multicast chance up (the new identity field).
+  clearItems();
+  let mc0 = ps.getMulticastChance();
+  giveReal('cosmic_dice_t4');
+  chk('cosmic_dice_t4: getMulticastChance +0.25', approx(ps.getMulticastChance(), mc0 + 0.25));
+
+  // Jackpot: crit +0.20, crit multiplier ×2.0.
+  clearItems();
+  c0 = ps.getCritChance(); let cm0 = ps.getCritMultiplier();
+  giveReal('jackpot_t4');
+  chk('jackpot_t4: getCritChance +0.20', approx(ps.getCritChance(), c0 + 0.20));
+  chk('jackpot_t4: getCritMultiplier ×2.0', approx(ps.getCritMultiplier(), cm0 * 2.0));
+
+  // Critical Synergy: crit +0.15, bleed chance up.
+  clearItems();
+  c0 = ps.getCritChance(); let bl0 = ps.getBleedChance();
+  giveReal('crit_synergy_t3');
+  chk('crit_synergy_t3: getCritChance +0.15', approx(ps.getCritChance(), c0 + 0.15));
+  chk('crit_synergy_t3: getBleedChance +0.4', approx(ps.getBleedChance(), bl0 + 0.4));
+
+  // Guardian Aura: max HP +50, thorns +0.3 (aura pulse handled by nova system).
+  clearItems();
+  h0 = ps.getMaxHealth(); let th0 = ps.getThorns();
+  giveReal('guardian_aura_t3');
+  chk('guardian_aura_t3: getMaxHealth +50', ps.getMaxHealth() === h0 + 50);
+  chk('guardian_aura_t3: getThorns +0.3', approx(ps.getThorns(), th0 + 0.3));
+
+  // Deadly Precision: piercing +3, fire rate falls.
+  clearItems();
+  let p0 = ps.getPiercing(); f0 = ps.getFireRate();
+  giveReal('deadly_precision_t3');
+  chk('deadly_precision_t3: getPiercing +3', ps.getPiercing() === p0 + 3);
+  chk('deadly_precision_t3: getFireRate should fall', ps.getFireRate() < f0);
+
+  // Compound Interest: gold-scale-damage aggregates (Rare hoard→dmg).
+  clearItems();
+  gs0 = ps.getGoldScaleDamage();
+  giveReal('compound_interest_t3');
+  chk('compound_interest_t3: getGoldScaleDamage +0.10', approx(ps.getGoldScaleDamage(), gs0 + 0.10));
+
+  // Treasure Map: luck +0.35, XP-magnet up.
+  clearItems();
+  lk0 = ps.getLuck(); let xm0 = ps.getXPMagnet();
+  giveReal('treasure_map_t3');
+  chk('treasure_map_t3: getLuck +0.35', approx(ps.getLuck(), lk0 + 0.35));
+  chk('treasure_map_t3: getXPMagnet should rise', ps.getXPMagnet() > xm0);
+
+  // Golden Vault: interest +0.18, luck +0.25.
+  clearItems();
+  let ib0 = ps.getInterestBonus(); lk0 = ps.getLuck();
+  giveReal('golden_vault_t3');
+  chk('golden_vault_t3: getInterestBonus +0.18', approx(ps.getInterestBonus(), ib0 + 0.18));
+  chk('golden_vault_t3: getLuck +0.25', approx(ps.getLuck(), lk0 + 0.25));
+
+  // Philosopher's Stone: luck +0.35, lifesteal +0.05, regen up.
+  clearItems();
+  lk0 = ps.getLuck(); l0 = ps.getLifesteal();
+  giveReal('philosophers_stone_t4');
+  chk("philosophers_stone_t4: getLuck +0.35", approx(ps.getLuck(), lk0 + 0.35));
+  chk("philosophers_stone_t4: getLifesteal +0.05", approx(ps.getLifesteal(), l0 + 0.05));
+
   clearItems();
 
   return { dataFails, behaviorFails, checked: Object.keys(SPEC).length };
