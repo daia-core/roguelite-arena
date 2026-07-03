@@ -17,12 +17,12 @@ Full-codebase review after the enemy-scaling + economy rebalance shipped today. 
 
 ## P1 — Balance-critical (the real holes)
 
-**1. Survivability stack is effectively uncapped → late-game immortality.**
-Combat damage is uncapped *by design* (enemies scale to meet it — that's the contract today's rebalance honoured). But two *defensive* stats that enemies do NOT scale against are also uncapped:
-- **Health regen** (`Game.ts:597`, `ItemSystem.ts` getHealthRegen) — ticks every frame with no ceiling. Stack enough and you out-heal most enemy DPS. This is the same class of bug as the gold runaway we just capped: a stat with no counter-pressure.
-- **Armor** (`Player.ts:241-244`) — `20/(20+armor)` diminishes but is unbounded; armor 200 = 91% reduction. No enemy has armor-pen.
+**1. Survivability stack is effectively uncapped → late-game immortality.** ✅ **FIXED (this run, commit `e8e91a3`, live).**
+Combat damage is uncapped *by design* (enemies scale to meet it). Two *defensive* stats that enemies do NOT scale against were also uncapped — both now capped:
+- **Health regen** (`Game.ts:597`) — was an uncapped per-frame tick. **Capped at 5% of max HP/sec** (scales with max HP so it stays relevant late). Still impactful; never enough to passively tank a scaled wave.
+- **Armor** (`Player.ts:241-244`) — `20/(20+armor)` was unbounded (armor 200 = 91%, 380 = 95%). **Multiplier floored at 0.10 → 90% mitigation cap.** Each point still matters up to the cap.
 
-Dodge (75%) and lifesteal (100%) are already capped. Regen and armor should get the same treatment the economy stats got. *This is the natural continuation of today's rebalance philosophy — but it changes difficulty/feel, so it's flagged for your call on exact numbers (my review earlier suggested also lowering DODGE_CAP to ~0.55–0.60 and making boss telegraphed AoE undodgeable).*
+Combat offense stays uncapped (enemies meet it); defense now has a ceiling, closing the last two counter-pressure-less runaways (same class as the gold/luck economy caps). Verified live in the production bundle. Dodge (75%) and lifesteal (100%) were already capped. *Remaining taste-dependent tweaks I did NOT take without a signal: lowering DODGE_CAP to ~0.55–0.60 and making boss telegraphed AoE undodgeable — those change feel more than they close a bug, so left for a play-feel call.*
 
 **2. Bosses are homogeneous.** 5 named bosses (Necrolord/Flamefiend/Voidbeast/Stormking/Ancientgolem) share one behaviour tree — the only per-boss difference is AoE cooldown timing at phase thresholds. No boss-unique mechanic (summon pattern, arena hazard, weak-point). First real check isn't until wave 10. This is where "depth" should live now that fodder is meant to melt.
 
