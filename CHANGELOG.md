@@ -8,6 +8,30 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-03 (night) — hit-stop "punch" on impactful kills
+
+- **Killing a boss or an elite now lands with a beat.** Added a hit-stop (freeze-frame): the game
+  briefly stops for a fraction of a second on a genuinely impactful kill so the moment reads as
+  weighty — the classic Brotato/Vampire-Survivors "punch." Boss kills get a meaty **120ms** stop
+  plus a white impact flash; elites/minibosses get a lighter **60ms** tap.
+- **Fodder kills are deliberately untouched.** The arena melts thousands of trash enemies per
+  second now that scaling is tuned, so a freeze on every kill would stutter the whole game
+  constantly. The stop fires *only* on bosses and minibosses — the kills that should feel like
+  events.
+- **Under the hood:** while the freeze window is active the gameplay simulation advances by `dt=0`
+  (everything holds — enemies, projectiles, the kill's particle burst) while the frame keeps
+  rendering, so the impact frame hangs. The timer drains on real time, is hard-capped at 130ms so
+  nothing can stall play unfairly, overlapping kills take the longer stop (never stack), and it
+  resets on run start.
+- Commit `1b55b67`. **Live-verified:** production `roguelite-game-blush.vercel.app` serving bundle
+  `index-DETIf3wt.js` (HTTP 200, no auth wall, hash matches local build, `hitPauseTimer` present in
+  the shipped bundle). QA: new `qa-hitstop.mjs` drives the real `handleEnemyKill` gating + the
+  genuine `update()` freeze/resume on a live enemy — **11/11 PASS, 0 console errors** (enemy moves
+  −3.6px on a normal frame, exactly 0 during the freeze, resumes after); `qa-roguelite` +
+  `qa-stat-caps` regression green.
+
+---
+
 ## 2026-07-03 (evening) — weapon evolution goes live (VS-style signature upgrades)
 
 - **Committed weapon builds now pay off with a signature evolution.** `EvolutionSystem` existed but

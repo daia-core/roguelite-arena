@@ -68,4 +68,10 @@ Combat offense stays uncapped (enemies meet it); defense now has a ceiling, clos
 2. **Cap regen + armor** (P1-1) — now measurable on the working sim. Taking this autonomously per Felix's "make your own calls" directive: ship sensible caps (regen ceiling, armor soft-cap) tuned on sim data, then QA. No longer gated on a number call.
 3. **Wire EvolutionSystem** (P2-3) — marquee depth. Taking autonomously (recommendation was "wire it").
 4. **Sprite projectiles + worms** (P3-6) — closes the pixel-art task, autonomous.
-5. Boss-unique mechanics, synergy telegraphing, hit-pause — depth/polish, batch as I go.
+5. Boss-unique mechanics, synergy telegraphing, ~~hit-pause~~ — depth/polish, batch as I go.
+   - ✅ **Hit-pause shipped** (2026-07-03 night, commit `1b55b67`, live). Gated to boss (120ms +
+     white flash) / miniboss (60ms) kills only — fodder untouched (a per-kill freeze would stutter a
+     thousand-trash/sec arena). Sim freezes at dt=0 while the frame renders; timer drains real-time,
+     capped 130ms, resets on run start. `qa-hitstop.mjs` 11/11 PASS (real handleEnemyKill gating +
+     genuine update() freeze/resume). **Remaining P3-6 (sprite projectiles + worms)** and **P1-2
+     (boss-unique mechanics)** are the next-highest depth pulls.
