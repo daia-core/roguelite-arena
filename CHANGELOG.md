@@ -26,6 +26,13 @@ Four changes from Felix's play feedback, all in one deploy:
   clear below it) and moved **Reroll + Auto-Buy onto one side-by-side row** so the cards keep their
   full height. Reads cleanly on phone portrait and desktop.
 
+**Commit** `e65c605`
+**Live verified** blush domain serves `index-C-Pwoqkd.js` (== the fresh build), HTTP 200, new JS
+asset 200; `qa-xp-coin-shop.mjs` 8/8 PASS on desktop + mobile against the freshly-built bundle
+(coins spawn on kill / gold not banked at the kill / coins bank on pickup / XP radius 6 / Auto-Buy
+buys + spends + stops when broke), 0 console errors; shop + gameplay screenshots reviewed at both
+viewports.
+
 ---
 
 ## 2026-07-03 (afternoon) — event reward cards, skippable artifacts, more artifacts & a mid-run gear menu
