@@ -8,6 +8,27 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-03 (evening) — orc sprite modernized (form-lit body + glowing inward eyes)
+
+- **New orc enemy sprite** — third sprite in the modern-technique pass, same silhouette-preserving
+  method as the player/skeleton (interior tones remapped cell-by-cell, hitbox unchanged):
+  - **Body** was a single flat mid-green with no form; it's now lit from the top-left — a warm
+    (toward-yellow) highlight on the head/shoulders and a cooler hue-shifted green shadow down the
+    right side and undersides, so the orc reads as a rounded, muscled body instead of a green blob.
+  - **Eyes** were two dull red smears under black slabs; they're now a matched **glowing pair** —
+    bright red with a hot amber core facing inward toward the face midline, so the two eyes read as
+    a menacing, alive stare rather than glancing the same way.
+  - **Axe** got a bright steel rim-highlight up its lit edge; the wooden handle/leather gained a warm
+    highlight on its lit-left cells (deep-brown shadow kept), so the weapon has form instead of one
+    flat brown block. Cream tusks kept their bright value.
+  - Proven visibly better via `qa-sprite-compare.mjs` before/after (`shots/sprite-compare/orc.png`),
+    iterated once to fix the eye-glow direction (centroid-based inward core).
+- QA: pixel-art, sprite-conversion round-trip, and gameplay/collision regression all green, 0 errors.
+- Commit `6b9cba0` → live build **`index-BBnDOY-2.js`** (verified: HTTP 200, live bundle == shipped
+  commit's build, no auth wall).
+
+---
+
 ## 2026-07-03 (evening) — stat numbers abbreviate cleanly (no scientific notation, no raw floats)
 
 - **Fixed the ugly stat readouts Felix screenshotted** — deep-run values like `6.82e+278` and
