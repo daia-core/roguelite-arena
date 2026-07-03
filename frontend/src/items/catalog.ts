@@ -110,38 +110,41 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'damage_t2',
       name: 'Steel Band',
-      description: '+15% damage',
+      description: '+45% melee/swing damage, -8% fire rate',
       rarity: 'rare',
       tier: ItemTier.Uncommon,
-      cost: 25,
+      cost: 26,
       icon: '💎',
       unlocked: true,
       tags: ['melee'],
-      damageMultiplier: 1.25
+      meleeDamageMult: 1.45,
+      fireRateMultiplier: 0.92
     },
     {
       id: 'attack_speed_t2',
       name: 'Rapid Gauntlets',
-      description: '+20% fire rate',
+      description: '+20% fire rate, +1 projectile',
       rarity: 'rare',
       tier: ItemTier.Uncommon,
-      cost: 25,
+      cost: 30,
       icon: '⚡',
       unlocked: true,
-      tags: ['melee', 'ranged'],
-      fireRateMultiplier: 1.2
+      tags: ['ranged'],
+      fireRateMultiplier: 1.2,
+      multishot: 1
     },
     {
       id: 'movement_speed_t2',
       name: 'Running Shoes',
-      description: '+20% move speed',
+      description: '+20% move speed, +10% dodge',
       rarity: 'rare',
       tier: ItemTier.Uncommon,
-      cost: 22,
+      cost: 26,
       icon: '👢',
       unlocked: true,
-      tags: ['utility'],
-      speedMultiplier: 1.2
+      tags: ['utility', 'defensive'],
+      speedMultiplier: 1.2,
+      dodge: 0.1
     },
     {
       id: 'max_hp_t2',
@@ -158,15 +161,15 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'crit_chance_t2',
       name: 'Precision Charm',
-      description: '+10% crit chance, +25% crit damage',
+      description: '+12% crit chance, +1 pierce',
       rarity: 'rare',
       tier: ItemTier.Uncommon,
       cost: 32,
       icon: '🎯',
       unlocked: true,
-      tags: ['melee', 'ranged'],
-      critChance: 0.1,
-      critDamageMultiplier: 1.25
+      tags: ['ranged'],
+      critChance: 0.12,
+      piercing: 1
     },
     {
       id: 'crit_damage_t2',
@@ -219,14 +222,15 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'armor_t2',
       name: 'Chain Mail',
-      description: '+5 armor',
+      description: '+5 armor, +1.5 HP/s',
       rarity: 'rare',
       tier: ItemTier.Uncommon,
-      cost: 35,
+      cost: 34,
       icon: '🛡️',
       unlocked: true,
       tags: ['defensive'],
-      armor: 5
+      armor: 5,
+      healthRegen: 1.5
     },
     {
       id: 'gold_bonus_t2',
@@ -1006,15 +1010,15 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'berserker_rage_t2',
       name: 'Berserker Rage',
-      description: '+30% dmg, +20% speed',
+      description: '+20% dmg; +35% dmg & fire rate while below 30% HP',
       rarity: 'rare',
       tier: ItemTier.Uncommon,
-      cost: 32,
+      cost: 34,
       icon: '😡',
       unlocked: true,
       tags: ['melee', 'utility'],
-      damageMultiplier: 1.3,
-      speedMultiplier: 1.2
+      damageMultiplier: 1.2,
+      lowHpPower: 0.35
     },
     {
       id: 'lucky_coin_t1',
@@ -1291,15 +1295,16 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'swift_blade_t2',
       name: 'Swift Blade',
-      description: '+30% speed, +15% fire rate',
+      description: '+20% speed, +10% fire rate, homing shots',
       rarity: 'rare',
       tier: ItemTier.Uncommon,
-      cost: 32,
+      cost: 34,
       icon: '⚡',
       unlocked: true,
-      tags: ['melee', 'utility'],
-      speedMultiplier: 1.3,
-      fireRateMultiplier: 1.15
+      tags: ['ranged', 'utility'],
+      speedMultiplier: 1.2,
+      fireRateMultiplier: 1.1,
+      homing: true
     },
 
     // Elemental combos
@@ -2345,15 +2350,16 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'bloodhound_t2',
       name: 'Bloodhound Sight',
-      description: '+12% crit, +20% crit dmg',
+      description: '+10% crit, +50% pickup range, +10% luck',
       rarity: 'rare',
       tier: ItemTier.Uncommon,
       cost: 34,
       icon: '👁️',
       unlocked: true,
-      tags: ['ranged'],
-      critChance: 0.12,
-      critDamageMultiplier: 1.2
+      tags: ['ranged', 'economic'],
+      critChance: 0.1,
+      xpMagnet: 1.5,
+      luck: 0.1
     },
     {
       id: 'deadly_precision_t3',

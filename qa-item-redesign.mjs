@@ -64,6 +64,16 @@ const SPEC = {
   deadly_precision_t3:  { critChance: 0.15, critDamageMultiplier: 1.6, piercing: 3, fireRateMultiplier: 0.85 },
   compound_interest_t3: { goldBonus: 1.3, goldScaleDamage: 0.10 },
   treasure_map_t3:      { goldBonus: 1.3, luck: 0.35, xpMagnet: 1.5 },
+  // --- Batch 3 (2026-07-04): the redundant Rare stat-stick duplicates → distinct
+  //     identities (kept one clean anchor per core stat; differentiated the rest). ---
+  damage_t2:         { meleeDamageMult: 1.45, fireRateMultiplier: 0.92 },
+  attack_speed_t2:   { fireRateMultiplier: 1.2, multishot: 1 },
+  movement_speed_t2: { speedMultiplier: 1.2, dodge: 0.1 },
+  crit_chance_t2:    { critChance: 0.12, piercing: 1 },
+  armor_t2:          { armor: 5, healthRegen: 1.5 },
+  berserker_rage_t2: { damageMultiplier: 1.2, lowHpPower: 0.35 },
+  swift_blade_t2:    { speedMultiplier: 1.2, fireRateMultiplier: 1.1, homing: true },
+  bloodhound_t2:     { critChance: 0.1, xpMagnet: 1.5, luck: 0.1 },
 };
 
 const result = await page.evaluate((SPEC) => {
@@ -264,6 +274,67 @@ const result = await page.evaluate((SPEC) => {
   giveReal('philosophers_stone_t4');
   chk("philosophers_stone_t4: getLuck +0.35", approx(ps.getLuck(), lk0 + 0.35));
   chk("philosophers_stone_t4: getLifesteal +0.05", approx(ps.getLifesteal(), l0 + 0.05));
+
+  clearItems();
+
+  // ===== BATCH 3 behavioral checks (2026-07-04) =====
+  // Steel Band: melee/swing damage up, fire rate down.
+  clearItems();
+  let md0 = ps.getMeleeDamageMult(); f0 = ps.getFireRate();
+  giveReal('damage_t2');
+  chk('damage_t2: getMeleeDamageMult should rise', ps.getMeleeDamageMult() > md0);
+  chk('damage_t2: getFireRate should fall', ps.getFireRate() < f0);
+
+  // Rapid Gauntlets: +1 multishot, fire rate up.
+  clearItems();
+  m0 = ps.getMultishot(); f0 = ps.getFireRate();
+  giveReal('attack_speed_t2');
+  chk('attack_speed_t2: getMultishot +1', ps.getMultishot() === m0 + 1);
+  chk('attack_speed_t2: getFireRate should rise', ps.getFireRate() > f0);
+
+  // Running Shoes: speed up, dodge up.
+  clearItems();
+  s0 = ps.getSpeed(); let dg0 = ps.getDodgeChance();
+  giveReal('movement_speed_t2');
+  chk('movement_speed_t2: getSpeed should rise', ps.getSpeed() > s0);
+  chk('movement_speed_t2: getDodgeChance +0.1', approx(ps.getDodgeChance(), dg0 + 0.1));
+
+  // Precision Charm: crit +0.12, pierce +1.
+  clearItems();
+  c0 = ps.getCritChance(); p0 = ps.getPiercing();
+  giveReal('crit_chance_t2');
+  chk('crit_chance_t2: getCritChance +0.12', approx(ps.getCritChance(), c0 + 0.12));
+  chk('crit_chance_t2: getPiercing +1', ps.getPiercing() === p0 + 1);
+
+  // Chain Mail: armor +5, regen up (endurance anchor).
+  clearItems();
+  let ar0 = ps.getArmor(), rg0 = ps.getHealthRegen();
+  giveReal('armor_t2');
+  chk('armor_t2: getArmor +5', ps.getArmor() === ar0 + 5);
+  chk('armor_t2: getHealthRegen should rise', ps.getHealthRegen() > rg0);
+
+  // Berserker Rage: damage up, low-HP power aggregates.
+  clearItems();
+  d0 = ps.getDamage(); lhp0 = ps.getLowHpPower();
+  giveReal('berserker_rage_t2');
+  chk('berserker_rage_t2: getDamage should rise', ps.getDamage() > d0);
+  chk('berserker_rage_t2: getLowHpPower +0.35', approx(ps.getLowHpPower(), lhp0 + 0.35));
+
+  // Swift Blade: speed up, fire rate up, homing enabled.
+  clearItems();
+  s0 = ps.getSpeed(); f0 = ps.getFireRate();
+  giveReal('swift_blade_t2');
+  chk('swift_blade_t2: getSpeed should rise', ps.getSpeed() > s0);
+  chk('swift_blade_t2: getFireRate should rise', ps.getFireRate() > f0);
+  if (typeof ps.hasHoming === 'function') chk('swift_blade_t2: hasHoming true', ps.hasHoming() === true);
+
+  // Bloodhound Sight: crit +0.1, luck +0.1, XP-magnet up.
+  clearItems();
+  c0 = ps.getCritChance(); lk0 = ps.getLuck(); xm0 = ps.getXPMagnet();
+  giveReal('bloodhound_t2');
+  chk('bloodhound_t2: getCritChance +0.1', approx(ps.getCritChance(), c0 + 0.1));
+  chk('bloodhound_t2: getLuck +0.1', approx(ps.getLuck(), lk0 + 0.1));
+  chk('bloodhound_t2: getXPMagnet should rise', ps.getXPMagnet() > xm0);
 
   clearItems();
 
