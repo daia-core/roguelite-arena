@@ -243,14 +243,14 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'reroll_discount_t2',
       name: 'Spyglass',
-      description: '-50% reroll cost',
+      description: '-25% reroll cost',
       rarity: 'rare',
       tier: ItemTier.Uncommon,
-      cost: 28,
+      cost: 40,
       icon: '🔭',
       unlocked: true,
       tags: ['economic', 'utility'],
-      rerollDiscount: 0.5
+      rerollDiscount: 0.25
     },
     {
       id: 'shop_discount_t2',
@@ -1379,7 +1379,7 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'merchants_ring_t3',
       name: 'Merchant\'s Ring',
-      description: '+50% gold, -20% prices',
+      description: '+50% gold, -10% prices',
       rarity: 'epic',
       tier: ItemTier.Rare,
       cost: 58,
@@ -1387,7 +1387,7 @@ export const ITEM_CATALOG: Item[] = [
       unlocked: true,
       tags: ['economic'],
       goldBonus: 1.5,
-      shopDiscount: 0.2
+      shopDiscount: 0.1
     },
     {
       id: 'experience_gem_t2',

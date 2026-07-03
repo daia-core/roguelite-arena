@@ -497,14 +497,18 @@ export class WaveManager {
    * unchanged (the early-game teaching curve) but COMPOUNDS from wave 8 on, so
    * depth actually bites: enemies get genuinely tanky and hit genuinely hard the
    * deeper you push, matching the exponential power a stacked build reaches.
-   *   wave 5  -> 1.6x   wave 8  -> 2.05x  wave 13 -> ~4.5x
-   *   wave 20 -> ~12x   wave 30 -> ~44x   wave 40 -> ~140x
+   *   wave 5  -> ~1.9x  wave 7  -> ~3.8x  wave 10 -> ~7.4x
+   *   wave 15 -> ~26x   wave 20 -> ~90x   wave 30 -> ~950x
    * A truly broken build will still shred trash (genre norm) — the depth curve
    * bites via enemy DAMAGE + density + tanky elites/bosses, not TTK on fodder.
+   * BALANCE 2026-07-03: player power was lapping the curve by ~wave 7 (owner hit
+   * 25M dmg / 927x crit / every stat maxed). Steepened the linear slope and moved
+   * the compound term to start at wave 4 so depth bites much sooner, honoring the
+   * "enemies scale to meet your combat output" contract that combat stays uncapped for.
    */
   static waveScale(wave: number): number {
-    const linear = 1 + (wave - 1) * 0.15;
-    const compound = Math.pow(1.1, Math.max(0, wave - 8));
+    const linear = 1 + (wave - 1) * 0.22;
+    const compound = Math.pow(1.18, Math.max(0, wave - 4));
     return linear * compound;
   }
 

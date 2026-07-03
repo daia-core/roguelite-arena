@@ -8,6 +8,35 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-03 (evening) — enemy scaling + economy rebalance, batch-1 enemy sprites hand-crafted
+
+- **Enemies scale far harder with depth** (Felix hit 25M damage / 927x crit / every stat maxed by
+  wave 7 while enemies were still trivial). `WaveManager.waveScale` linear slope 0.15→0.22/wave and
+  the compound term moved from `1.1^(wave-8)` to `1.18^(wave-4)`, so depth bites much sooner:
+  wave 7 enemies are now **~3.8x** (was ~1.9x), wave 10 ~8x, wave 15 ~25x, wave 20 ~73x. HP *and*
+  damage both scale, so deep waves stay threatening via enemy damage + density + tanky elites even
+  against a broken build (trash still shreds — genre norm). Combat stats stay uncapped by design;
+  the enemy curve is what honours that contract.
+- **Prices ramp harder so late buys are a real choice** — `getItemPrice` base slope +15%→+25%/wave
+  and compound from `1.12^(wave-6)` to `1.18^(wave-3)`: wave 7 shop items now ~5.3x cost (was ~2.7x),
+  scaling into hundreds/thousands deep. A full buy-out is no longer free once gold snowballs.
+- **Discount / income caps tightened so nothing maxes by wave 7:** shop-discount cap 50%→30%,
+  reroll-discount cap 90%→60% (near-free rerolls let you fish out every maxing item), gold-multiplier
+  cap ×10→×4, luck cap +200%→+100% (legendaries no longer flood the shop early).
+- **Two cheapest discount offenders weakened:** Spyglass 50%→25% reroll discount (cost 28→40);
+  Merchant's Ring 20%→10% shop discount.
+- **Batch-1 enemy sprites hand-crafted from scratch** (the 8 worst-reading greys/abstracts):
+  gargoyle (spread wings + pointed ears), golem (heavy shoulders/arms), construct, dasher, phaser,
+  spinner (brass shell + radial spikes), druid, cyclops — each drawn per SPRITE-STYLE.md (black
+  outline, top-left light, hue-shifted ramp, readable silhouette) over 2 render→look→fix cycles,
+  compared vs the old auto-enhanced versions, shipped only where clearly better.
+- QA: `qa-roguelite` (0 errors), `qa-stat-caps` (12/12 PASS — new gold=4 cap picked up),
+  `qa-sprite-conversion`/`qa-pixel-art`/`qa-new-enemies` all PASS, lifecycle invariant holds (no
+  dead-in-array over 120 frames). `tsc` clean.
+- **Live:** `index-BeJvcJwf.js` verified serving on production (HTTP 200, title correct).
+
+---
+
 ## 2026-07-03 (evening) — every artifact hand-crafted (dedicated glyphs, not reused item art)
 
 - **All 20 artifacts now have their own dedicated, hand-crafted 12×12 sprite** instead of borrowing an

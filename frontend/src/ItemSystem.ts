@@ -274,7 +274,7 @@ export class PlayerStats {
   // the quality-of-life & economy stats that enemies never scale against, because
   // past their useful maximum they only trivialise non-combat play (or, for recycle,
   // open an infinite-gold loop). Each is a single tunable constant.
-  static readonly GOLD_MULT_CAP = 10;     // ×10 total gold earned (=1000%)
+  static readonly GOLD_MULT_CAP = 4;      // ×4 total gold earned (=300%); was ×10, which let income lap the whole shop every wave
   static readonly XP_MAGNET_CAP = 10;     // ×10 pickup radius (base 95 → ~950px, ~full screen)
   static readonly RECYCLE_CAP = 3;        // +300% → recycle refunds at most 100% of item cost (break-even)
   static readonly DODGE_CAP = 0.75;       // 75% (already enforced; named here for the offer filter)
@@ -613,14 +613,14 @@ export class PlayerStats {
 
   // Brotato-inspired: Economic modifiers
   getRerollDiscount(): number {
-    return Math.min(0.9, this.ensureAgg().rerollDiscount); // Max 90% discount
+    return Math.min(0.6, this.ensureAgg().rerollDiscount); // Max 60% discount (was 90% — near-free rerolls let you fish out every maxing item)
   }
 
   getShopDiscount(): number {
     let discount = this.ensureAgg().shopDiscount;
     // TRANSFORMATION BONUS
     discount += this.transformations.getTotalBonuses().shopDiscount;
-    return Math.min(0.5, discount); // Max 50% discount
+    return Math.min(0.3, discount); // Max 30% discount (was 50% — combined with runaway gold it made the shop free)
   }
 
   getRecycleBonus(): number {
@@ -636,7 +636,7 @@ export class PlayerStats {
 
   // Luck: raises shop rarity weighting + health-orb drop chance (additive across items)
   getLuck(): number {
-    return Math.min(2.0, this.ensureAgg().luck); // cap +200% so a stacked luck build stays bounded
+    return Math.min(1.0, this.ensureAgg().luck); // cap +100% (was +200%) so legendaries don't flood the shop by wave 7
   }
 
   hasPiercing(): boolean {
@@ -832,14 +832,18 @@ export class PlayerStats {
     // buy-the-whole-shop formality. Linear alone (+15%/wave) stayed trivial
     // once gold income snowballs, so this compounds past wave 6 to mirror the
     // enemy/power curve — deep-wave items cost hundreds-to-thousands.
-    //   wave 6 -> 1.9x   wave 14 -> ~7.7x   wave 20 -> ~19x   wave 30 -> ~84x
+    //   wave 3 -> ~2.5x  wave 7 -> ~5.3x  wave 14 -> ~24x  wave 20 -> ~80x
+    // BALANCE 2026-07-03: income was out-earning the whole shop every wave by ~7,
+    // so every stat maxed early. Steeper base slope + compound from wave 3 makes
+    // late buys a real choice again (a full shop is no longer free).
     const basePrice = item.cost;
-    const linear = 1 + wave * 0.15;
-    const compound = Math.pow(1.12, Math.max(0, wave - 6));
+    const linear = 1 + wave * 0.25;
+    const compound = Math.pow(1.18, Math.max(0, wave - 3));
     let finalPrice = basePrice * linear * compound;
 
-    // Apply shop discount (items + meta, shared 50% cap)
-    const discount = Math.min(0.5, this.getShopDiscount() + this.metaShopDiscount);
+    // Apply shop discount (items + meta, shared 30% cap — was 50%, which combined
+    // with runaway gold made buy-out free).
+    const discount = Math.min(0.3, this.getShopDiscount() + this.metaShopDiscount);
     finalPrice *= (1 - discount);
 
     return Math.max(1, Math.floor(finalPrice));
