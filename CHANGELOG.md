@@ -37,7 +37,7 @@ artifact event captures + renders its card, Continue clears it, and Skip decline
 zero console errors. Regression: qa-roguelite, qa-shop-inputguard, qa-event-title, qa-node-map,
 qa-stacking-weapons, qa-magnet, qa-new-enemies all PASS.
 
-Commit: __PENDING__ · Live build: __PENDING__
+Commit: 5950f65 · Live build: `index-MWocolug.js` (verified live at roguelite-game-blush.vercel.app)
 
 ---
 
