@@ -52,6 +52,15 @@ export class WaveManager {
 
   static readonly BOSS_GRACE_SEC = 45;
 
+  /**
+   * Flat HP-only survivability multiplier applied to every regular spawned enemy
+   * (on top of the wave-scale HP). This makes fodder actually TANK a few hits so
+   * the flood reads as a swarm you carve through, not a field of one-frame pops —
+   * even against a broken build. It scales enemy HEALTH only, never damage, so a
+   * denser tankier arena doesn't also start one-shotting the player.
+   */
+  static readonly FLOOD_HP_MULT = 2.2;
+
   constructor() {}
 
   /**
@@ -108,8 +117,11 @@ export class WaveManager {
     // Density ramps with depth: linear early, then a compounding late-game term so
     // deep waves are a genuine swarm (released over the wave duration, so on-screen
     // concurrency stays bounded by how fast you clear).
-    const lateDensity = Math.floor(Math.pow(Math.max(0, waveNumber - 10), 1.8) * 0.5);
-    let baseCount = waveNumber === 1 ? 28 : 20 + waveNumber * 3 + lateDensity;
+    // Vampire-Survivors flood: much larger budgets so the arena stays packed. The
+    // late-game term compounds harder and the per-wave slope is steeper, so even
+    // mid waves feel like a horde rather than a trickle.
+    const lateDensity = Math.floor(Math.pow(Math.max(0, waveNumber - 10), 2.0) * 1.1);
+    let baseCount = waveNumber === 1 ? 45 : 40 + waveNumber * 7 + lateDensity;
 
     if (this.isBossWave) {
       this.totalEnemiesInWave = 18 + waveNumber * 2;
@@ -276,9 +288,12 @@ export class WaveManager {
       this.waveEnemiesRemaining -= spawned.length;
       this.phaseBudgetRemaining -= spawned.length;
 
+      // Flood pacing: spawn fast so the arena stays packed (Vampire-Survivors
+      // density). Formations arrive in quick succession rather than being spread
+      // thin across the whole wave — the wave clears by killing, not by waiting.
       let baseInterval = Math.min(
-        1.1,
-        Math.max(0.3, (this.waveDuration * 0.7 * spawned.length) / this.totalEnemiesInWave)
+        0.55,
+        Math.max(0.16, (this.waveDuration * 0.35 * spawned.length) / this.totalEnemiesInWave)
       );
       if (this.isHordeWave) baseInterval *= 0.6;
       this.spawnTimer = baseInterval;
@@ -348,7 +363,7 @@ export class WaveManager {
         return out;
       }
       case 'line': {
-        const n = Math.min(remaining, this.isHordeWave ? 6 : 4);
+        const n = Math.min(remaining, this.isHordeWave ? 10 : 7);
         const { x, y, inx, iny } = this.edgeAnchor(cw, ch);
         // Perpendicular spread so they arrive abreast.
         const px = -iny, py = inx;
@@ -360,7 +375,7 @@ export class WaveManager {
         return out;
       }
       case 'vee': {
-        const n = Math.min(remaining, 5);
+        const n = Math.min(remaining, 8);
         const { x, y, inx, iny } = this.edgeAnchor(cw, ch);
         const px = -iny, py = inx;
         const out: Enemy[] = [];
@@ -378,7 +393,7 @@ export class WaveManager {
         return out;
       }
       case 'ring': {
-        const n = Math.min(remaining, 6);
+        const n = Math.min(remaining, 9);
         const { x, y } = this.edgeAnchor(cw, ch);
         const out: Enemy[] = [];
         const r = 60;
@@ -390,7 +405,7 @@ export class WaveManager {
       }
       case 'pincer': {
         // Two groups from OPPOSITE edges to squeeze the player.
-        const n = Math.min(remaining, 6);
+        const n = Math.min(remaining, 10);
         const half = Math.ceil(n / 2);
         const out: Enemy[] = [];
         const edge = randomInt(0, 1); // 0 = left/right, 1 = top/bottom
@@ -408,7 +423,7 @@ export class WaveManager {
         return out;
       }
       case 'cluster': {
-        const n = Math.min(remaining, this.isHordeWave ? 6 : 4);
+        const n = Math.min(remaining, this.isHordeWave ? 10 : 7);
         const { x, y } = this.edgeAnchor(cw, ch);
         const out: Enemy[] = [];
         for (let i = 0; i < n; i++) {
@@ -420,7 +435,7 @@ export class WaveManager {
       }
       case 'scatter':
       default: {
-        const n = Math.min(remaining, this.isHordeWave ? 6 : 4);
+        const n = Math.min(remaining, this.isHordeWave ? 10 : 7);
         const out: Enemy[] = [];
         for (let i = 0; i < n; i++) {
           const { x, y } = this.edgeAnchor(cw, ch);
@@ -503,6 +518,12 @@ export class WaveManager {
     else if (this.waveModifier === 'reward') waveMultiplier *= 0.7;
 
     const enemy = new Enemy(x, y, type, waveMultiplier);
+
+    // Flood survivability: bump HP only (not damage) so enemies survive a few
+    // hits even against a snowballed build. maxHealth/health are re-synced.
+    enemy.typeData.health *= WaveManager.FLOOD_HP_MULT;
+    enemy.maxHealth = enemy.typeData.health;
+    enemy.health = enemy.maxHealth;
 
     if (this.waveModifier === 'speed') enemy.typeData.speed *= 1.5;
     if (this.waveModifier === 'horde') {

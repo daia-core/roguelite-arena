@@ -8,6 +8,35 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-03 (late morning) — flood the arena (vampire-survivors density) + tankier enemies
+
+Felix: *"I want the stage to be flooded with enemies (like vampire survivor), also give them more
+health so they don't die straight away even with broken builds."* Both delivered, HP-only so the
+game gets denser and chunkier without getting more punishing.
+
+**Player-visible:**
+- **The stage now floods.** Wave 1 spends **45** enemies (was 28); every later wave grows faster
+  (`40 + wave*7` + a steeper late-game density curve, was `20 + wave*3`). Formations spawn in far
+  bigger clumps (line/cluster/scatter up to 7–10 vs 4–6, ring 9, pincer 10, vee 8) and arrive
+  faster (spawn interval capped at 0.55s / floored at 0.16s, was 1.1s / 0.3s). On-screen swarm
+  measured at **~45 concurrent** on wave 1 — a real VS-style wall of enemies closing from all sides.
+- **Enemies tank hits.** A flat **2.2× HP** multiplier (`FLOOD_HP_MULT`) on top of the existing
+  wave scaling, so even a snowballed/broken build no longer one-shots the swarm off the screen —
+  wave-1 slime now 132 HP. **Damage is untouched** — enemies survive longer but don't hit harder,
+  so density goes up without difficulty spiking unfairly.
+
+**Under the hood:** all three density levers live in `WaveManager.ts` (`baseCount`, formation caps,
+`spawnTimer` interval). `FLOOD_HP_MULT` is applied in `makeEnemy` *after* `waveMultiplier`, re-syncing
+`maxHealth`/`health` — HP only, not damage/speed. No collision/entity/pool code touched.
+
+**Verified:** `qa-flood.mjs` (new, headless, real `g.update` loop, player damage neutralized so the
+swarm accumulates) — wave 1 **peak 45–46 concurrent alive**, min/max enemy HP 40–132 (2.2× applied),
+**0 console/page errors**. `qa-roguelite.mjs` PASS. Mobile screenshot (390×844, `shots/flood-mobile.png`)
+reviewed: dense swarm reads clearly, sprites distinct (no mush), HUD clean, nothing clipped.
+Commit `<pending>`; live-build hash verified after deploy (below).
+
+---
+
 ## 2026-07-03 (morning, hygiene) — commit the abbreviated floating damage numbers already live in index-DrFjavMF.js
 
 No new deploy — this locks the git source to what's *already* serving live. Earlier this morning
