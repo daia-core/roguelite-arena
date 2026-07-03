@@ -79,9 +79,24 @@ function resizeCanvas(): void {
   canvas.width = Math.round(viewport.width * zoomFactor);
   canvas.height = Math.round(viewport.height * zoomFactor);
 
-  // CSS scales down to viewport size (creates zoom-out effect)
-  canvas.style.width = '100%';
-  canvas.style.height = '100%';
+  // Size AND position the display box to the VISUAL viewport, in explicit px.
+  // Using `100%`/`100vh` sized the box to the *large* viewport (URL-bar-hidden
+  // height) while the internal buffer was built from the visualViewport (the
+  // actually-visible height). That mismatch stretched the frame vertically and
+  // pushed its top — where the HUD lives — up behind the browser URL/status bar,
+  // clipping it. Matching the box to the visual viewport (same aspect as the
+  // buffer) removes the stretch and keeps the HUD on-screen. offsetTop/Left
+  // handle pinch-zoom / on-screen-keyboard insets.
+  const vv = window.visualViewport;
+  if (vv) {
+    canvas.style.width = vv.width + 'px';
+    canvas.style.height = vv.height + 'px';
+    canvas.style.left = vv.offsetLeft + 'px';
+    canvas.style.top = vv.offsetTop + 'px';
+  } else {
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+  }
 
   // Let the game rebuild size-dependent structures (quadtrees, pathfinding grid)
   window.dispatchEvent(new Event('game-resize'));
@@ -90,6 +105,8 @@ function resizeCanvas(): void {
 window.addEventListener('resize', resizeCanvas);
 if (window.visualViewport) {
   window.visualViewport.addEventListener('resize', resizeCanvas);
+  // The URL bar sliding in/out fires 'scroll' (viewport offset/size change) too.
+  window.visualViewport.addEventListener('scroll', resizeCanvas);
 }
 resizeCanvas();
 

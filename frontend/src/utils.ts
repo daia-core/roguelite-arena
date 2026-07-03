@@ -1,5 +1,30 @@
 // Math and collision utilities
 
+// Abbreviate large numbers so they stay readable on-screen (515000000 -> "515M",
+// 1500 -> "1.5K"). Damage/gold scale exponentially late-game, so a raw value blows
+// past any text box. Uses K/M/B/T suffixes; one decimal only when it adds signal
+// (1.5K but 12K, not 12.0K), and never a decimal on the raw <1000 range.
+export function formatShort(n: number): string {
+  const neg = n < 0;
+  let v = Math.abs(Math.round(n));
+  if (v < 1000) return (neg ? '-' : '') + v.toString();
+  const units = [
+    { d: 1e12, s: 'T' },
+    { d: 1e9, s: 'B' },
+    { d: 1e6, s: 'M' },
+    { d: 1e3, s: 'K' },
+  ];
+  for (const u of units) {
+    if (v >= u.d) {
+      const scaled = v / u.d;
+      // One decimal for 1-9.9x (keeps precision where it matters), none for >=10x.
+      const str = scaled >= 10 ? Math.floor(scaled).toString() : (Math.floor(scaled * 10) / 10).toString();
+      return (neg ? '-' : '') + str + u.s;
+    }
+  }
+  return (neg ? '-' : '') + v.toString();
+}
+
 export interface Point {
   x: number;
   y: number;
@@ -39,6 +64,23 @@ export function circleCollision(a: Circle, b: Circle): boolean {
 // Point-circle collision detection
 export function pointInCircle(px: number, py: number, circle: Circle): boolean {
   return distance(px, py, circle.x, circle.y) < circle.radius;
+}
+
+// Swept collision: does the segment (ax,ay)->(bx,by) come within `radius` of the
+// circle at (cx,cy)? Used so fast projectiles can't tunnel PAST a small enemy in
+// one frame — we test the whole path travelled this step, not just the endpoint.
+export function segmentCircleHit(
+  ax: number, ay: number, bx: number, by: number,
+  cx: number, cy: number, radius: number
+): boolean {
+  const dx = bx - ax, dy = by - ay;
+  const lenSq = dx * dx + dy * dy;
+  // Degenerate (no movement): fall back to a point test at the endpoint.
+  let t = lenSq > 0 ? ((cx - ax) * dx + (cy - ay) * dy) / lenSq : 0;
+  t = t < 0 ? 0 : t > 1 ? 1 : t; // clamp to the segment
+  const closestX = ax + dx * t, closestY = ay + dy * t;
+  const ex = cx - closestX, ey = cy - closestY;
+  return ex * ex + ey * ey <= radius * radius;
 }
 
 // Clamp a value between min and max

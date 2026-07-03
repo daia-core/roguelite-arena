@@ -8,6 +8,61 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-03 (morning) — HUD viewport clip, late-game difficulty ramp, shop price scaling, village walk-away, projectile tunneling (live index-DDef9XaJ.js)
+
+Five things Felix hit while playing on his phone (wave 13+, a broken 2.3M-damage build).
+
+**1 — HUD clipped at the top of a browser tab.** *"HUD is still cut off at top of screen."* The
+earlier `env(safe-area-inset-top)` patch only covered a notched PWA; in a normal browser tab the
+URL bar is the culprit. Root cause: the canvas *buffer* was sized from `window.visualViewport`
+(the real visible area) but the *display box* was set to `100%`/`100vh` — which is the **large**
+viewport (URL-bar-hidden height). That mismatch stretched the frame vertically and pushed the top
+row (HUD) up behind the URL/status bar. **Fix:** size *and* position the canvas display box to
+`visualViewport` in explicit px (`width/height/offsetLeft/offsetTop`), with a `100%` fallback for
+browsers without `visualViewport`; also listen to visualViewport `scroll` (URL-bar slide fires
+scroll, not resize) so it re-fits as the bar shows/hides.
+
+**2 — Late-game had no bite (515M damage shredding everything).** Felix clarified 515M is a
+*legitimate* broken build — so **enemies** must scale to match, not the numbers get capped. Enemy
+HP+damage scaled flat-linearly (`1 + (wave-1)*0.15`); by wave 20+ that's trivial against an
+exponential build. **Fix:** `WaveManager.waveScale(wave)` = the same linear term **×** a compounding
+`1.1^(wave-8)` — identical early game, steepening from wave 8 (≈2.05× @ w8, 4.5× @ w13, 12× @ w20,
+44× @ w30). Applied to trash, boss, and miniboss (miniboss ×1.3 on top); added late-wave density
+(`floor((wave-10)^1.8 * 0.5)` extra spawns). A truly broken build will still melt fodder (genre
+norm) — depth now bites through enemy damage, density, and tanky elites, not fodder TTK.
+
+**3 — Shop was trivial to buy out.** *"At wave 14 I have thousands of gold but items are still
+15-100 gold each… I can just buy the entire shop."* Prices scaled flat-linear too. **Fix:**
+`getItemPrice` now multiplies the linear term by `1.12^(wave-6)` — flat early, compounding past
+wave 6 (a 25g base item is ~163g @ w13, ~488g @ w20, ~2087g @ w30), so gold stays a real choice.
+
+**4 — Couldn't walk away from a village building.** *"If I walk up to a house and then close and
+try to leave it opens again straight away."* On mobile, `touchstart` sets `mouseDown=true` **and**
+activates the joystick in the same touch — so the very touch you use to walk away re-counts as an
+"interact" tap while still in range, instantly reopening the panel. **Fix:** a `suppressId` latch —
+on close, remember which building was open and refuse to reopen it until the avatar actually leaves
+its reach (then re-arm). You can now close and walk off.
+
+**5 — Projectiles passing through enemies.** *"Projectiles seem to pass through enemies quite a
+lot, can you review hitboxes?"* Collision was a discrete point-circle test at the projectile's
+**post-move** position — a fast projectile (or any frame near the loop's 100ms dt cap) jumps clean
+past a small enemy in one step, testing only the spot *beyond* it. **Fix:** swept collision —
+`segmentCircleHit()` tests the whole path travelled this frame (pre-move → post-move) against each
+enemy's radius (+ projectile radius), for both player→enemy and enemy→player. No more tunneling; a
+genuine side-pass still correctly misses.
+
+**Commit:** `TBD` — built to `frontend/dist`, deployed to daiacore production, verified live.
+
+**Verification:** `npx tsc --noEmit` clean; `qa-node-map.mjs` PASS (every node type routes, all
+screens render, persistence round-trips). Balance probe on the shipped bundle: waveScale
+{8:2.05, 13:4.51, 20:12.08, 30:43.55}, price(base 25) {13:163, 20:488, 30:2087}. Village probe:
+panel opens on tap, closes, does **not** reopen while walking, suppress re-arms after leaving reach,
+0 errors. Tunneling probe: fast projectile whose endpoint lands *past* a small enemy — old endpoint
+test missed, swept test hits, side-pass correctly ignored, 0 console errors. **Live:**
+`https://roguelite-game-blush.vercel.app` serves `index-DDef9XaJ.js`, HTTP 200, no auth wall.
+
+---
+
 ## 2026-07-03 (early morning) — Standardized text boxes: descriptive copy never overflows or clips in portrait (live index-CAj25nIJ.js)
 
 **Felix's ask (B3):** *"Artifacts description also doesn't wrap. You need to standardize text boxes

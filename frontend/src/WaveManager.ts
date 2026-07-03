@@ -105,7 +105,11 @@ export class WaveManager {
       }
     }
 
-    let baseCount = waveNumber === 1 ? 28 : 20 + waveNumber * 3;
+    // Density ramps with depth: linear early, then a compounding late-game term so
+    // deep waves are a genuine swarm (released over the wave duration, so on-screen
+    // concurrency stays bounded by how fast you clear).
+    const lateDensity = Math.floor(Math.pow(Math.max(0, waveNumber - 10), 1.8) * 0.5);
+    let baseCount = waveNumber === 1 ? 28 : 20 + waveNumber * 3 + lateDensity;
 
     if (this.isBossWave) {
       this.totalEnemiesInWave = 18 + waveNumber * 2;
@@ -470,9 +474,28 @@ export class WaveManager {
     return this.chooseEnemyType();
   }
 
+  /**
+   * Enemy stat multiplier (HP + damage) for a given wave.
+   *
+   * The old curve was flat linear (+15%/wave), so wave 13 was only ~2.8x base —
+   * trivial once a build snowballs. This keeps the first several waves basically
+   * unchanged (the early-game teaching curve) but COMPOUNDS from wave 8 on, so
+   * depth actually bites: enemies get genuinely tanky and hit genuinely hard the
+   * deeper you push, matching the exponential power a stacked build reaches.
+   *   wave 5  -> 1.6x   wave 8  -> 2.05x  wave 13 -> ~4.5x
+   *   wave 20 -> ~12x   wave 30 -> ~44x   wave 40 -> ~140x
+   * A truly broken build will still shred trash (genre norm) — the depth curve
+   * bites via enemy DAMAGE + density + tanky elites/bosses, not TTK on fodder.
+   */
+  static waveScale(wave: number): number {
+    const linear = 1 + (wave - 1) * 0.15;
+    const compound = Math.pow(1.1, Math.max(0, wave - 8));
+    return linear * compound;
+  }
+
   /** Construct an enemy at a position with all wave-modifier scaling applied. */
   private makeEnemy(type: EnemyType, x: number, y: number, _poolOverride?: EnemyType[]): Enemy {
-    let waveMultiplier = 1 + (this.currentWave - 1) * 0.15;
+    let waveMultiplier = WaveManager.waveScale(this.currentWave);
     if (this.waveModifier === 'horde') waveMultiplier *= 0.5;
     else if (this.waveModifier === 'elite') waveMultiplier *= 2;
     else if (this.waveModifier === 'tank') waveMultiplier *= 2;
@@ -499,7 +522,7 @@ export class WaveManager {
   private spawnBoss(canvasWidth: number, _canvasHeight: number): Enemy {
     const x = canvasWidth / 2;
     const y = -40;
-    const waveMultiplier = 1 + (this.currentWave - 1) * 0.15;
+    const waveMultiplier = WaveManager.waveScale(this.currentWave);
 
     let bossType: EnemyType;
     if (this.currentWave === 10) bossType = 'boss_necrolord';
@@ -527,7 +550,7 @@ export class WaveManager {
   private spawnMiniboss(canvasWidth: number, _canvasHeight: number): Enemy {
     const x = canvasWidth / 2;
     const y = -40;
-    const waveMultiplier = 1 + (this.currentWave - 1) * 0.2;
+    const waveMultiplier = WaveManager.waveScale(this.currentWave) * 1.3;
 
     // A styled, oversized version of a strong regular enemy — bigger, tougher,
     // faster-hitting, and marked as a miniboss so it draws with a menacing tint

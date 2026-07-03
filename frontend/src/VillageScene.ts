@@ -125,6 +125,11 @@ export class VillageScene {
   // Interaction
   private openId: string | null = null; // building whose panel is open
   private nearId: string | null = null; // building/shrine currently in range
+  // After closing a panel the avatar is still standing in that building's reach,
+  // and on mobile the very touch used to walk away sets mouseDown — which would
+  // instantly re-open the same panel, trapping the player. Suppress re-opening
+  // THIS building until the avatar has physically left its reach once.
+  private suppressId: string | null = null;
 
   // Layout scratch reused by draw + update so hit-tests match visuals exactly.
   private buyRects: { id: string; rect: Rect }[] = [];
@@ -145,6 +150,7 @@ export class VillageScene {
       this.spawned = true;
     }
     this.openId = null;
+    this.suppressId = null;
   }
 
   private s(v: number): number {
@@ -266,6 +272,8 @@ export class VillageScene {
 
     // Nearest interactable (building or shrine) within reach of the avatar.
     this.nearId = this.findNearest();
+    // Re-arm the just-closed building only once the avatar walks out of its reach.
+    if (this.suppressId && this.nearId !== this.suppressId) this.suppressId = null;
 
     this.updateParticles(dt);
 
@@ -283,7 +291,7 @@ export class VillageScene {
     }
 
     // Walk-up interaction: tap opens the nearest building panel / embarks at Shrine.
-    if (input.mouseDown && this.nearId) {
+    if (input.mouseDown && this.nearId && this.nearId !== this.suppressId) {
       input.mouseDown = false;
       if (this.nearId === 'shrine') {
         this.d.onEmbark();
@@ -315,6 +323,7 @@ export class VillageScene {
     const mx = input.mouseX, my = input.mouseY;
     if (this.closeRect && this.pointIn(mx, my, this.closeRect)) {
       input.mouseDown = false;
+      this.suppressId = this.openId; // block instant re-open until we leave its reach
       this.openId = null;
       return;
     }

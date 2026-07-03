@@ -3281,8 +3281,15 @@ export class PlayerStats {
   getItemPrice(item: Item, wave: number): number {
     // BALANCE: Brotato-inspired pricing formula for tighter economy
     // Prices scale more aggressively to prevent player from getting rich
+    // Prices scale with wave so late-game buying is a real CHOICE, not a
+    // buy-the-whole-shop formality. Linear alone (+15%/wave) stayed trivial
+    // once gold income snowballs, so this compounds past wave 6 to mirror the
+    // enemy/power curve — deep-wave items cost hundreds-to-thousands.
+    //   wave 6 -> 1.9x   wave 14 -> ~7.7x   wave 20 -> ~19x   wave 30 -> ~84x
     const basePrice = item.cost;
-    let finalPrice = basePrice * (1 + wave * 0.15);
+    const linear = 1 + wave * 0.15;
+    const compound = Math.pow(1.12, Math.max(0, wave - 6));
+    let finalPrice = basePrice * linear * compound;
 
     // Apply shop discount (items + meta, shared 50% cap)
     const discount = Math.min(0.5, this.getShopDiscount() + this.metaShopDiscount);

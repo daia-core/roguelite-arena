@@ -11,7 +11,7 @@ import { SaveManager } from './SaveManager';
 import { Input } from './Input';
 import { Renderer } from './Renderer';
 import { AudioManager } from './AudioManager';
-import { pointInRect } from './utils';
+import { pointInRect, formatShort, segmentCircleHit } from './utils';
 import { HealthOrb, XPOrb } from './Pickup';
 import { OrbitingOrb, Bomb, Shockwave } from './Weapons';
 import { AoeZone } from './AoeZone';
@@ -932,6 +932,9 @@ export class Game {
         proj.vx = Math.cos(current + turn) * speed;
         proj.vy = Math.sin(current + turn) * speed;
       }
+      // Capture pre-move position so we can sweep the whole path this frame
+      // (fast projectiles + the loop's dt cap can otherwise tunnel past small enemies).
+      const px0 = proj.x, py0 = proj.y;
       proj.update(scaledDt, this.worldWidth, this.worldHeight);
 
       // Skip collision detection for projectiles that are already dead
@@ -945,7 +948,7 @@ export class Game {
           if (enemy.dead) continue; // Corpse still in this frame's quadtree — don't re-kill
           if (proj.hasHit(enemy.id)) continue; // Already hit (piercing)
 
-          if (enemy.collidesWith(proj.x, proj.y, proj.radius)) {
+          if (segmentCircleHit(px0, py0, proj.x, proj.y, enemy.x, enemy.y, enemy.typeData.radius + proj.radius)) {
             const isCrit = this.player.rollCrit();
             let damage = isCrit ? this.player.getCritDamage(proj.damage) : proj.damage;
             if (enemy.typeData.isBoss) {
@@ -1014,7 +1017,7 @@ export class Game {
         }
       } else {
         // Enemy projectile hits player
-        if (this.player.collidesWith(proj.x, proj.y, proj.radius)) {
+        if (segmentCircleHit(px0, py0, proj.x, proj.y, this.player.x, this.player.y, this.player.radius + proj.radius)) {
           const damaged = this.player.takeDamage(proj.damage);
           if (damaged) {
             this.applyThorns(proj.damage);
@@ -3173,6 +3176,11 @@ export class Game {
   // Reads the device's top safe-area inset (notch / status bar) in *canvas* pixels.
   // The HTML controls already respect env(safe-area-inset-*); the canvas HUD didn't,
   // so on a notched phone in portrait the top panels were drawn under the status bar.
+  //
+  // env(safe-area-inset-top) only reports a value with viewport-fit=cover (now set),
+  // and even then Android Chrome usually reports 0 for its status bar — so in portrait
+  // we also apply a minimum clearance band so the HUD never tucks under the status bar
+  // on a phone. Landscape/desktop keep the raw inset (no wasted vertical space).
   private safeAreaTop(zoom: number): number {
     if (!this.safeAreaProbe) {
       const el = document.createElement('div');
@@ -3183,7 +3191,10 @@ export class Game {
       this.safeAreaProbe = el;
     }
     const cssInset = this.safeAreaProbe.getBoundingClientRect().height; // display px
-    return Math.round(cssInset * zoom);
+    const isPortrait = this.canvas.width < this.canvas.height;
+    // ~status-bar height in display px; only reserved in portrait on a phone.
+    const portraitFloor = isPortrait ? 24 : 0;
+    return Math.round(Math.max(cssInset, portraitFloor) * zoom);
   }
 
   private drawHUD(): void {
@@ -3237,7 +3248,7 @@ export class Game {
     drawBar(barX, y + Math.round((iconS - barH) / 2), barW, barH, hpFrac,
       hpFrac > 0.6 ? '#4ade80' : hpFrac > 0.3 ? '#fbbf24' : '#ef4444', '#3c0000');
     this.renderer.drawText(
-      `${Math.ceil(this.player.health)}/${this.player.maxHealth}`,
+      `${formatShort(Math.ceil(this.player.health))}/${formatShort(this.player.maxHealth)}`,
       textX, y + Math.round(iconS / 2), { size: textS, baseline: 'middle', color: '#ffffff' }
     );
 
@@ -3253,7 +3264,7 @@ export class Game {
     y += rowH;
     const coin = UISprites.getIcon('coin');
     if (coin) ctx.drawImage(coin, x0, y, iconS, iconS);
-    this.renderer.drawText(`${this.player.gold}`, barX, y + Math.round(iconS / 2), {
+    this.renderer.drawText(`${formatShort(this.player.gold)}`, barX, y + Math.round(iconS / 2), {
       size: s(11), baseline: 'middle', color: '#ffd700'
     });
 
