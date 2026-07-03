@@ -1644,12 +1644,14 @@ export class Enemy {
     // pulsing shell with a countdown crack. Drawn here so they read distinctly.
     if (this.type === 'wormhead' || this.type === 'wormbody') {
       this.drawWormSegment(ctx);
+      this.drawStatusEffects(ctx);
       this.drawHealthBar(ctx);
       ctx.restore();
       return;
     }
     if (this.type === 'eggsac') {
       this.drawEggSac(ctx);
+      this.drawStatusEffects(ctx);
       this.drawHealthBar(ctx);
       ctx.restore();
       return;
@@ -1701,7 +1703,124 @@ export class Enemy {
       ctx.stroke();
     }
 
+    this.drawStatusEffects(ctx);
     this.drawHealthBar(ctx);
+
+    ctx.restore();
+  }
+
+  /** Additive pixel-art overlays for active status effects (frozen / burn / poison /
+   *  bleed / wound / doom). Purely visual — the DoTs themselves are ticked in Game.ts;
+   *  this just makes each status legible in the game's chunky fillRect pixel style so a
+   *  player can SEE what their build is applying. Kept to a few small pixels per status
+   *  for cheap per-enemy cost. */
+  private drawStatusEffects(ctx: CanvasRenderingContext2D): void {
+    // Fast reject when nothing is active (the common case).
+    if (
+      this.frozenTimer <= 0 && this.burnTimer <= 0 && this.poisonTimer <= 0 &&
+      this.bleedTimer <= 0 && this.doomTimer <= 0 && this.woundMult <= 1
+    ) return;
+
+    const r = this.typeData.radius;
+    const t = performance.now();
+    // Per-enemy phase offset so neighbours don't pulse in lockstep.
+    const seed = this.x * 0.7 + this.y * 1.3;
+
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+
+    // FROZEN — steady icy tint disc + static ice shards (the enemy is stopped).
+    if (this.frozenTimer > 0) {
+      ctx.globalAlpha = 0.32;
+      ctx.fillStyle = '#7fdfff';
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, r * 0.95, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = '#eaffff';
+      for (let i = 0; i < 3; i++) {
+        const a = seed + i * 2.1;
+        const sx = Math.floor(this.x + Math.cos(a) * r * 0.5);
+        const sy = Math.floor(this.y + Math.sin(a) * r * 0.5);
+        ctx.fillRect(sx - 1, sy - 4, 3, 8);
+        ctx.fillRect(sx - 3, sy - 1, 7, 3);
+      }
+    }
+
+    // BURN — flickering flame pixels rising off the top of the enemy.
+    if (this.burnTimer > 0) {
+      const flame = ['#ff3b00', '#ff8c1a', '#ffd23d'];
+      for (let i = 0; i < 5; i++) {
+        const ph = t / 260 + seed + i * 1.7;
+        const rise = ph % 1;
+        const fx = Math.floor(this.x + Math.sin(ph * 3 + i) * r * 0.5);
+        const fy = Math.floor(this.y - r * 0.4 - rise * r * 1.1);
+        const sz = 4 - Math.floor(rise * 2);
+        if (sz > 0) {
+          ctx.fillStyle = flame[i % 3];
+          ctx.fillRect(fx - (sz >> 1), fy - (sz >> 1), sz, sz);
+        }
+      }
+    }
+
+    // POISON — green bubbles drifting up; brighter/lime when it spreads on death.
+    if (this.poisonTimer > 0) {
+      ctx.fillStyle = this.poisonSpreads ? '#9be62b' : '#4fd44f';
+      for (let i = 0; i < 4; i++) {
+        const ph = t / 380 + seed * 1.4 + i * 2.3;
+        const rise = ph % 1;
+        const bx = Math.floor(this.x + Math.cos(ph * 2 + i) * r * 0.6);
+        const by = Math.floor(this.y - rise * r * 0.9);
+        const sz = 2 + (i % 2) * 2;
+        ctx.fillRect(bx - (sz >> 1), by - (sz >> 1), sz, sz);
+      }
+    }
+
+    // BLEED — red droplets dripping below the enemy.
+    if (this.bleedTimer > 0) {
+      ctx.fillStyle = '#d61f1f';
+      for (let i = 0; i < 3; i++) {
+        const ph = t / 300 + seed + i * 1.9;
+        const fall = ph % 1;
+        const dx = Math.floor(this.x + (i - 1) * r * 0.4);
+        const dy = Math.floor(this.y + r * 0.2 + fall * r * 0.9);
+        ctx.fillRect(dx - 1, dy - 2, 3, 5);
+        ctx.fillRect(dx, dy - 3, 1, 1);
+      }
+    }
+
+    // WOUND — a small chunky red "X" mark by the enemy (all DoTs amplified).
+    if (this.woundMult > 1) {
+      const mx = Math.floor(this.x + r * 0.7);
+      const my = Math.floor(this.y - r * 0.7);
+      ctx.fillStyle = '#ff5555';
+      ctx.fillRect(mx - 3, my - 3, 2, 2);
+      ctx.fillRect(mx + 1, my - 3, 2, 2);
+      ctx.fillRect(mx - 1, my - 1, 2, 2);
+      ctx.fillRect(mx - 3, my + 1, 2, 2);
+      ctx.fillRect(mx + 1, my + 1, 2, 2);
+    }
+
+    // DOOM — a purple rune glyph above the head that blinks FASTER and reddens as
+    // detonation nears; an ominous countdown for the stored-damage execute.
+    if (this.doomTimer > 0) {
+      const urgency = 1 - Math.min(1, this.doomTimer / 2.5);
+      const blink = 0.5 + 0.5 * Math.sin(t / (150 - urgency * 110));
+      const dcx = this.x;
+      const dcy = this.y - r - 8;
+      ctx.globalAlpha = 0.5 + 0.5 * blink;
+      ctx.fillStyle = urgency > 0.7 ? '#ff5cf0' : '#a83bff';
+      const px = 2;
+      const glyph = ['01110', '10101', '11111', '01010'];
+      for (let gy = 0; gy < glyph.length; gy++) {
+        for (let gx = 0; gx < glyph[gy].length; gx++) {
+          if (glyph[gy][gx] === '1') {
+            ctx.fillRect(Math.floor(dcx - 5 + gx * px), Math.floor(dcy - 4 + gy * px), px, px);
+          }
+        }
+      }
+      ctx.globalAlpha = 1;
+    }
 
     ctx.restore();
   }
