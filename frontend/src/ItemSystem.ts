@@ -259,15 +259,16 @@ export class ItemDatabase {
     },
     {
       id: 'crit_chance_t2',
-      name: 'Lucky Coin',
-      description: '+10% crit chance',
+      name: 'Precision Charm',
+      description: '+10% crit chance, +25% crit damage',
       rarity: 'rare',
       tier: ItemTier.Uncommon,
-      cost: 30,
+      cost: 32,
       icon: '🎯',
       unlocked: true,
       tags: ['melee', 'ranged'],
-      critChance: 0.1
+      critChance: 0.1,
+      critDamageMultiplier: 1.25
     },
     {
       id: 'crit_damage_t2',
@@ -790,14 +791,15 @@ export class ItemDatabase {
     {
       id: 'lucky_coin_t1',
       name: 'Lucky Coin',
-      description: '+10% crit chance',
+      description: '+7% crit chance, +8% luck',
       rarity: 'common',
       tier: ItemTier.Common,
       cost: 10,
       icon: '🪙',
       unlocked: true,
       tags: ['utility'],
-      critChance: 0.1
+      critChance: 0.07,
+      luck: 0.08
     },
     {
       id: 'explosive_rounds_t2',
@@ -814,15 +816,16 @@ export class ItemDatabase {
     },
     {
       id: 'toxic_touch_t2',
-      name: 'Toxic Touch',
-      description: 'Poison enemies on hit',
+      name: 'Envenomed Blade',
+      description: 'Poison on hit, +25% melee damage',
       rarity: 'rare',
       tier: ItemTier.Uncommon,
-      cost: 30,
+      cost: 34,
       icon: '☣️',
       unlocked: true,
-      tags: ['elemental'],
-      poison: true
+      tags: ['elemental', 'melee'],
+      poison: true,
+      meleeDamageMult: 1.25
     },
     {
       id: 'frozen_heart_t3',
@@ -863,15 +866,16 @@ export class ItemDatabase {
     },
     {
       id: 'triple_shot_t2',
-      name: 'Triple Shot',
-      description: '+2 projectiles',
+      name: 'Scattergun',
+      description: '+2 projectiles, strong knockback',
       rarity: 'rare',
       tier: ItemTier.Uncommon,
-      cost: 38,
+      cost: 40,
       icon: '🎯',
       unlocked: true,
       tags: ['ranged'],
-      multishot: 2
+      multishot: 2,
+      knockback: 200
     },
     {
       id: 'rapid_fire_t2',
@@ -911,27 +915,29 @@ export class ItemDatabase {
     },
     {
       id: 'dodge_master_t3',
-      name: 'Dodge Master',
-      description: '20% dodge chance',
+      name: 'Evasion Plating',
+      description: '15% dodge chance, +5 armor',
       rarity: 'epic',
       tier: ItemTier.Rare,
-      cost: 50,
+      cost: 52,
       icon: '👻',
       unlocked: true,
       tags: ['defensive', 'utility'],
-      dodge: 0.2
+      dodge: 0.15,
+      armor: 5
     },
     {
       id: 'homing_bullets_t3',
-      name: 'Homing Bullets',
-      description: 'Bullets track enemies',
+      name: 'Guided Rounds',
+      description: 'Bullets track enemies, +20% ranged dmg',
       rarity: 'epic',
       tier: ItemTier.Rare,
-      cost: 60,
+      cost: 64,
       icon: '🎯',
       unlocked: true,
       tags: ['ranged', 'utility'],
-      homing: true
+      homing: true,
+      rangedDamageMult: 1.2
     },
     {
       id: 'speed_demon_t2',
@@ -973,26 +979,28 @@ export class ItemDatabase {
     {
       id: 'bargain_hunter_t1',
       name: 'Bargain Hunter',
-      description: '-10% shop prices',
+      description: '-7% shop prices, -20% reroll cost',
       rarity: 'common',
       tier: ItemTier.Common,
       cost: 12,
       icon: '💰',
       unlocked: true,
       tags: ['economic'],
-      shopDiscount: 0.1
+      shopDiscount: 0.07,
+      rerollDiscount: 0.2
     },
     {
       id: 'recycler_t2',
-      name: 'Recycler',
-      description: '+50% recycle value',
+      name: 'Salvage Rig',
+      description: '+40% recycle value, -6% shop prices',
       rarity: 'rare',
       tier: ItemTier.Uncommon,
-      cost: 20,
+      cost: 22,
       icon: '♻️',
       unlocked: true,
       tags: ['economic'],
-      recycleBonus: 0.5
+      recycleBonus: 0.4,
+      shopDiscount: 0.06
     },
     {
       id: 'soul_collector_t3',
@@ -2028,7 +2036,7 @@ export class ItemDatabase {
     {
       id: 'cleaver_t2',
       name: 'Bone Cleaver',
-      description: '+35% melee dmg, +2 knockback',
+      description: '+35% melee dmg, knockback',
       rarity: 'rare',
       tier: ItemTier.Uncommon,
       cost: 32,
@@ -2036,7 +2044,7 @@ export class ItemDatabase {
       unlocked: true,
       tags: ['melee'],
       meleeDamageMult: 1.35,
-      knockback: 2
+      knockback: 250
     },
     {
       id: 'berserkers_axe_t2',
@@ -2410,27 +2418,27 @@ export class ItemDatabase {
     {
       id: 'shockwave_gloves_t2',
       name: 'Shockwave Gloves',
-      description: '+4 knockback, +10% melee dmg',
+      description: 'Massive knockback, +10% melee dmg',
       rarity: 'rare',
       tier: ItemTier.Uncommon,
       cost: 26,
       icon: '🧤',
       unlocked: true,
       tags: ['melee'],
-      knockback: 4,
+      knockback: 450,
       meleeDamageMult: 1.1
     },
     {
       id: 'cryo_repulsor_t3',
       name: 'Cryo Repulsor',
-      description: '+6 knockback, +15% freeze',
+      description: 'Strong knockback, +15% freeze',
       rarity: 'epic',
       tier: ItemTier.Rare,
       cost: 56,
       icon: '🌬️',
       unlocked: true,
       tags: ['defensive', 'elemental'],
-      knockback: 6,
+      knockback: 350,
       freeze: 0.15
     },
 
@@ -2467,14 +2475,15 @@ export class ItemDatabase {
     {
       id: 'bargain_bin_t1',
       name: 'Bargain Bin',
-      description: '+10% shop discount',
+      description: '-8% shop prices, +10% gold',
       rarity: 'common',
       tier: ItemTier.Common,
       cost: 14,
       icon: '🏷️',
       unlocked: true,
       tags: ['economic'],
-      shopDiscount: 0.1
+      shopDiscount: 0.08,
+      goldBonus: 1.1
     },
     {
       id: 'scavenger_t2',
