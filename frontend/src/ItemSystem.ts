@@ -1689,8 +1689,8 @@ export class ItemDatabase {
       elementalDamageMult: 1.2
     },
     {
-      id: 'leech_blade_t3',
-      name: 'Leech Blade',
+      id: 'sanguine_edge_t3',
+      name: 'Sanguine Edge',
       description: 'Heal 18% of melee dmg, +30% melee, -15 HP',
       rarity: 'epic',
       tier: ItemTier.Rare,
@@ -1869,6 +1869,761 @@ export class ItemDatabase {
       novaPulse: true,
       novaCooldownMult: 0.5,
       novaDamageMult: 1.7
+    },
+
+    // ==================== EXPANSION: 50+ UNIQUE BUILD-DEFINING ITEMS ====================
+    // Each item is a distinct trade-off, not a plain "+X% damage" — they deepen the
+    // ranged / melee / crit / elemental / tank / sustain / speed / economy / aux axes
+    // so the shop always offers a meaningful specialisation choice. Balanced by
+    // cost-per-power against the existing tiers (C ~6-14, U ~22-40, R ~48-84, L ~130-165).
+
+    // ---- RANGED / GUN specialists ----
+    {
+      id: 'hollow_point_t2',
+      name: 'Hollow Points',
+      description: '+35% ranged dmg, -10% fire rate',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 32,
+      icon: '🔩',
+      unlocked: true,
+      tags: ['ranged'],
+      rangedDamageMult: 1.35,
+      fireRateMultiplier: 0.9
+    },
+    {
+      id: 'full_auto_t2',
+      name: 'Full Auto',
+      description: '+40% fire rate, -15% ranged dmg',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 32,
+      icon: '🔫',
+      unlocked: true,
+      tags: ['ranged'],
+      fireRateMultiplier: 1.4,
+      rangedDamageMult: 0.85
+    },
+    {
+      id: 'armor_piercing_t3',
+      name: 'Armor-Piercing Rounds',
+      description: '+3 pierce, +20% ranged dmg',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 62,
+      icon: '🗜️',
+      unlocked: true,
+      tags: ['ranged'],
+      piercing: 3,
+      rangedDamageMult: 1.2
+    },
+    {
+      id: 'deadeye_t4',
+      name: 'Deadeye Module',
+      description: '+25% crit, +40% ranged dmg, -15% speed',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 148,
+      icon: '🎯',
+      unlocked: true,
+      tags: ['ranged'],
+      critChance: 0.25,
+      rangedDamageMult: 1.4,
+      speedMultiplier: 0.85
+    },
+    {
+      id: 'gatling_core_t4',
+      name: 'Gatling Core',
+      description: '+70% fire rate, -20% ranged dmg',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 150,
+      icon: '🌀',
+      unlocked: true,
+      tags: ['ranged'],
+      fireRateMultiplier: 1.7,
+      rangedDamageMult: 0.8
+    },
+    {
+      id: 'overclock_t3',
+      name: 'Overclock Chip',
+      description: '+50% fire rate, -20 max HP',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 64,
+      icon: '⏱️',
+      unlocked: true,
+      tags: ['ranged'],
+      fireRateMultiplier: 1.5,
+      maxHealthBonus: -20
+    },
+    {
+      id: 'heavy_ordnance_t3',
+      name: 'Heavy Ordnance',
+      description: '+60% dmg, -25% fire rate',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 66,
+      icon: '🚀',
+      unlocked: true,
+      tags: ['ranged'],
+      damageMultiplier: 1.6,
+      fireRateMultiplier: 0.75
+    },
+
+    // ---- MULTISHOT / bullet-count ----
+    {
+      id: 'split_shot_t2',
+      name: 'Split Shot',
+      description: '+1 projectile, -10% ranged dmg',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 36,
+      icon: '🔀',
+      unlocked: true,
+      tags: ['ranged'],
+      multishot: 1,
+      rangedDamageMult: 0.9
+    },
+    {
+      id: 'volley_t3',
+      name: 'Volley Rig',
+      description: '+2 projectiles, -15% ranged dmg',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 72,
+      icon: '🎇',
+      unlocked: true,
+      tags: ['ranged'],
+      multishot: 2,
+      rangedDamageMult: 0.85
+    },
+    {
+      id: 'hydra_rounds_t4',
+      name: 'Hydra Rounds',
+      description: '+4 projectiles, -25% ranged dmg',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 158,
+      icon: '🐉',
+      unlocked: true,
+      tags: ['ranged'],
+      multishot: 4,
+      rangedDamageMult: 0.75
+    },
+
+    // ---- MELEE specialists ----
+    {
+      id: 'whetstone_t1',
+      name: 'Whetstone',
+      description: '+20% melee dmg',
+      rarity: 'common',
+      tier: ItemTier.Common,
+      cost: 11,
+      icon: '🪨',
+      unlocked: true,
+      tags: ['melee'],
+      meleeDamageMult: 1.2
+    },
+    {
+      id: 'cleaver_t2',
+      name: 'Bone Cleaver',
+      description: '+35% melee dmg, +2 knockback',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 32,
+      icon: '🔪',
+      unlocked: true,
+      tags: ['melee'],
+      meleeDamageMult: 1.35,
+      knockback: 2
+    },
+    {
+      id: 'berserkers_axe_t2',
+      name: "Berserker's Axe",
+      description: '+50% melee dmg, -20 max HP',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 34,
+      icon: '🪓',
+      unlocked: true,
+      tags: ['melee'],
+      meleeDamageMult: 1.5,
+      maxHealthBonus: -20
+    },
+    {
+      id: 'executioner_t3',
+      name: "Executioner's Blade",
+      description: '+60% melee dmg, +40% crit dmg, -10% speed',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 70,
+      icon: '⚰️',
+      unlocked: true,
+      tags: ['melee'],
+      meleeDamageMult: 1.6,
+      critDamageMultiplier: 1.4,
+      speedMultiplier: 0.9
+    },
+    {
+      id: 'titans_gauntlet_t4',
+      name: "Titan's Gauntlet",
+      description: '+80% melee dmg, +40 HP, -15% speed',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 152,
+      icon: '🥊',
+      unlocked: true,
+      tags: ['melee', 'defensive'],
+      meleeDamageMult: 1.8,
+      maxHealthBonus: 40,
+      speedMultiplier: 0.85
+    },
+
+    // ---- CRIT specialists ----
+    {
+      id: 'keen_edge_t1',
+      name: 'Keen Edge',
+      description: '+8% crit chance',
+      rarity: 'common',
+      tier: ItemTier.Common,
+      cost: 12,
+      icon: '🔺',
+      unlocked: true,
+      tags: ['melee', 'ranged'],
+      critChance: 0.08
+    },
+    {
+      id: 'bloodhound_t2',
+      name: 'Bloodhound Sight',
+      description: '+12% crit, +20% crit dmg',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 34,
+      icon: '👁️',
+      unlocked: true,
+      tags: ['ranged'],
+      critChance: 0.12,
+      critDamageMultiplier: 1.2
+    },
+    {
+      id: 'deadly_precision_t3',
+      name: 'Deadly Precision',
+      description: '+15% crit, +60% crit dmg',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 68,
+      icon: '💠',
+      unlocked: true,
+      tags: ['ranged'],
+      critChance: 0.15,
+      critDamageMultiplier: 1.6
+    },
+    {
+      id: 'executioners_mark_t4',
+      name: "Executioner's Mark",
+      description: '+20% crit, +100% crit dmg, -30 HP',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 152,
+      icon: '💢',
+      unlocked: true,
+      tags: ['ranged'],
+      critChance: 0.2,
+      critDamageMultiplier: 2.0,
+      maxHealthBonus: -30
+    },
+
+    // ---- ELEMENTAL / on-hit specialists ----
+    {
+      id: 'ember_rounds_t2',
+      name: 'Ember Rounds',
+      description: 'Shots explode on hit, +10% elemental dmg',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 38,
+      icon: '🔥',
+      unlocked: true,
+      tags: ['elemental'],
+      explosionOnHit: true,
+      elementalDamageMult: 1.1
+    },
+    {
+      id: 'plague_bearer_t3',
+      name: 'Plague Bearer',
+      description: 'Hits poison enemies, +30% elemental dmg',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 62,
+      icon: '🧪',
+      unlocked: true,
+      tags: ['elemental'],
+      poison: true,
+      elementalDamageMult: 1.3
+    },
+    {
+      id: 'glacier_t3',
+      name: 'Glacier Shard',
+      description: '+25% freeze chance, +20% elemental dmg',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 64,
+      icon: '🧊',
+      unlocked: true,
+      tags: ['elemental'],
+      freeze: 0.25,
+      elementalDamageMult: 1.2
+    },
+    {
+      id: 'tesla_coil_t3',
+      name: 'Tesla Coil',
+      description: '+35% chain lightning, +15% elemental dmg',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 66,
+      icon: '🔌',
+      unlocked: true,
+      tags: ['elemental'],
+      chainLightning: 0.35,
+      elementalDamageMult: 1.15
+    },
+    {
+      id: 'wildfire_t4',
+      name: 'Wildfire',
+      description: 'Explode on hit, +60% elemental dmg, +10% fire rate',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 155,
+      icon: '🌋',
+      unlocked: true,
+      tags: ['elemental'],
+      explosionOnHit: true,
+      elementalDamageMult: 1.6,
+      fireRateMultiplier: 1.1
+    },
+    {
+      id: 'absolute_zero_t4',
+      name: 'Absolute Zero',
+      description: '+40% freeze, +40% elemental dmg',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 150,
+      icon: '❄️',
+      unlocked: true,
+      tags: ['elemental'],
+      freeze: 0.4,
+      elementalDamageMult: 1.4
+    },
+    {
+      id: 'chain_reactor_t4',
+      name: 'Chain Reactor',
+      description: '+50% chain lightning, +50% elemental dmg',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 155,
+      icon: '⚡',
+      unlocked: true,
+      tags: ['elemental'],
+      chainLightning: 0.5,
+      elementalDamageMult: 1.5
+    },
+
+    // ---- TANK / DEFENSIVE ----
+    {
+      id: 'kite_shield_t1',
+      name: 'Kite Shield',
+      description: '+3 armor',
+      rarity: 'common',
+      tier: ItemTier.Common,
+      cost: 12,
+      icon: '🛡️',
+      unlocked: true,
+      tags: ['defensive'],
+      armor: 3
+    },
+    {
+      id: 'stalwart_t2',
+      name: 'Stalwart Plate',
+      description: '+45 max HP, -5% speed',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 30,
+      icon: '🧱',
+      unlocked: true,
+      tags: ['defensive'],
+      maxHealthBonus: 45,
+      speedMultiplier: 0.95
+    },
+    {
+      id: 'bulwark_t2',
+      name: 'Bulwark',
+      description: '+7 armor, -5% speed',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 32,
+      icon: '🚧',
+      unlocked: true,
+      tags: ['defensive'],
+      armor: 7,
+      speedMultiplier: 0.95
+    },
+    {
+      id: 'spiked_shell_t3',
+      name: 'Spiked Shell',
+      description: '+8 armor, +30% thorns',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 60,
+      icon: '🦔',
+      unlocked: true,
+      tags: ['defensive'],
+      armor: 8,
+      thorns: 0.3
+    },
+    {
+      id: 'retaliation_t3',
+      name: 'Retaliation Core',
+      description: '+50% thorns, +4 armor',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 60,
+      icon: '💥',
+      unlocked: true,
+      tags: ['defensive'],
+      thorns: 0.5,
+      armor: 4
+    },
+    {
+      id: 'juggernaut_t4',
+      name: 'Juggernaut',
+      description: '+15 armor, +60 HP, -20% speed',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 155,
+      icon: '🏰',
+      unlocked: true,
+      tags: ['defensive'],
+      armor: 15,
+      maxHealthBonus: 60,
+      speedMultiplier: 0.8
+    },
+
+    // ---- LIFESTEAL / SUSTAIN ----
+    {
+      id: 'bloodletter_t2',
+      name: 'Bloodletter',
+      description: '+8% lifesteal, +10% dmg',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 34,
+      icon: '🩸',
+      unlocked: true,
+      tags: ['melee'],
+      lifesteal: 0.08,
+      damageMultiplier: 1.1
+    },
+    {
+      id: 'sanguine_pact_t3',
+      name: 'Sanguine Pact',
+      description: '+20% lifesteal, -25 max HP',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 68,
+      icon: '🧛',
+      unlocked: true,
+      tags: ['melee'],
+      lifesteal: 0.2,
+      maxHealthBonus: -25
+    },
+    {
+      id: 'phoenix_heart_t4',
+      name: 'Phoenix Heart',
+      description: '+8 HP/s regen, +50 HP, +10% lifesteal',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 152,
+      icon: '🔆',
+      unlocked: true,
+      tags: ['defensive'],
+      healthRegen: 8,
+      maxHealthBonus: 50,
+      lifesteal: 0.1
+    },
+
+    // ---- SPEED / DODGE / EVASION ----
+    {
+      id: 'windwalker_t2',
+      name: 'Windwalker Boots',
+      description: '+30% speed, +8% dodge',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 32,
+      icon: '🍃',
+      unlocked: true,
+      tags: ['utility', 'defensive'],
+      speedMultiplier: 1.3,
+      dodge: 0.08
+    },
+    {
+      id: 'momentum_t2',
+      name: 'Momentum Engine',
+      description: '+25% speed, +10% fire rate, -10 HP',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 30,
+      icon: '💨',
+      unlocked: true,
+      tags: ['utility'],
+      speedMultiplier: 1.25,
+      fireRateMultiplier: 1.1,
+      maxHealthBonus: -10
+    },
+    {
+      id: 'phantom_cloak_t3',
+      name: 'Phantom Cloak',
+      description: '+20% dodge, +10% speed',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 62,
+      icon: '🌫️',
+      unlocked: true,
+      tags: ['defensive'],
+      dodge: 0.2,
+      speedMultiplier: 1.1
+    },
+    {
+      id: 'blink_boots_t4',
+      name: 'Blink Boots',
+      description: '+25% dodge, +30% speed, -20 HP',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 145,
+      icon: '👟',
+      unlocked: true,
+      tags: ['defensive', 'utility'],
+      dodge: 0.25,
+      speedMultiplier: 1.3,
+      maxHealthBonus: -20
+    },
+
+    // ---- CROWD CONTROL ----
+    {
+      id: 'shockwave_gloves_t2',
+      name: 'Shockwave Gloves',
+      description: '+4 knockback, +10% melee dmg',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 26,
+      icon: '🧤',
+      unlocked: true,
+      tags: ['melee'],
+      knockback: 4,
+      meleeDamageMult: 1.1
+    },
+    {
+      id: 'cryo_repulsor_t3',
+      name: 'Cryo Repulsor',
+      description: '+6 knockback, +15% freeze',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 56,
+      icon: '🌬️',
+      unlocked: true,
+      tags: ['defensive', 'elemental'],
+      knockback: 6,
+      freeze: 0.15
+    },
+
+    // ---- HYBRID / high-risk ----
+    {
+      id: 'berserkers_pact_t3',
+      name: "Berserker's Pact",
+      description: '+50% dmg, +20% speed, -5 armor',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 68,
+      icon: '😤',
+      unlocked: true,
+      tags: ['melee'],
+      damageMultiplier: 1.5,
+      speedMultiplier: 1.2,
+      armor: -5
+    },
+    {
+      id: 'lucky_strike_t2',
+      name: 'Lucky Strike',
+      description: '+10% crit, +10% luck',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 30,
+      icon: '🍀',
+      unlocked: true,
+      tags: ['utility'],
+      critChance: 0.1,
+      luck: 0.1
+    },
+
+    // ---- ECONOMY / META ----
+    {
+      id: 'bargain_bin_t1',
+      name: 'Bargain Bin',
+      description: '+10% shop discount',
+      rarity: 'common',
+      tier: ItemTier.Common,
+      cost: 14,
+      icon: '🏷️',
+      unlocked: true,
+      tags: ['economic'],
+      shopDiscount: 0.1
+    },
+    {
+      id: 'scavenger_t2',
+      name: 'Scavenger Kit',
+      description: '+50% recycle value, +15% gold',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 24,
+      icon: '🧰',
+      unlocked: true,
+      tags: ['economic'],
+      recycleBonus: 0.5,
+      goldBonus: 1.15
+    },
+    {
+      id: 'merchant_scale_t2',
+      name: "Merchant's Scale",
+      description: '+30% gold, +8% shop discount',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 26,
+      icon: '⚖️',
+      unlocked: true,
+      tags: ['economic'],
+      goldBonus: 1.3,
+      shopDiscount: 0.08
+    },
+    {
+      id: 'compound_interest_t3',
+      name: 'Compound Interest',
+      description: '+12% bank interest, +20% gold',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 55,
+      icon: '🏦',
+      unlocked: true,
+      tags: ['economic'],
+      interestBonus: 0.12,
+      goldBonus: 1.2
+    },
+    {
+      id: 'treasure_map_t3',
+      name: 'Treasure Map',
+      description: '+40% gold, +10% luck',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 58,
+      icon: '🗺️',
+      unlocked: true,
+      tags: ['economic'],
+      goldBonus: 1.4,
+      luck: 0.1
+    },
+    {
+      id: 'philosophers_stone_t4',
+      name: "Philosopher's Stone",
+      description: '+60% gold, +15% interest, +15% luck',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 150,
+      icon: '🔮',
+      unlocked: true,
+      tags: ['economic'],
+      goldBonus: 1.6,
+      interestBonus: 0.15,
+      luck: 0.15
+    },
+    {
+      id: 'jackpot_t4',
+      name: 'Jackpot',
+      description: '+25% luck, +40% gold, +10% crit',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 142,
+      icon: '🎰',
+      unlocked: true,
+      tags: ['economic', 'utility'],
+      luck: 0.25,
+      goldBonus: 1.4,
+      critChance: 0.1
+    },
+
+    // ---- AUX-WEAPON deepeners (stack alongside the primary gun) ----
+    {
+      id: 'satellite_t2',
+      name: 'Satellite',
+      description: '+1 orbiting orb, orbs hit +20% harder',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 38,
+      icon: '🛰️',
+      unlocked: true,
+      tags: ['utility', 'elemental'],
+      orbitOrbs: 1,
+      orbitDamageMult: 1.2
+    },
+    {
+      id: 'dervish_t3',
+      name: 'Dervish Charm',
+      description: 'Whirling blades +40% dmg, +10% speed',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 70,
+      icon: '🌀',
+      unlocked: true,
+      tags: ['melee'],
+      auxMelee: true,
+      auxMeleeDamageMult: 1.4,
+      speedMultiplier: 1.1
+    },
+    {
+      id: 'detonator_t3',
+      name: 'Detonator',
+      description: 'Drop bombs, blasts hit +50% harder',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 68,
+      icon: '💥',
+      unlocked: true,
+      tags: ['elemental'],
+      bombDrop: true,
+      bombDamageMult: 1.5
+    },
+    {
+      id: 'shockwave_amp_t3',
+      name: 'Shockwave Amplifier',
+      description: 'Pulse novas that hit +40% harder',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 66,
+      icon: '📡',
+      unlocked: true,
+      tags: ['elemental'],
+      novaPulse: true,
+      novaDamageMult: 1.4
+    },
+    {
+      id: 'war_machine_t4',
+      name: 'War Machine',
+      description: 'Whirling blades + an orbiting orb + pulsing novas, all at once',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 165,
+      icon: '🤖',
+      unlocked: true,
+      tags: ['melee', 'elemental'],
+      auxMelee: true,
+      orbitOrbs: 1,
+      novaPulse: true
     }
   ];
 
@@ -2227,7 +2982,10 @@ export class PlayerStats {
     });
     // DUO COMBO BONUS
     lifesteal += this.duos.getTotalBonuses().lifesteal;
-    return lifesteal;
+    // Cap at 100% — a dedicated vampire build can fully convert damage to healing,
+    // but overheal beyond that is wasted (heal() clamps to maxHP anyway) and an
+    // uncapped value made a heavy-lifesteal build trivially unkillable.
+    return Math.min(1, lifesteal);
   }
 
   getThorns(): number {
