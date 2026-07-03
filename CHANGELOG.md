@@ -31,7 +31,8 @@ Live: https://roguelite-game-blush.vercel.app
 - QA: `qa-new-enemies` PASS (lifecycle invariant holds over 120 frames), `qa-sprite-conversion`
   PASS (0 console errors), `tsc` clean, `vite build` clean. spriteData rebuilt 41 → **42 sprites**
   (bombardier added; both new sprites confirmed present, overriding legacy).
-- **Live:** verified serving on production (HTTP 200) — sha below.
+- **Live:** commit `48ff16c`, bundle `index-D9i-9N3k.js` verified serving on production
+  (roguelite-game-blush.vercel.app, HTTP 200, no auth wall) via CLI deploy.
 
 ---
 
