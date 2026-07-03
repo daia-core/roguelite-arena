@@ -22,6 +22,12 @@ export class Input {
   mouseY: number = 0;
   mouseDown: boolean = false;
 
+  // When true, the press currently held is ignored until it is released once.
+  // Set on a screen transition so a finger/button that was ALREADY down (e.g.
+  // holding to move when a wave ends and the shop opens) can't register as a
+  // click — a fresh touchdown is required. Cleared on the next release.
+  private pressDisarmed: boolean = false;
+
   // Touch joystick
   joystick: TouchJoystick = {
     active: false,
@@ -85,11 +91,13 @@ export class Input {
     });
 
     this.canvas.addEventListener('mousedown', () => {
+      if (this.pressDisarmed) return; // held-over press: wait for a release first
       this.mouseDown = true;
     });
 
     this.canvas.addEventListener('mouseup', () => {
       this.mouseDown = false;
+      this.pressDisarmed = false; // release seen → next press is a fresh click
     });
 
     // Touch for joystick and UI
@@ -104,7 +112,7 @@ export class Input {
         // Update mouse position for shop/UI interactions
         this.mouseX = x;
         this.mouseY = y;
-        this.mouseDown = true;
+        if (!this.pressDisarmed) this.mouseDown = true; // ignore a held-over touch
 
         // Anywhere on screen activates joystick (ONLY during gameplay, not in shop/menu/gameover)
         const gameState = this.gameStateGetter ? this.gameStateGetter() : 'menu';
@@ -164,6 +172,7 @@ export class Input {
     this.canvas.addEventListener('touchend', (e) => {
       e.preventDefault();
       this.mouseDown = false;
+      this.pressDisarmed = false; // release seen → next touch is a fresh tap
       for (let i = 0; i < e.changedTouches.length; i++) {
         const touch = e.changedTouches[i];
         if (touch.identifier === this.joystick.identifier) {
@@ -193,6 +202,14 @@ export class Input {
         this.blastPressed = true;
       });
     }
+  }
+
+  // Drop the currently-held press and require a fresh touchdown before the next
+  // click registers. Called on screen transitions so a held finger can't carry a
+  // click into the new screen (e.g. holding to move → wave ends → shop insta-buy).
+  disarmUntilRelease(): void {
+    this.mouseDown = false;
+    this.pressDisarmed = true;
   }
 
   isKeyDown(key: string): boolean {

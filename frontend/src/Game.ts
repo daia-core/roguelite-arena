@@ -52,6 +52,9 @@ export class Game {
   private safeAreaProbe: HTMLElement | null = null;
 
   state: GameState = 'menu';
+  // Tracks the state seen on the previous update tick, to detect screen changes
+  // (used to disarm a held press so it can't carry a click into the new screen).
+  private lastUpdateState: GameState = 'menu';
 
   // Game entities
   player: Player | null = null;
@@ -503,6 +506,14 @@ export class Game {
 
     // GAME FEEL: Update screen effects
     this.screenEffects.update(dt);
+
+    // On any screen change, disarm a held press so a finger/button that was
+    // already down (e.g. holding to move when a wave ends → shop) can't register
+    // as a click in the new screen. A fresh touchdown is then required.
+    if (this.state !== this.lastUpdateState) {
+      this.input.disarmUntilRelease();
+      this.lastUpdateState = this.state;
+    }
 
     switch (this.state) {
       case 'menu':
@@ -2092,37 +2103,77 @@ export class Game {
     const isMobile = cssW < 800;
     const s = (v: number) => Math.round(v * zoom);
 
-    const itemWidth = isPortrait
-      ? s(Math.min(300, cssW - 32))
-      : isMobile
-        ? s(Math.min(360, cssW - 60))
-        : s(200);
-    const itemHeight = isPortrait ? s(92) : isMobile ? s(100) : s(150);
-    const gap = s(isPortrait ? 8 : 12);
+    const SLOTS = 6;
+    // Column count is driven by width, NOT the mobile flag: a wide LANDSCAPE phone
+    // uses the 3-wide grid (a 6-tall single column can't fit its short height), only
+    // a narrow PORTRAIT screen stacks in one column.
+    const cols = isPortrait ? 1 : 3;
+    const rows = Math.ceil(SLOTS / cols);
 
-    let startX: number;
-    let startY: number;
-    if (isMobile) {
-      startX = Math.round((this.canvas.width - itemWidth) / 2);
-      startY = s(isPortrait ? 118 : 96);
-    } else {
-      startX = Math.round(this.canvas.width / 2 - (itemWidth * 3 + gap * 2) / 2);
-      startY = s(120);
-    }
+    const gapCss = isPortrait ? 8 : 12;
+    const gap = s(gapCss);
+
+    // --- Horizontal fit ---
+    // Only true desktop (non-portrait, non-mobile) draws the stats panel as a LEFT
+    // column and the inventory as a RIGHT column, so a multi-column grid must sit in
+    // the gutter BETWEEN them. Portrait and mobile-landscape put stats as a
+    // full-width strip on TOP, so the grid can use the full width (it just starts
+    // below the strip via gridTop). Reserving these gutters is the fix for the
+    // leftmost card colliding with the side panel on narrower desktop windows.
+    const sidePanels = !isPortrait && !isMobile;
+    const leftGutterCss = sidePanels ? 242 : 16;   // clears stats panel (x10 + w220 + margin)
+    const rightGutterCss = sidePanels ? 240 : 16;  // clears inventory panel (~230 wide + margin)
+    const gridRegionWCss = Math.max(60, cssW - leftGutterCss - rightGutterCss);
+    const preferredItemWidthCss = isPortrait
+      ? Math.min(300, cssW - 32)
+      : isMobile ? Math.min(360, cssW - 60) : 200;
+    const itemWidthCss = Math.min(
+      preferredItemWidthCss,
+      (gridRegionWCss - (cols - 1) * gapCss) / cols
+    );
+    const itemWidth = s(itemWidthCss);
+    const rowWidthCss = cols * itemWidthCss + (cols - 1) * gapCss;
+    // Centre the grid inside its region (full width in portrait/mobile).
+    const startXCss = leftGutterCss + (gridRegionWCss - rowWidthCss) / 2;
+
+    // --- Vertical budget: reserve fixed bands for the header and the button row,
+    // then FIT the card rows into what's left. This is the core overlap fix: cards
+    // can never grow into the buttons because the button band is subtracted first. ---
+    const buttonHeightCss = isMobile ? 48 : 44;
+    const buttonSpacingCss = 10;
+    const bottomMarginCss = 14;
+    const gridToButtonGapCss = 12; // guaranteed clear space between last row and buttons
+    const buttonBandCss =
+      buttonHeightCss * 2 + buttonSpacingCss + bottomMarginCss + gridToButtonGapCss;
+
+    // Top of the card grid, below the title/gold/stats header.
+    const gridTopCss = isMobile ? 110 : 120;
+
+    const preferredItemHeightCss = isPortrait ? 92 : isMobile ? 100 : 150;
+    const minItemHeightCss = isMobile ? 34 : 70;
+    const availForItemsCss = cssH - gridTopCss - buttonBandCss;
+    const fittedItemHeightCss = (availForItemsCss - (rows - 1) * gapCss) / rows;
+    const itemHeightCss = Math.max(
+      minItemHeightCss,
+      Math.min(preferredItemHeightCss, fittedItemHeightCss)
+    );
+    const itemHeight = s(itemHeightCss);
+
+    const startY = s(gridTopCss);
+    const startX = s(startXCss);
 
     const buttonWidth = s(isMobile ? 240 : 220);
-    const buttonHeight = s(isMobile ? 48 : 44);
-    const buttonSpacing = s(10);
-    const rows = isMobile ? 6 : 2;
+    const buttonHeight = s(buttonHeightCss);
+    const buttonSpacing = s(buttonSpacingCss);
     const itemsEndY = startY + rows * (itemHeight + gap);
     const continueY = Math.min(
-      itemsEndY + s(10),
-      this.canvas.height - buttonHeight * 2 - buttonSpacing - s(14)
+      itemsEndY + s(gridToButtonGapCss - gapCss),
+      this.canvas.height - buttonHeight * 2 - buttonSpacing - s(bottomMarginCss)
     );
     const rerollY = continueY + buttonHeight + buttonSpacing;
 
     return {
-      zoom, s, isPortrait, isMobile,
+      zoom, s, isPortrait, isMobile, cols,
       itemWidth, itemHeight, gap, startX, startY,
       lockButtonSize: s(isMobile ? 34 : 26),
       buttonWidth, buttonHeight, continueY, rerollY,
@@ -2157,7 +2208,7 @@ export class Game {
     const mouseY = this.input.mouseY;
 
     // Layout shared with drawShop so hitboxes always match visuals
-    const { s, isMobile, itemWidth, itemHeight, gap, startX, startY, lockButtonSize,
+    const { s, cols, itemWidth, itemHeight, gap, startX, startY, lockButtonSize,
       buttonWidth, buttonHeight, continueY, rerollY } = this.getShopLayout();
 
     this.selectedShopItem = -1;
@@ -2199,12 +2250,12 @@ export class Game {
       // Skip empty slots (purchased items)
       if (!item) continue;
 
-      // Desktop: 3x2 grid layout
-      const gridCol = isMobile ? 0 : i % 3;
-      const gridRow = isMobile ? i : Math.floor(i / 3);
+      // Responsive grid: `cols` columns (1 in portrait, 3 otherwise)
+      const gridCol = i % cols;
+      const gridRow = Math.floor(i / cols);
 
-      const x = isMobile ? startX : startX + gridCol * (itemWidth + gap);
-      const y = isMobile ? startY + i * (itemHeight + gap) : startY + gridRow * (itemHeight + gap);
+      const x = startX + gridCol * (itemWidth + gap);
+      const y = startY + gridRow * (itemHeight + gap);
 
       // FREE LOCKING: Lock button in top-right corner (NO 5g cost)
       const lockButtonX = x + itemWidth - lockButtonSize - s(4);
@@ -3395,7 +3446,7 @@ export class Game {
   }
 
   private drawShop(): void {
-    const { s, isMobile, itemWidth, itemHeight, gap, startX, startY, lockButtonSize,
+    const { s, isMobile, cols, itemWidth, itemHeight, gap, startX, startY, lockButtonSize,
       buttonWidth, buttonHeight, continueY, rerollY,
       iconY, iconSize, nameY, nameSize, descY, descSize, costY, costSize,
       synergySize } = this.getShopLayout();
@@ -3592,12 +3643,12 @@ export class Game {
       // Skip empty slots (purchased items)
       if (!item) continue;
 
-      // Desktop: 3x2 grid layout
-      const gridCol = isMobile ? 0 : i % 3;
-      const gridRow = isMobile ? i : Math.floor(i / 3);
+      // Responsive grid: `cols` columns (1 in portrait, 3 otherwise)
+      const gridCol = i % cols;
+      const gridRow = Math.floor(i / cols);
 
-      const x = isMobile ? startX : startX + gridCol * (itemWidth + gap);
-      const y = isMobile ? startY + i * (itemHeight + gap) : startY + gridRow * (itemHeight + gap);
+      const x = startX + gridCol * (itemWidth + gap);
+      const y = startY + gridRow * (itemHeight + gap);
       const hovered = this.selectedShopItem === i;
 
       // Rarity colors with better palette
