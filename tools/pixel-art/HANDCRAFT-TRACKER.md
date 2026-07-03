@@ -27,6 +27,18 @@ slime, goblin, blob
 - **swarm** — the auto-enhancer left it reading as disconnected fragments (floating bee parts +
   a stray beak), not one creature. Redrawn as a tight buzzing CLUSTER: bumpy orange/black ball,
   multiple red eyes (the "many creatures" tell), pale wing-haze motion flecks, 2-frame buzz jitter.
+**Batch-4** (`handcraft/batch4.mjs`) — the SPECTRAL FAMILY (Felix: "hand craft each"). The
+auto-enhancer left these four as near-identical pale/purple blobs; worst was the phantom, which
+read as a purple CAT (ear-bumps). Redrawn as four DISTINCT silhouettes so they never blur on grass:
+- **ghost** — dopey rounded pale-cyan sheet, big dark eyes + "o" mouth, 3-lobe wavy hem, blink+bob
+  idle. Kept deliberately soft to contrast the three menacing spirits.
+- **phantom** — sleek forward-LEANING violet shade (the fast, speed-140 invisible one) with a
+  tapering speed-smear tail + hollow glowing slit eyes. No more cat ears.
+- **wraith** — pointed hood over a hollow void with TWO burning cyan eyes (void bridge between them
+  so they never merge into a visor) + skeletal claw nubs; eyes flare on frame 2.
+- **banshee** — long flowing hair framing a wide-open screaming mouth (the AoE-scream tell) with
+  two cold sound-ripple arcs flanking the head that push outward + brighten on the scream frame.
+Verified on a grass contact sheet before shipping (four clearly-different creatures).
 
 ## Still auto-enhanced — future batches, worst-first
 
@@ -41,8 +53,8 @@ cases are now fixed; what remains all reads decently — this is now polish, so 
 
 **Already decent (leave unless a clear win):**
 - imp — genuinely good after auto-enhance; do NOT redraw for its own sake
-- demon, ghost, phantom, banshee, wraith, wizard, necromancer, healer, shielder, summoner,
-  mimic, troll, orc
+- demon, wizard, necromancer, healer, shielder, summoner, mimic, troll, orc
+  (ghost/phantom/banshee/wraith now hand-crafted → batch-4 above)
 
 **Bosses (24×24, own tier — handle as a dedicated batch, not mixed with trash):**
 boss_ancientgolem, boss_flamefiend, boss_necrolord, boss_stormking, boss_voidbeast
