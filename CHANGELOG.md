@@ -38,7 +38,7 @@ Regression-verified with a new headless harness (`qa-new-enemies.mjs`): worm spl
 eggs hatch on timer / don't hatch if killed early, bombardier + mini-boss both spawn detonating AoE
 zones, and no entity is ever dead-but-still-in-array across 120 frames. All existing regressions
 (stacking weapons, zoom/XP orbs) still pass; mobile playthrough holds **183 FPS under a 22-enemy swarm**,
-console clean. Commit `SHASHA` → live and verified.
+console clean. Commit `6d8489a` → live and verified (`index-CsyCryoz.js`, HTTP 200).
 
 ---
 
