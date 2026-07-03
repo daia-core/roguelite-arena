@@ -8,6 +8,27 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-03 (evening) — wave-scaling curve v2 (sim-driven softening) + QA harness repair
+
+- **Early game is no longer a wall.** The morning's enemy-scaling bump over-corrected: a fresh run
+  had no room to establish before the compound term (which started at wave 4) buried it. Softened
+  `WaveManager.waveScale` — linear slope back to **0.15/wave** and the compound onset delayed to
+  **wave 7** (where a run has picked up items). Late-game bite stays high: wave 20 enemies are now
+  **~33x** (down from the overshot 73x, but well above the old immortality-causing 12x), wave 30
+  ~241x. The curve now threads between "wave-7 immortality" and "wave-4 wall".
+- **This was tuned with data, not vibes.** Repaired the headless balance simulator
+  (`tools/qa/simulate-balance.mjs`), which had bit-rotted when the node-map layer was added between
+  start and combat — it stalled at wave 0. It now drives the full map→combat→shop→map loop. Before
+  the fix the kite-bot died at wave 3-6 (8/8 runs, avg ~4); after, coherent builds reach wave 10+
+  while incoherent ones still die early (correct roguelite shape — bad builds should fail).
+- **QA gates un-rotted.** `verify-mechanics` and `verify-luck` were failing on the same node-map
+  change (couldn't reach the shop) plus a stale-memoization pitfall (direct `.items` assignment
+  didn't invalidate the cached stat aggregate) and an outdated luck-cap assertion (2.0→1.0 from the
+  economy rebalance). All fixed; both suites now **ALL PASS**.
+- QA: `verify-mechanics` 5/5, `verify-luck` 3/3, balance sim green (no console/page errors), tsc clean.
+
+---
+
 ## 2026-07-03 (evening) — audio coverage for unlock moments
 
 - **Dodge, duo-unlock, and transformation now play SFX** — these AudioManager sounds existed but were

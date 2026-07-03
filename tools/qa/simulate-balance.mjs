@@ -98,7 +98,7 @@ async function simulateRun(page, maxWave) {
       const S = window.__sim;
       const DT = 1 / 60;
       for (let i = 0; i < 4000; i++) {
-        if (g.state === 'gameOver') {
+        if (g.state === 'gameover') {
           S.records.push({
             wave: g.waveManager.currentWave, died: true,
             durSec: +(S.simTime - S.waveStartTime).toFixed(1),
@@ -106,6 +106,52 @@ async function simulateRun(page, maxWave) {
             level: g.player?.level ?? 0, gold: g.player?.gold ?? 0,
           });
           return true;
+        }
+        // Node-map layer (added after this bot was first written): a run no longer
+        // drops straight into combat — startNewGame() lands in 'map' and every
+        // wave is gated behind picking a node. Drive it exactly the way the real
+        // state machine does: pick a node via onMapNodePicked (private, but reachable
+        // at runtime — TS `private` is compile-time only and vite doesn't mangle).
+        // Prefer combat nodes (battle/elite/boss) so we keep measuring fights; fall
+        // back to any reachable node if only non-combat ones are offered. When the
+        // pick lands us in combat, (re)set the per-wave bookkeeping here — this is
+        // the single point where a new fight actually begins.
+        if (g.state === 'map') {
+          const ids = g.mapSystem.reachable();
+          if (!ids || ids.length === 0) { g.startNextWave(); continue; }
+          const combat = ids.find((id) => {
+            const n = g.mapSystem.nodeById(id);
+            return n && (n.type === 'battle' || n.type === 'elite' || n.type === 'boss');
+          });
+          g.onMapNodePicked(combat || ids[0]);
+          if (g.state === 'playing') {
+            S.lastWave = g.waveManager.currentWave;
+            S.waveStartTime = S.simTime;
+            S.waveStartHp = g.player.health;
+            S.waveStartGold = g.player.gold;
+          }
+          continue;
+        }
+        // Reward screen (elite/boss/treasure spoils): replicate the real "skip"
+        // click inline. updateReward()'s skip path fires the reward's `then`
+        // callback and clears reward state — and for VICTORY SPOILS `then` is
+        // enterShop(), so we must run it rather than forcing state='map' (which
+        // would silently skip the shop and strand the run). Skip (grant nothing)
+        // keeps the sim's economy honest — free artifacts would skew balance data.
+        if (g.state === 'reward') {
+          const then = g.rewardThen;
+          g.rewardChoices = [];
+          g.rewardThen = null;
+          g.rewardSkippable = false;
+          if (typeof then === 'function') then();
+          else g.state = 'map';
+          continue;
+        }
+        // Event/rest never gate the shop — the game returns to 'map' after them.
+        // Auto-resolve so the bot never stalls on a UI click it can't make.
+        if (g.state === 'event' || g.state === 'rest') {
+          g.state = 'map';
+          continue;
         }
         if (g.state === 'shop') {
           // Record completed wave
@@ -140,17 +186,27 @@ async function simulateRun(page, maxWave) {
               }
             }
           }
-          g.startNextWave();
-          S.lastWave = g.waveManager.currentWave;
-          S.waveStartTime = S.simTime;
-          S.waveStartHp = g.player.health;
-          S.waveStartGold = g.player.gold;
+          // Real "Continue" button routes back through the node-map (toMapFromShop),
+          // NOT straight into the next wave. Calling startNextWave() here bypassed
+          // the map, left mapSystem on a consumed node, and stalled the run — the
+          // wave-3–6 STUCK. Hand back to the map; the map handler picks the next
+          // combat node and resets per-wave bookkeeping.
+          g.toMapFromShop();
         }
         g.update(DT);
         S.simTime += DT;
         if (S.simTime - S.waveStartTime > 180) {
-          // Wave stuck >3 sim-minutes: record and bail
-          S.records.push({ wave: S.lastWave, stuck: true, durSec: 180, level: g.player.level, gold: g.player.gold });
+          // Wave stuck >3 sim-minutes: record and bail. Capture WHY — which state
+          // and (if we're stuck on the map) what nodes are reachable — so a stall
+          // is diagnosable instead of a silent "STUCK".
+          let reach = null;
+          try { reach = g.mapSystem?.reachable?.() ?? null; } catch { reach = 'err'; }
+          S.records.push({
+            wave: S.lastWave, stuck: true, durSec: 180,
+            state: g.state, reachable: reach,
+            enemies: g.enemies?.length ?? -1,
+            level: g.player?.level ?? 0, gold: g.player?.gold ?? 0,
+          });
           return true;
         }
       }
@@ -168,7 +224,8 @@ for (let r = 0; r < RUNS; r++) {
   const result = await simulateRun(page, MAX_WAVE);
   runs.push(result);
   const last = result.records.at(-1);
-  console.log(`run ${r}: reached wave ${last?.wave}${last?.died ? ' (DIED)' : ''}${last?.stuck ? ' (STUCK)' : ''}`);
+  const why = last?.stuck ? ` (STUCK @ state='${last.state}' enemies=${last.enemies} reachable=${JSON.stringify(last.reachable)})` : (last?.died ? ' (DIED)' : '');
+  console.log(`run ${r}: reached wave ${last?.wave}${why}`);
   await page.close();
 }
 

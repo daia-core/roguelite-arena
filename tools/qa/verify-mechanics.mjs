@@ -38,8 +38,20 @@ await page.click('#startBtn');
 await new Promise((r) => setTimeout(r, 800));
 
 // --- Test 1: base interest (no banker item), 200 gold at wave 1 → 10% = 20, cap 12 ---
+// The node-map layer (added after this test was written) means startNewGame() lands
+// in 'map', not 'playing' — so the wave-complete→enterShop path (which grants interest)
+// never fires from a fresh start. Drive the map: pick a combat node to enter 'playing',
+// THEN empty the wave so it completes and routes to the shop.
 const t1 = await page.evaluate(async () => {
   const g = window.__game;
+  if (g.state === 'map') {
+    const ids = g.mapSystem.reachable();
+    const combat = ids.find((id) => {
+      const n = g.mapSystem.nodeById(id);
+      return n && (n.type === 'battle' || n.type === 'elite' || n.type === 'boss');
+    });
+    g.onMapNodePicked(combat || ids[0]);
+  }
   g.player.gold = 200;
   g.playerStats.items = []; // no banker items
   g.waveManager.currentWave = 1;
@@ -47,7 +59,7 @@ const t1 = await page.evaluate(async () => {
   g.enemies.length = 0;
   g.waveManager.waveEnemiesRemaining = 0;
   g.waveManager.enemiesAlive = 0;
-  return { before };
+  return { before, state: g.state };
 });
 await new Promise((r) => setTimeout(r, 2600)); // let wave-complete → enterShop fire
 const r1 = await page.evaluate(() => {
@@ -72,15 +84,22 @@ const r2 = await page.evaluate(() => {
   const baseDmg = ps.getDamage();
   const baseArmor = ps.getArmor();
   const baseHP = ps.getMaxHealth();
+  // NOTE: getDamage/getArmor/getMaxHealth/getInterestBonus all read a MEMOIZED
+  // aggregate that only recomputes on addItem()/invalidateAgg(). Pushing to
+  // ps.items directly leaves the cache stale, so invalidate after each push
+  // before reading the derived stat — otherwise the penalties look like no-ops.
   // Reckless Charm: +40% dmg, -3 armor
   ps.items.push({ id: 'reckless_charm_t2', name: 'Reckless Charm', tags: ['melee'], damageMultiplier: 1.4, armor: -3 });
+  ps.invalidateAgg?.();
   const dmgAfter = ps.getDamage();
   const armorAfter = ps.getArmor();
   // Blood Pact: +50% dmg, -35 max HP
   ps.items.push({ id: 'blood_pact_t3', name: 'Blood Pact', tags: ['melee'], damageMultiplier: 1.5, maxHealthBonus: -35 });
+  ps.invalidateAgg?.();
   const hpAfter = ps.getMaxHealth();
   // Piggy Bank interest bonus
   ps.items.push({ id: 'piggy_bank_t2', name: 'Piggy Bank', tags: ['economic'], interestBonus: 0.08 });
+  ps.invalidateAgg?.();
   const interestBonus = ps.getInterestBonus();
   return {
     dmgWentUp: dmgAfter > baseDmg,
@@ -143,6 +162,11 @@ const r5 = await page.evaluate(() => {
   // well past the cap, then confirm getSpeed() clamps to exactly maxSpeed.
   const speedItems = DB.getAllItems().filter(i => (i.speedMultiplier ?? 1) > 1);
   g.playerStats.items = [...speedItems, ...speedItems, ...speedItems];
+  // getSpeed() reads a MEMOIZED aggregate that only recomputes when the item list
+  // changes through addItem()/invalidateAgg(). Assigning .items directly (as this
+  // test does) leaves the cache stale, so force a recompute before reading — else
+  // getSpeed() returns the base 240 as if no items were equipped.
+  g.playerStats.invalidateAgg?.();
   const capped = g.playerStats.getSpeed();
   const maxSpeed = g.playerStats.maxSpeed;
   g.playerStats.items = [];

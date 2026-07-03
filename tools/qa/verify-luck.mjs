@@ -38,18 +38,25 @@ await new Promise((r) => setTimeout(r, 1200));
 await page.click('#startBtn');
 await new Promise((r) => setTimeout(r, 800));
 
-// --- Test 1: getLuck() sums item.luck and caps at 2.0 ---
+// --- Test 1: getLuck() sums item.luck and caps at +100% (was +200%; tightened by
+// the 2026-07-03 economy rebalance so legendaries don't flood the shop by wave 7).
+// getLuck() reads the MEMOIZED item aggregate, so invalidate after each direct
+// .items mutation before reading — otherwise the cache is stale and returns 0. ---
 const t1 = await page.evaluate(() => {
   const ps = window.__game.playerStats;
   ps.items = [];
+  ps.invalidateAgg?.();
   const zero = ps.getLuck();
   ps.items.push({ id: 'rabbits_foot_t1', tags: ['economic'], luck: 0.15 });
   ps.items.push({ id: 'four_leaf_clover_t3', tags: ['economic'], luck: 0.40, damageMultiplier: 0.90 });
+  ps.invalidateAgg?.();
   const summed = ps.getLuck(); // 0.55
   // Overstack past the cap
   for (let i = 0; i < 10; i++) ps.items.push({ id: 'cosmic_dice_t4', tags: ['economic'], luck: 0.80 });
-  const capped = ps.getLuck(); // 0.55 + 8.0 -> capped at 2.0
+  ps.invalidateAgg?.();
+  const capped = ps.getLuck(); // 0.55 + 8.0 -> capped at 1.0
   ps.items = [];
+  ps.invalidateAgg?.();
   return { zero, summed, capped };
 });
 
@@ -89,7 +96,7 @@ server.close();
 const result = {
   test1_getLuck: {
     ...t1,
-    pass: t1.zero === 0 && Math.abs(t1.summed - 0.55) < 1e-9 && t1.capped === 2.0,
+    pass: t1.zero === 0 && Math.abs(t1.summed - 0.55) < 1e-9 && t1.capped === 1.0,
   },
   test2_shopRarity: {
     ...t2,
