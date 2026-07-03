@@ -8,6 +8,22 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-03 (early morning) — Shop: tap your stats for a full breakdown (live index-C02SkJZz.js)
+
+The shop's stats panel only ever showed six headline numbers (HP, DMG, FIRE, SPD, CRIT, MULTI).
+Now **tapping the panel opens a full breakdown popup** of *every* stat and bonus your build has —
+grouped **Offense / Defense / Utility / Economy / Special** (damage types, piercing, knockback,
+armor, dodge, regen, lifesteal, thorns, XP magnet, gold/luck/discount/interest, chain lightning,
+freeze, poison, homing, orbit orbs, bomb, nova, aux-melee, and more).
+
+Only rows that actually differ from base or are active are listed, so it reads as "what makes *my*
+run special" rather than a wall of zeros. Two columns on desktop, one on mobile; a "TAP FOR ALL
+STATS" hint sits on the panel, and a tap anywhere dismisses it (same mobile-safe overlay pattern as
+the COMBOS guide). Verified with a screenshot QA at 390×844 and 1280×800 — zero console errors, all
+existing regressions still green. Commit `45dfb8b` → live and verified (`index-C02SkJZz.js`, HTTP 200).
+
+---
+
 ## 2026-07-03 (early morning) — Waves reborn: formations, splitting worms, egg-layers, telegraphed enemy AoE, mini-bosses (live index-CsyCryoz.js)
 
 The biggest combat-feel pass yet. Every wave now plays differently and enemies fight back with
