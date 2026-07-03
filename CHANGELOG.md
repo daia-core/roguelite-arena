@@ -8,6 +8,17 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-03 (evening) — audio coverage for unlock moments
+
+- **Dodge, duo-unlock, and transformation now play SFX** — these AudioManager sounds existed but were
+  never wired up, so evading a hit, completing a synergy duo, and triggering a tag-mastery
+  transformation were all silent milestones. Dodge gets a short airy blip (kept quiet so frequent
+  dodges never fatigue the ear); duo-unlock plays the chord stinger; transformation plays the
+  fanfare. Pure additive feel — no balance/gameplay change.
+- QA: `qa-roguelite` regression green (0 console errors), tsc clean.
+
+---
+
 ## 2026-07-03 (evening) — enemy scaling + economy rebalance, batch-1 enemy sprites hand-crafted
 
 - **Enemies scale far harder with depth** (Felix hit 25M damage / 927x crit / every stat maxed by

@@ -72,6 +72,11 @@ export class AudioManager {
     this.playTone(600, 0.15, 'triangle', 0.2);
   }
 
+  playDodge(): void {
+    // Airy evade blip — kept quiet so frequent dodges never fatigue the ear
+    this.playTone(720, 0.08, 'triangle', 0.12);
+  }
+
   playBlast(): void {
     this.playTone(150, 0.3, 'sawtooth', 0.25);
   }

@@ -600,6 +600,7 @@ export class Game {
     }
 
     // Dodge popups so Evasion items visibly do something
+    if (this.player.pendingDodges > 0) this.audio.playDodge();
     while (this.player.pendingDodges > 0) {
       this.player.pendingDodges--;
       this.damageNumbers.push(
@@ -2424,15 +2425,21 @@ export class Game {
     if (this.player.gold < finalPrice) return false;
 
     this.player.gold -= finalPrice;
-    const { newDuos } = this.playerStats.addItem(item);
+    const { newDuos, newTransformations } = this.playerStats.addItem(item);
     this.itemsPurchasedThisWave++;
 
     // GAME FEEL: Duo unlock effects
     if (newDuos.length > 0) {
+      this.audio.playDuoUnlock();
       for (const duo of newDuos) {
         console.log(`🎉 DUO UNLOCKED: ${duo.name} - ${duo.description}`);
         this.screenEffects.flash(duo.glowColor || '#ff00ff', 0.3);
       }
+    }
+
+    // GAME FEEL: Transformation (tag-mastery) fanfare — a once-per-run milestone
+    if (newTransformations.length > 0) {
+      this.audio.playTransformation();
     }
 
     // Update player max health if needed
