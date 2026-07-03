@@ -8,6 +8,41 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-04 (night) — batch-8 enemy sprites hand-crafted: the beasts/critters family (9) — FULL COVERAGE 🎉
+
+- **Every enemy in the game is now a bespoke hand-drawn sprite.** This final batch redraws the last
+  9 enemies still on the batch auto-enhancer, completing Felix's "go through EACH monster/enemy and
+  hand craft improvements" — the same standard that redrew all 20 artifacts, the 5 bosses, and the
+  spectral / caster / brute-demon families. Biggest glow-ups on the weak readers; the already-decent
+  ones brought up to the hand-crafted bar with a real improvement each:
+  - **Mushroom** — was a **faceless plain plant**. Now a toadstool **monster**: red warty cap + a
+    face on the pale stem (beady eyes, mouth), stubby arms, rising violet **spore puffs**. Biggest win.
+  - **Bat** — spread membrane wings with a **scalloped trailing edge** + finger-ribs (was reading as a
+    downward arrow), ear tufts, two red eyes, white fangs. Now unmistakably a bat.
+  - **Spider** — round glossy black body, **4 pairs of radiating jointed legs** (were stubby stumps),
+    yellow eyes + fangs, red hourglass marking. Reads as a proper arachnid now.
+  - **Necroegg** — was a plain egg. Now a **necrotic hatching sac**: veiny purple shell, a glowing
+    **green crack** with an embryo eye peeking through, green ooze at the base.
+  - **Spiraler** — clean teal **spiral shell** (was muddy) over a warm-tan slug body, eye-stalks,
+    slime-trail shimmer.
+  - **Exploder** — round rushing bomb-creature: lit fuse spark, panicked eyes, gritted teeth, **hot
+    glowing cracks** (about-to-blow tell). Distinct from the bombardier.
+  - **Orbiter** — floating single **eyeball-horror**: big iris+pupil, fleshy violet diamond body,
+    lash-spikes, glow rim. Single-eye → distinct from the multi-eye voidbeast boss.
+  - **Evader** — nimble blue **sprite-gremlin** (the dodger): big cyan eyes, tuft ears, spring-crouch,
+    dodge-shimmer flecks.
+  - **Mimic** — treasure-chest monster: gold-banded wooden chest, lid = **fanged mouth** agape, red
+    tongue, asymmetric lid-eyes, a spilling coin.
+- Each drawn per `SPRITE-STYLE.md` (black exterior outline, light top-left, hue-shifted cool-shadow/
+  warm-highlight ramps, asymmetry, readable silhouette + a face that sells it), a 2-frame breathe/
+  hover idle, and grass-verified as 9 distinct creatures on a contact sheet before shipping.
+- **Roster is now 100% hand-crafted — no enemy remains on the auto-enhancer.** Tracker updated.
+- Commit `8dab002`. **Live-verified:** `roguelite-game-blush.vercel.app` serves this build
+  (`index-DZ5bki6l.js`, HTTP 200, no auth wall) and the new sprite palette is present in the served
+  bundle. Source: `tools/pixel-art/handcraft/batch8-critters.mjs` → `sprites/*.json` → `spriteData.ts`.
+
+---
+
 ## 2026-07-04 (night) — batch-7 enemy sprites hand-crafted: the brute/demon family (3)
 
 - **The three brute/demon-class enemies are now bespoke hand-drawn sprites instead of the batch

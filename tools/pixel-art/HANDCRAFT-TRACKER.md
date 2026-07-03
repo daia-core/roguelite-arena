@@ -88,28 +88,46 @@ boss as clearly-different creatures:
   core, a charged fire-bolt in the claw (the "shoots bursts" tell). The WINGS deliberately
   differentiate it from the flamefiend BOSS (horns + flame mane, no wings) and from the small imp.
 Subtle 1px breathe idle like the other families.
+**Batch-8** (`handcraft/batch8-critters.mjs`, commit 8dab002) — the BEASTS / CRITTERS FAMILY, the
+**final coverage batch** (Felix: "go through EACH monster/enemy"). The last 9 enemies still on the
+auto-enhancer, redrawn from scratch and grass-verified as 9 distinct creatures. Biggest glow-ups on
+the weak readers; the already-decent ones brought into the hand-crafted tier with a real improvement:
+- **bat** — spread membrane wings with scalloped trailing edge + finger-ribs (was a downward arrow),
+  ear tufts, two red eyes, white fangs. Now unmistakably a bat, not a manta.
+- **spider** — round glossy black body, 4 pairs of radiating jointed legs (was stubby stumps),
+  yellow eyes + fangs, red hourglass marking, spinneret. Reads clearly as an arachnid now.
+- **evader** — nimble blue sprite-gremlin (the dodger): big cyan eyes, tuft ears, ready-to-spring
+  crouch, dodge-shimmer flecks. Distinct from the boss/caster blues.
+- **exploder** — round rushing bomb-creature: lit fuse spark, panicked wide eyes, gritted teeth,
+  hot glowing cracks (the about-to-blow tell). Distinct from the bombardier's helmeted artillery.
+- **mushroom** — toadstool MONSTER (was a faceless plain plant): red warty cap + a FACE on the pale
+  stem (two beady eyes, mouth), stubby arms, rising violet spore puffs. The biggest single glow-up.
+- **orbiter** — floating single eyeball-horror: big iris+pupil, fleshy violet diamond body with
+  lash-spikes + a cool glow rim. Single-eye → deliberately distinct from the multi-eye voidbeast boss.
+- **spiraler** — spiral-moving snail: clean teal spiral SHELL (was muddy) contrasting a warm-tan slug
+  body, two eye-stalks, slime-trail shimmer.
+- **necroegg** — necrotic hatching egg-sac (was a plain egg): leathery veiny purple sac, a glowing
+  green CRACK down the middle with an embryo eye peeking, green ooze at the base.
+- **mimic** — treasure-chest monster: wooden chest, gold bands, lid = fanged mouth agape, red tongue,
+  two asymmetric lid-eyes, a spilling gold coin.
+Subtle 1px breathe/hover idle like the other families. Live-verified (index-DZ5bki6l.js on
+roguelite-game-blush.vercel.app, new palette served).
 
-## Still auto-enhanced — future batches, worst-first
+## Still auto-enhanced — NONE. 🎉 FULL COVERAGE REACHED (2026-07-04, batch-8).
 
-Re-audited on grass contact sheets 2026-07-03 (evening, after batch-3); caster family cleared in
-batch-6 and brute/demon family in batch-7 (both Jul-4). The genuinely-broken cases are all fixed;
-what remains reads decently — but per Felix's "go through EACH", the goal is still full coverage,
-so keep pulling the next family.
+Every enemy in the game is now hand-drawn from scratch per `SPRITE-STYLE.md` — Felix's "go through
+EACH monster/enemy and hand craft improvements" is complete. Re-audited on grass contact sheets
+across batches 1–8; the caster family cleared in batch-6, brute/demon in batch-7, and the
+beasts/critters (last holdouts) in batch-8 (all Jul-4).
 
-**Remaining roster (next batch — the beasts/critters, batch-8):**
-- **Critters**: bat (purple, red eyes — good), spider (black + red abdomen — good), evader
-  (blue cat — fine), exploder (round bomb-creature — fine, distinct from bombardier), mushroom,
-  orbiter (eye-diamond), spiraler (snail), necroegg (simple), mimic (chest) — all read decently on
-  grass; redraw for a clear win as each comes up. Pick the ugliest holdout first (mushroom/orbiter/
-  spiraler/necroegg/mimic are likelier wins than the already-good bat/spider/evader/exploder).
+**Bosses (24×24) — ✅ ALL DONE (batch-5).** Casters — ✅ (batch-6). Brutes/demons — ✅ (batch-7).
+Spectral — ✅ (batch-4). Beasts/critters — ✅ (batch-8).
 
-**Bosses (24×24) — ✅ ALL DONE (batch-5).** Casters — ✅ (batch-6). Brutes/demons — ✅ (batch-7). Spectral — ✅ (batch-4).
-
-**Roster status (Jul-4):** hand-crafted now = player, skeleton, orc + batches 1–7 (gargoyle, golem,
+**Roster status (Jul-4) — 100% hand-crafted:** player, skeleton, orc + batches 1–8 (gargoyle, golem,
 construct, dasher, phaser, spinner, druid, cyclops, slime, goblin, blob, bombardier, swarm, ghost,
-phantom, wraith, banshee, 5 bosses, wizard, necromancer, healer, shielder, summoner, **imp, troll,
-demon**). Left on auto-enhance: bat, spider, evader, exploder, mushroom, orbiter, spiraler,
-necroegg, mimic — all read decently; next pull = the beasts/critters family (batch-8).
+phantom, wraith, banshee, 5 bosses, wizard, necromancer, healer, shielder, summoner, imp, troll,
+demon, **bat, spider, evader, exploder, mushroom, orbiter, spiraler, necroegg, mimic**). No enemy
+remains on the auto-enhancer. Future sprite work = polish passes / any newly-added enemy type.
 
 ## Method reminder
 
