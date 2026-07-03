@@ -8,6 +8,42 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-03 (early morning) — Build your Village: a walkable between-runs base (live index-2QTFxGkM.js)
+
+The flat "Permanent Upgrades" grid is gone. In its place is a **Village** — a walkable,
+camera-scrolling pixel-art base in the spirit of Cult of the Lamb. Tap **Village** on the menu and
+you spawn as your character in a settlement laid out around a central **Shrine**, with dirt paths
+radiating out to **8 themed buildings**:
+
+- **🔥 The Forge** — starting damage, fire rate, crit.
+- **🛡️ The Armory** — armor, boss damage.
+- **❤️ The Infirmary** — max HP, regen, permanent shield.
+- **💰 The Market** — starting gold, gold gain, shop & reroll discounts.
+- **⭐ The Academy** — XP gain, double level-ups.
+- **👟 The Stables** — move speed.
+- **👑 The War Table** — elite rewards, wave skip.
+- **🎁 The Vault** — starting item, starting legendary.
+
+All **19 permanent upgrades** live inside these buildings, spending the **same souls economy** — the
+balance is untouched, it's purely a nicer front-end for the same purchases. **Walk up to a building
+and tap** to open its upgrade panel (buy with souls, MAX when capped); **walk to the Shrine and tap
+to embark** on a run. On mobile the floating joystick works here just like in-game.
+
+The reward Felix asked for is the **visible progression**: every building tiers up as you invest,
+0→4. A fresh plot is a scaffolded **foundation with a `?` sign**; as souls go in it grows into a
+modest hall, then a bigger one with **lit windows** and a themed roof/prop (forge chimney with
+smoke, market awning, arcane tower, gilded vault dome, crenellated keep…), and a **fully-maxed
+building reaches a golden "hero" state** with gold trim, banners, and a flag — so a maxed-out village
+looks earned. Warm dawn tint + vignette for mood; y-sorted so your avatar walks in front of and
+behind structures correctly.
+
+Headless QA (`qa-village.mjs`) enters the village, walks the avatar and verifies the **camera
+scrolls**, and drives a **real purchase through the input path**, at mobile 390×844 and desktop —
+zero console errors. Screenshots reviewed at both sizes (tier-0 and fully-maxed). Commit `20cb160`
+→ live and verified (`index-2QTFxGkM.js`, HTTP 200, no SSO wall, village code present in bundle).
+
+---
+
 ## 2026-07-03 (early morning) — A map between the waves: routes, artifacts, and real choices (live index-CCe5AaXN.js)
 
 The run is no longer a straight line of wave → shop → wave. After each shop you now open a
