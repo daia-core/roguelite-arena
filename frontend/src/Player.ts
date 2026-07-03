@@ -90,8 +90,10 @@ export class Player {
   }
 
   // Auto-attack nearest enemy (supports different weapon types)
-  tryShoot(enemies: Enemy[]): Projectile[] {
-    if (this.shootCooldown > 0 || enemies.length === 0) return [];
+  tryShoot(enemies: Enemy[], forceFire: boolean = false): Projectile[] {
+    // forceFire = a bonus volley (e.g. Multicast) that fires the same frame and
+    // must NOT be gated by, or reset, the normal fire cooldown.
+    if ((!forceFire && this.shootCooldown > 0) || enemies.length === 0) return [];
 
     // Find nearest enemy
     let nearest: Enemy | null = null;
@@ -176,8 +178,8 @@ export class Player {
       }
     }
 
-    // Reset cooldown
-    this.shootCooldown = 1 / this.stats.getFireRate();
+    // Reset cooldown (bonus/forced volleys don't touch the cadence)
+    if (!forceFire) this.shootCooldown = 1 / this.stats.getFireRate();
 
     return projectiles;
   }
@@ -230,8 +232,17 @@ export class Player {
     // armor still shaves the same flat amount off the scaled hit).
     amount *= this.incomingDamageMult;
 
-    // Armor: flat reduction, but a hit always deals at least 1
-    amount = Math.max(1, amount - this.stats.getArmor());
+    // Armor: PERCENTAGE damage mitigation (Brotato-style), not flat subtraction.
+    // Flat subtraction was degenerate: with the game's many-weak-hits design (enemy
+    // contact 6-15) and persistent meta armor of up to +15, every early hit was floored
+    // to the min-1 — the player took almost no damage regardless of in-run stats. A
+    // diminishing-returns curve keeps each armor point meaningful (armor 5 = ~20% less,
+    // 10 = ~33%, 15 = ~43%, 25 = ~56%) without ever making small hits free.
+    const armor = this.stats.getArmor();
+    if (armor > 0) {
+      amount *= 20 / (20 + armor);
+    }
+    amount = Math.max(1, amount); // a hit always deals at least 1
 
     this.health -= amount;
     if (this.health <= 0) {

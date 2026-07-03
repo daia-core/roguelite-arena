@@ -8,6 +8,30 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-03 (afternoon) — armor reworked: player takes real damage again
+
+Felix: *"I barely take any damage from enemies and enemy projectiles. Even really early on with
+minimal stats."*
+
+**Root cause:** armor was **flat subtraction** (`damage − armor`, floored at 1). The `Starting
+Armor` meta upgrade grants up to **+15 armor**, and enemy contact damage is only 6–15 — so with
+that meta upgrade nearly every early hit was reduced to the **minimum 1 damage**, regardless of
+in-run stats. The persistent meta armor was making the player near-immune early.
+
+**Fix:** armor is now **percentage mitigation** (Brotato-style diminishing returns) instead of
+flat subtraction: `taken = raw × 20/(20+armor)`. Each armor point stays meaningful but small hits
+are never free — armor 5 = ~20% less, 10 = ~33%, 15 = ~43%, 25 = ~56%.
+
+**Player-visible:** enemies and their projectiles now deal real damage from wave 1 even with
+armor invested. Heavy-armor builds are still tanky, just not invincible.
+
+**Verified:** new `qa-armor-damage.mjs` harness — with +15 meta armor and zero run items,
+standing in a wave-1 swarm for 10s now costs **59 HP over 13 hits** (~4 dmg/hit after mitigation)
+vs. near-zero under the old flat formula. `qa-melee-stack` combat regression PASS, 0 console
+errors. Commit `PENDING` · live build `PENDING`.
+
+---
+
 ## 2026-07-03 (afternoon) — melee STACKS like every weapon (Crescent Blade projectile bug fixed)
 
 Felix: *"the crescent blade item seems to break projectiles being fired"* and *"Melee should
