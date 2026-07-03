@@ -3374,7 +3374,9 @@ export class Game {
       size: 30,
       bold: true,
       align: 'center',
-      color: '#ffd43b'
+      color: '#ffd43b',
+      // Auto-shrink so the (variable-length) name never clips off narrow portrait.
+      maxWidth: this.canvas.width - 40
     });
     ctx.restore();
   }
