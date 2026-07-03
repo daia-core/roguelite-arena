@@ -282,26 +282,28 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'damage_t3',
       name: 'Champion\'s Crown',
-      description: '+35% damage',
+      description: '+55% damage, but -12% fire rate (a heavy crown)',
       rarity: 'epic',
       tier: ItemTier.Rare,
       cost: 60,
       icon: '👑',
       unlocked: true,
       tags: ['melee', 'ranged'],
-      damageMultiplier: 1.35
+      damageMultiplier: 1.55,
+      fireRateMultiplier: 0.88
     },
     {
       id: 'attack_speed_t3',
       name: 'Lightning Bracers',
-      description: '+35% fire rate',
+      description: '+30% fire rate; +15% chance to chain lightning on hit',
       rarity: 'epic',
       tier: ItemTier.Rare,
       cost: 58,
       icon: '⚡',
       unlocked: true,
-      tags: ['ranged'],
-      fireRateMultiplier: 1.35
+      tags: ['ranged', 'elemental'],
+      fireRateMultiplier: 1.30,
+      chainLightning: 0.15
     },
     {
       id: 'piercing_t3',
@@ -414,38 +416,43 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'dodge_t3',
       name: 'Shadow Step',
-      description: '20% dodge chance',
+      description: '18% dodge, +15% move speed, but -10 max HP (fragile & fast)',
       rarity: 'epic',
       tier: ItemTier.Rare,
       cost: 65,
       icon: '👻',
       unlocked: true,
       tags: ['defensive', 'utility'],
-      dodge: 0.2
+      dodge: 0.18,
+      speedMultiplier: 1.15,
+      maxHealthBonus: -10
     },
     {
       id: 'crit_chance_t3',
       name: 'Assassin\'s Mark',
-      description: '+20% crit chance',
+      description: '+18% crit chance; +25% chance to Bleed on hit',
       rarity: 'epic',
       tier: ItemTier.Rare,
       cost: 68,
       icon: '🗡️',
       unlocked: true,
       tags: ['melee', 'ranged'],
-      critChance: 0.2
+      critChance: 0.18,
+      bleed: 0.25
     },
     {
       id: 'knockback_t3',
       name: 'Impact Gauntlet',
-      description: 'Heavy knockback',
+      description: 'Heavy knockback, +20% damage, and hits explode (small AoE)',
       rarity: 'epic',
       tier: ItemTier.Rare,
       cost: 55,
       icon: '👊',
       unlocked: true,
       tags: ['melee'],
-      knockback: 250
+      knockback: 250,
+      damageMultiplier: 1.20,
+      explosionOnHit: true
     },
 
     // ==================== TIER 4 (LEGENDARY) ====================
@@ -453,26 +460,30 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'berserker_rage_t4',
       name: 'Berserker Rage',
-      description: '+60% damage',
+      description: '+75% damage & +15% fire rate, but -25 max HP (fury over safety)',
       rarity: 'legendary',
       tier: ItemTier.Legendary,
       cost: 140,
       icon: '⚔️',
       unlocked: true,
       tags: ['melee'],
-      damageMultiplier: 1.6
+      damageMultiplier: 1.75,
+      fireRateMultiplier: 1.15,
+      maxHealthBonus: -25
     },
     {
       id: 'rapid_fire_t4',
       name: 'Gatling Core',
-      description: '+60% fire rate',
+      description: '+70% fire rate & +2 projectiles, but -15% damage (bullet hose)',
       rarity: 'legendary',
       tier: ItemTier.Legendary,
       cost: 135,
       icon: '🔫',
       unlocked: true,
       tags: ['ranged'],
-      fireRateMultiplier: 1.6
+      fireRateMultiplier: 1.70,
+      multishot: 2,
+      damageMultiplier: 0.85
     },
     {
       id: 'glass_cannon_t4',
@@ -1181,14 +1192,15 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'crit_master_t3',
       name: 'Crit Master',
-      description: '2.5x crit multiplier',
+      description: '2.8x crit damage, but -15% fire rate (precision over spray)',
       rarity: 'epic',
       tier: ItemTier.Rare,
       cost: 55,
       icon: '💢',
       unlocked: true,
       tags: ['utility'],
-      critDamageMultiplier: 2.5
+      critDamageMultiplier: 2.8,
+      fireRateMultiplier: 0.85
     },
     {
       id: 'bargain_hunter_t1',
@@ -1219,14 +1231,15 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'soul_collector_t3',
       name: 'Soul Collector',
-      description: '+50% pickup range',
+      description: '+50% pickup range and +5% lifesteal (drain the souls you reap)',
       rarity: 'epic',
       tier: ItemTier.Rare,
       cost: 45,
       icon: '👻',
       unlocked: true,
-      tags: ['utility'],
-      xpMagnet: 1.5
+      tags: ['utility', 'defensive'],
+      xpMagnet: 1.5,
+      lifesteal: 0.05
     },
 
     // ==================== NEW ITEMS (20+ additions for build variety) ====================
@@ -1841,14 +1854,16 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'cosmic_dice_t4',
       name: 'Cosmic Dice',
-      description: '+80% luck — the shop turns legendary',
+      description: '+80% luck, +40% gold & +10% crit chance (fortune\'s gambit)',
       rarity: 'legendary',
       tier: ItemTier.Legendary,
       cost: 95,
       icon: '🎲',
       unlocked: true,
       tags: ['economic', 'utility'],
-      luck: 0.80
+      luck: 0.80,
+      goldBonus: 1.40,
+      critChance: 0.10
     },
 
     // ============ UNIQUE IMPACTFUL ITEMS (build-defining, 2026-07-02) ============
