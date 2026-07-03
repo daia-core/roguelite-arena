@@ -37,7 +37,8 @@ to drive stats through the real `addItem`/`removeItem` API instead of mutating t
 directly (direct mutation bypassed the new cache — the exact stale-cache trap to avoid; production
 code never does it).
 
-**Verified:** commit `__SHA__` · live build `__HASH__` (blush alias verified).
+**Verified:** commit `062bf45` · live build `index-COlzWkAn.js` (blush alias verified — deployment
+`dpl_D5o69…` READY/PROMOTED, sha matches HEAD, HTTP 200, no auth wall).
 
 ---
 
