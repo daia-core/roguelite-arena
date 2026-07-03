@@ -238,9 +238,13 @@ export class Player {
     // to the min-1 — the player took almost no damage regardless of in-run stats. A
     // diminishing-returns curve keeps each armor point meaningful (armor 5 = ~20% less,
     // 10 = ~33%, 15 = ~43%, 25 = ~56%) without ever making small hits free.
+    // BALANCE 2026-07-03: armor is otherwise UNBOUNDED and enemies have no armor-pen,
+    // so a heavy stack (armor 200 = 91%, 380 = 95%) trended toward immortality — the
+    // same counter-pressure-less runaway the economy caps fixed. Floor the multiplier
+    // at 0.10 → armor caps at 90% mitigation; each point still matters up to the cap.
     const armor = this.stats.getArmor();
     if (armor > 0) {
-      amount *= 20 / (20 + armor);
+      amount *= Math.max(0.10, 20 / (20 + armor));
     }
     amount = Math.max(1, amount); // a hit always deals at least 1
 

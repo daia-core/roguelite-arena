@@ -8,6 +8,24 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-03 (evening) — cap health regen + armor (close the late-game immortality)
+
+- **Armor no longer trends to immortal.** Armor mitigation (`20/(20+armor)`) was unbounded and no
+  enemy has armor-pen, so a heavy stack (armor 200 = 91%, 380 = 95%) let you shrug off scaled hits
+  indefinitely. Floored the damage multiplier at **0.10 → armor caps at 90% mitigation**. Every
+  point still matters up to the cap; the degenerate tail is gone.
+- **Health regen no longer out-heals the game.** Regen ticked every frame with no ceiling, so a
+  stacked build passively out-healed most enemy DPS. Capped at **5% of max HP per second** — still
+  impactful, never enough to tank a scaled wave by standing still. The cap scales with max HP so it
+  stays relevant deep into a run.
+- Together these close the last two counter-pressure-less defensive runaways (the same class of bug
+  as the gold/luck economy caps). Combat *offense* stays uncapped by design — enemies scale to meet
+  it — but defense now has a real ceiling.
+- QA: `verify-mechanics` 5/5, `verify-luck` 3/3, balance sim non-regressive (early death curve
+  unchanged — the caps only bite a late heavy defensive stack, which is the point), tsc clean.
+
+---
+
 ## 2026-07-03 (evening) — batch-2 enemy sprites hand-crafted (the two most-seen enemies + toxic blob)
 
 - **Slime and goblin — the two enemies you meet every single run (waves 1-2) — are hand-drawn from

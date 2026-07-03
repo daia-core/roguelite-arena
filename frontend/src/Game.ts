@@ -593,8 +593,14 @@ export class Game {
     // Player update
     this.player.update(dt, movement.x, movement.y, this.worldWidth, this.worldHeight);
 
-    // Health regen (items + meta) — previously sold but never ticked
-    const regen = this.playerStats.getHealthRegen() + this.metaProgression.getStartingRegenBonus();
+    // Health regen (items + meta) — previously sold but never ticked.
+    // BALANCE 2026-07-03: regen was UNBOUNDED and enemies don't scale against it, so a
+    // heavy stack out-healed most enemy DPS (immortality, same class as the armor/economy
+    // runaways). Cap it at 5% of max HP per second — generous enough to feel impactful,
+    // never enough to tank a scaled wave passively. Scaling with maxHealth keeps the cap
+    // relevant deep into a run instead of a flat number that goes irrelevant late.
+    const rawRegen = this.playerStats.getHealthRegen() + this.metaProgression.getStartingRegenBonus();
+    const regen = Math.min(rawRegen, this.player.maxHealth * 0.05);
     if (regen > 0 && this.player.health < this.player.maxHealth) {
       this.player.heal(regen * dt);
     }
