@@ -104,53 +104,81 @@ export class AoeZone {
     return this.damage;
   }
 
+  /** World-space size of one rendered pixel cell (matches the nova/Shockwave look). */
+  private static readonly PX = 6;
+
   draw(ctx: CanvasRenderingContext2D): void {
     ctx.save();
+    // Pixel-art rendering: no smoothing, quantized chunky cells (not smooth arcs).
+    ctx.imageSmoothingEnabled = false;
     if (!this.detonated) {
-      // Telegraph phase: hollow red outline + growing fill + pulsing border.
+      // Telegraph phase: chunky red danger fill + growing "loading" fill + pulsing pixel border.
       const p = this.fillProgress;
       const pulse = 0.35 + 0.25 * Math.sin(performance.now() / 90);
-      // Filled danger area growing toward full as impact approaches.
+      // Faint danger area over the whole zone.
       ctx.globalAlpha = 0.14 + 0.16 * p;
       ctx.fillStyle = this.color;
-      this.tracePath(ctx, this.radius);
-      ctx.fill();
-      // Growing inner fill that reaches the edge exactly at impact (a "loading" cue).
+      this.fillArea(ctx, this.radius);
+      // Growing inner fill that reaches the edge exactly at impact.
       ctx.globalAlpha = 0.22 + 0.2 * p;
-      this.tracePath(ctx, this.radius * p);
-      ctx.fill();
-      // Pulsing dashed border.
-      ctx.globalAlpha = 0.55 + pulse * 0.4;
-      ctx.strokeStyle = this.color;
-      ctx.lineWidth = 3;
-      ctx.setLineDash([10, 8]);
-      this.tracePath(ctx, this.radius);
-      ctx.stroke();
+      this.fillArea(ctx, this.radius * p);
+      // Pulsing chunky-pixel border ring.
+      ctx.globalAlpha = 0.6 + pulse * 0.4;
+      this.strokeRing(ctx, this.radius, AoeZone.PX * 1.5);
     } else {
       // Detonation flash: bright, fading fast over the active window.
       const a = Math.max(0, this.activeTime / 0.35);
-      ctx.globalAlpha = 0.45 * a;
+      ctx.globalAlpha = 0.5 * a;
       ctx.fillStyle = '#ffd0d0';
-      this.tracePath(ctx, this.radius);
-      ctx.fill();
-      ctx.globalAlpha = 0.8 * a;
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 4;
-      ctx.setLineDash([]);
-      this.tracePath(ctx, this.radius);
-      ctx.stroke();
+      this.fillArea(ctx, this.radius);
+      ctx.globalAlpha = 0.9 * a;
+      ctx.fillStyle = '#ffffff';
+      this.strokeRing(ctx, this.radius, AoeZone.PX * 1.5);
     }
     ctx.restore();
   }
 
-  private tracePath(ctx: CanvasRenderingContext2D, r: number): void {
-    ctx.beginPath();
-    if (this.shape === 'ring' && !this.detonated) {
-      const inner = r * this.innerFrac;
-      ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
-      ctx.arc(this.x, this.y, inner, 0, Math.PI * 2, true);
-    } else {
-      ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
+  /** Fill the zone's area (disc, or annulus when shape === 'ring') as quantized pixels. */
+  private fillArea(ctx: CanvasRenderingContext2D, r: number): void {
+    if (r <= 0) return;
+    const inner = this.shape === 'ring' ? r * this.innerFrac : 0;
+    this.scanFill(ctx, r, inner);
+  }
+
+  /** Draw a chunky-pixel outline band of `thickness` at outer radius `r`. */
+  private strokeRing(ctx: CanvasRenderingContext2D, r: number, thickness: number): void {
+    if (r <= 0) return;
+    this.scanFill(ctx, r, Math.max(0, r - thickness));
+  }
+
+  /**
+   * Rasterize a disc (innerR = 0) or annulus into pixel-aligned scanlines, one
+   * fillRect per row snapped to the PX grid — a chunky, no-antialias pixel shape.
+   */
+  private scanFill(ctx: CanvasRenderingContext2D, outerR: number, innerR: number): void {
+    const px = AoeZone.PX;
+    const cx = this.x;
+    const cy = this.y;
+    const startY = Math.floor((cy - outerR) / px) * px;
+    const endY = Math.ceil((cy + outerR) / px) * px;
+    for (let yy = startY; yy < endY; yy += px) {
+      const dy = yy + px / 2 - cy;
+      const ad = Math.abs(dy);
+      if (ad > outerR) continue;
+      const outerHalf = Math.sqrt(outerR * outerR - dy * dy);
+      if (innerR > 0 && ad < innerR) {
+        // Annulus row: two side bands leaving the hole in the middle.
+        const innerHalf = Math.sqrt(innerR * innerR - dy * dy);
+        const bandW = Math.max(px, Math.ceil((outerHalf - innerHalf) / px) * px);
+        const lx = Math.floor((cx - outerHalf) / px) * px;
+        ctx.fillRect(lx, yy, bandW, px);
+        const rx = Math.floor((cx + innerHalf) / px) * px;
+        ctx.fillRect(rx, yy, bandW, px);
+      } else {
+        const lx = Math.floor((cx - outerHalf) / px) * px;
+        const w = Math.max(px, Math.ceil((2 * outerHalf) / px) * px);
+        ctx.fillRect(lx, yy, w, px);
+      }
     }
   }
 }

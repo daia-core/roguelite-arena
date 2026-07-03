@@ -1,6 +1,7 @@
 // Main entry point - game loop and initialization
 
 import { Game } from './Game';
+import { AoeZone } from './AoeZone';
 import { SpriteSheet } from './sprites';
 import { UISprites } from './UISprites';
 import { getItemIcon } from './items/itemIcons';
@@ -47,6 +48,8 @@ const game = new Game(canvas);
 
 // Dev/QA hook: lets headless tooling drive/inspect the game. Not a public API.
 (window as unknown as { __game: Game }).__game = game;
+// Dev/QA hook: lets tooling spawn an AoE zone to verify pixel-art rendering. Not a public API.
+(window as unknown as { __AoeZone: typeof AoeZone }).__AoeZone = AoeZone;
 
 // Game loop
 let lastTime = performance.now();
