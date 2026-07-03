@@ -188,6 +188,14 @@ export class Game {
   evolutionBannerTimer: number = 0;
   evolutionBannerText: string = '';
 
+  // GAME FEEL: hit-stop (freeze-frame "punch"). Set only on genuinely impactful
+  // kills — bosses and elites/minibosses — NEVER on fodder: the arena clears
+  // thousands of trash enemies per second, so a per-kill freeze would stutter
+  // the game constantly. While >0, the playing sim runs at dt=0 (frozen) but the
+  // frame still renders, so the kill's flash/particles hang for a beat.
+  hitPauseTimer: number = 0;
+  private static readonly HIT_PAUSE_MAX = 0.13; // hard ceiling — gameplay never freezes longer
+
   constructor(canvas: HTMLCanvasElement) {
     // Dev/QA hook: lets tooling (screenshot scripts, the shots-qa harness)
     // inspect and force game state. Not a public API.
@@ -420,6 +428,7 @@ export class Game {
     this.coins = [];
     this.resetAuxWeapons();
     this.kills = 0;
+    this.hitPauseTimer = 0;
     this.bossKills = 0;
     this.soulsEarnedThisRun = 0;
 
@@ -503,6 +512,7 @@ export class Game {
     this.coins = [];
     this.resetAuxWeapons();
     this.kills = 0;
+    this.hitPauseTimer = 0;
 
     const wave = save.wave ?? 1;
     this.waveManager.reset();
@@ -537,9 +547,18 @@ export class Game {
       case 'menu':
         this.updateMenu();
         break;
-      case 'playing':
-        this.updatePlaying(dt);
+      case 'playing': {
+        // Hit-stop: while the freeze window is active, drain it with REAL time but
+        // advance the gameplay sim by 0 this frame. draw() still runs (main loop),
+        // so the impact frame — kill particles, hit flash — hangs for a beat.
+        let simDt = dt;
+        if (this.hitPauseTimer > 0) {
+          this.hitPauseTimer -= dt;
+          simDt = 0;
+        }
+        this.updatePlaying(simDt);
         break;
+      }
       case 'shop':
         this.updateShop();
         break;
@@ -1637,6 +1656,13 @@ export class Game {
     }
   }
 
+  /** Arm a hit-stop freeze, taking the longer of any overlapping request and
+   *  clamping to the hard ceiling so nothing can stall gameplay unfairly. */
+  private triggerHitPause(seconds: number): void {
+    if (seconds > this.hitPauseTimer) this.hitPauseTimer = seconds;
+    if (this.hitPauseTimer > Game.HIT_PAUSE_MAX) this.hitPauseTimer = Game.HIT_PAUSE_MAX;
+  }
+
   private handleEnemyKill(enemy: Enemy): void {
     if (!this.player) return;
 
@@ -1645,6 +1671,16 @@ export class Game {
     // Track boss kills
     if (enemy.type === 'demon') {
       this.bossKills++;
+    }
+
+    // GAME FEEL: freeze-frame punch on impactful kills only. Bosses get a meaty
+    // stop (+ a white impact flash); elites/minibosses a lighter tap. Fodder gets
+    // nothing — a freeze on every trash kill would stutter the whole arena.
+    if (enemy.typeData.isBoss) {
+      this.triggerHitPause(0.12);
+      this.screenEffects.flash('#ffffff', 0.3);
+    } else if (enemy.isMiniboss) {
+      this.triggerHitPause(0.06);
     }
 
     this.audio.playKill();
