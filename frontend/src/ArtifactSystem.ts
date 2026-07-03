@@ -57,103 +57,103 @@ export interface Artifact {
 // rule-changing flags, the rest are big pure-stat swings.
 export const ARTIFACTS: Artifact[] = [
   {
-    id: 'glass_cannon', name: 'Glass Cannon', icon: '', rarity: 'epic',
+    id: 'glass_cannon', name: 'Glass Cannon', icon: '💥', rarity: 'epic',
     desc: 'Deal +120% damage, but take +60% damage.',
     damageMult: 2.2, flags: ['glassCannon'], glassTakenMult: 1.6,
   },
   {
-    id: 'titans_heart', name: "Titan's Heart", icon: '', rarity: 'rare',
+    id: 'titans_heart', name: "Titan's Heart", icon: '❤️', rarity: 'rare',
     desc: '+80% max health, but -15% move speed.',
     maxHealthBonus: 80, speedMult: 0.85,
   },
   {
-    id: 'scholars_codex', name: "Scholar's Codex", icon: '', rarity: 'rare',
+    id: 'scholars_codex', name: "Scholar's Codex", icon: '📖', rarity: 'rare',
     desc: 'Double all XP gained.',
     xpMult: 2,
   },
   {
-    id: 'fleetfoot', name: 'Fleetfoot Charm', icon: '', rarity: 'rare',
+    id: 'fleetfoot', name: 'Fleetfoot Charm', icon: '🪶', rarity: 'rare',
     desc: '+30% move speed and +20% fire rate.',
     speedMult: 1.3, fireRateMult: 1.2,
   },
   {
-    id: 'executioner', name: "Executioner's Mark", icon: '', rarity: 'epic',
+    id: 'executioner', name: "Executioner's Mark", icon: '💀', rarity: 'epic',
     desc: '+12% crit chance and +75% crit damage.',
     critChanceBonus: 0.12, critMultMult: 1.75,
   },
   {
-    id: 'second_wind', name: 'Second Wind', icon: '', rarity: 'legendary',
+    id: 'second_wind', name: 'Second Wind', icon: '🌬️', rarity: 'legendary',
     desc: 'The first lethal hit each wave leaves you at 1 HP instead of dying.',
     flags: ['secondWind'],
   },
   {
-    id: 'vampiric_field', name: 'Vampiric Field', icon: '', rarity: 'epic',
+    id: 'vampiric_field', name: 'Vampiric Field', icon: '🧛', rarity: 'epic',
     desc: 'Every kill heals 2 HP.',
     flags: ['vampiric'], vampHeal: 2,
   },
   {
-    id: 'momentum', name: 'Momentum Engine', icon: '', rarity: 'epic',
+    id: 'momentum', name: 'Momentum Engine', icon: '🚀', rarity: 'epic',
     desc: 'Deal up to +50% damage the longer you keep moving.',
     flags: ['momentum'], momentumBonus: 0.5,
   },
   {
-    id: 'berserk_core', name: 'Berserk Core', icon: '', rarity: 'epic',
+    id: 'berserk_core', name: 'Berserk Core', icon: '😡', rarity: 'epic',
     desc: 'The lower your health, the faster you fire (up to +80%).',
     flags: ['berserk'], berserkBonus: 0.8,
   },
   {
-    id: 'spiked_aura', name: 'Spiked Aura', icon: '', rarity: 'rare',
+    id: 'spiked_aura', name: 'Spiked Aura', icon: '🦔', rarity: 'rare',
     desc: 'Reflect 40% of contact damage back to attackers.',
     flags: ['thorns'], thornsFrac: 0.4,
   },
   // ---- expanded roster (pure-stat, high-impact) ----
   {
-    id: 'ironbark_totem', name: 'Ironbark Totem', icon: '', rarity: 'rare',
+    id: 'ironbark_totem', name: 'Ironbark Totem', icon: '🌵', rarity: 'rare',
     desc: '+45 max health and +10% damage.',
     maxHealthBonus: 45, damageMult: 1.1,
   },
   {
-    id: 'duelists_edge', name: "Duelist's Edge", icon: '', rarity: 'rare',
+    id: 'duelists_edge', name: "Duelist's Edge", icon: '⚔️', rarity: 'rare',
     desc: '+25% damage and +8% crit chance.',
     damageMult: 1.25, critChanceBonus: 0.08,
   },
   {
-    id: 'stormcaller', name: 'Stormcaller', icon: '', rarity: 'epic',
+    id: 'stormcaller', name: 'Stormcaller', icon: '⚡', rarity: 'epic',
     desc: '+40% fire rate and +15% move speed.',
     fireRateMult: 1.4, speedMult: 1.15,
   },
   {
-    id: 'assassins_guile', name: "Assassin's Guile", icon: '', rarity: 'epic',
+    id: 'assassins_guile', name: "Assassin's Guile", icon: '🗡️', rarity: 'epic',
     desc: '+18% crit chance and +40% crit damage.',
     critChanceBonus: 0.18, critMultMult: 1.4,
   },
   {
-    id: 'warlords_banner', name: "Warlord's Banner", icon: '', rarity: 'epic',
+    id: 'warlords_banner', name: "Warlord's Banner", icon: '🚩', rarity: 'epic',
     desc: '+45% damage and +20 max health.',
     damageMult: 1.45, maxHealthBonus: 20,
   },
   {
-    id: 'prodigys_insight', name: "Prodigy's Insight", icon: '', rarity: 'rare',
+    id: 'prodigys_insight', name: "Prodigy's Insight", icon: '👁️', rarity: 'rare',
     desc: '+60% XP gained and +12% fire rate.',
     xpMult: 1.6, fireRateMult: 1.12,
   },
   {
-    id: 'windrunner_boots', name: 'Windrunner Boots', icon: '', rarity: 'rare',
+    id: 'windrunner_boots', name: 'Windrunner Boots', icon: '👟', rarity: 'rare',
     desc: '+35% move speed and +25% XP gained.',
     speedMult: 1.35, xpMult: 1.25,
   },
   {
-    id: 'colossus_plating', name: 'Colossus Plating', icon: '', rarity: 'epic',
+    id: 'colossus_plating', name: 'Colossus Plating', icon: '🪨', rarity: 'epic',
     desc: '+90 max health, but -10% move speed.',
     maxHealthBonus: 90, speedMult: 0.9,
   },
   {
-    id: 'snipers_focus', name: "Sniper's Focus", icon: '', rarity: 'rare',
+    id: 'snipers_focus', name: "Sniper's Focus", icon: '🎯', rarity: 'rare',
     desc: '+100% crit damage.',
     critMultMult: 2.0,
   },
   {
-    id: 'crown_of_slaughter', name: 'Crown of Slaughter', icon: '', rarity: 'legendary',
+    id: 'crown_of_slaughter', name: 'Crown of Slaughter', icon: '👑', rarity: 'legendary',
     desc: '+25% damage, +15% crit chance and +80% crit damage.',
     damageMult: 1.25, critChanceBonus: 0.15, critMultMult: 1.8,
   },

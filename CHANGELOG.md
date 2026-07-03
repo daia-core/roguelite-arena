@@ -8,6 +8,28 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-03 (evening) — pixel-art icons for every artifact (last emoji holdouts)
+
+- **All 20 run-long artifacts now have a distinct pixel-art icon** on the reward-pick card and the
+  event-granted card. Until now artifacts carried an empty `icon` and rendered as text-only cards
+  (name + rarity + description, no visual) — the last game objects with no sprite.
+  - Each artifact maps to a thematic authored glyph in the same pipeline as items/monsters
+    (`getItemIcon` → 12×12 pixel grid). 18 reuse existing shipped glyphs (skull for Executioner,
+    crossed swords for Duelist, crown for Crown of Slaughter, target for Sniper, bolt for
+    Stormcaller, rocket for Momentum, etc.); **2 new glyphs were hand-authored** — an open **book**
+    (Scholar's Codex) and a pennant **banner** (Warlord's Banner).
+  - Both artifact cards (`drawReward`, `drawEventRewardCard`) now draw the icon on the left with the
+    text reflowed beside it; the event-granted card gained an `icon` field so item *and* artifact
+    grants both show their sprite.
+- **Item-sprite coverage reviewed and confirmed 100%:** every one of the 136 distinct icons across
+  items, duos, upgrades and artifacts now resolves to one of 80 authored pixel glyphs — **0 fall
+  back to a generic procedural rune** (checked programmatically). This completes Felix's "pixel art
+  sprites for every item and every artifact, no emojis" pass.
+- QA: new `qa-artifact-icons.mjs` renders all 20 and asserts each paints pixels with ≥2 colours —
+  20/20 pass, 0 console errors; sheet eyeballed at `shots/pixel-art/artifact-icons.png`. Build clean.
+
+---
+
 ## 2026-07-03 (evening) — all 37 enemy sprites modernized (form-lit hue-shifted shading)
 
 - **Every remaining enemy sprite** got the modern pixel-art treatment in one pass, using a

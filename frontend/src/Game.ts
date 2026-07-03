@@ -139,7 +139,7 @@ export class Game {
   eventResultText: string | null = null;    // outcome shown after picking an option
   // The concrete item/artifact an event granted, so the result screen can show a
   // proper card (name + rarity + what it does) instead of just a line of text.
-  private eventReward: { name: string; rarity: string; desc: string } | null = null;
+  private eventReward: { name: string; rarity: string; desc: string; icon: string; artifactId?: string } | null = null;
   rewardChoices: Artifact[] = [];            // the 1-of-3 artifact offer
   rewardTitle: string = '';                  // header for the reward screen
   rewardSkippable: boolean = false;          // show a Skip button (elite/treasure/boss)
@@ -2826,11 +2826,19 @@ export class Game {
     const h = this.eventRewardCardHeight(cardW, s, isMobile);
     drawPanel(ctx, x0, y, cardW, h, DARK_WOOD_THEME, 23, 67);
     const color = Game.RARITY_COLOR[this.eventReward.rarity] || '#ffffff';
-    this.renderer.drawText(this.eventReward.name, x0 + s(12), y + s(isMobile ? 15 : 17), { size: s(isMobile ? 11 : 13), align: 'left', color });
+    const iconBox = s(isMobile ? 26 : 28);
+    const textX = x0 + s(12) + iconBox + s(8);
+    const textW = cardW - (textX - x0) - s(12);
+    if (this.eventReward.artifactId) {
+      this.renderer.drawArtifactIcon(this.eventReward.artifactId, x0 + s(12), y + (h - iconBox) / 2, iconBox, 'left');
+    } else {
+      this.renderer.drawItemIcon(this.eventReward.icon, x0 + s(12), y + (h - iconBox) / 2, iconBox, 'left');
+    }
+    this.renderer.drawText(this.eventReward.name, textX, y + s(isMobile ? 15 : 17), { size: s(isMobile ? 11 : 13), align: 'left', color });
     this.renderer.drawText(this.eventReward.rarity.toUpperCase(), x0 + cardW - s(12), y + s(isMobile ? 15 : 17), { size: s(7), align: 'right', color });
     const bodyPx = s(isMobile ? 8 : 9);
-    for (const [li, line] of this.wrapText(this.eventReward.desc, cardW - s(24), bodyPx).entries()) {
-      this.renderer.drawText(line, x0 + s(12), y + s(isMobile ? 32 : 34) + li * (bodyPx + s(3)), { size: bodyPx, align: 'left', color: '#d8c9a8' });
+    for (const [li, line] of this.wrapText(this.eventReward.desc, textW, bodyPx).entries()) {
+      this.renderer.drawText(line, textX, y + s(isMobile ? 32 : 34) + li * (bodyPx + s(3)), { size: bodyPx, align: 'left', color: '#d8c9a8' });
     }
   }
 
@@ -2951,7 +2959,7 @@ export class Game {
         if (pool.length) {
           const picked = pool[Math.floor(Math.random() * pool.length)];
           this.grantArtifact(picked);
-          this.eventReward = { name: picked.name, rarity: picked.rarity, desc: picked.desc };
+          this.eventReward = { name: picked.name, rarity: picked.rarity, desc: picked.desc, icon: picked.icon, artifactId: picked.id };
         }
         break;
       }
@@ -2960,7 +2968,7 @@ export class Game {
         if (items[0]) {
           this.playerStats.addItem(items[0]);
           this.refreshMaxHealth();
-          this.eventReward = { name: items[0].name, rarity: items[0].rarity, desc: items[0].description };
+          this.eventReward = { name: items[0].name, rarity: items[0].rarity, desc: items[0].description, icon: items[0].icon };
         }
         break;
       }
@@ -2987,13 +2995,17 @@ export class Game {
     const topY = s(isMobile ? 72 : 92);
     const bodyPx = s(isMobile ? 8 : 9);
 
+    const iconBox = s(isMobile ? 28 : 30);
+    const textX = x0 + s(12) + iconBox + s(8);
+    const textW = cardW - (textX - x0) - s(12);
     this.rewardChoices.forEach((a, i) => {
       const y = topY + i * (cardH + gap);
       drawPanel(ctx, x0, y, cardW, cardH, DARK_WOOD_THEME, 11 + i, 53);
-      this.renderer.drawText(a.name, x0 + s(12), y + s(isMobile ? 16 : 18), { size: s(isMobile ? 11 : 13), align: 'left', color: rarityColor[a.rarity] || '#ffffff' });
+      this.renderer.drawArtifactIcon(a.id, x0 + s(12), y + (cardH - iconBox) / 2, iconBox, 'left');
+      this.renderer.drawText(a.name, textX, y + s(isMobile ? 16 : 18), { size: s(isMobile ? 11 : 13), align: 'left', color: rarityColor[a.rarity] || '#ffffff' });
       this.renderer.drawText(a.rarity.toUpperCase(), x0 + cardW - s(12), y + s(isMobile ? 16 : 18), { size: s(7), align: 'right', color: rarityColor[a.rarity] || '#ffffff' });
-      for (const [li, line] of this.wrapText(a.desc, cardW - s(24), bodyPx).entries()) {
-        this.renderer.drawText(line, x0 + s(12), y + s(isMobile ? 34 : 36) + li * (bodyPx + s(3)), { size: bodyPx, align: 'left', color: '#d8c9a8' });
+      for (const [li, line] of this.wrapText(a.desc, textW, bodyPx).entries()) {
+        this.renderer.drawText(line, textX, y + s(isMobile ? 34 : 36) + li * (bodyPx + s(3)), { size: bodyPx, align: 'left', color: '#d8c9a8' });
       }
     });
 
