@@ -42,7 +42,8 @@ const result = await page.evaluate(() => {
   const g = window.__game;
   if (!g) return { fatal: 'no __game handle' };
   g.startNewGame();
-  if (!g.player || g.state !== 'playing') return { fatal: `bad start state=${g.state} player=${!!g.player}` };
+  g.state = 'playing'; // node-map opens first now; jump into combat (map covered by qa-node-map)
+  if (!g.player) return { fatal: `no player after startNewGame (state=${g.state})` };
   const step = (n) => { for (let i=0;i<n;i++) g.update(1/60); };
   const out = {};
 
@@ -74,7 +75,10 @@ const result = await page.evaluate(() => {
   out.xpGranted = (g.player.level > lvlBefore) || (g.player.xp > xpBefore);
 
   // --- 3. DENSER SPAWNS: run a live wave, track peak crowd size ---
+  // startNewGame opens the node-map; a battle node calls startNextWave() to actually
+  // arm the WaveManager and drop into combat. Invoke that real entry point directly.
   g.startNewGame();
+  g.startNextWave();
   let peak = 0;
   for (let i = 0; i < 240; i++) { g.update(1/60); peak = Math.max(peak, g.enemies.length); }
   out.peakEnemies = peak;                                  // burst spawning should crowd the field

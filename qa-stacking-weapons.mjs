@@ -73,6 +73,7 @@ const result = await page.evaluate(() => {
 
   // === 1. ORBITING ORBS ===
   g.startNewGame();
+  g.state = 'playing'; // node-map now opens first; jump into combat (map has its own qa-node-map test)
   out.baseWeapon = g.playerStats.getWeaponType();          // should stay 'auto-aim' throughout
   giveItem('orbit_orb_t2');                                 // +1 orb
   giveItem('orbit_orb_swarm_t3');                           // +2 orbs (=> 3 total, additive/stacks)
@@ -86,6 +87,7 @@ const result = await page.evaluate(() => {
 
   // === 2. BOMBS ===
   g.startNewGame();
+  g.state = 'playing'; // node-map now opens first; jump into combat (map has its own qa-node-map test)
   giveItem('bomb_bandolier_t2');
   spawnRing(6, 40);
   const bombDmgBefore = totalDmg();
@@ -96,6 +98,7 @@ const result = await page.evaluate(() => {
 
   // === 3. NOVA ===
   g.startNewGame();
+  g.state = 'playing'; // node-map now opens first; jump into combat (map has its own qa-node-map test)
   giveItem('nova_core_t3');
   spawnRing(10, 120);
   const novaDmgBefore = totalDmg();
@@ -106,6 +109,7 @@ const result = await page.evaluate(() => {
 
   // === 4. WHIRLING MELEE COEXISTS WITH SHOTS ===
   g.startNewGame();
+  g.state = 'playing'; // node-map now opens first; jump into combat (map has its own qa-node-map test)
   // Primary stays a gun (auto-aim). Add the aux melee — expect BOTH melee arcs AND projectiles.
   giveItem('whirl_blades_t2');
   out.primaryIsGun = g.playerStats.getWeaponType();         // 'auto-aim' (NOT replaced by melee)

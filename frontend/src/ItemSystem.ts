@@ -1,2648 +1,20 @@
-// Advanced item and upgrade system with tiers, tags, and Brotato-inspired mechanics
+// Item & upgrade system — runtime logic (database access + PlayerStats aggregation).
+// Type definitions live in ./items/types; the static roster lives in ./items/catalog.
+// This file re-exports the types for existing importers, so no other file needs changing.
 
 import { TransformationTracker } from './TransformationSystem';
 import { DuoTracker, DUO_COMBOS, type DuoCombo } from './DuoSystem';
+import { ItemTier, getItemKinds, type Item, type ItemTag, type ItemKind, type WeaponType, type Weapon } from './items/types';
+import { ITEM_CATALOG } from './items/catalog';
 
-export const ItemTier = {
-  Common: 1,
-  Uncommon: 2,
-  Rare: 3,
-  Legendary: 4
-} as const;
-
-export type ItemTier = typeof ItemTier[keyof typeof ItemTier];
-
-export type ItemTag = 'melee' | 'ranged' | 'defensive' | 'economic' | 'elemental' | 'utility';
-
-// Weapon attack patterns (Brotato-inspired)
-export type WeaponType =
-  | 'auto-aim' // Default: auto-aim bullets
-  | 'shotgun' // Spread of projectiles
-  | 'laser' // Continuous beam
-  | 'orbital' // Rotating projectiles around player
-  | 'melee'; // Swing/slash around player
-
-export interface Item {
-  id: string;
-  name: string;
-  description: string;
-  rarity: 'common' | 'rare' | 'epic' | 'legendary';
-  tier: ItemTier;
-  cost: number;
-  icon: string;
-  unlocked: boolean;
-  tags: ItemTag[]; // For synergy detection and affinity system
-
-  // Weapon system (Brotato-inspired)
-  weaponType?: WeaponType; // Changes attack behavior
-  weaponRange?: number; // For melee weapons
-  weaponArc?: number; // For melee sweep angle (radians)
-
-  // AUXILIARY STACKING WEAPONS — these run ALONGSIDE the primary weapon (they do
-  // NOT replace weaponType), so a gun build can also spin blades, orbit orbs,
-  // drop bombs and pulse novas. Additive/count fields stack across copies;
-  // boolean fields don't (a duplicate is wasted, so the shop stops offering it).
-  orbitOrbs?: number; // extra energy orbs circling the player (additive)
-  orbitDamageMult?: number; // scales orbit-orb contact damage
-  auxMelee?: boolean; // a whirling melee arc that swings on its own timer
-  auxMeleeDamageMult?: number; // scales the aux melee damage
-  bombDrop?: boolean; // periodically drop a bomb at the player's feet
-  bombDamageMult?: number; // scales bomb blast damage
-  bombCooldownMult?: number; // <1 = bombs drop faster (multiplies the base cooldown)
-  novaPulse?: boolean; // periodic expanding shockwave from the player
-  novaDamageMult?: number; // scales nova damage
-  novaCooldownMult?: number; // <1 = novas fire faster
-
-  // MELEE SWING — every player has a default swing that auto-hits nearby enemies.
-  // These fields let items shape it into distinct melee builds. The swing STACKS on
-  // top of the (always-firing) ranged weapon, so a melee build still shoots weakly.
-  swingDamageMult?: number; // scales the default swing damage (multiplicative)
-  swingRangeBonus?: number; // flat range added to the swing reach (px)
-  swingArcBonus?: number; // radians added to the swing arc width
-  swingCooldownMult?: number; // <1 = swing faster, >1 = slower/heavier
-  swingAoe?: number; // radius of a full-circle AOE burst on each swing (px); makes the swing hit all around
-  aoeRadiusMult?: number; // GLOBAL area multiplier — scales swing AOE, nova, and bomb radii
-
-  // Stat modifiers
-  damageMultiplier?: number;
-  // Per-damage-type multipliers (Brotato-style). These layer ON TOP of the global
-  // damageMultiplier and only apply to the matching source, so an item can read
-  // "+45% melee dmg, -10% ranged dmg" — a real specialisation cost that makes a
-  // melee build and a ranged build mechanically different, not just a tag.
-  meleeDamageMult?: number; // multiplies melee-weapon hits only
-  rangedDamageMult?: number; // multiplies projectile hits only
-  elementalDamageMult?: number; // multiplies on-hit elemental effects (chain, explosion)
-  fireRateMultiplier?: number;
-  critChance?: number; // Additive
-  critDamageMultiplier?: number; // Multiplicative
-  speedMultiplier?: number;
-  maxHealthBonus?: number; // Additive
-  healthRegen?: number; // HP per second
-  armor?: number; // Flat damage reduction
-
-  // Special effects
-  piercing?: number; // Number of enemies to pierce
-  explosionOnHit?: boolean;
-  chainLightning?: number; // Percentage chance
-  lifesteal?: number; // Percentage
-  thorns?: number; // Percentage reflect
-  shield?: boolean;
-  multishot?: number; // Extra projectiles
-  projectileSpeed?: number;
-  knockback?: number;
-  xpMagnet?: number; // Multiplier for pickup range
-  goldBonus?: number; // Multiplier
-  dodge?: number; // Percentage chance to evade
-  poison?: boolean; // DoT effect
-  freeze?: number; // Percentage chance to slow
-  homing?: boolean; // Bullets curve toward enemies
-
-  // Brotato-inspired mechanics
-  rerollDiscount?: number; // Reduce shop reroll cost
-  shopDiscount?: number; // Reduce all shop prices
-  recycleBonus?: number; // Increase recycle value
-  interestBonus?: number; // Additional interest rate on banked gold (additive, e.g. 0.05 = +5%)
-  luck?: number; // Raises shop rarity + health-orb drop chance (additive, e.g. 0.15 = +15%)
-}
-
-export interface Weapon {
-  id: string;
-  name: string;
-  baseName: string; // For combining (e.g., "Sword")
-  tier: ItemTier;
-  damage: number;
-  icon: string;
-  cost: number;
-  unlocked: boolean;
-}
+// Re-export the item types from their new home so every existing importer
+// (Game.ts, Player.ts, ArtifactSystem.ts, …) keeps working unchanged.
+export { ItemTier, getItemKinds };
+export type { Item, ItemTag, ItemKind, WeaponType, Weapon };
 
 export class ItemDatabase {
-  private static items: Item[] = [
-    // ==================== TIER 1 (COMMON) ====================
-    // Basic stat boosts - cheap and accessible
-    {
-      id: 'damage_t1',
-      name: 'Iron Ring',
-      description: '+3 damage',
-      rarity: 'common',
-      tier: ItemTier.Common,
-      cost: 8,
-      icon: '💍',
-      unlocked: true,
-      tags: ['melee'],
-      damageMultiplier: 1.15
-    },
-    {
-      id: 'attack_speed_t1',
-      name: 'Swift Gloves',
-      description: '+10% fire rate',
-      rarity: 'common',
-      tier: ItemTier.Common,
-      cost: 8,
-      icon: '🧤',
-      unlocked: true,
-      tags: ['melee'],
-      fireRateMultiplier: 1.1
-    },
-    {
-      id: 'movement_speed_t1',
-      name: 'Worn Boots',
-      description: '+10% move speed',
-      rarity: 'common',
-      tier: ItemTier.Common,
-      cost: 7,
-      icon: '👟',
-      unlocked: true,
-      tags: ['utility'],
-      speedMultiplier: 1.1
-    },
-    {
-      id: 'max_hp_t1',
-      name: 'Health Pendant',
-      description: '+15 max health',
-      rarity: 'common',
-      tier: ItemTier.Common,
-      cost: 10,
-      icon: '❤️',
-      unlocked: true,
-      tags: ['defensive'],
-      maxHealthBonus: 15
-    },
-    {
-      id: 'hp_regen_t1',
-      name: 'Healing Charm',
-      description: '+0.5 HP/sec',
-      rarity: 'common',
-      tier: ItemTier.Common,
-      cost: 9,
-      icon: '💚',
-      unlocked: true,
-      tags: ['defensive'],
-      healthRegen: 0.5
-    },
-    {
-      id: 'xp_magnet_t1',
-      name: 'Small Magnet',
-      description: '+30% pickup range',
-      rarity: 'common',
-      tier: ItemTier.Common,
-      cost: 6,
-      icon: '🧲',
-      unlocked: true,
-      tags: ['utility'],
-      xpMagnet: 1.3
-    },
-    {
-      id: 'gold_bonus_t1',
-      name: 'Coin Purse',
-      description: '+10% gold',
-      rarity: 'common',
-      tier: ItemTier.Common,
-      cost: 8,
-      icon: '💰',
-      unlocked: true,
-      tags: ['economic'],
-      goldBonus: 1.1
-    },
-    {
-      id: 'armor_t1',
-      name: 'Leather Vest',
-      description: '+2 armor',
-      rarity: 'common',
-      tier: ItemTier.Common,
-      cost: 12,
-      icon: '🦺',
-      unlocked: true,
-      tags: ['defensive'],
-      armor: 2
-    },
-
-    // ==================== TIER 2 (UNCOMMON) ====================
-    // Moderate stat boosts and simple special effects
-    {
-      id: 'damage_t2',
-      name: 'Steel Band',
-      description: '+15% damage',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 25,
-      icon: '💎',
-      unlocked: true,
-      tags: ['melee'],
-      damageMultiplier: 1.25
-    },
-    {
-      id: 'attack_speed_t2',
-      name: 'Rapid Gauntlets',
-      description: '+20% fire rate',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 25,
-      icon: '⚡',
-      unlocked: true,
-      tags: ['melee', 'ranged'],
-      fireRateMultiplier: 1.2
-    },
-    {
-      id: 'movement_speed_t2',
-      name: 'Running Shoes',
-      description: '+20% move speed',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 22,
-      icon: '👢',
-      unlocked: true,
-      tags: ['utility'],
-      speedMultiplier: 1.2
-    },
-    {
-      id: 'max_hp_t2',
-      name: 'Vitality Ring',
-      description: '+30 max health',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 28,
-      icon: '❤️‍🔥',
-      unlocked: true,
-      tags: ['defensive'],
-      maxHealthBonus: 30
-    },
-    {
-      id: 'crit_chance_t2',
-      name: 'Precision Charm',
-      description: '+10% crit chance, +25% crit damage',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 32,
-      icon: '🎯',
-      unlocked: true,
-      tags: ['melee', 'ranged'],
-      critChance: 0.1,
-      critDamageMultiplier: 1.25
-    },
-    {
-      id: 'crit_damage_t2',
-      name: 'Precision Scope',
-      description: '+35% crit damage',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 28,
-      icon: '🔍',
-      unlocked: true,
-      tags: ['ranged'],
-      critDamageMultiplier: 1.35
-    },
-    {
-      id: 'lifesteal_t2',
-      name: 'Vampire Fang',
-      description: '5% lifesteal',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 32,
-      icon: '🩸',
-      unlocked: true,
-      tags: ['melee'],
-      lifesteal: 0.05
-    },
-    {
-      id: 'dodge_t2',
-      name: 'Evasion Cloak',
-      description: '8% dodge chance',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 30,
-      icon: '💨',
-      unlocked: true,
-      tags: ['defensive', 'utility'],
-      dodge: 0.08
-    },
-    {
-      id: 'thorns_t2',
-      name: 'Spiked Armor',
-      description: 'Reflect 15% damage',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 26,
-      icon: '🌵',
-      unlocked: true,
-      tags: ['defensive'],
-      thorns: 0.15
-    },
-    {
-      id: 'armor_t2',
-      name: 'Chain Mail',
-      description: '+5 armor',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 35,
-      icon: '🛡️',
-      unlocked: true,
-      tags: ['defensive'],
-      armor: 5
-    },
-    {
-      id: 'gold_bonus_t2',
-      name: 'Treasure Hunter',
-      description: '+25% gold',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 24,
-      icon: '💸',
-      unlocked: true,
-      tags: ['economic'],
-      goldBonus: 1.25
-    },
-    {
-      id: 'reroll_discount_t2',
-      name: 'Spyglass',
-      description: '-50% reroll cost',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 28,
-      icon: '🔭',
-      unlocked: true,
-      tags: ['economic', 'utility'],
-      rerollDiscount: 0.5
-    },
-    {
-      id: 'shop_discount_t2',
-      name: 'Coupon Book',
-      description: '-10% shop prices',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 22,
-      icon: '🎫',
-      unlocked: true,
-      tags: ['economic'],
-      shopDiscount: 0.1
-    },
-    {
-      id: 'recycle_bonus_t2',
-      name: 'Haggler Badge',
-      description: '+50% recycle value',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 20,
-      icon: '♻️',
-      unlocked: true,
-      tags: ['economic'],
-      recycleBonus: 0.5
-    },
-
-    // ==================== TIER 3 (RARE) ====================
-    // Strong effects and build-defining mechanics
-    {
-      id: 'damage_t3',
-      name: 'Champion\'s Crown',
-      description: '+35% damage',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 60,
-      icon: '👑',
-      unlocked: true,
-      tags: ['melee', 'ranged'],
-      damageMultiplier: 1.35
-    },
-    {
-      id: 'attack_speed_t3',
-      name: 'Lightning Bracers',
-      description: '+35% fire rate',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 58,
-      icon: '⚡',
-      unlocked: true,
-      tags: ['ranged'],
-      fireRateMultiplier: 1.35
-    },
-    {
-      id: 'piercing_t3',
-      name: 'Penetrating Shot',
-      description: 'Pierce +2 enemies',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 55,
-      icon: '🎯',
-      unlocked: true,
-      tags: ['ranged'],
-      piercing: 2
-    },
-    {
-      id: 'multishot_t3',
-      name: 'Trident',
-      description: '+2 projectiles',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 65,
-      icon: '🔱',
-      unlocked: true,
-      tags: ['ranged'],
-      multishot: 2
-    },
-    {
-      id: 'homing_t3',
-      name: 'Seeking Rune',
-      description: 'Homing projectiles',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 70,
-      icon: '🎯',
-      unlocked: true,
-      tags: ['ranged', 'elemental'],
-      homing: true
-    },
-    {
-      id: 'explosive_t3',
-      name: 'Demolition Kit',
-      description: 'Explosions on hit',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 75,
-      icon: '💣',
-      unlocked: true,
-      tags: ['ranged', 'elemental'],
-      explosionOnHit: true
-    },
-    {
-      id: 'chain_lightning_t3',
-      name: 'Storm Essence',
-      description: '25% chain to nearby',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 68,
-      icon: '⚡',
-      unlocked: true,
-      tags: ['elemental', 'ranged'],
-      chainLightning: 0.25
-    },
-    {
-      id: 'poison_t3',
-      name: 'Toxic Vial',
-      description: 'Poison (7 dmg/s, 3s)',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 62,
-      icon: '☠️',
-      unlocked: true,
-      tags: ['elemental'],
-      poison: true
-    },
-    {
-      id: 'freeze_t3',
-      name: 'Frost Orb',
-      description: '15% freeze chance',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 60,
-      icon: '❄️',
-      unlocked: true,
-      tags: ['elemental'],
-      freeze: 0.15
-    },
-    {
-      id: 'shield_t3',
-      name: 'Energy Barrier',
-      description: '75 HP shield (regen)',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 72,
-      icon: '🛡️',
-      unlocked: true,
-      tags: ['defensive'],
-      shield: true
-    },
-    {
-      id: 'lifesteal_t3',
-      name: 'Blood Chalice',
-      description: '12% lifesteal',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 70,
-      icon: '🍷',
-      unlocked: true,
-      tags: ['melee'],
-      lifesteal: 0.12
-    },
-    {
-      id: 'dodge_t3',
-      name: 'Shadow Step',
-      description: '20% dodge chance',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 65,
-      icon: '👻',
-      unlocked: true,
-      tags: ['defensive', 'utility'],
-      dodge: 0.2
-    },
-    {
-      id: 'crit_chance_t3',
-      name: 'Assassin\'s Mark',
-      description: '+20% crit chance',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 68,
-      icon: '🗡️',
-      unlocked: true,
-      tags: ['melee', 'ranged'],
-      critChance: 0.2
-    },
-    {
-      id: 'knockback_t3',
-      name: 'Impact Gauntlet',
-      description: 'Heavy knockback',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 55,
-      icon: '👊',
-      unlocked: true,
-      tags: ['melee'],
-      knockback: 250
-    },
-
-    // ==================== TIER 4 (LEGENDARY) ====================
-    // Game-changing unique effects
-    {
-      id: 'berserker_rage_t4',
-      name: 'Berserker Rage',
-      description: '+60% damage',
-      rarity: 'legendary',
-      tier: ItemTier.Legendary,
-      cost: 140,
-      icon: '⚔️',
-      unlocked: true,
-      tags: ['melee'],
-      damageMultiplier: 1.6
-    },
-    {
-      id: 'rapid_fire_t4',
-      name: 'Gatling Core',
-      description: '+60% fire rate',
-      rarity: 'legendary',
-      tier: ItemTier.Legendary,
-      cost: 135,
-      icon: '🔫',
-      unlocked: true,
-      tags: ['ranged'],
-      fireRateMultiplier: 1.6
-    },
-    {
-      id: 'glass_cannon_t4',
-      name: 'Glass Cannon',
-      description: '+100% dmg, -40% HP',
-      rarity: 'legendary',
-      tier: ItemTier.Legendary,
-      cost: 150,
-      icon: '💀',
-      unlocked: true,
-      tags: ['melee', 'ranged'],
-      damageMultiplier: 2.0,
-      maxHealthBonus: -40
-    },
-    {
-      id: 'time_slow_t4',
-      name: 'Chrono Crystal',
-      description: 'Slow time on crit',
-      rarity: 'legendary',
-      tier: ItemTier.Legendary,
-      cost: 145,
-      icon: '⏱️',
-      unlocked: true,
-      tags: ['elemental', 'utility'],
-      critChance: 0.15,
-      freeze: 0.3 // 30% chance to slow
-    },
-    {
-      id: 'clone_projectiles_t4',
-      name: 'Mirror Shard',
-      description: 'Clone projectiles',
-      rarity: 'legendary',
-      tier: ItemTier.Legendary,
-      cost: 155,
-      icon: '🪞',
-      unlocked: true,
-      tags: ['ranged'],
-      multishot: 3
-    },
-    {
-      id: 'chain_lightning_t4',
-      name: 'Arc Reactor',
-      description: 'Chain to all nearby',
-      rarity: 'legendary',
-      tier: ItemTier.Legendary,
-      cost: 148,
-      icon: '⚡',
-      unlocked: true,
-      tags: ['elemental', 'ranged'],
-      chainLightning: 0.5,
-      explosionOnHit: true
-    },
-    {
-      id: 'immortal_t4',
-      name: 'Phoenix Feather',
-      description: '+100 HP, +10 HP/s',
-      rarity: 'legendary',
-      tier: ItemTier.Legendary,
-      cost: 142,
-      icon: '🔥',
-      unlocked: true,
-      tags: ['defensive'],
-      maxHealthBonus: 100,
-      healthRegen: 10
-    },
-    {
-      id: 'mega_knockback_t4',
-      name: 'Titan Fist',
-      description: 'Massive knockback',
-      rarity: 'legendary',
-      tier: ItemTier.Legendary,
-      cost: 138,
-      icon: '🦾',
-      unlocked: true,
-      tags: ['melee'],
-      knockback: 500,
-      damageMultiplier: 1.3
-    },
-    {
-      id: 'infinite_piercing_t4',
-      name: 'Void Lance',
-      description: 'Pierce all enemies',
-      rarity: 'legendary',
-      tier: ItemTier.Legendary,
-      cost: 160,
-      icon: '🌌',
-      unlocked: true,
-      tags: ['ranged'],
-      piercing: 999
-    },
-    {
-      id: 'gold_rush_t4',
-      name: 'Midas Touch',
-      description: '+100% gold, -15% shop',
-      rarity: 'legendary',
-      tier: ItemTier.Legendary,
-      cost: 125,
-      icon: '✨',
-      unlocked: true,
-      tags: ['economic'],
-      goldBonus: 2.0,
-      shopDiscount: 0.15
-    },
-
-    // ==================== WEAPON ITEMS (BROTATO-INSPIRED) ====================
-    // These items change your attack pattern entirely
-    {
-      id: 'shotgun_weapon_t2',
-      name: 'Scatter Gun',
-      description: 'Fires wide spread (5 pellets)',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 35,
-      icon: '🔫',
-      unlocked: true,
-      tags: ['ranged'],
-      weaponType: 'shotgun',
-      multishot: 4, // 1 main + 4 extra = 5 total
-      damageMultiplier: 0.8, // Lower damage per pellet
-      fireRateMultiplier: 0.7 // Slower fire rate
-    },
-    {
-      id: 'melee_sword_t2',
-      name: 'Crescent Blade',
-      description: 'Wider, faster, harder-hitting swing',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 32,
-      icon: '🗡️',
-      unlocked: true,
-      tags: ['melee'],
-      meleeDamageMult: 1.5, // buffs the swing, not the gun
-      swingRangeBonus: 25,
-      swingArcBonus: Math.PI * 0.15,
-      swingCooldownMult: 0.75 // 33% faster swings
-    },
-    {
-      id: 'orbital_weapon_t3',
-      name: 'Satellite Orbs',
-      description: 'Orbs orbit around you',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 65,
-      icon: '⭕',
-      unlocked: true,
-      tags: ['utility', 'ranged'],
-      weaponType: 'orbital',
-      multishot: 2, // 3 orbs total
-      damageMultiplier: 0.9
-    },
-    {
-      id: 'laser_weapon_t3',
-      name: 'Beam Rifle',
-      description: 'Continuous laser beam',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 70,
-      icon: '⚡',
-      unlocked: true,
-      tags: ['ranged', 'elemental'],
-      weaponType: 'laser',
-      piercing: 999, // Laser pierces everything
-      damageMultiplier: 0.6, // Lower base damage
-      fireRateMultiplier: 3.0, // Much faster ticks
-      projectileSpeed: 1200 // Very fast
-    },
-    {
-      id: 'hammer_weapon_t3',
-      name: 'Thunder Hammer',
-      description: 'Slow, heavy swing that quakes all around you',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 62,
-      icon: '🔨',
-      unlocked: true,
-      tags: ['melee'],
-      meleeDamageMult: 2.2, // buffs the swing, not the gun
-      swingAoe: 90, // full-circle shockwave on each swing
-      swingRangeBonus: 20,
-      swingCooldownMult: 1.6, // very slow but hard-hitting
-      knockback: 300
-    },
-
-    // ==================== NEW ITEMS (BINDING OF ISAAC INSPIRED) ====================
-    // Focus on synergies and build diversity
-    {
-      id: 'glass_cannon_t2',
-      name: 'Glass Cannon',
-      description: '+80% dmg, -30 max HP',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 28,
-      icon: '💥',
-      unlocked: true,
-      tags: ['ranged', 'utility'],
-      damageMultiplier: 1.8,
-      maxHealthBonus: -30
-    },
-    {
-      id: 'berserker_rage_t2',
-      name: 'Berserker Rage',
-      description: '+30% dmg, +20% speed',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 32,
-      icon: '😡',
-      unlocked: true,
-      tags: ['melee', 'utility'],
-      damageMultiplier: 1.3,
-      speedMultiplier: 1.2
-    },
-    {
-      id: 'lucky_coin_t1',
-      name: 'Lucky Coin',
-      description: '+7% crit chance, +8% luck',
-      rarity: 'common',
-      tier: ItemTier.Common,
-      cost: 10,
-      icon: '🪙',
-      unlocked: true,
-      tags: ['utility'],
-      critChance: 0.07,
-      luck: 0.08
-    },
-    {
-      id: 'explosive_rounds_t2',
-      name: 'Explosive Rounds',
-      description: 'Bullets explode on hit',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 35,
-      icon: '💣',
-      unlocked: true,
-      tags: ['ranged', 'elemental'],
-      explosionOnHit: true,
-      damageMultiplier: 0.9 // Slightly lower base damage
-    },
-    {
-      id: 'toxic_touch_t2',
-      name: 'Envenomed Blade',
-      description: 'Poison on hit, +25% melee damage',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 34,
-      icon: '☣️',
-      unlocked: true,
-      tags: ['elemental', 'melee'],
-      poison: true,
-      meleeDamageMult: 1.25
-    },
-    {
-      id: 'frozen_heart_t3',
-      name: 'Frozen Heart',
-      description: '40% freeze chance',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 55,
-      icon: '❄️',
-      unlocked: true,
-      tags: ['elemental', 'defensive'],
-      freeze: 0.4,
-      armor: 3
-    },
-    {
-      id: 'vampiric_embrace_t3',
-      name: 'Vampiric Embrace',
-      description: '25% lifesteal',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 58,
-      icon: '🩸',
-      unlocked: true,
-      tags: ['utility'],
-      lifesteal: 0.25
-    },
-    {
-      id: 'chain_reaction_t3',
-      name: 'Chain Reaction',
-      description: '50% chain lightning',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 62,
-      icon: '⚡',
-      unlocked: true,
-      tags: ['elemental', 'ranged'],
-      chainLightning: 0.5
-    },
-    {
-      id: 'triple_shot_t2',
-      name: 'Scattergun',
-      description: '+2 projectiles, strong knockback',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 40,
-      icon: '🎯',
-      unlocked: true,
-      tags: ['ranged'],
-      multishot: 2,
-      knockback: 200
-    },
-    {
-      id: 'rapid_fire_t2',
-      name: 'Rapid Fire',
-      description: '+40% fire rate',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 33,
-      icon: '🔥',
-      unlocked: true,
-      tags: ['ranged'],
-      fireRateMultiplier: 1.4
-    },
-    {
-      id: 'armor_plating_t2',
-      name: 'Armor Plating',
-      description: '+8 armor',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 30,
-      icon: '🛡️',
-      unlocked: true,
-      tags: ['defensive'],
-      armor: 8
-    },
-    {
-      id: 'regeneration_t2',
-      name: 'Regeneration',
-      description: '+3 HP/s',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 28,
-      icon: '💚',
-      unlocked: true,
-      tags: ['defensive'],
-      healthRegen: 3
-    },
-    {
-      id: 'dodge_master_t3',
-      name: 'Evasion Plating',
-      description: '15% dodge chance, +5 armor',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 52,
-      icon: '👻',
-      unlocked: true,
-      tags: ['defensive', 'utility'],
-      dodge: 0.15,
-      armor: 5
-    },
-    {
-      id: 'homing_bullets_t3',
-      name: 'Guided Rounds',
-      description: 'Bullets track enemies, +20% ranged dmg',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 64,
-      icon: '🎯',
-      unlocked: true,
-      tags: ['ranged', 'utility'],
-      homing: true,
-      rangedDamageMult: 1.2
-    },
-    {
-      id: 'speed_demon_t2',
-      name: 'Speed Demon',
-      description: '+35% move speed',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 25,
-      icon: '💨',
-      unlocked: true,
-      tags: ['utility'],
-      speedMultiplier: 1.35
-    },
-    {
-      id: 'thorny_armor_t3',
-      name: 'Thorny Armor',
-      description: '40% reflect damage',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 52,
-      icon: '🌹',
-      unlocked: true,
-      tags: ['defensive'],
-      thorns: 0.4,
-      armor: 5
-    },
-    {
-      id: 'crit_master_t3',
-      name: 'Crit Master',
-      description: '2.5x crit multiplier',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 55,
-      icon: '💢',
-      unlocked: true,
-      tags: ['utility'],
-      critDamageMultiplier: 2.5
-    },
-    {
-      id: 'bargain_hunter_t1',
-      name: 'Bargain Hunter',
-      description: '-7% shop prices, -20% reroll cost',
-      rarity: 'common',
-      tier: ItemTier.Common,
-      cost: 12,
-      icon: '💰',
-      unlocked: true,
-      tags: ['economic'],
-      shopDiscount: 0.07,
-      rerollDiscount: 0.2
-    },
-    {
-      id: 'recycler_t2',
-      name: 'Salvage Rig',
-      description: '+40% recycle value, -6% shop prices',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 22,
-      icon: '♻️',
-      unlocked: true,
-      tags: ['economic'],
-      recycleBonus: 0.4,
-      shopDiscount: 0.06
-    },
-    {
-      id: 'soul_collector_t3',
-      name: 'Soul Collector',
-      description: '+50% pickup range',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 45,
-      icon: '👻',
-      unlocked: true,
-      tags: ['utility'],
-      xpMagnet: 1.5
-    },
-
-    // ==================== NEW ITEMS (20+ additions for build variety) ====================
-
-    // Damage scaling items
-    {
-      id: 'crit_synergy_t3',
-      name: 'Critical Synergy',
-      description: '+15% crit, +50% crit dmg',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 70,
-      icon: '💥',
-      unlocked: true,
-      tags: ['melee', 'ranged'],
-      critChance: 0.15,
-      critDamageMultiplier: 1.5
-    },
-    {
-      id: 'glass_blade_t2',
-      name: 'Glass Blade',
-      description: '+50% dmg, -20 HP',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 30,
-      icon: '🔪',
-      unlocked: true,
-      tags: ['melee'],
-      damageMultiplier: 1.5,
-      maxHealthBonus: -20
-    },
-    {
-      id: 'heavy_strike_t2',
-      name: 'Heavy Strike',
-      description: '+30% dmg, -15% speed',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 28,
-      icon: '⚒️',
-      unlocked: true,
-      tags: ['melee'],
-      damageMultiplier: 1.3,
-      speedMultiplier: 0.85
-    },
-    {
-      id: 'swift_blade_t2',
-      name: 'Swift Blade',
-      description: '+30% speed, +15% fire rate',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 32,
-      icon: '⚡',
-      unlocked: true,
-      tags: ['melee', 'utility'],
-      speedMultiplier: 1.3,
-      fireRateMultiplier: 1.15
-    },
-
-    // Elemental combos
-    {
-      id: 'frostfire_t3',
-      name: 'Frostfire',
-      description: 'Poison + Freeze combo',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 65,
-      icon: '🔥❄️',
-      unlocked: true,
-      tags: ['elemental'],
-      poison: true,
-      freeze: 0.2
-    },
-    {
-      id: 'storm_essence_t3',
-      name: 'Storm Essence',
-      description: '35% chain + explosions',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 72,
-      icon: '⛈️',
-      unlocked: true,
-      tags: ['elemental', 'ranged'],
-      chainLightning: 0.35,
-      explosionOnHit: true
-    },
-    {
-      id: 'toxic_explosion_t3',
-      name: 'Toxic Explosion',
-      description: 'Explosions poison nearby',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 68,
-      icon: '💀',
-      unlocked: true,
-      tags: ['elemental', 'ranged'],
-      explosionOnHit: true,
-      poison: true
-    },
-
-    // Defensive combos
-    {
-      id: 'guardian_aura_t3',
-      name: 'Guardian Aura',
-      description: '+12 armor, +50 HP',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 75,
-      icon: '🛡️',
-      unlocked: true,
-      tags: ['defensive'],
-      armor: 12,
-      maxHealthBonus: 50
-    },
-    {
-      id: 'vampire_armor_t3',
-      name: 'Vampire Armor',
-      description: '15% lifesteal, +8 armor',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 70,
-      icon: '🦇',
-      unlocked: true,
-      tags: ['defensive', 'utility'],
-      lifesteal: 0.15,
-      armor: 8
-    },
-    {
-      id: 'regenerative_shield_t3',
-      name: 'Regenerative Shield',
-      description: 'Shield + 5 HP/s regen',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 78,
-      icon: '💚',
-      unlocked: true,
-      tags: ['defensive'],
-      shield: true,
-      healthRegen: 5
-    },
-    {
-      id: 'evasive_armor_t3',
-      name: 'Evasive Armor',
-      description: '15% dodge, +25% speed',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 62,
-      icon: '👤',
-      unlocked: true,
-      tags: ['defensive', 'utility'],
-      dodge: 0.15,
-      speedMultiplier: 1.25
-    },
-
-    // Projectile modifiers
-    {
-      id: 'scattershot_t2',
-      name: 'Scattershot',
-      description: '+3 projectiles, -10% dmg',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 38,
-      icon: '🎯',
-      unlocked: true,
-      tags: ['ranged'],
-      multishot: 3,
-      damageMultiplier: 0.9
-    },
-    {
-      id: 'piercing_rounds_t2',
-      name: 'Piercing Rounds',
-      description: 'Pierce +3 enemies',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 35,
-      icon: '🏹',
-      unlocked: true,
-      tags: ['ranged'],
-      piercing: 3
-    },
-    {
-      id: 'seeking_shots_t2',
-      name: 'Seeking Shots',
-      description: 'Homing + faster bullets',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 42,
-      icon: '🎯',
-      unlocked: true,
-      tags: ['ranged', 'utility'],
-      homing: true,
-      projectileSpeed: 1.3
-    },
-    {
-      id: 'explosive_pierce_t3',
-      name: 'Explosive Pierce',
-      description: 'Pierce +2, explosions',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 68,
-      icon: '💥',
-      unlocked: true,
-      tags: ['ranged', 'elemental'],
-      piercing: 2,
-      explosionOnHit: true
-    },
-
-    // Economic/utility
-    {
-      id: 'lucky_charm_t2',
-      name: 'Lucky Charm',
-      description: '+30% gold, +10% crit',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 32,
-      icon: '🍀',
-      unlocked: true,
-      tags: ['economic', 'utility'],
-      goldBonus: 1.3,
-      critChance: 0.1
-    },
-    {
-      id: 'merchants_ring_t3',
-      name: 'Merchant\'s Ring',
-      description: '+50% gold, -20% prices',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 58,
-      icon: '💍',
-      unlocked: true,
-      tags: ['economic'],
-      goldBonus: 1.5,
-      shopDiscount: 0.2
-    },
-    {
-      id: 'experience_gem_t2',
-      name: 'Experience Gem',
-      description: '+60% pickup range',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 28,
-      icon: '💎',
-      unlocked: true,
-      tags: ['utility'],
-      xpMagnet: 1.6
-    },
-
-    // Legendary unique effects
-    {
-      id: 'necromantic_power_t4',
-      name: 'Necromantic Power',
-      description: 'Kills spawn skeleton ally',
-      rarity: 'legendary',
-      tier: ItemTier.Legendary,
-      cost: 160,
-      icon: '💀',
-      unlocked: true,
-      tags: ['utility', 'elemental'],
-      damageMultiplier: 1.2,
-      lifesteal: 0.1
-    },
-    {
-      id: 'berserker_soul_t4',
-      name: 'Berserker Soul',
-      description: 'Lower HP = more damage',
-      rarity: 'legendary',
-      tier: ItemTier.Legendary,
-      cost: 145,
-      icon: '😈',
-      unlocked: true,
-      tags: ['melee'],
-      damageMultiplier: 1.4,
-      speedMultiplier: 1.3
-    },
-    {
-      id: 'elemental_mastery_t4',
-      name: 'Elemental Mastery',
-      description: 'All elemental effects',
-      rarity: 'legendary',
-      tier: ItemTier.Legendary,
-      cost: 175,
-      icon: '🌟',
-      unlocked: true,
-      tags: ['elemental'],
-      poison: true,
-      freeze: 0.25,
-      chainLightning: 0.3,
-      explosionOnHit: true
-    },
-    {
-      id: 'divine_protection_t4',
-      name: 'Divine Protection',
-      description: 'Shield + 30% dodge',
-      rarity: 'legendary',
-      tier: ItemTier.Legendary,
-      cost: 152,
-      icon: '✨',
-      unlocked: true,
-      tags: ['defensive'],
-      shield: true,
-      dodge: 0.3,
-      armor: 10
-    },
-    {
-      id: 'infinity_core_t4',
-      name: 'Infinity Core',
-      description: 'Pierce all + multishot 5',
-      rarity: 'legendary',
-      tier: ItemTier.Legendary,
-      cost: 180,
-      icon: '♾️',
-      unlocked: true,
-      tags: ['ranged'],
-      piercing: 999,
-      multishot: 5,
-      homing: true
-    },
-
-    // ==================== TRADE-OFF ITEMS (BROTATO-STYLE) ====================
-    // Every one gives a strong bonus with a REAL drawback, forcing you to
-    // commit to a lane / manage risk. This is where build identity comes from:
-    // a glass-cannon player keeps these, a tank recycles them.
-    {
-      id: 'reckless_charm_t2',
-      name: 'Reckless Charm',
-      description: '+40% dmg, -3 armor',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 26,
-      icon: '🔥',
-      unlocked: true,
-      tags: ['melee', 'ranged'],
-      damageMultiplier: 1.4,
-      armor: -3
-    },
-    {
-      id: 'hair_trigger_t2',
-      name: 'Hair Trigger',
-      description: '+30% fire rate, -12% dmg',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 28,
-      icon: '⏱️',
-      unlocked: true,
-      tags: ['ranged'],
-      fireRateMultiplier: 1.3,
-      damageMultiplier: 0.88
-    },
-    {
-      id: 'heavy_slugs_t2',
-      name: 'Heavy Slugs',
-      description: '+30% dmg, -15% fire rate',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 28,
-      icon: '🎱',
-      unlocked: true,
-      tags: ['melee', 'ranged'],
-      damageMultiplier: 1.3,
-      fireRateMultiplier: 0.85
-    },
-    {
-      id: 'adrenaline_t2',
-      name: 'Adrenaline',
-      description: '+35% speed, -15 max HP',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 24,
-      icon: '💉',
-      unlocked: true,
-      tags: ['utility'],
-      speedMultiplier: 1.35,
-      maxHealthBonus: -15
-    },
-    {
-      id: 'sharpshooter_t3',
-      name: 'Sharpshooter Lens',
-      description: '+18% crit, -2 armor',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 52,
-      icon: '🔭',
-      unlocked: true,
-      tags: ['ranged'],
-      critChance: 0.18,
-      armor: -2
-    },
-    {
-      id: 'gamblers_dice_t3',
-      name: "Gambler's Dice",
-      description: '+18% dodge, -20 max HP',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 48,
-      icon: '🎲',
-      unlocked: true,
-      tags: ['defensive', 'utility'],
-      dodge: 0.18,
-      maxHealthBonus: -20
-    },
-    {
-      id: 'siphon_rounds_t3',
-      name: 'Siphon Rounds',
-      description: '+15% lifesteal, +20% ranged dmg, -15% fire rate',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 55,
-      icon: '🧛',
-      unlocked: true,
-      tags: ['ranged'],
-      lifesteal: 0.15,
-      rangedDamageMult: 1.2,
-      fireRateMultiplier: 0.85
-    },
-    {
-      id: 'iron_turtle_t3',
-      name: 'Iron Turtle',
-      description: '+10 armor, -20% speed',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 50,
-      icon: '🐢',
-      unlocked: true,
-      tags: ['defensive'],
-      armor: 10,
-      speedMultiplier: 0.8
-    },
-    {
-      id: 'blood_pact_t3',
-      name: 'Blood Pact',
-      description: '+50% dmg, -25% max HP',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 58,
-      icon: '🩸',
-      unlocked: true,
-      tags: ['melee', 'ranged'],
-      damageMultiplier: 1.5,
-      maxHealthBonus: -35
-    },
-    {
-      id: 'featherweight_t2',
-      name: 'Featherweight',
-      description: '+25% speed & fire rate, -15% dmg',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 30,
-      icon: '🪶',
-      unlocked: true,
-      tags: ['utility', 'ranged'],
-      speedMultiplier: 1.25,
-      fireRateMultiplier: 1.25,
-      damageMultiplier: 0.85
-    },
-
-    // ============ DAMAGE-TYPE SPECIALISATION ITEMS (melee / ranged / elemental) ============
-    // These carry PER-TYPE multipliers so a build can commit to one damage lane. The
-    // downside usually hits the OTHER lanes or mobility, so the same item is great for a
-    // specialist and a trap for a generalist — that's what makes archetypes mechanically
-    // real instead of cosmetic tags.
-    // --- Ranged lane ---
-    {
-      id: 'marksman_scope_t1',
-      name: 'Marksman Scope',
-      description: '+20% ranged dmg, -8% fire rate',
-      rarity: 'common',
-      tier: ItemTier.Common,
-      cost: 15,
-      icon: '🎯',
-      unlocked: true,
-      tags: ['ranged'],
-      rangedDamageMult: 1.20,
-      fireRateMultiplier: 0.92
-    },
-    {
-      id: 'snipers_focus_t2',
-      name: "Sniper's Focus",
-      description: '+40% ranged dmg, -25% move speed',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 30,
-      icon: '🔭',
-      unlocked: true,
-      tags: ['ranged'],
-      rangedDamageMult: 1.40,
-      speedMultiplier: 0.75
-    },
-    // --- Melee lane ---
-    {
-      id: 'warhammer_grip_t1',
-      name: 'Warhammer Grip',
-      description: '+22% melee dmg, -10% move speed',
-      rarity: 'common',
-      tier: ItemTier.Common,
-      cost: 15,
-      icon: '🔨',
-      unlocked: true,
-      tags: ['melee'],
-      meleeDamageMult: 1.22,
-      speedMultiplier: 0.90
-    },
-    {
-      id: 'brawlers_rage_t2',
-      name: "Brawler's Rage",
-      description: '+45% melee dmg, -12% ranged dmg',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 30,
-      icon: '👊',
-      unlocked: true,
-      tags: ['melee'],
-      meleeDamageMult: 1.45,
-      rangedDamageMult: 0.88
-    },
-    // --- Elemental lane (scales chain lightning + explosion on-hit) ---
-    {
-      id: 'storm_conduit_t2',
-      name: 'Storm Conduit',
-      description: '+35% elemental dmg, -12% dmg',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 28,
-      icon: '⚡',
-      unlocked: true,
-      tags: ['elemental'],
-      elementalDamageMult: 1.35,
-      damageMultiplier: 0.88
-    },
-    {
-      id: 'overcharged_core_t3',
-      name: 'Overcharged Core',
-      description: '+55% elemental dmg, +12% fire rate, -3 armor',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 54,
-      icon: '🔮',
-      unlocked: true,
-      tags: ['elemental'],
-      elementalDamageMult: 1.55,
-      fireRateMultiplier: 1.12,
-      armor: -3
-    },
-    {
-      id: 'prism_lens_t4',
-      name: 'Prism Lens',
-      description: '+90% elemental dmg — chain & blast melt crowds',
-      rarity: 'legendary',
-      tier: ItemTier.Legendary,
-      cost: 92,
-      icon: '💠',
-      unlocked: true,
-      tags: ['elemental'],
-      elementalDamageMult: 1.90
-    },
-
-    // ==================== BANKING ITEMS (interest economy) ====================
-    // Reward the save-vs-spend playstyle: bank gold, earn interest, buy big later.
-    {
-      id: 'piggy_bank_t2',
-      name: 'Piggy Bank',
-      description: '+8% interest on gold',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 22,
-      icon: '🐷',
-      unlocked: true,
-      tags: ['economic'],
-      interestBonus: 0.08
-    },
-    {
-      id: 'golden_vault_t3',
-      name: 'Golden Vault',
-      description: '+18% interest, +25% gold',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 55,
-      icon: '🏦',
-      unlocked: true,
-      tags: ['economic'],
-      interestBonus: 0.18,
-      goldBonus: 1.25
-    },
-
-    // ==================== LUCK ITEMS (rarity / high-roll economy) ====================
-    // Luck raises the odds the shop offers higher-tier items and that enemies drop
-    // health orbs. Enables a "high-roller" build: trade raw power for a legendary-stuffed
-    // shop. The T3/T4 luck items carry a real damage cost so pure luck stacking is a gamble.
-    {
-      id: 'rabbits_foot_t1',
-      name: "Rabbit's Foot",
-      description: '+15% luck (better shop rarity & orb drops)',
-      rarity: 'common',
-      tier: ItemTier.Common,
-      cost: 14,
-      icon: '🐇',
-      unlocked: true,
-      tags: ['economic', 'utility'],
-      luck: 0.15
-    },
-    {
-      id: 'four_leaf_clover_t3',
-      name: 'Four-Leaf Clover',
-      description: '+40% luck, -10% dmg',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 48,
-      icon: '🍀',
-      unlocked: true,
-      tags: ['economic', 'utility'],
-      luck: 0.40,
-      damageMultiplier: 0.90
-    },
-    {
-      id: 'cosmic_dice_t4',
-      name: 'Cosmic Dice',
-      description: '+80% luck — the shop turns legendary',
-      rarity: 'legendary',
-      tier: ItemTier.Legendary,
-      cost: 95,
-      icon: '🎲',
-      unlocked: true,
-      tags: ['economic', 'utility'],
-      luck: 0.80
-    },
-
-    // ============ UNIQUE IMPACTFUL ITEMS (build-defining, 2026-07-02) ============
-    // Felix asked for "more unique items that feel impactful". These grant already-wired
-    // combat MECHANICS (explosion, poison, homing, freeze+chain, lifesteal, shield, thorns,
-    // multishot, pierce) rather than flat stat sticks, so each visibly changes how a run
-    // plays and anchors a distinct build. Every flag effect is paired with a positive
-    // stackable stat so a second copy is never dead gold (see itemStacks()).
-    {
-      id: 'volatile_rounds_t2',
-      name: 'Volatile Rounds',
-      description: 'Attacks explode on hit, +20% elemental dmg',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 40,
-      icon: '💥',
-      unlocked: true,
-      tags: ['elemental', 'ranged'],
-      explosionOnHit: true,
-      elementalDamageMult: 1.2
-    },
-    {
-      id: 'venom_coating_t2',
-      name: 'Venom Coating',
-      description: 'Attacks poison enemies, +15% elemental dmg',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 38,
-      icon: '🧪',
-      unlocked: true,
-      tags: ['elemental'],
-      poison: true,
-      elementalDamageMult: 1.15
-    },
-    {
-      id: 'seeker_rounds_t3',
-      name: 'Seeker Rounds',
-      description: 'Bullets curve into enemies, +25% ranged dmg',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 80,
-      icon: '🎯',
-      unlocked: true,
-      tags: ['ranged', 'utility'],
-      homing: true,
-      rangedDamageMult: 1.25
-    },
-    {
-      id: 'cryo_capacitor_t3',
-      name: 'Cryo Capacitor',
-      description: '40% freeze + arcs to nearby, +20% elemental dmg',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 88,
-      icon: '❄️',
-      unlocked: true,
-      tags: ['elemental'],
-      freeze: 0.4,
-      chainLightning: 0.25,
-      elementalDamageMult: 1.2
-    },
-    {
-      id: 'sanguine_edge_t3',
-      name: 'Sanguine Edge',
-      description: 'Heal 18% of melee dmg, +30% melee, -15 HP',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 84,
-      icon: '🩸',
-      unlocked: true,
-      tags: ['melee'],
-      lifesteal: 0.18,
-      meleeDamageMult: 1.3,
-      maxHealthBonus: -15
-    },
-    {
-      id: 'bullet_hurricane_t4',
-      name: 'Bullet Hurricane',
-      description: '+2 homing, piercing shots, -15% ranged dmg',
-      rarity: 'legendary',
-      tier: ItemTier.Legendary,
-      cost: 160,
-      icon: '🌀',
-      unlocked: true,
-      tags: ['ranged'],
-      multishot: 2,
-      homing: true,
-      piercing: 3,
-      rangedDamageMult: 0.85
-    },
-    {
-      id: 'supernova_core_t4',
-      name: 'Supernova Core',
-      description: 'Shots explode + arc to all nearby, +40% elemental, -25 HP',
-      rarity: 'legendary',
-      tier: ItemTier.Legendary,
-      cost: 168,
-      icon: '🌟',
-      unlocked: true,
-      tags: ['elemental', 'ranged'],
-      explosionOnHit: true,
-      chainLightning: 0.4,
-      elementalDamageMult: 1.4,
-      maxHealthBonus: -25
-    },
-    {
-      id: 'bloodmoon_pact_t4',
-      name: 'Bloodmoon Pact',
-      description: 'Heal 30% of melee dmg, +50% melee, reflect 40%, -30 HP',
-      rarity: 'legendary',
-      tier: ItemTier.Legendary,
-      cost: 162,
-      icon: '🌑',
-      unlocked: true,
-      tags: ['melee', 'defensive'],
-      lifesteal: 0.3,
-      meleeDamageMult: 1.5,
-      thorns: 0.4,
-      maxHealthBonus: -30
-    },
-    {
-      id: 'aegis_protocol_t4',
-      name: 'Aegis Protocol',
-      description: 'Recharging shield, reflect 50%, +6 armor & regen, -20% dmg',
-      rarity: 'legendary',
-      tier: ItemTier.Legendary,
-      cost: 150,
-      icon: '🛡️',
-      unlocked: true,
-      tags: ['defensive'],
-      shield: true,
-      thorns: 0.5,
-      armor: 6,
-      healthRegen: 6,
-      damageMultiplier: 0.8
-    },
-
-    // ==================== AUXILIARY STACKING WEAPONS (2026-07-02) ====================
-    // A SECOND source of damage that runs alongside whatever primary weapon you carry
-    // — the whole point is they STACK (a gun build can also spin blades, orbit orbs,
-    // drop bombs, pulse novas). Each anchors a distinct new build axis.
-    {
-      id: 'orbit_orb_t2',
-      name: 'Guardian Orb',
-      description: 'An energy orb circles you, shredding anything it touches',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 34,
-      icon: '🔵',
-      unlocked: true,
-      tags: ['utility', 'elemental'],
-      orbitOrbs: 1
-    },
-    {
-      id: 'orbit_orb_swarm_t3',
-      name: 'Orbital Swarm',
-      description: '+2 orbiting orbs and they hit harder',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 78,
-      icon: '🌐',
-      unlocked: true,
-      tags: ['utility', 'elemental'],
-      orbitOrbs: 2,
-      orbitDamageMult: 1.4
-    },
-    {
-      id: 'whirl_blades_t2',
-      name: 'Whirling Blades',
-      description: 'A blade arc sweeps you constantly — your gun keeps firing too',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 36,
-      icon: '🌪️',
-      unlocked: true,
-      tags: ['melee'],
-      auxMelee: true
-    },
-    {
-      id: 'blade_storm_t4',
-      name: 'Blade Storm',
-      description: 'A faster, deadlier whirl of blades around you',
-      rarity: 'legendary',
-      tier: ItemTier.Legendary,
-      cost: 150,
-      icon: '⚔️',
-      unlocked: true,
-      tags: ['melee'],
-      auxMelee: true,
-      auxMeleeDamageMult: 1.8
-    },
-    {
-      id: 'bomb_bandolier_t2',
-      name: 'Bomb Bandolier',
-      description: 'Drop a bomb at your feet every few seconds — big AoE blast',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 40,
-      icon: '💣',
-      unlocked: true,
-      tags: ['elemental', 'utility'],
-      bombDrop: true
-    },
-    {
-      id: 'cluster_charges_t4',
-      name: 'Cluster Charges',
-      description: 'Bombs drop twice as fast and hit far harder',
-      rarity: 'legendary',
-      tier: ItemTier.Legendary,
-      cost: 158,
-      icon: '🧨',
-      unlocked: true,
-      tags: ['elemental'],
-      bombDrop: true,
-      bombCooldownMult: 0.5,
-      bombDamageMult: 1.6
-    },
-    {
-      id: 'nova_core_t3',
-      name: 'Nova Core',
-      description: 'A shockwave ripples out from you on a timer',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 72,
-      icon: '💠',
-      unlocked: true,
-      tags: ['elemental', 'utility'],
-      novaPulse: true
-    },
-    {
-      id: 'pulsar_t4',
-      name: 'Pulsar',
-      description: 'Novas fire relentlessly and hit like a truck',
-      rarity: 'legendary',
-      tier: ItemTier.Legendary,
-      cost: 160,
-      icon: '✴️',
-      unlocked: true,
-      tags: ['elemental'],
-      novaPulse: true,
-      novaCooldownMult: 0.5,
-      novaDamageMult: 1.7
-    },
-
-    // ==================== EXPANSION: 50+ UNIQUE BUILD-DEFINING ITEMS ====================
-    // Each item is a distinct trade-off, not a plain "+X% damage" — they deepen the
-    // ranged / melee / crit / elemental / tank / sustain / speed / economy / aux axes
-    // so the shop always offers a meaningful specialisation choice. Balanced by
-    // cost-per-power against the existing tiers (C ~6-14, U ~22-40, R ~48-84, L ~130-165).
-
-    // ---- RANGED / GUN specialists ----
-    {
-      id: 'hollow_point_t2',
-      name: 'Hollow Points',
-      description: '+35% ranged dmg, -10% fire rate',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 32,
-      icon: '🔩',
-      unlocked: true,
-      tags: ['ranged'],
-      rangedDamageMult: 1.35,
-      fireRateMultiplier: 0.9
-    },
-    {
-      id: 'full_auto_t2',
-      name: 'Full Auto',
-      description: '+40% fire rate, -15% ranged dmg',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 32,
-      icon: '🔫',
-      unlocked: true,
-      tags: ['ranged'],
-      fireRateMultiplier: 1.4,
-      rangedDamageMult: 0.85
-    },
-    {
-      id: 'armor_piercing_t3',
-      name: 'Armor-Piercing Rounds',
-      description: '+3 pierce, +20% ranged dmg',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 62,
-      icon: '🗜️',
-      unlocked: true,
-      tags: ['ranged'],
-      piercing: 3,
-      rangedDamageMult: 1.2
-    },
-    {
-      id: 'deadeye_t4',
-      name: 'Deadeye Module',
-      description: '+25% crit, +40% ranged dmg, -15% speed',
-      rarity: 'legendary',
-      tier: ItemTier.Legendary,
-      cost: 148,
-      icon: '🎯',
-      unlocked: true,
-      tags: ['ranged'],
-      critChance: 0.25,
-      rangedDamageMult: 1.4,
-      speedMultiplier: 0.85
-    },
-    {
-      id: 'gatling_core_t4',
-      name: 'Gatling Core',
-      description: '+70% fire rate, -20% ranged dmg',
-      rarity: 'legendary',
-      tier: ItemTier.Legendary,
-      cost: 150,
-      icon: '🌀',
-      unlocked: true,
-      tags: ['ranged'],
-      fireRateMultiplier: 1.7,
-      rangedDamageMult: 0.8
-    },
-    {
-      id: 'overclock_t3',
-      name: 'Overclock Chip',
-      description: '+50% fire rate, -20 max HP',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 64,
-      icon: '⏱️',
-      unlocked: true,
-      tags: ['ranged'],
-      fireRateMultiplier: 1.5,
-      maxHealthBonus: -20
-    },
-    {
-      id: 'heavy_ordnance_t3',
-      name: 'Heavy Ordnance',
-      description: '+60% dmg, -25% fire rate',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 66,
-      icon: '🚀',
-      unlocked: true,
-      tags: ['ranged'],
-      damageMultiplier: 1.6,
-      fireRateMultiplier: 0.75
-    },
-
-    // ---- MULTISHOT / bullet-count ----
-    {
-      id: 'split_shot_t2',
-      name: 'Split Shot',
-      description: '+1 projectile, -10% ranged dmg',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 36,
-      icon: '🔀',
-      unlocked: true,
-      tags: ['ranged'],
-      multishot: 1,
-      rangedDamageMult: 0.9
-    },
-    {
-      id: 'volley_t3',
-      name: 'Volley Rig',
-      description: '+2 projectiles, -15% ranged dmg',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 72,
-      icon: '🎇',
-      unlocked: true,
-      tags: ['ranged'],
-      multishot: 2,
-      rangedDamageMult: 0.85
-    },
-    {
-      id: 'hydra_rounds_t4',
-      name: 'Hydra Rounds',
-      description: '+4 projectiles, -25% ranged dmg',
-      rarity: 'legendary',
-      tier: ItemTier.Legendary,
-      cost: 158,
-      icon: '🐉',
-      unlocked: true,
-      tags: ['ranged'],
-      multishot: 4,
-      rangedDamageMult: 0.75
-    },
-
-    // ---- MELEE specialists ----
-    {
-      id: 'whetstone_t1',
-      name: 'Whetstone',
-      description: '+20% melee dmg',
-      rarity: 'common',
-      tier: ItemTier.Common,
-      cost: 11,
-      icon: '🪨',
-      unlocked: true,
-      tags: ['melee'],
-      meleeDamageMult: 1.2
-    },
-    {
-      id: 'cleaver_t2',
-      name: 'Bone Cleaver',
-      description: '+35% melee dmg, knockback',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 32,
-      icon: '🔪',
-      unlocked: true,
-      tags: ['melee'],
-      meleeDamageMult: 1.35,
-      knockback: 250
-    },
-    {
-      id: 'berserkers_axe_t2',
-      name: "Berserker's Axe",
-      description: '+50% melee dmg, -20 max HP',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 34,
-      icon: '🪓',
-      unlocked: true,
-      tags: ['melee'],
-      meleeDamageMult: 1.5,
-      maxHealthBonus: -20
-    },
-    {
-      id: 'executioner_t3',
-      name: "Executioner's Blade",
-      description: '+60% melee dmg, +40% crit dmg, -10% speed',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 70,
-      icon: '⚰️',
-      unlocked: true,
-      tags: ['melee'],
-      meleeDamageMult: 1.6,
-      critDamageMultiplier: 1.4,
-      speedMultiplier: 0.9
-    },
-    {
-      id: 'titans_gauntlet_t4',
-      name: "Titan's Gauntlet",
-      description: '+80% melee dmg, +40 HP, -15% speed',
-      rarity: 'legendary',
-      tier: ItemTier.Legendary,
-      cost: 152,
-      icon: '🥊',
-      unlocked: true,
-      tags: ['melee', 'defensive'],
-      meleeDamageMult: 1.8,
-      maxHealthBonus: 40,
-      speedMultiplier: 0.85
-    },
-
-    // ---- CRIT specialists ----
-    {
-      id: 'keen_edge_t1',
-      name: 'Keen Edge',
-      description: '+8% crit chance',
-      rarity: 'common',
-      tier: ItemTier.Common,
-      cost: 12,
-      icon: '🔺',
-      unlocked: true,
-      tags: ['melee', 'ranged'],
-      critChance: 0.08
-    },
-    {
-      id: 'bloodhound_t2',
-      name: 'Bloodhound Sight',
-      description: '+12% crit, +20% crit dmg',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 34,
-      icon: '👁️',
-      unlocked: true,
-      tags: ['ranged'],
-      critChance: 0.12,
-      critDamageMultiplier: 1.2
-    },
-    {
-      id: 'deadly_precision_t3',
-      name: 'Deadly Precision',
-      description: '+15% crit, +60% crit dmg',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 68,
-      icon: '💠',
-      unlocked: true,
-      tags: ['ranged'],
-      critChance: 0.15,
-      critDamageMultiplier: 1.6
-    },
-    {
-      id: 'executioners_mark_t4',
-      name: "Executioner's Mark",
-      description: '+20% crit, +100% crit dmg, -30 HP',
-      rarity: 'legendary',
-      tier: ItemTier.Legendary,
-      cost: 152,
-      icon: '💢',
-      unlocked: true,
-      tags: ['ranged'],
-      critChance: 0.2,
-      critDamageMultiplier: 2.0,
-      maxHealthBonus: -30
-    },
-
-    // ---- ELEMENTAL / on-hit specialists ----
-    {
-      id: 'ember_rounds_t2',
-      name: 'Ember Rounds',
-      description: 'Shots explode on hit, +10% elemental dmg',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 38,
-      icon: '🔥',
-      unlocked: true,
-      tags: ['elemental'],
-      explosionOnHit: true,
-      elementalDamageMult: 1.1
-    },
-    {
-      id: 'plague_bearer_t3',
-      name: 'Plague Bearer',
-      description: 'Hits poison enemies, +30% elemental dmg',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 62,
-      icon: '🧪',
-      unlocked: true,
-      tags: ['elemental'],
-      poison: true,
-      elementalDamageMult: 1.3
-    },
-    {
-      id: 'glacier_t3',
-      name: 'Glacier Shard',
-      description: '+25% freeze chance, +20% elemental dmg',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 64,
-      icon: '🧊',
-      unlocked: true,
-      tags: ['elemental'],
-      freeze: 0.25,
-      elementalDamageMult: 1.2
-    },
-    {
-      id: 'tesla_coil_t3',
-      name: 'Tesla Coil',
-      description: '+35% chain lightning, +15% elemental dmg',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 66,
-      icon: '🔌',
-      unlocked: true,
-      tags: ['elemental'],
-      chainLightning: 0.35,
-      elementalDamageMult: 1.15
-    },
-    {
-      id: 'wildfire_t4',
-      name: 'Wildfire',
-      description: 'Explode on hit, +60% elemental dmg, +10% fire rate',
-      rarity: 'legendary',
-      tier: ItemTier.Legendary,
-      cost: 155,
-      icon: '🌋',
-      unlocked: true,
-      tags: ['elemental'],
-      explosionOnHit: true,
-      elementalDamageMult: 1.6,
-      fireRateMultiplier: 1.1
-    },
-    {
-      id: 'absolute_zero_t4',
-      name: 'Absolute Zero',
-      description: '+40% freeze, +40% elemental dmg',
-      rarity: 'legendary',
-      tier: ItemTier.Legendary,
-      cost: 150,
-      icon: '❄️',
-      unlocked: true,
-      tags: ['elemental'],
-      freeze: 0.4,
-      elementalDamageMult: 1.4
-    },
-    {
-      id: 'chain_reactor_t4',
-      name: 'Chain Reactor',
-      description: '+50% chain lightning, +50% elemental dmg',
-      rarity: 'legendary',
-      tier: ItemTier.Legendary,
-      cost: 155,
-      icon: '⚡',
-      unlocked: true,
-      tags: ['elemental'],
-      chainLightning: 0.5,
-      elementalDamageMult: 1.5
-    },
-
-    // ---- TANK / DEFENSIVE ----
-    {
-      id: 'kite_shield_t1',
-      name: 'Kite Shield',
-      description: '+3 armor',
-      rarity: 'common',
-      tier: ItemTier.Common,
-      cost: 12,
-      icon: '🛡️',
-      unlocked: true,
-      tags: ['defensive'],
-      armor: 3
-    },
-    {
-      id: 'stalwart_t2',
-      name: 'Stalwart Plate',
-      description: '+45 max HP, -5% speed',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 30,
-      icon: '🧱',
-      unlocked: true,
-      tags: ['defensive'],
-      maxHealthBonus: 45,
-      speedMultiplier: 0.95
-    },
-    {
-      id: 'bulwark_t2',
-      name: 'Bulwark',
-      description: '+7 armor, -5% speed',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 32,
-      icon: '🚧',
-      unlocked: true,
-      tags: ['defensive'],
-      armor: 7,
-      speedMultiplier: 0.95
-    },
-    {
-      id: 'spiked_shell_t3',
-      name: 'Spiked Shell',
-      description: '+8 armor, +30% thorns',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 60,
-      icon: '🦔',
-      unlocked: true,
-      tags: ['defensive'],
-      armor: 8,
-      thorns: 0.3
-    },
-    {
-      id: 'retaliation_t3',
-      name: 'Retaliation Core',
-      description: '+50% thorns, +4 armor',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 60,
-      icon: '💥',
-      unlocked: true,
-      tags: ['defensive'],
-      thorns: 0.5,
-      armor: 4
-    },
-    {
-      id: 'juggernaut_t4',
-      name: 'Juggernaut',
-      description: '+15 armor, +60 HP, -20% speed',
-      rarity: 'legendary',
-      tier: ItemTier.Legendary,
-      cost: 155,
-      icon: '🏰',
-      unlocked: true,
-      tags: ['defensive'],
-      armor: 15,
-      maxHealthBonus: 60,
-      speedMultiplier: 0.8
-    },
-
-    // ---- LIFESTEAL / SUSTAIN ----
-    {
-      id: 'bloodletter_t2',
-      name: 'Bloodletter',
-      description: '+8% lifesteal, +10% dmg',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 34,
-      icon: '🩸',
-      unlocked: true,
-      tags: ['melee'],
-      lifesteal: 0.08,
-      damageMultiplier: 1.1
-    },
-    {
-      id: 'sanguine_pact_t3',
-      name: 'Sanguine Pact',
-      description: '+20% lifesteal, -25 max HP',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 68,
-      icon: '🧛',
-      unlocked: true,
-      tags: ['melee'],
-      lifesteal: 0.2,
-      maxHealthBonus: -25
-    },
-    {
-      id: 'phoenix_heart_t4',
-      name: 'Phoenix Heart',
-      description: '+8 HP/s regen, +50 HP, +10% lifesteal',
-      rarity: 'legendary',
-      tier: ItemTier.Legendary,
-      cost: 152,
-      icon: '🔆',
-      unlocked: true,
-      tags: ['defensive'],
-      healthRegen: 8,
-      maxHealthBonus: 50,
-      lifesteal: 0.1
-    },
-
-    // ---- SPEED / DODGE / EVASION ----
-    {
-      id: 'windwalker_t2',
-      name: 'Windwalker Boots',
-      description: '+30% speed, +8% dodge',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 32,
-      icon: '🍃',
-      unlocked: true,
-      tags: ['utility', 'defensive'],
-      speedMultiplier: 1.3,
-      dodge: 0.08
-    },
-    {
-      id: 'momentum_t2',
-      name: 'Momentum Engine',
-      description: '+25% speed, +10% fire rate, -10 HP',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 30,
-      icon: '💨',
-      unlocked: true,
-      tags: ['utility'],
-      speedMultiplier: 1.25,
-      fireRateMultiplier: 1.1,
-      maxHealthBonus: -10
-    },
-    {
-      id: 'phantom_cloak_t3',
-      name: 'Phantom Cloak',
-      description: '+20% dodge, +10% speed',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 62,
-      icon: '🌫️',
-      unlocked: true,
-      tags: ['defensive'],
-      dodge: 0.2,
-      speedMultiplier: 1.1
-    },
-    {
-      id: 'blink_boots_t4',
-      name: 'Blink Boots',
-      description: '+25% dodge, +30% speed, -20 HP',
-      rarity: 'legendary',
-      tier: ItemTier.Legendary,
-      cost: 145,
-      icon: '👟',
-      unlocked: true,
-      tags: ['defensive', 'utility'],
-      dodge: 0.25,
-      speedMultiplier: 1.3,
-      maxHealthBonus: -20
-    },
-
-    // ---- CROWD CONTROL ----
-    {
-      id: 'shockwave_gloves_t2',
-      name: 'Shockwave Gloves',
-      description: 'Massive knockback, +10% melee dmg',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 26,
-      icon: '🧤',
-      unlocked: true,
-      tags: ['melee'],
-      knockback: 450,
-      meleeDamageMult: 1.1
-    },
-    {
-      id: 'cryo_repulsor_t3',
-      name: 'Cryo Repulsor',
-      description: 'Strong knockback, +15% freeze',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 56,
-      icon: '🌬️',
-      unlocked: true,
-      tags: ['defensive', 'elemental'],
-      knockback: 350,
-      freeze: 0.15
-    },
-
-    // ---- HYBRID / high-risk ----
-    {
-      id: 'berserkers_pact_t3',
-      name: "Berserker's Pact",
-      description: '+50% dmg, +20% speed, -5 armor',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 68,
-      icon: '😤',
-      unlocked: true,
-      tags: ['melee'],
-      damageMultiplier: 1.5,
-      speedMultiplier: 1.2,
-      armor: -5
-    },
-    {
-      id: 'lucky_strike_t2',
-      name: 'Lucky Strike',
-      description: '+10% crit, +10% luck',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 30,
-      icon: '🍀',
-      unlocked: true,
-      tags: ['utility'],
-      critChance: 0.1,
-      luck: 0.1
-    },
-
-    // ---- ECONOMY / META ----
-    {
-      id: 'bargain_bin_t1',
-      name: 'Bargain Bin',
-      description: '-8% shop prices, +10% gold',
-      rarity: 'common',
-      tier: ItemTier.Common,
-      cost: 14,
-      icon: '🏷️',
-      unlocked: true,
-      tags: ['economic'],
-      shopDiscount: 0.08,
-      goldBonus: 1.1
-    },
-    {
-      id: 'scavenger_t2',
-      name: 'Scavenger Kit',
-      description: '+50% recycle value, +15% gold',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 24,
-      icon: '🧰',
-      unlocked: true,
-      tags: ['economic'],
-      recycleBonus: 0.5,
-      goldBonus: 1.15
-    },
-    {
-      id: 'merchant_scale_t2',
-      name: "Merchant's Scale",
-      description: '+30% gold, +8% shop discount',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 26,
-      icon: '⚖️',
-      unlocked: true,
-      tags: ['economic'],
-      goldBonus: 1.3,
-      shopDiscount: 0.08
-    },
-    {
-      id: 'compound_interest_t3',
-      name: 'Compound Interest',
-      description: '+12% bank interest, +20% gold',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 55,
-      icon: '🏦',
-      unlocked: true,
-      tags: ['economic'],
-      interestBonus: 0.12,
-      goldBonus: 1.2
-    },
-    {
-      id: 'treasure_map_t3',
-      name: 'Treasure Map',
-      description: '+40% gold, +10% luck',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 58,
-      icon: '🗺️',
-      unlocked: true,
-      tags: ['economic'],
-      goldBonus: 1.4,
-      luck: 0.1
-    },
-    {
-      id: 'philosophers_stone_t4',
-      name: "Philosopher's Stone",
-      description: '+60% gold, +15% interest, +15% luck',
-      rarity: 'legendary',
-      tier: ItemTier.Legendary,
-      cost: 150,
-      icon: '🔮',
-      unlocked: true,
-      tags: ['economic'],
-      goldBonus: 1.6,
-      interestBonus: 0.15,
-      luck: 0.15
-    },
-    {
-      id: 'jackpot_t4',
-      name: 'Jackpot',
-      description: '+25% luck, +40% gold, +10% crit',
-      rarity: 'legendary',
-      tier: ItemTier.Legendary,
-      cost: 142,
-      icon: '🎰',
-      unlocked: true,
-      tags: ['economic', 'utility'],
-      luck: 0.25,
-      goldBonus: 1.4,
-      critChance: 0.1
-    },
-
-    // ---- AUX-WEAPON deepeners (stack alongside the primary gun) ----
-    {
-      id: 'satellite_t2',
-      name: 'Satellite',
-      description: '+1 orbiting orb, orbs hit +20% harder',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 38,
-      icon: '🛰️',
-      unlocked: true,
-      tags: ['utility', 'elemental'],
-      orbitOrbs: 1,
-      orbitDamageMult: 1.2
-    },
-    {
-      id: 'dervish_t3',
-      name: 'Dervish Charm',
-      description: 'Whirling blades +40% dmg, +10% speed',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 70,
-      icon: '🌀',
-      unlocked: true,
-      tags: ['melee'],
-      auxMelee: true,
-      auxMeleeDamageMult: 1.4,
-      speedMultiplier: 1.1
-    },
-    {
-      id: 'detonator_t3',
-      name: 'Detonator',
-      description: 'Drop bombs, blasts hit +50% harder',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 68,
-      icon: '💥',
-      unlocked: true,
-      tags: ['elemental'],
-      bombDrop: true,
-      bombDamageMult: 1.5
-    },
-    {
-      id: 'shockwave_amp_t3',
-      name: 'Shockwave Amplifier',
-      description: 'Pulse novas that hit +40% harder',
-      rarity: 'epic',
-      tier: ItemTier.Rare,
-      cost: 66,
-      icon: '📡',
-      unlocked: true,
-      tags: ['elemental'],
-      novaPulse: true,
-      novaDamageMult: 1.4
-    },
-    {
-      id: 'war_machine_t4',
-      name: 'War Machine',
-      description: 'Whirling blades + an orbiting orb + pulsing novas, all at once',
-      rarity: 'legendary',
-      tier: ItemTier.Legendary,
-      cost: 165,
-      icon: '🤖',
-      unlocked: true,
-      tags: ['melee', 'elemental'],
-      auxMelee: true,
-      orbitOrbs: 1,
-      novaPulse: true
-    }
-  ];
+  // The full roster now lives in ./items/catalog.ts (pure data). ItemDatabase operates on it.
+  private static items: Item[] = ITEM_CATALOG;
 
   // Weapon tiers for combining system (FUTURE FEATURE - not implemented yet)
   // private static weapons: Weapon[] = [
@@ -2833,6 +205,46 @@ export class ItemDatabase {
   }
 }
 
+// Folded per-item contributions — products for multiplicative fields (identity 1),
+// sums for additive fields (identity 0), OR-ed booleans. Recomputed only when the
+// item set changes; getters read from this instead of re-looping every frame.
+interface ItemAgg {
+  // multiplicative
+  damageMult: number; meleeDamageMult: number; rangedDamageMult: number; elementalDamageMult: number;
+  fireRateMult: number; speedMult: number; critDamageMult: number; projectileSpeedMult: number;
+  xpMagnetMult: number; goldMult: number; orbitDamageMult: number; auxMeleeDamageMult: number;
+  bombDamageMult: number; bombCooldownMult: number; novaDamageMult: number; novaCooldownMult: number;
+  swingDamageMult: number; swingCooldownMult: number; aoeRadiusMult: number;
+  // additive
+  critChance: number; maxHealthBonus: number; healthRegen: number; armor: number; lifesteal: number;
+  thorns: number; knockback: number; piercing: number; multishot: number; dodge: number;
+  chainLightning: number; freeze: number; burn: number; bleed: number; doom: number; wound: number;
+  multicast: number; rerollDiscount: number; shopDiscount: number; recycleBonus: number;
+  interestBonus: number; luck: number; orbitOrbs: number; swingRangeBonus: number;
+  swingArcBonus: number; swingAoe: number;
+  // boolean
+  explosionOnHit: boolean; shield: boolean; homing: boolean; poison: boolean; poisonSpread: boolean;
+  auxMelee: boolean; bombDrop: boolean; novaPulse: boolean;
+}
+
+function freshAgg(): ItemAgg {
+  return {
+    damageMult: 1, meleeDamageMult: 1, rangedDamageMult: 1, elementalDamageMult: 1,
+    fireRateMult: 1, speedMult: 1, critDamageMult: 1, projectileSpeedMult: 1,
+    xpMagnetMult: 1, goldMult: 1, orbitDamageMult: 1, auxMeleeDamageMult: 1,
+    bombDamageMult: 1, bombCooldownMult: 1, novaDamageMult: 1, novaCooldownMult: 1,
+    swingDamageMult: 1, swingCooldownMult: 1, aoeRadiusMult: 1,
+    critChance: 0, maxHealthBonus: 0, healthRegen: 0, armor: 0, lifesteal: 0,
+    thorns: 0, knockback: 0, piercing: 0, multishot: 0, dodge: 0,
+    chainLightning: 0, freeze: 0, burn: 0, bleed: 0, doom: 0, wound: 0,
+    multicast: 0, rerollDiscount: 0, shopDiscount: 0, recycleBonus: 0,
+    interestBonus: 0, luck: 0, orbitOrbs: 0, swingRangeBonus: 0,
+    swingArcBonus: 0, swingAoe: 0,
+    explosionOnHit: false, shield: false, homing: false, poison: false, poisonSpread: false,
+    auxMelee: false, bombDrop: false, novaPulse: false,
+  };
+}
+
 // Player stats calculated from items with affinity system
 export class PlayerStats {
   items: Item[] = [];
@@ -2867,6 +279,88 @@ export class PlayerStats {
   runtimeDamageMult: number = 1;
   runtimeFireRateMult: number = 1;
 
+  // ---- MEMOIZED ITEM AGGREGATION ----
+  // Every getter used to re-loop the whole item list on EVERY call, every frame
+  // (getDamage/getFireRate/… are read many times per frame). The item list only
+  // changes on addItem/removeItem, so we fold all per-item contributions into one
+  // bundle once, and getters read from it. Transformation/duo/artifact/runtime
+  // modifiers and all caps stay applied at read-time (they change independently of
+  // the item set), so results are identical — this only removes the per-frame loops.
+  private _agg: ItemAgg = freshAgg();
+  private _aggDirty: boolean = true;
+
+  /** Recompute the item-aggregation bundle from the current item list (only when dirty). */
+  private ensureAgg(): ItemAgg {
+    if (!this._aggDirty) return this._agg;
+    const a = freshAgg();
+    for (const item of this.items) {
+      // Multiplicative (product of item multipliers)
+      if (item.damageMultiplier) a.damageMult *= item.damageMultiplier;
+      if (item.meleeDamageMult) a.meleeDamageMult *= item.meleeDamageMult;
+      if (item.rangedDamageMult) a.rangedDamageMult *= item.rangedDamageMult;
+      if (item.elementalDamageMult) a.elementalDamageMult *= item.elementalDamageMult;
+      if (item.fireRateMultiplier) a.fireRateMult *= item.fireRateMultiplier;
+      if (item.speedMultiplier) a.speedMult *= item.speedMultiplier;
+      if (item.critDamageMultiplier) a.critDamageMult *= item.critDamageMultiplier;
+      if (item.projectileSpeed) a.projectileSpeedMult *= item.projectileSpeed;
+      if (item.xpMagnet) a.xpMagnetMult *= item.xpMagnet;
+      if (item.goldBonus) a.goldMult *= item.goldBonus;
+      if (item.orbitDamageMult) a.orbitDamageMult *= item.orbitDamageMult;
+      if (item.auxMeleeDamageMult) a.auxMeleeDamageMult *= item.auxMeleeDamageMult;
+      if (item.bombDamageMult) a.bombDamageMult *= item.bombDamageMult;
+      if (item.bombCooldownMult) a.bombCooldownMult *= item.bombCooldownMult;
+      if (item.novaDamageMult) a.novaDamageMult *= item.novaDamageMult;
+      if (item.novaCooldownMult) a.novaCooldownMult *= item.novaCooldownMult;
+      if (item.swingDamageMult) a.swingDamageMult *= item.swingDamageMult;
+      if (item.swingCooldownMult) a.swingCooldownMult *= item.swingCooldownMult;
+      if (item.aoeRadiusMult) a.aoeRadiusMult *= item.aoeRadiusMult;
+      // Additive (sum of item bonuses)
+      if (item.critChance) a.critChance += item.critChance;
+      if (item.maxHealthBonus) a.maxHealthBonus += item.maxHealthBonus;
+      if (item.healthRegen) a.healthRegen += item.healthRegen;
+      if (item.armor) a.armor += item.armor;
+      if (item.lifesteal) a.lifesteal += item.lifesteal;
+      if (item.thorns) a.thorns += item.thorns;
+      if (item.knockback) a.knockback += item.knockback;
+      if (item.piercing) a.piercing += item.piercing;
+      if (item.multishot) a.multishot += item.multishot;
+      if (item.dodge) a.dodge += item.dodge;
+      if (item.chainLightning) a.chainLightning += item.chainLightning;
+      if (item.freeze) a.freeze += item.freeze;
+      if (item.burn) a.burn += item.burn;
+      if (item.bleed) a.bleed += item.bleed;
+      if (item.doom) a.doom += item.doom;
+      if (item.wound) a.wound += item.wound;
+      if (item.multicast) a.multicast += item.multicast;
+      if (item.rerollDiscount) a.rerollDiscount += item.rerollDiscount;
+      if (item.shopDiscount) a.shopDiscount += item.shopDiscount;
+      if (item.recycleBonus) a.recycleBonus += item.recycleBonus;
+      if (item.interestBonus) a.interestBonus += item.interestBonus;
+      if (item.luck) a.luck += item.luck;
+      if (item.orbitOrbs) a.orbitOrbs += item.orbitOrbs;
+      if (item.swingRangeBonus) a.swingRangeBonus += item.swingRangeBonus;
+      if (item.swingArcBonus) a.swingArcBonus += item.swingArcBonus;
+      if (item.swingAoe) a.swingAoe += item.swingAoe;
+      // Boolean (any item carries it)
+      if (item.explosionOnHit) a.explosionOnHit = true;
+      if (item.shield) a.shield = true;
+      if (item.homing) a.homing = true;
+      if (item.poison) a.poison = true;
+      if (item.poisonSpread) a.poisonSpread = true;
+      if (item.auxMelee) a.auxMelee = true;
+      if (item.bombDrop) a.bombDrop = true;
+      if (item.novaPulse) a.novaPulse = true;
+    }
+    this._agg = a;
+    this._aggDirty = false;
+    return a;
+  }
+
+  /** Invalidate the memoized bundle — call after any change to the item list. */
+  private invalidateAgg(): void {
+    this._aggDirty = true;
+  }
+
   constructor() {
     // Randomly assign 2 affinity tags
     const allTags: ItemTag[] = ['melee', 'ranged', 'defensive', 'economic', 'elemental', 'utility'];
@@ -2876,6 +370,7 @@ export class PlayerStats {
 
   addItem(item: Item): { newDuos: any[]; newTransformations: any[] } {
     this.items.push(item);
+    this.invalidateAgg();
     // Track for transformations
     const transformationId = this.transformations.trackItemPickup(item.tags);
     const newTransformations = transformationId ? [transformationId] : [];
@@ -2889,6 +384,7 @@ export class PlayerStats {
     const index = this.items.findIndex(item => item.id === itemId);
     if (index !== -1) {
       const [removed] = this.items.splice(index, 1);
+      this.invalidateAgg();
       return removed;
     }
     return null;
@@ -2896,9 +392,7 @@ export class PlayerStats {
 
   getDamage(): number {
     let damage = this.baseDamage;
-    this.items.forEach(item => {
-      if (item.damageMultiplier) damage *= item.damageMultiplier;
-    });
+    damage *= this.ensureAgg().damageMult;
     damage *= this.getSpecializationBonus();
     // TRANSFORMATION BONUS
     damage *= this.transformations.getTotalBonuses().damageMultiplier;
@@ -2913,21 +407,15 @@ export class PlayerStats {
   // Each is the product of the matching item field, defaulting to 1 when no item
   // carries it — so builds without type items behave exactly as before.
   getMeleeDamageMult(): number {
-    let m = 1;
-    this.items.forEach(item => { if (item.meleeDamageMult) m *= item.meleeDamageMult; });
-    return m;
+    return this.ensureAgg().meleeDamageMult;
   }
 
   getRangedDamageMult(): number {
-    let m = 1;
-    this.items.forEach(item => { if (item.rangedDamageMult) m *= item.rangedDamageMult; });
-    return m;
+    return this.ensureAgg().rangedDamageMult;
   }
 
   getElementalDamageMult(): number {
-    let m = 1;
-    this.items.forEach(item => { if (item.elementalDamageMult) m *= item.elementalDamageMult; });
-    return m;
+    return this.ensureAgg().elementalDamageMult;
   }
 
   /** Damage for a melee-weapon swing: global damage × melee multiplier. */
@@ -2942,9 +430,7 @@ export class PlayerStats {
 
   getFireRate(): number {
     let rate = this.baseFireRate;
-    this.items.forEach(item => {
-      if (item.fireRateMultiplier) rate *= item.fireRateMultiplier;
-    });
+    rate *= this.ensureAgg().fireRateMult;
     // TRANSFORMATION BONUS
     rate *= this.transformations.getTotalBonuses().fireRateMultiplier;
     // DUO COMBO BONUS
@@ -2956,9 +442,7 @@ export class PlayerStats {
 
   getSpeed(): number {
     let speed = this.baseSpeed;
-    this.items.forEach(item => {
-      if (item.speedMultiplier) speed *= item.speedMultiplier;
-    });
+    speed *= this.ensureAgg().speedMult;
     // TRANSFORMATION BONUS
     speed *= this.transformations.getTotalBonuses().speedMultiplier;
     // DUO COMBO BONUS
@@ -2970,9 +454,7 @@ export class PlayerStats {
 
   getMaxHealth(): number {
     let health = this.baseMaxHealth;
-    this.items.forEach(item => {
-      if (item.maxHealthBonus) health += item.maxHealthBonus;
-    });
+    health += this.ensureAgg().maxHealthBonus;
     // TRANSFORMATION BONUS
     health += this.transformations.getTotalBonuses().maxHealthBonus;
     // ARTIFACT contribution
@@ -2982,9 +464,7 @@ export class PlayerStats {
 
   getCritChance(): number {
     let chance = this.baseCritChance;
-    this.items.forEach(item => {
-      if (item.critChance) chance += item.critChance;
-    });
+    chance += this.ensureAgg().critChance;
     // TRANSFORMATION BONUS
     chance += this.transformations.getTotalBonuses().critChance;
     // DUO COMBO BONUS
@@ -2996,9 +476,7 @@ export class PlayerStats {
 
   getCritMultiplier(): number {
     let mult = this.baseCritMultiplier;
-    this.items.forEach(item => {
-      if (item.critDamageMultiplier) mult *= item.critDamageMultiplier;
-    });
+    mult *= this.ensureAgg().critDamageMult;
     // TRANSFORMATION BONUS
     mult *= this.transformations.getTotalBonuses().critDamageMultiplier;
     // ARTIFACT contribution
@@ -3007,11 +485,7 @@ export class PlayerStats {
   }
 
   getHealthRegen(): number {
-    let regen = 0;
-    this.items.forEach(item => {
-      if (item.healthRegen) regen += item.healthRegen;
-    });
-    return regen;
+    return this.ensureAgg().healthRegen;
   }
 
   /** Flat armor from meta progression (set by Game at run start). */
@@ -3021,19 +495,14 @@ export class PlayerStats {
 
   getArmor(): number {
     let armor = this.metaArmor;
-    this.items.forEach(item => {
-      if (item.armor) armor += item.armor;
-    });
+    armor += this.ensureAgg().armor;
     // TRANSFORMATION BONUS
     armor += this.transformations.getTotalBonuses().armor;
     return armor;
   }
 
   getLifesteal(): number {
-    let lifesteal = 0;
-    this.items.forEach(item => {
-      if (item.lifesteal) lifesteal += item.lifesteal;
-    });
+    let lifesteal = this.ensureAgg().lifesteal;
     // DUO COMBO BONUS
     lifesteal += this.duos.getTotalBonuses().lifesteal;
     // Cap at 100% — a dedicated vampire build can fully convert damage to healing,
@@ -3043,130 +512,105 @@ export class PlayerStats {
   }
 
   getThorns(): number {
-    let thorns = 0;
-    this.items.forEach(item => {
-      if (item.thorns) thorns += item.thorns;
-    });
-    return thorns;
+    return this.ensureAgg().thorns;
   }
 
   getProjectileSpeed(): number {
-    let speed = this.baseProjectileSpeed;
-    this.items.forEach(item => {
-      if (item.projectileSpeed) speed *= item.projectileSpeed;
-    });
-    return speed;
+    return this.baseProjectileSpeed * this.ensureAgg().projectileSpeedMult;
   }
 
   getKnockback(): number {
-    let kb = 0;
-    this.items.forEach(item => {
-      if (item.knockback) kb += item.knockback;
-    });
-    return kb;
+    return this.ensureAgg().knockback;
   }
 
   getPiercing(): number {
-    let pierce = 0;
-    this.items.forEach(item => {
-      if (item.piercing) pierce += item.piercing;
-    });
+    let pierce = this.ensureAgg().piercing;
     // DUO COMBO BONUS
     pierce += this.duos.getTotalBonuses().piercing;
     return pierce;
   }
 
   getXPMagnet(): number {
-    let magnet = 1;
-    this.items.forEach(item => {
-      if (item.xpMagnet) magnet *= item.xpMagnet;
-    });
+    let magnet = this.ensureAgg().xpMagnetMult;
     // TRANSFORMATION BONUS
     magnet *= this.transformations.getTotalBonuses().xpMagnet;
     return magnet;
   }
 
   getGoldBonus(): number {
-    let bonus = 1;
-    this.items.forEach(item => {
-      if (item.goldBonus) bonus *= item.goldBonus;
-    });
+    let bonus = this.ensureAgg().goldMult;
     // TRANSFORMATION BONUS
     bonus *= this.transformations.getTotalBonuses().goldBonus;
     return bonus;
   }
 
   getDodgeChance(): number {
-    let dodge = 0;
-    this.items.forEach(item => {
-      if (item.dodge) dodge += item.dodge;
-    });
-    return Math.min(0.75, dodge);
+    return Math.min(0.75, this.ensureAgg().dodge);
   }
 
   getChainLightningChance(): number {
-    let chance = 0;
-    this.items.forEach(item => {
-      if (item.chainLightning) chance += item.chainLightning;
-    });
+    let chance = this.ensureAgg().chainLightning;
     // DUO COMBO BONUS
     chance += this.duos.getTotalBonuses().chainLightning;
     return Math.min(1, chance);
   }
 
   getFreezeChance(): number {
-    let chance = 0;
-    this.items.forEach(item => {
-      if (item.freeze) chance += item.freeze;
-    });
+    let chance = this.ensureAgg().freeze;
     // DUO COMBO BONUS
     chance += this.duos.getTotalBonuses().freeze;
     return Math.min(1, chance);
   }
 
+  // ---- Status engines (Phase 3b) ----
+  getBurnChance(): number {
+    return Math.min(1, this.ensureAgg().burn);
+  }
+
+  getBleedChance(): number {
+    return Math.min(1, this.ensureAgg().bleed);
+  }
+
+  hasPoisonSpread(): boolean {
+    return this.ensureAgg().poisonSpread;
+  }
+
+  getDoomChance(): number {
+    return Math.min(1, this.ensureAgg().doom);
+  }
+
+  getWoundChance(): number {
+    return Math.min(1, this.ensureAgg().wound);
+  }
+
+  getMulticastChance(): number {
+    return Math.min(0.9, this.ensureAgg().multicast); // cap so it never becomes an infinite volley
+  }
+
   // Brotato-inspired: Economic modifiers
   getRerollDiscount(): number {
-    let discount = 0;
-    this.items.forEach(item => {
-      if (item.rerollDiscount) discount += item.rerollDiscount;
-    });
-    return Math.min(0.9, discount); // Max 90% discount
+    return Math.min(0.9, this.ensureAgg().rerollDiscount); // Max 90% discount
   }
 
   getShopDiscount(): number {
-    let discount = 0;
-    this.items.forEach(item => {
-      if (item.shopDiscount) discount += item.shopDiscount;
-    });
+    let discount = this.ensureAgg().shopDiscount;
     // TRANSFORMATION BONUS
     discount += this.transformations.getTotalBonuses().shopDiscount;
     return Math.min(0.5, discount); // Max 50% discount
   }
 
   getRecycleBonus(): number {
-    let bonus = 0;
-    this.items.forEach(item => {
-      if (item.recycleBonus) bonus += item.recycleBonus;
-    });
-    return bonus;
+    return this.ensureAgg().recycleBonus;
   }
 
   // Banking: extra interest rate on gold you hold entering the shop
   getInterestBonus(): number {
-    let bonus = 0;
-    this.items.forEach(item => {
-      if (item.interestBonus) bonus += item.interestBonus;
-    });
-    return Math.min(0.4, bonus); // cap +40% so interest stays bounded
+    return Math.min(0.4, this.ensureAgg().interestBonus); // cap +40% so interest stays bounded
   }
 
   // Luck: raises shop rarity weighting + health-orb drop chance (additive across items)
   getLuck(): number {
-    let luck = 0;
-    this.items.forEach(item => {
-      if (item.luck) luck += item.luck;
-    });
-    return Math.min(2.0, luck); // cap +200% so a stacked luck build stays bounded
+    return Math.min(2.0, this.ensureAgg().luck); // cap +200% so a stacked luck build stays bounded
   }
 
   hasPiercing(): boolean {
@@ -3174,31 +618,27 @@ export class PlayerStats {
   }
 
   hasExplosionOnKill(): boolean {
-    return this.items.some(item => item.explosionOnHit);
+    return this.ensureAgg().explosionOnHit;
   }
 
   hasExplosionOnHit(): boolean {
-    return this.items.some(item => item.explosionOnHit);
+    return this.ensureAgg().explosionOnHit;
   }
 
   hasShield(): boolean {
-    return this.items.some(item => item.shield);
+    return this.ensureAgg().shield;
   }
 
   hasHoming(): boolean {
-    return this.items.some(item => item.homing);
+    return this.ensureAgg().homing;
   }
 
   hasPoison(): boolean {
-    return this.items.some(item => item.poison);
+    return this.ensureAgg().poison;
   }
 
   getMultishot(): number {
-    let count = 0;
-    this.items.forEach(item => {
-      if (item.multishot) count += item.multishot;
-    });
-    return count;
+    return this.ensureAgg().multishot;
   }
 
   // Advanced synergy detection with tag system
@@ -3339,25 +779,21 @@ export class PlayerStats {
 
   /** Number of orbs circling the player (sum across items). */
   getOrbitOrbCount(): number {
-    return this.items.reduce((n, i) => n + (i.orbitOrbs ?? 0), 0);
+    return this.ensureAgg().orbitOrbs;
   }
 
   /** Contact damage per orbit orb — scaled off the player's base damage. */
   getOrbitDamage(): number {
-    let mult = 1;
-    for (const i of this.items) if (i.orbitDamageMult) mult *= i.orbitDamageMult;
-    return this.getDamage() * 0.9 * mult;
+    return this.getDamage() * 0.9 * this.ensureAgg().orbitDamageMult;
   }
 
   hasAuxMelee(): boolean {
-    return this.items.some(i => i.auxMelee);
+    return this.ensureAgg().auxMelee;
   }
 
   /** Whirling-arc damage — leans on melee scaling so melee builds amplify it. */
   getAuxMeleeDamage(): number {
-    let mult = 1;
-    for (const i of this.items) if (i.auxMeleeDamageMult) mult *= i.auxMeleeDamageMult;
-    return this.getMeleeDamage() * 1.1 * mult;
+    return this.getMeleeDamage() * 1.1 * this.ensureAgg().auxMeleeDamageMult;
   }
 
   // ==================== DEFAULT MELEE SWING ====================
@@ -3367,47 +803,35 @@ export class PlayerStats {
 
   /** Swing damage — 60% of melee damage baseline, ramped by swing/aux-melee items. */
   getSwingDamage(): number {
-    let mult = 0.6; // baseline: the free swing is a light default
-    for (const i of this.items) {
-      if (i.swingDamageMult) mult *= i.swingDamageMult;
-      if (i.auxMeleeDamageMult) mult *= i.auxMeleeDamageMult; // legacy aux-melee items still boost the swing
-    }
+    const a = this.ensureAgg();
+    // baseline 0.6 (the free swing is a light default) × swing items × legacy aux-melee items
+    const mult = 0.6 * a.swingDamageMult * a.auxMeleeDamageMult;
     return this.getMeleeDamage() * mult;
   }
 
   /** Swing reach in px (base 70 + item bonuses). */
   getSwingRange(): number {
-    let r = 70;
-    for (const i of this.items) if (i.swingRangeBonus) r += i.swingRangeBonus;
-    return r;
+    return 70 + this.ensureAgg().swingRangeBonus;
   }
 
   /** Swing arc width in radians (base ~126°, widened by items, capped at full circle). */
   getSwingArc(): number {
-    let arc = Math.PI * 0.7;
-    for (const i of this.items) if (i.swingArcBonus) arc += i.swingArcBonus;
-    return Math.min(arc, Math.PI * 2);
+    return Math.min(Math.PI * 0.7 + this.ensureAgg().swingArcBonus, Math.PI * 2);
   }
 
   /** Seconds between swings (base 0.85s, scaled by cooldown items). */
   getSwingInterval(): number {
-    let mult = 1;
-    for (const i of this.items) if (i.swingCooldownMult) mult *= i.swingCooldownMult;
-    return 0.85 * mult;
+    return 0.85 * this.ensureAgg().swingCooldownMult;
   }
 
   /** Full-circle AOE burst radius on each swing (0 = none), scaled by global area. */
   getSwingAoe(): number {
-    let r = 0;
-    for (const i of this.items) if (i.swingAoe) r += i.swingAoe;
-    return r * this.getAoeRadiusMult();
+    return this.ensureAgg().swingAoe * this.getAoeRadiusMult();
   }
 
   /** Global area-of-effect multiplier — scales swing AOE, nova, and bomb radii. */
   getAoeRadiusMult(): number {
-    let mult = 1;
-    for (const i of this.items) if (i.aoeRadiusMult) mult *= i.aoeRadiusMult;
-    return mult;
+    return this.ensureAgg().aoeRadiusMult;
   }
 
   /** Knockback the swing imparts — a light base shove plus any item knockback. */
@@ -3416,36 +840,28 @@ export class PlayerStats {
   }
 
   hasBombDrop(): boolean {
-    return this.items.some(i => i.bombDrop);
+    return this.ensureAgg().bombDrop;
   }
 
   getBombDamage(): number {
-    let mult = 1;
-    for (const i of this.items) if (i.bombDamageMult) mult *= i.bombDamageMult;
-    return this.getDamage() * 3.0 * mult;
+    return this.getDamage() * 3.0 * this.ensureAgg().bombDamageMult;
   }
 
   /** Seconds between bomb drops (base 3.5s, faster with cooldown items). */
   getBombCooldown(): number {
-    let mult = 1;
-    for (const i of this.items) if (i.bombCooldownMult) mult *= i.bombCooldownMult;
-    return Math.max(0.6, 3.5 * mult);
+    return Math.max(0.6, 3.5 * this.ensureAgg().bombCooldownMult);
   }
 
   hasNova(): boolean {
-    return this.items.some(i => i.novaPulse);
+    return this.ensureAgg().novaPulse;
   }
 
   getNovaDamage(): number {
-    let mult = 1;
-    for (const i of this.items) if (i.novaDamageMult) mult *= i.novaDamageMult;
-    return this.getDamage() * 1.6 * mult;
+    return this.getDamage() * 1.6 * this.ensureAgg().novaDamageMult;
   }
 
   /** Seconds between nova pulses (base 4s, faster with cooldown items). */
   getNovaCooldown(): number {
-    let mult = 1;
-    for (const i of this.items) if (i.novaCooldownMult) mult *= i.novaCooldownMult;
-    return Math.max(0.8, 4.0 * mult);
+    return Math.max(0.8, 4.0 * this.ensureAgg().novaCooldownMult);
   }
 }

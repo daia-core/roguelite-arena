@@ -49,11 +49,19 @@ const result = await page.evaluate(() => {
   if (!g) return { fatal: 'no __game handle' };
   if (!DB) return { fatal: 'no __ItemDatabase handle' };
   g.startNewGame();
-  if (!g.player || g.state !== 'playing') return { fatal: `bad start state=${g.state} player=${!!g.player}` };
+  // startNewGame now opens on the node-map meta screen; drop straight into combat
+  // for this stats-focused harness (the map layer has its own test, qa-node-map).
+  g.state = 'playing';
+  if (!g.player) return { fatal: `no player after startNewGame (state=${g.state})` };
 
   const s = g.playerStats;
   const out = {};
-  const clear = () => { s.items = s.items.filter(it => !it.__test); };
+  // Add/remove through the real API so the stat memoization invalidates correctly
+  // (production code only ever mutates items via addItem/removeItem — never touch
+  // s.items directly, or the cache goes stale, which is the whole point of the test).
+  let __tn = 0;
+  const give = (fields) => { const it = { id: `__test_${__tn++}`, __test: true, tags: [], ...fields }; s.addItem(it); return it; };
+  const clear = () => { for (const it of s.items.filter(i => i.__test)) s.removeItem(it.id); };
 
   // --- Case A: defaults are 1 with no type items ---
   clear();
@@ -64,7 +72,7 @@ const result = await page.evaluate(() => {
   // --- Case B: melee item raises melee only ---
   clear();
   const base0 = s.getDamage();
-  s.items.push({ __test: true, meleeDamageMult: 1.45, tags: [] });
+  give({ meleeDamageMult: 1.45, tags: [] });
   out.B_meleeMult = s.getMeleeDamageMult();          // 1.45
   out.B_rangedMult = s.getRangedDamageMult();         // 1 (unchanged)
   out.B_meleeDmg = s.getMeleeDamage();                // base0 * 1.45
@@ -73,20 +81,20 @@ const result = await page.evaluate(() => {
 
   // --- Case C: ranged item raises ranged only ---
   clear();
-  s.items.push({ __test: true, rangedDamageMult: 1.40, tags: [] });
+  give({ rangedDamageMult: 1.40, tags: [] });
   out.C_rangedMult = s.getRangedDamageMult();         // 1.40
   out.C_meleeMult = s.getMeleeDamageMult();           // 1
 
   // --- Case D: compose with global getDamage ---
   clear();
   const d = s.getDamage();
-  s.items.push({ __test: true, meleeDamageMult: 2.0, tags: [] });
+  give({ meleeDamageMult: 2.0, tags: [] });
   out.D_meleeEqualsDx2 = Math.abs(s.getMeleeDamage() - d * 2.0) < 1e-6;
 
   // --- Case E: elemental mult composes across items ---
   clear();
-  s.items.push({ __test: true, elementalDamageMult: 1.35, tags: [] });
-  s.items.push({ __test: true, elementalDamageMult: 1.55, tags: [] });
+  give({ elementalDamageMult: 1.35, tags: [] });
+  give({ elementalDamageMult: 1.55, tags: [] });
   out.E_elem = s.getElementalDamageMult();            // 1.35 * 1.55 = 2.0925
   clear();
 

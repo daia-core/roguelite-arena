@@ -50,12 +50,16 @@ const result = await page.evaluate(() => {
   const DB = window.__ItemDatabase;
   if (!g || !DB) return { fatal: 'no __game / __ItemDatabase handle' };
   g.startNewGame();
-  if (!g.player || g.state !== 'playing') return { fatal: `bad start state=${g.state} player=${!!g.player}` };
+  // startNewGame now opens on the node-map meta screen; drop into combat for this
+  // synergy-panel harness (the map layer has its own coverage in qa-node-map).
+  g.state = 'playing';
+  if (!g.player) return { fatal: `no player after startNewGame (state=${g.state})` };
 
   const out = {};
   const s = g.playerStats;
-  const give = (id) => { const it = DB.getItemById(id); if (it) s.items.push(it); return !!it; };
-  const clear = () => { s.items = []; };
+  // Route through the real API so the stat memoization invalidates (never mutate s.items directly).
+  const give = (id) => { const it = DB.getItemById(id); if (it) s.addItem(it); return !!it; };
+  const clear = () => { for (const it of [...s.items]) s.removeItem(it.id); };
 
   // Use a known duo: storm_surge = chain_lightning_t3 + homing_t3,
   // effect "Lightning seeks targets and chains indefinitely".

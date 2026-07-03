@@ -39,7 +39,8 @@ const result = await page.evaluate(() => {
   const g = window.__game;
   if (!g) return { fatal: 'no __game handle' };
   g.startNewGame();
-  if (!g.player || g.state !== 'playing') return { fatal: `bad start state=${g.state} player=${!!g.player}` };
+  g.state = 'playing'; // node-map opens first now; jump into combat (map covered by qa-node-map)
+  if (!g.player) return { fatal: `no player after startNewGame (state=${g.state})` };
 
   // Helper: a minimal orb honoring the interface the pickup loop uses (x,y,radius,healAmount,dead,update,collidesWith)
   const mkOrb = (x, y) => ({ x, y, radius: 8, healAmount: 20, dead: false, update(){}, collidesWith(px,py,r){ return Math.hypot(this.x-px, this.y-py) <= this.radius + r; } });
@@ -49,7 +50,8 @@ const result = await page.evaluate(() => {
   const out = {};
 
   // --- Case A: baseline magnet (no items), orb at 55px — inside the 60px baseline vacuum ---
-  g.playerStats.items = g.playerStats.items.filter(it => !it.__test);
+  // Route item changes through the real API so the stat memoization invalidates.
+  for (const it of g.playerStats.items.filter(i => i.__test)) g.playerStats.removeItem(it.id);
   out.baseMagnet = g.playerStats.getXPMagnet();               // expect 1
   g.player.health = 10; g.player.maxHealth = 200;             // room to observe a heal
   g.healthOrbs.length = 0;
@@ -74,7 +76,7 @@ const result = await page.evaluate(() => {
   out.B_stayedPut = Math.abs(dist(b) - bStart) < 0.5 && b.dead === false;
 
   // --- Case C: a magnet item (xpMagnet 2) widens range so a 100px orb is now pulled ---
-  g.playerStats.items.push({ __test: true, xpMagnet: 2, tags: [] });
+  g.playerStats.addItem({ id: '__test_magnet', __test: true, xpMagnet: 2, tags: [] });
   out.itemMagnet = g.playerStats.getXPMagnet();               // expect 2
   g.healthOrbs.length = 0;
   const c = mkOrb(g.player.x + 100, g.player.y);              // >60 (base) but <120 (2x)

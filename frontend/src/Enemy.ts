@@ -569,6 +569,20 @@ export class Enemy {
   frozenTimer: number = 0;
   /** Poison DoT remaining seconds (Toxic Vial etc., ticked by Game). */
   poisonTimer: number = 0;
+  /** Burn (Ignite) DoT remaining seconds — fast fire ticks, ticked by Game. */
+  burnTimer: number = 0;
+  /** Bleed DoT remaining seconds — extra damage while moving, ticked by Game. */
+  bleedTimer: number = 0;
+  /** Poison on this enemy spreads to a neighbor on death (set when a poison-spread build applies poison). */
+  poisonSpreads: boolean = false;
+  /** Wound: multiplies all DoT ticks on this enemy while > 1 (set on-hit by a Wound build). */
+  woundMult: number = 1;
+  /** Doom mark: stored damage that detonates when the timer elapses; executes if stored >= current HP. */
+  doomTimer: number = 0;
+  doomStored: number = 0;
+  /** Last position, used to measure movement for Bleed (punishes rushers). */
+  lastX: number = 0;
+  lastY: number = 0;
   health: number;
   maxHealth: number;
   dead: boolean = false;

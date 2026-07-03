@@ -46,10 +46,15 @@ const result = await page.evaluate(() => {
   const g = window.__game;
   if (!g) return { fatal: 'no __game handle' };
   g.startNewGame();
-  if (!g.player || g.state !== 'playing') return { fatal: `bad start state=${g.state} player=${!!g.player}` };
+  g.state = 'playing'; // node-map opens first now; jump into combat (map covered by qa-node-map)
+  if (!g.player) return { fatal: `no player after startNewGame (state=${g.state})` };
 
   const out = {};
-  const clearItems = () => { g.playerStats.items = g.playerStats.items.filter(it => !it.__test); };
+  // Add/remove through the real API so the stat memoization invalidates correctly
+  // (never mutate playerStats.items directly — the cache only rebuilds on add/remove).
+  let __tn = 0;
+  const give = (fields) => { g.playerStats.addItem({ id: `__test_${__tn++}`, __test: true, tags: [], ...fields }); };
+  const clearItems = () => { for (const it of g.playerStats.items.filter(i => i.__test)) g.playerStats.removeItem(it.id); };
   const setWave = (w) => { g.waveManager.currentWave = w; };
 
   // --- Case A: baseline interest = floor(gold * 0.10), added to gold ---
@@ -70,7 +75,7 @@ const result = await page.evaluate(() => {
   // --- Case C: a banking item raises the rate ---
   clearItems();
   setWave(30);                 // cap = 70, above the expected 18
-  g.playerStats.items.push({ __test: true, interestBonus: 0.08, tags: [] });
+  give({ interestBonus: 0.08, tags: [] });
   out.C_bonus = g.playerStats.getInterestBonus();   // expect 0.08
   g.player.gold = 100;
   g.enterShop();
@@ -78,14 +83,14 @@ const result = await page.evaluate(() => {
 
   // --- Case D: luck sums additively across items ---
   clearItems();
-  g.playerStats.items.push({ __test: true, luck: 0.15, tags: [] });
-  g.playerStats.items.push({ __test: true, luck: 0.40, tags: [] });
+  give({ luck: 0.15, tags: [] });
+  give({ luck: 0.40, tags: [] });
   out.D_luck = g.playerStats.getLuck();       // expect 0.55
 
   // --- Case E: a trade-off DOWNSIDE is live (armor -3 lowers getArmor) ---
   clearItems();
   const armorBase = g.playerStats.getArmor();
-  g.playerStats.items.push({ __test: true, armor: -3, tags: [] });
+  give({ armor: -3, tags: [] });
   out.E_armorDrop = armorBase - g.playerStats.getArmor();   // expect 3
   clearItems();
 

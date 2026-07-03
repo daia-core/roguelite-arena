@@ -8,6 +8,39 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-03 (afternoon) — architecture: item data split out + per-frame stat aggregation memoized
+
+Felix: *"improve the underlying architecture so it's optimized and will support your continued
+development of it well."* No player-visible change — this is a foundation pass so the next content
+push (item rework, new mechanics) is faster and safer to build on.
+
+**What changed:**
+- **Item data extracted from the code.** The 206-item roster and its type definitions lived inline
+  in a single 3630-line `ItemSystem.ts`. Split into a pure-data module: `items/types.ts` (the
+  `Item`/`Weapon`/tag types, 163 lines) and `items/catalog.ts` (the 206-item roster, 2780 lines).
+  `ItemSystem.ts` is now **867 lines** of behavior (the `ItemDatabase` query layer + `PlayerStats`
+  aggregation) that re-exports the types, so every existing import keeps working unchanged.
+- **PlayerStats aggregation is now memoized.** Every stat getter (`getDamage`, `getArmor`,
+  `getCritChance`, … ~35 of them) previously **re-looped the whole item list on every call, every
+  frame**. They now read from a single `ItemAgg` bundle that folds all per-item contributions once
+  and is rebuilt **only when items change** (invalidated on `addItem`/`removeItem`). With many items
+  and dozens of getters queried per frame, that's a large amount of per-frame work removed from the
+  hot path. Transformation/duo/artifact/runtime modifiers and all stat caps still apply at read-time
+  (they change independently of the item set), so behavior is identical.
+
+**Why it's safe:** new `qa-stats-parity.mjs` harness adds **every** catalog item incrementally and,
+after each change, checks **all** getters against an independent from-scratch recomputation of the
+old loop math — plus the removal path and a mixed meta-armor loadout: **237 checks, 0 mismatches, 0
+errors.** Full regression suite green (stats-parity, stacking-weapons, melee-stack, status-engines,
+damagetype, synergy, node-map, magnet, zoom-xporbs, builddiv — 10/10). Also hardened the QA harnesses
+to drive stats through the real `addItem`/`removeItem` API instead of mutating the item array
+directly (direct mutation bypassed the new cache — the exact stale-cache trap to avoid; production
+code never does it).
+
+**Verified:** commit `__SHA__` · live build `__HASH__` (blush alias verified).
+
+---
+
 ## 2026-07-03 (afternoon) — armor reworked: player takes real damage again
 
 Felix: *"I barely take any damage from enemies and enemy projectiles. Even really early on with

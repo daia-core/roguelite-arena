@@ -6,7 +6,7 @@ import { Projectile } from './Projectile';
 import { MeleeAttack } from './MeleeAttack';
 import { Particle, DamageNumber } from './Particle';
 import { WaveManager } from './WaveManager';
-import { PlayerStats, ItemDatabase, type Item, type ItemTag } from './ItemSystem';
+import { PlayerStats, ItemDatabase, getItemKinds, type Item, type ItemTag } from './ItemSystem';
 import { SaveManager } from './SaveManager';
 import { Input } from './Input';
 import { Renderer } from './Renderer';
@@ -586,14 +586,25 @@ export class Game {
     // still shoots a weak gun instead of losing projectiles entirely.
     const newProjectiles = this.player.tryShoot(this.enemies);
     if (newProjectiles.length > 0) {
-      // PERFORMANCE: Use pooled projectiles instead of new ones
-      for (const proj of newProjectiles) {
-        const pooled = this.projectilePool.acquire();
-        pooled.init(proj.x, proj.y, Math.atan2(proj.vy, proj.vx), proj.damage, proj.speed, proj.fromPlayer, proj.piercing);
-        pooled.maxPierceCount = proj.maxPierceCount;
-        pooled.homing = proj.homing;
-        pooled.turnSpeed = proj.turnSpeed;
-        this.projectiles.push(pooled);
+      const spawnVolley = (volley: typeof newProjectiles) => {
+        // PERFORMANCE: Use pooled projectiles instead of new ones
+        for (const proj of volley) {
+          const pooled = this.projectilePool.acquire();
+          pooled.init(proj.x, proj.y, Math.atan2(proj.vy, proj.vx), proj.damage, proj.speed, proj.fromPlayer, proj.piercing);
+          pooled.maxPierceCount = proj.maxPierceCount;
+          pooled.homing = proj.homing;
+          pooled.turnSpeed = proj.turnSpeed;
+          this.projectiles.push(pooled);
+        }
+      };
+      spawnVolley(newProjectiles);
+      // Multicast: a chance to instantly fire a bonus volley (re-aimed at live enemies).
+      // Rolls repeatedly so stacked multicast can chain more than one extra volley.
+      let mc = this.playerStats.getMulticastChance();
+      let guard = 0;
+      while (mc > 0 && Math.random() < mc && guard++ < 4) {
+        spawnVolley(this.player.tryShoot(this.enemies, true));
+        mc -= 0.15; // each extra volley is a little less likely, keeps it bounded
       }
       this.audio.playShoot();
     }
@@ -635,15 +646,41 @@ export class Game {
         );
       }
 
-      // Status effects (wired item mechanics: Frost Orb, Toxic Vial, ...)
+      // Status effects (wired item mechanics: Frost Orb, Toxic Vial, Ignite, Bleed, Doom...).
+      // All DoTs run through tickDoT so Wound (woundMult) amplifies every one uniformly and
+      // a DoT kill routes through killByDot (which handles poison-spread).
       if (enemy.frozenTimer > 0) enemy.frozenTimer -= dt;
-      if (enemy.poisonTimer > 0) {
-        enemy.poisonTimer -= dt;
-        enemy.health -= 7 * dt;
-        if (enemy.health <= 0 && !enemy.dead) {
-          enemy.dead = true;
-          this.handleEnemyKill(enemy);
-          continue;
+      let dotDamage = 0;
+      if (enemy.poisonTimer > 0) { enemy.poisonTimer -= dt; dotDamage += 7 * dt; }
+      if (enemy.burnTimer > 0) { enemy.burnTimer -= dt; dotDamage += 16 * dt; } // Ignite: hurts fast, burns out fast
+      if (enemy.bleedTimer > 0) {
+        enemy.bleedTimer -= dt;
+        // Bleed hits harder while the enemy is moving (punishes rushers).
+        const moved = Math.hypot(enemy.x - enemy.lastX, enemy.y - enemy.lastY);
+        dotDamage += (6 + Math.min(18, moved * 1.5)) * dt;
+      }
+      enemy.lastX = enemy.x; enemy.lastY = enemy.y;
+      if (dotDamage > 0) {
+        enemy.health -= dotDamage * enemy.woundMult;
+        if (enemy.health <= 0 && !enemy.dead) { this.killByDot(enemy); continue; }
+      }
+      // Doom: stores damage, then detonates. Executes if the stored payload >= remaining HP.
+      if (enemy.doomTimer > 0) {
+        enemy.doomTimer -= dt;
+        if (enemy.doomTimer <= 0 && enemy.doomStored > 0 && !enemy.dead) {
+          const payload = enemy.doomStored * enemy.woundMult;
+          enemy.doomStored = 0;
+          this.renderer.addImpactFlash(enemy.x, enemy.y);
+          if (payload >= enemy.health) {
+            enemy.health = 0;
+            this.damageNumbers.push(this.createDamageNumber(enemy.x, enemy.y - 20, payload, true, '#b06bff'));
+            this.killByDot(enemy);
+            continue;
+          } else {
+            enemy.health -= payload;
+            this.damageNumbers.push(this.createDamageNumber(enemy.x, enemy.y - 20, payload, false, '#b06bff'));
+            if (enemy.health <= 0 && !enemy.dead) { this.killByDot(enemy); continue; }
+          }
         }
       }
 
@@ -1076,6 +1113,10 @@ export class Game {
 
           if (enemy.dead) {
             this.handleEnemyKill(enemy);
+          } else {
+            // Melee swings apply on-hit statuses too (chain/freeze/poison/burn/bleed/doom/wound),
+            // so a melee/DoT hybrid build actually procs its statuses — not just ranged.
+            this.applyOnHitEffects(enemy, damage);
           }
         }
       }
@@ -1865,6 +1906,31 @@ export class Game {
   }
 
   /**
+   * Kill an enemy from a damage-over-time source. Handles the Poison-Spread build:
+   * if a poisoned enemy tagged for spread dies, its poison (and burn/bleed) hops to the
+   * nearest living neighbor so a plague build chains through a pack.
+   */
+  private killByDot(enemy: Enemy): void {
+    if (enemy.dead) return;
+    enemy.dead = true;
+    if (enemy.poisonSpreads) {
+      let nearest: Enemy | null = null;
+      let bd = 140 * 140;
+      for (const other of this.enemies) {
+        if (other === enemy || other.dead || other.poisonTimer > 0) continue;
+        const d = (other.x - enemy.x) ** 2 + (other.y - enemy.y) ** 2;
+        if (d < bd) { bd = d; nearest = other; }
+      }
+      if (nearest) {
+        nearest.poisonTimer = 3.0;
+        nearest.poisonSpreads = true; // keep the chain going
+        this.renderer.addImpactFlash(nearest.x, nearest.y);
+      }
+    }
+    this.handleEnemyKill(enemy);
+  }
+
+  /**
    * On-hit item mechanics (chain lightning, freeze, poison, explosion) —
    * these items existed and were purchasable but had no implementation.
    */
@@ -1900,6 +1966,28 @@ export class Game {
     // Poison: DoT for 3s (ticked in the enemy loop)
     if (this.playerStats.hasPoison()) {
       enemy.poisonTimer = 3.0;
+      if (this.playerStats.hasPoisonSpread()) enemy.poisonSpreads = true;
+    }
+
+    // Burn (Ignite): short, fast fire DoT.
+    if (Math.random() < this.playerStats.getBurnChance()) {
+      enemy.burnTimer = Math.max(enemy.burnTimer, 2.0);
+    }
+
+    // Bleed: DoT that scales with the enemy's movement (punishes rushers).
+    if (Math.random() < this.playerStats.getBleedChance()) {
+      enemy.bleedTimer = Math.max(enemy.bleedTimer, 4.0);
+    }
+
+    // Wound: amplifies EVERY DoT already on the enemy (universal DoT multiplier, capped).
+    if (Math.random() < this.playerStats.getWoundChance()) {
+      enemy.woundMult = Math.min(3, enemy.woundMult + 0.5);
+    }
+
+    // Doom: mark that stores a share of the hit, then detonates — executes if it stored enough.
+    if (Math.random() < this.playerStats.getDoomChance()) {
+      enemy.doomStored += damage * 1.5 * elem;
+      if (enemy.doomTimer <= 0) enemy.doomTimer = 2.5; // fresh 2.5s fuse on first mark
     }
 
     // Explosion on hit: AoE for 50% damage around the target
@@ -3640,6 +3728,20 @@ export class Game {
         size: nameSize,
         align: 'center',
         color: rarityColor
+      });
+
+      // Category chips (weapon / passive / active) — at-a-glance "what does this item do".
+      const kindColors: Record<string, string> = { weapon: '#f0637a', passive: '#6aa9ff', active: '#ffc14d' };
+      const kinds = getItemKinds(item);
+      const chipSize = Math.max(6, Math.round(nameSize * 0.5));
+      const chipLabel = kinds.map(k => k.toUpperCase()).join('  ');
+      // Sit the chip row in the gap between the name and the description so it scales
+      // with card height and never collides with either row.
+      const chipY = nameY + Math.round((descY - nameY) * 0.58);
+      this.renderer.drawText(chipLabel, x + itemWidth / 2, y + chipY, {
+        size: chipSize,
+        align: 'center',
+        color: kinds.length === 1 ? kindColors[kinds[0]] : '#cbb892',
       });
 
       // Description (more compact) — swapped for the combo payoff when you'd complete a duo,
