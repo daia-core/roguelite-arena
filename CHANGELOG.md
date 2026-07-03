@@ -8,6 +8,39 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-04 (night) — batch-6 enemy sprites hand-crafted: the caster/support family (5)
+
+- **Every caster/support enemy is now a bespoke, hand-drawn sprite instead of the batch auto-enhancer.**
+  Continuing Felix's "go through EACH monster/enemy and hand craft improvements" (the same ask that
+  got all 20 artifacts + the spectral family redrawn). These five robed humanoids were blurring
+  together on the auto-enhance filter — worst was the **shielder**, which read as two disembodied
+  grey shields rather than a creature. Each is now a distinct silhouette with a readable role:
+  - **Wizard** — classic pointed-hat blue mage: gold star on the hat, big white beard, glowing eyes,
+    a wood staff with a cyan orb.
+  - **Necromancer** — grounded navy-robed hooded figure, two green soul-eyes + a green chest rune,
+    holding a **bone staff topped with a green-glowing skull** (was nearly invisible before).
+  - **Healer** — bright white/green medic robe, green hair, a glowing green healing **cross** on the
+    chest + rising heal-sparkles (the only light/bright one, so it never blurs with the others).
+  - **Shielder** — a helmeted head with a glowing eye-slit peeking over ONE big grey **tower shield**
+    (gold star boss), a hand gripping the shield edge, feet below — a guardian *behind* a shield.
+  - **Summoner** — purple hooded cultist with **both arms raised** to a floating magenta/gold
+    **rune-portal** orb above (fixed the old cat-like read).
+- **Subtle 1px "breathe" idle** on each (whole creature settles one row on frame 2) so they stay
+  alive next to the bobbing regular enemies. Distinct from the spectral family — those float
+  pale/tattered; these are grounded, solid, robed humanoids.
+- **Under the hood:** batch-6 in the hand-craft pipeline (`handcraft/batch6-casters.mjs` → per-name
+  `sprites/*.json` → `build-sprite-data.mjs` → `spriteData.ts`, which overrides the legacy
+  auto-enhanced art). Each drawn with ≥2 render→look→fix cycles, then grass-verified together on a
+  contact sheet as five clearly-different creatures.
+- **Verified:** `tsc` clean; `vite build` green (`index-DSqnpMKG.js`); all 4 batch-6 palette markers
+  (necro green `#7bf06b`, portal `#e58cff`, heal-cross `#8affc0`, shield gold `#f2d24b`) baked into
+  the shipped bundle. Live-verified below.
+- **Remaining on auto-enhance:** troll, demon, imp, bat, spider, evader, exploder, mushroom, orbiter,
+  spiraler, necroegg, mimic — all read decently; next pull = the brute/demon family (batch-7).
+- **Commit:** _(deploy block below)_
+
+---
+
 ## 2026-07-04 (night) — item redesign batch 3: 8 redundant Rare stat-cards get distinct identities
 
 - **The Rare shelf had too many near-twins.** After batches 1–2 finished the Legendary/Epic shelf,

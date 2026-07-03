@@ -53,29 +53,46 @@ Redrawn from scratch, grass-verified as five clearly-different boss silhouettes:
 - **boss_ancientgolem** — colossal rune STONE TITAN: blocky shoulders + heavy fists, cracked body
   with a glowing amber core + rune eyes, moss-green accents for "ancient" (core-breathe idle).
 Idle frames are a living-glow pulse (recolor of glow indices, + small bob on voidbeast), not a redraw.
+**Batch-6** (`handcraft/batch6-casters.mjs`) — the CASTER / SUPPORT FAMILY (Felix: "go through
+EACH monster/enemy"). The auto-enhancer left these five robed humanoids blurring together — worst
+offender the **shielder**, which read as two disembodied grey shields, not a creature. Redrawn as
+five distinct silhouettes + readable roles, grass-verified as a contact sheet:
+- **wizard** — classic pointed-hat blue mage: gold star on the hat, big white beard, glowing eyes,
+  a wood staff with a cyan orb (the ranged homing caster).
+- **necromancer** — grounded navy-robed hooded figure with two green soul-eyes + a green chest
+  rune, holding a **bone staff topped with a green-glowing skull** (was near-invisible before).
+- **healer** — bright white/green medic robe with green hair, a glowing green healing **cross** on
+  the chest + rising heal-sparkles (the only bright/light one → instantly distinct).
+- **shielder** — a helmeted head with a glowing eye-slit peeking over ONE big grey **tower shield**
+  (gold 4-point star boss), a hand gripping the shield's right edge, feet below. Now reads as a
+  guardian BEHIND a shield, not two floating shields.
+- **summoner** — purple hooded cultist with **both arms raised** to a floating magenta/gold
+  **rune-portal** orb above, glowing eyes, gold rune trim (fixed the old cat-like read).
+Subtle 1px "breathe" idle (whole creature settles 1 row on frame 2) keeps them alive next to the
+bobbing regular enemies. Distinct from the spectral family (batch-4) — those float pale/tattered;
+these are grounded, solid, robed humanoids.
 
 ## Still auto-enhanced — future batches, worst-first
 
-Re-audited on grass contact sheets 2026-07-03 (evening, after batch-3). The genuinely-broken
-cases are now fixed; what remains all reads decently — this is now polish, so pick only clear wins.
+Re-audited on grass contact sheets 2026-07-03 (evening, after batch-3); caster family cleared in
+batch-6 (Jul-4). The genuinely-broken cases are all fixed; what remains reads decently — but per
+Felix's "go through EACH", the goal is still full coverage, so keep pulling the next family.
 
-**Reassessed as already-decent (do NOT redraw for its own sake):**
-- bat (purple, red eyes — good), spider (black + red abdomen, green eyes — good), evader
+**Remaining roster (next batches — the beasts/critters):**
+- **Brutes/demons** (candidate batch-7): troll, demon, imp — big melee bruisers; give them bulk +
+  bespoke menace rather than the auto-enhance filter.
+- **Critters**: bat (purple, red eyes — good), spider (black + red abdomen — good), evader
   (blue cat — fine), exploder (round bomb-creature — fine, distinct from bombardier), mushroom,
-  orbiter (eye-diamond), spiraler (snail) — all read clearly on grass.
-- necroegg — simple, low priority
+  orbiter (eye-diamond), spiraler (snail), necroegg (simple), mimic (chest) — all read decently on
+  grass; redraw for a clear win as each family comes up.
 
-**Already decent (leave unless a clear win):**
-- imp — genuinely good after auto-enhance; do NOT redraw for its own sake
-- demon, wizard, necromancer, healer, shielder, summoner, mimic, troll, orc
-  (ghost/phantom/banshee/wraith now hand-crafted → batch-4 above)
+**Bosses (24×24) — ✅ ALL DONE (batch-5).** Casters — ✅ ALL DONE (batch-6). Spectral — ✅ (batch-4).
 
-**Bosses (24×24) — ✅ ALL DONE (batch-5 above).** Nothing left in this tier.
-
-**Roster status:** every enemy that read poorly is now hand-crafted. What remains auto-enhanced
-(bat, spider, evader, exploder, mushroom, orbiter, spiraler, necroegg, imp, demon, wizard,
-necromancer, healer, shielder, summoner, mimic) all reads decently — redraw only on a clear win,
-never for its own sake.
+**Roster status (Jul-4):** hand-crafted now = player, skeleton, orc + batches 1–6 (gargoyle, golem,
+construct, dasher, phaser, spinner, druid, cyclops, slime, goblin, blob, bombardier, swarm, ghost,
+phantom, wraith, banshee, 5 bosses, **wizard, necromancer, healer, shielder, summoner**). Left on
+auto-enhance: troll, demon, imp, bat, spider, evader, exploder, mushroom, orbiter, spiraler,
+necroegg, mimic — all read decently; next pull = the brute/demon family (batch-7).
 
 ## Method reminder
 
