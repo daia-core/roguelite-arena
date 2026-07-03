@@ -2591,8 +2591,12 @@ export class Game {
     drawPanel(ctx, x0 - s(8), s(12), contentW + s(16), H - s(24), DARK_WOOD_THEME, 7, 31);
 
     let y = s(isMobile ? 26 : 34);
-    this.renderer.drawText(ev.title, W / 2, y, { size: s(isMobile ? 14 : 18), align: 'center', color: '#ffd700' });
-    y += s(isMobile ? 20 : 26);
+    const titlePx = s(isMobile ? 14 : 18);
+    for (const line of this.wrapText(ev.title, contentW - s(24), titlePx)) {
+      this.renderer.drawText(line, W / 2, y, { size: titlePx, align: 'center', color: '#ffd700' });
+      y += titlePx + s(4);
+    }
+    y += s(isMobile ? 6 : 8);
 
     const bodyPx = s(isMobile ? 9 : 11);
     for (const line of this.wrapText(ev.text, contentW - s(24), bodyPx)) {
@@ -2628,7 +2632,9 @@ export class Game {
 
     // Recompute the same vertical anchor the draw pass uses.
     const contentW = Math.min(W - s(24), s(isMobile ? 372 : 560));
-    let y = s(isMobile ? 26 : 34) + s(isMobile ? 20 : 26);
+    const titlePx = s(isMobile ? 14 : 18);
+    const titleLines = this.wrapText(ev.title, contentW - s(24), titlePx).length;
+    let y = s(isMobile ? 26 : 34) + titleLines * (titlePx + s(4)) + s(isMobile ? 6 : 8);
     const bodyPx = s(isMobile ? 9 : 11);
     y += this.wrapText(ev.text, contentW - s(24), bodyPx).length * (bodyPx + s(5));
     y += s(10);
