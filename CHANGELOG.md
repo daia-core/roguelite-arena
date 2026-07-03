@@ -33,7 +33,9 @@ game gets denser and chunkier without getting more punishing.
 swarm accumulates) — wave 1 **peak 45–46 concurrent alive**, min/max enemy HP 40–132 (2.2× applied),
 **0 console/page errors**. `qa-roguelite.mjs` PASS. Mobile screenshot (390×844, `shots/flood-mobile.png`)
 reviewed: dense swarm reads clearly, sprites distinct (no mush), HUD clean, nothing clipped.
-Commit `<pending>`; live-build hash verified after deploy (below).
+Commit `6f18c45`; **live-verified** — production deploy `roguelite-game-fjog4ga0y` (READY), the
+aliased `roguelite-game-blush.vercel.app` serves bundle `index-Dz1ctciu.js` (this commit's build),
+HTTP 200, no SSO wall.
 
 ---
 
