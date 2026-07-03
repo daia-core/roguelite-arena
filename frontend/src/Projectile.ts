@@ -2,7 +2,26 @@
 
 import { SpriteSheet } from './sprites';
 
+/**
+ * The elemental identity of a projectile. Player shots inherit the dominant
+ * element of the build (see PlayerStats.getShotElement) so an elemental build
+ * LOOKS elemental. Purely a visual/readability tag today (tints the trail + a
+ * small core over the bullet); it does NOT change damage or which statuses roll
+ * — those stay per-hit in Game.applyOnHitEffects. The tag is the plumbing a
+ * future elemental-combo pass (e.g. fire-vs-frozen) can key off.
+ */
+export type DamageType = 'physical' | 'fire' | 'ice' | 'lightning' | 'poison';
+
 export class Projectile {
+  // Per-element bullet/trail colors. 'physical' keeps the original cyan.
+  static readonly ELEMENT_COLORS: Record<DamageType, string> = {
+    physical: '#00ffff',
+    fire: '#ff6b2b',
+    ice: '#7fdfff',
+    lightning: '#ffd43b',
+    poison: '#7bd44f',
+  };
+
   x: number;
   y: number;
   vx: number;
@@ -23,6 +42,8 @@ export class Projectile {
   // by Game, which knows the player position)
   homing: boolean = false;
   turnSpeed: number = 0;
+  // Elemental identity (player shots only; enemy bullets stay 'physical').
+  damageType: DamageType = 'physical';
 
   constructor(
     x: number = 0,
@@ -78,6 +99,17 @@ export class Projectile {
     this.pierceCount = 0;
     this.homing = false;
     this.turnSpeed = 0;
+    this.damageType = 'physical';
+  }
+
+  /**
+   * Tag a player projectile with an element and tint it to match (trail via
+   * `color`; a small core is drawn in draw()). No-op for enemy bullets in
+   * practice — they keep their pattern colors and stay 'physical'.
+   */
+  setElement(type: DamageType): void {
+    this.damageType = type;
+    this.color = Projectile.ELEMENT_COLORS[type];
   }
 
   update(dt: number, canvasWidth: number, canvasHeight: number): void {
@@ -161,6 +193,15 @@ export class Projectile {
         Math.floor(this.x - sprite.width / 2),
         Math.floor(this.y - sprite.height / 2)
       );
+    }
+
+    // ELEMENT TINT: a small element-colored core over the bullet so the build's
+    // element reads at a glance (the trail is already tinted via this.color).
+    // Physical shots keep the default sprite look — no overlay.
+    if (this.fromPlayer && this.damageType !== 'physical') {
+      ctx.fillStyle = Projectile.ELEMENT_COLORS[this.damageType];
+      const cs = 4;
+      ctx.fillRect(Math.floor(this.x - cs / 2), Math.floor(this.y - cs / 2), cs, cs);
     }
 
     ctx.restore();

@@ -4,6 +4,7 @@
 
 import { TransformationTracker } from './TransformationSystem';
 import { DuoTracker, DUO_COMBOS, type DuoCombo } from './DuoSystem';
+import type { DamageType } from './Projectile';
 import { ItemTier, getItemKinds, type Item, type ItemTag, type ItemKind, type WeaponType, type Weapon } from './items/types';
 import { ITEM_CATALOG } from './items/catalog';
 
@@ -589,6 +590,28 @@ export class PlayerStats {
   // ---- Status engines (Phase 3b) ----
   getBurnChance(): number {
     return Math.min(1, this.ensureAgg().burn);
+  }
+
+  /**
+   * The dominant elemental identity of the current build, used to tint outgoing
+   * player projectiles (Player.shoot → Projectile.setElement) so an elemental
+   * build LOOKS elemental. Picks the strongest of burn/freeze/chain/poison; a
+   * build with no elemental stat stays 'physical' (default cyan). Purely visual
+   * — does not change damage or which statuses roll on hit.
+   */
+  getShotElement(): DamageType {
+    const scored: Array<[DamageType, number]> = [
+      ['fire', this.getBurnChance()],
+      ['ice', this.getFreezeChance()],
+      ['lightning', this.getChainLightningChance()],
+      ['poison', this.hasPoison() ? 0.5 : 0],
+    ];
+    let best: DamageType = 'physical';
+    let bestV = 0.001; // threshold so a raw/no-element build stays physical
+    for (const [el, v] of scored) {
+      if (v > bestV) { bestV = v; best = el; }
+    }
+    return best;
   }
 
   getBleedChance(): number {

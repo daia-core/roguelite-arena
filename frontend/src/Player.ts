@@ -119,6 +119,9 @@ export class Player {
     const damage = this.stats.getRangedDamage();
     const speed = this.stats.getProjectileSpeed();
     const piercingCount = this.stats.getPiercing();
+    // Tint outgoing shots to the build's dominant element (visual/readability only —
+    // applied to every projectile below, whatever the weapon pattern).
+    const element = this.stats.getShotElement();
 
     const projectiles: Projectile[] = [];
 
@@ -177,6 +180,9 @@ export class Player {
         }
       }
     }
+
+    // Tag every shot with the build's element (tints trail + core).
+    for (const p of projectiles) p.setElement(element);
 
     // Reset cooldown (bonus/forced volleys don't touch the cadence)
     if (!forceFire) this.shootCooldown = 1 / this.stats.getFireRate();
