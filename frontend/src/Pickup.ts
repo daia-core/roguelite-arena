@@ -71,7 +71,7 @@ export class XPOrb {
   id: number;
   x: number;
   y: number;
-  radius: number = 4;
+  radius: number = 6;
   xpAmount: number;
   dead: boolean = false;
 
@@ -122,9 +122,80 @@ export class XPOrb {
     ctx.save();
     ctx.imageSmoothingEnabled = false;
     const pulse = Math.sin(this.pulseOffset) * 0.2 + 1;
-    // Pixel-art XP gem sprite (blue crystal). Sized to ~2.6x the pickup radius.
+    // Pixel-art XP gem sprite (blue crystal). Sized to ~3.2x the pickup radius
+    // so the gems read as chunky pixel crystals rather than specks.
     const sprite = SpriteSheet.get('xp')!;
-    const size = this.radius * 2.6 * pulse;
+    const size = this.radius * 3.2 * pulse;
+    ctx.drawImage(
+      sprite,
+      Math.round(this.x - size / 2),
+      Math.round(this.y - size / 2),
+      Math.round(size),
+      Math.round(size)
+    );
+    ctx.restore();
+  }
+}
+
+// Gold coin dropped by a slain enemy. Same pop → magnet → home behaviour as the
+// XP gem, but carries a gold value granted on pickup instead of at the moment of
+// the kill — so money now has to be vacuumed up like XP rather than auto-banking.
+export class CoinPickup {
+  static nextId = 0;
+
+  id: number;
+  x: number;
+  y: number;
+  radius: number = 6;
+  goldAmount: number;
+  dead: boolean = false;
+
+  private vx: number;
+  private vy: number;
+  private homing: boolean = false;
+  private homeSpeed: number = 260;
+  pulseOffset: number = 0;
+
+  constructor(x: number, y: number, goldAmount: number) {
+    this.id = CoinPickup.nextId++;
+    this.x = x;
+    this.y = y;
+    this.goldAmount = goldAmount;
+    const a = Math.random() * Math.PI * 2;
+    const pop = 40 + Math.random() * 60;
+    this.vx = Math.cos(a) * pop;
+    this.vy = Math.sin(a) * pop;
+    this.pulseOffset = Math.random() * Math.PI * 2;
+  }
+
+  // Returns true when it has reached the player and should be collected.
+  update(dt: number, px: number, py: number, magnetRadius: number): boolean {
+    this.pulseOffset += dt * 8;
+    const dx = px - this.x;
+    const dy = py - this.y;
+    const dist = Math.hypot(dx, dy) || 1;
+
+    if (this.homing || dist < magnetRadius) {
+      this.homing = true;
+      this.homeSpeed = Math.min(900, this.homeSpeed + 900 * dt);
+      this.vx = (dx / dist) * this.homeSpeed;
+      this.vy = (dy / dist) * this.homeSpeed;
+    } else {
+      this.vx *= 0.9;
+      this.vy *= 0.9;
+    }
+
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+    return dist < this.radius + 14;
+  }
+
+  draw(ctx: CanvasRenderingContext2D): void {
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    const pulse = Math.sin(this.pulseOffset) * 0.2 + 1;
+    const sprite = SpriteSheet.get('gold')!;
+    const size = this.radius * 3.2 * pulse;
     ctx.drawImage(
       sprite,
       Math.round(this.x - size / 2),

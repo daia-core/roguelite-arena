@@ -12,7 +12,7 @@ import { Input } from './Input';
 import { Renderer } from './Renderer';
 import { AudioManager } from './AudioManager';
 import { pointInRect, formatShort, segmentCircleHit } from './utils';
-import { HealthOrb, XPOrb } from './Pickup';
+import { HealthOrb, XPOrb, CoinPickup } from './Pickup';
 import { OrbitingOrb, Bomb, Shockwave } from './Weapons';
 import { AoeZone } from './AoeZone';
 import { MetaProgression } from './MetaProgression';
@@ -65,6 +65,7 @@ export class Game {
   damageNumbers: DamageNumber[] = [];
   healthOrbs: HealthOrb[] = [];
   xpOrbs: XPOrb[] = [];
+  coins: CoinPickup[] = [];
 
   // AUXILIARY STACKING WEAPONS — run alongside the primary weapon (never replace it).
   orbitingOrbs: OrbitingOrb[] = [];
@@ -409,6 +410,7 @@ export class Game {
     this.damageNumbers = [];
     this.healthOrbs = [];
     this.xpOrbs = [];
+    this.coins = [];
     this.resetAuxWeapons();
     this.kills = 0;
     this.bossKills = 0;
@@ -491,6 +493,7 @@ export class Game {
     this.damageNumbers = [];
     this.healthOrbs = [];
     this.xpOrbs = [];
+    this.coins = [];
     this.resetAuxWeapons();
     this.kills = 0;
 
@@ -1209,6 +1212,16 @@ export class Game {
       }
     }
 
+    // Coins — same magnet-and-home behaviour as XP; gold is banked on pickup, not
+    // at the moment of the kill, so money has to be vacuumed up like the gems.
+    for (const coin of this.coins) {
+      if (coin.update(dt, this.player.x, this.player.y, xpMagnetRadius)) {
+        this.player.addGold(coin.goldAmount);
+        coin.dead = true;
+        this.audio.playItemPickup();
+      }
+    }
+
     // PERFORMANCE: Cleanup dead entities using swap-and-pop (zero allocation)
     // Old approach: .filter() creates new arrays every frame = GC pressure
     // New approach: in-place removal = no GC, ~30% faster for entity cleanup
@@ -1269,6 +1282,7 @@ export class Game {
     this.removeDeadEntities(this.meleeAttacks);
     this.removeDeadEntities(this.healthOrbs);
     this.removeDeadEntities(this.xpOrbs);
+    this.removeDeadEntities(this.coins);
     this.removeDeadEntities(this.bombs);
     this.removeDeadEntities(this.shockwaves);
     this.updateAoeZones(dt);
@@ -1645,8 +1659,8 @@ export class Game {
       finalGold *= 2;
     }
 
-    // XP now drops as collectable gems (granted on pickup, not on kill). Gold
-    // stays instant. Split larger rewards into a few orbs for a satisfying pop,
+    // XP and gold now both drop as collectable pickups (granted on pickup, not on
+    // kill). Split larger rewards into a few orbs/coins for a satisfying pop,
     // capped so a dense wave can't flood the screen with pickups.
     const xpAward = Math.max(1, Math.floor(finalXP));
     const orbCount = Math.min(4, Math.max(1, Math.round(xpAward / 4)));
@@ -1657,7 +1671,19 @@ export class Game {
       if (remainder > 0) remainder--;
       this.xpOrbs.push(new XPOrb(enemy.x, enemy.y, share));
     }
-    this.player.addGold(Math.floor(finalGold));
+
+    // Gold drops as coins the player has to vacuum up (same magnet as XP).
+    const goldAward = Math.floor(finalGold);
+    if (goldAward > 0) {
+      const coinCount = Math.min(4, Math.max(1, Math.round(goldAward / 5)));
+      const goldPer = Math.floor(goldAward / coinCount);
+      let goldRemainder = goldAward - goldPer * coinCount;
+      for (let i = 0; i < coinCount; i++) {
+        const share = goldPer + (goldRemainder > 0 ? 1 : 0);
+        if (goldRemainder > 0) goldRemainder--;
+        this.coins.push(new CoinPickup(enemy.x, enemy.y, share));
+      }
+    }
 
     // ARTIFACT: Vampiric Field — every kill restores a flat amount of HP.
     const vamp = this.artifacts.killHeal();
@@ -2155,6 +2181,7 @@ export class Game {
     const buttonSpacingCss = 10;
     const bottomMarginCss = 14;
     const gridToButtonGapCss = 12; // guaranteed clear space between last row and buttons
+    // Two button rows: Next Wave (full width), then Reroll + Auto-Buy side by side.
     const buttonBandCss =
       buttonHeightCss * 2 + buttonSpacingCss + bottomMarginCss + gridToButtonGapCss;
 
@@ -2178,25 +2205,36 @@ export class Game {
     const buttonHeight = s(buttonHeightCss);
     const buttonSpacing = s(buttonSpacingCss);
     const itemsEndY = startY + rows * (itemHeight + gap);
+    // Two rows of buttons: Next Wave (full width) then Reroll + Auto-Buy split.
     const continueY = Math.min(
       itemsEndY + s(gridToButtonGapCss - gapCss),
       this.canvas.height - buttonHeight * 2 - buttonSpacing - s(bottomMarginCss)
     );
     const rerollY = continueY + buttonHeight + buttonSpacing;
+    // Split the second row into two side-by-side buttons sharing the full-width
+    // footprint (Reroll left, Auto-Buy right) with a small gap between them.
+    const splitGap = s(10);
+    const splitButtonWidth = Math.floor((buttonWidth - splitGap) / 2);
+    const rowCenterX = this.canvas.width / 2;
+    const rerollX = rowCenterX - buttonWidth / 2 + splitButtonWidth / 2;
+    const autoBuyX = rowCenterX + buttonWidth / 2 - splitButtonWidth / 2;
 
     return {
       zoom, s, isPortrait, isMobile, cols,
       itemWidth, itemHeight, gap, startX, startY,
       lockButtonSize: s(isMobile ? 34 : 26),
       buttonWidth, buttonHeight, continueY, rerollY,
-      // Card content offsets/sizes (within a card)
-      iconY: Math.round(itemHeight * 0.14),
-      iconSize: s(isMobile ? 26 : 30),
-      nameY: Math.round(itemHeight * 0.46),
+      splitButtonWidth, rerollX, autoBuyX,
+      // Card content offsets/sizes (within a card). Portrait/mobile cards are
+      // short (~84-100px), so the icon must stay small and the name must clear
+      // it — hence smaller mobile iconSize and a name row pushed below the icon.
+      iconY: Math.round(itemHeight * 0.12),
+      iconSize: s(isMobile ? 20 : 30),
+      nameY: Math.round(itemHeight * 0.5),
       nameSize: s(isMobile ? 9 : 10),
-      descY: Math.round(itemHeight * 0.63),
+      descY: Math.round(itemHeight * 0.66),
       descSize: s(8),
-      costY: Math.round(itemHeight * 0.8),
+      costY: Math.round(itemHeight * 0.82),
       costSize: s(11),
       synergySize: s(7),
     };
@@ -2221,7 +2259,8 @@ export class Game {
 
     // Layout shared with drawShop so hitboxes always match visuals
     const { s, cols, itemWidth, itemHeight, gap, startX, startY, lockButtonSize,
-      buttonWidth, buttonHeight, continueY, rerollY } = this.getShopLayout();
+      buttonWidth, buttonHeight, continueY, rerollY,
+      splitButtonWidth, rerollX, autoBuyX } = this.getShopLayout();
 
     this.selectedShopItem = -1;
 
@@ -2316,42 +2355,7 @@ export class Game {
         this.selectedShopItem = i;
 
         if (this.input.mouseDown) {
-          // DYNAMIC PRICING: Calculate wave-scaled price with shop discount
-          const finalPrice = this.playerStats.getItemPrice(item, this.waveManager.currentWave);
-
-          if (this.player.gold >= finalPrice) {
-            this.player.gold -= finalPrice;
-            const { newDuos } = this.playerStats.addItem(item);
-            this.itemsPurchasedThisWave++;
-
-            // GAME FEEL: Duo unlock effects
-            if (newDuos.length > 0) {
-              for (const duo of newDuos) {
-                console.log(`🎉 DUO UNLOCKED: ${duo.name} - ${duo.description}`);
-                this.screenEffects.flash(duo.glowColor || '#ff00ff', 0.3);
-              }
-            }
-
-            // Update player max health if needed
-            if (item.maxHealthBonus) {
-              const oldMax = this.player.maxHealth;
-              this.player.maxHealth = this.playerStats.getMaxHealth();
-              const healthPercent = this.player.health / oldMax;
-              this.player.health = this.player.maxHealth * healthPercent;
-            }
-
-            // Add shield
-            if (item.shield) {
-              this.player.shield = true;
-            }
-
-            // Clear lock on purchased item
-            this.lockedShopItems.delete(i);
-
-            // BUG FIX: Mark slot as empty (null) instead of removing to preserve indices
-            // Reroll will refill these empty slots
-            this.shopItems[i] = null as any; // Temporarily null, reroll fills it
-
+          if (this.purchaseShopItem(i)) {
             this.audio.playPurchase();
             this.input.mouseDown = false;
           }
@@ -2373,70 +2377,172 @@ export class Game {
       this.input.mouseDown = false;
     }
 
-    // ADVANCED REROLL: Free reroll ONLY when shop is completely empty
-    const freeReroll = this.shopItems.filter(item => item !== null && item !== undefined).length === 0;
-    const effectiveRerollCost = freeReroll ? 0 : this.shopRerollCost;
-
-    // Reroll button
+    // Reroll button (left half of the second row)
     const rerollBtn = {
-      x: this.canvas.width / 2 - buttonWidth / 2,
+      x: rerollX - splitButtonWidth / 2,
       y: rerollY,
-      width: buttonWidth,
+      width: splitButtonWidth,
       height: buttonHeight
     };
 
     if (pointInRect(mouseX, mouseY, rerollBtn) && this.input.mouseDown) {
-      if (this.player.gold >= effectiveRerollCost) {
-        this.player.gold -= effectiveRerollCost;
-
-        // BUG FIX: Rebuild shop to full 6 slots (purchased items were removed via splice)
-        const shopSlotCount = 6;
-        const newShopItems: Item[] = [];
-
-        // Keep locked items in their original positions
-        const lockedItems: Map<number, Item> = new Map();
-        for (const index of this.lockedShopItems) {
-          if (this.shopItems[index]) {
-            lockedItems.set(index, this.shopItems[index]);
-          }
-        }
-
-        // Generate new items for unlocked slots (BROTATO-STYLE WEIGHTED)
-        const unlockedSlotCount = shopSlotCount - lockedItems.size;
-        const newItems = ItemDatabase.getWeightedShopItems(
-          unlockedSlotCount,
-          this.waveManager.currentWave,
-          this.playerStats.items, // Pass owned items for tag weighting
-          this.playerStats.getLuck() // Luck tilts the shop toward higher rarities
-        );
-
-        // Rebuild shop: place locked items at their positions, fill rest with new items
-        let newItemIndex = 0;
-        for (let i = 0; i < shopSlotCount; i++) {
-          if (lockedItems.has(i)) {
-            newShopItems.push(lockedItems.get(i)!);
-          } else {
-            newShopItems.push(newItems[newItemIndex++]);
-          }
-        }
-
-        this.shopItems = newShopItems;
-
-        // DYNAMIC REROLL COST: Scale per reroll this wave
-        const wave = this.waveManager.currentWave;
-        // Always at least +1 — a zero increment allowed unlimited flat-price
-        // rerolls on waves 1-2
-        const rerollScaling = Math.max(1, Math.floor(wave * 0.4));
-        this.shopRerollCost = Math.min(
-          this.metaProgression.getRerollDiscount().maxCost,
-          this.shopRerollCost + rerollScaling
-        );
-
-        this.shopRerolls++;
+      if (this.rerollShop()) {
         this.audio.playPurchase();
         this.input.mouseDown = false;
       }
     }
+
+    // Auto-Buy button (right half of the second row) — greedily buy every
+    // affordable item, reroll, repeat until neither an item nor a reroll fits.
+    const autoBuyBtn = {
+      x: autoBuyX - splitButtonWidth / 2,
+      y: rerollY,
+      width: splitButtonWidth,
+      height: buttonHeight
+    };
+
+    if (pointInRect(mouseX, mouseY, autoBuyBtn) && this.input.mouseDown) {
+      this.autoBuyAll();
+      this.input.mouseDown = false;
+    }
+  }
+
+  /**
+   * Buy the shop item in slot `i` if the player can afford it. Returns true on a
+   * successful purchase. Shared by the click handler and Auto-Buy so the item
+   * effects (duos, health, shield, lock clear) stay in one place. Does NOT play
+   * the purchase sound — the caller owns that so Auto-Buy can play it once.
+   */
+  private purchaseShopItem(i: number): boolean {
+    if (!this.player) return false;
+    const item = this.shopItems[i];
+    if (!item) return false;
+
+    // DYNAMIC PRICING: wave-scaled price with shop discount.
+    const finalPrice = this.playerStats.getItemPrice(item, this.waveManager.currentWave);
+    if (this.player.gold < finalPrice) return false;
+
+    this.player.gold -= finalPrice;
+    const { newDuos } = this.playerStats.addItem(item);
+    this.itemsPurchasedThisWave++;
+
+    // GAME FEEL: Duo unlock effects
+    if (newDuos.length > 0) {
+      for (const duo of newDuos) {
+        console.log(`🎉 DUO UNLOCKED: ${duo.name} - ${duo.description}`);
+        this.screenEffects.flash(duo.glowColor || '#ff00ff', 0.3);
+      }
+    }
+
+    // Update player max health if needed
+    if (item.maxHealthBonus) {
+      const oldMax = this.player.maxHealth;
+      this.player.maxHealth = this.playerStats.getMaxHealth();
+      const healthPercent = this.player.health / oldMax;
+      this.player.health = this.player.maxHealth * healthPercent;
+    }
+
+    // Add shield
+    if (item.shield) {
+      this.player.shield = true;
+    }
+
+    // Clear lock on purchased item
+    this.lockedShopItems.delete(i);
+
+    // Mark slot empty (null) instead of removing to preserve indices; reroll refills.
+    this.shopItems[i] = null as any;
+    return true;
+  }
+
+  /**
+   * Reroll the shop if the player can afford it (free when the shop is empty).
+   * Returns true if a reroll happened. Does NOT play the sound (caller owns it).
+   */
+  private rerollShop(): boolean {
+    if (!this.player) return false;
+
+    // ADVANCED REROLL: Free reroll ONLY when shop is completely empty.
+    const freeReroll = this.shopItems.filter(item => item !== null && item !== undefined).length === 0;
+    const effectiveRerollCost = freeReroll ? 0 : this.shopRerollCost;
+    if (this.player.gold < effectiveRerollCost) return false;
+
+    this.player.gold -= effectiveRerollCost;
+
+    // Rebuild shop to full 6 slots, keeping locked items in their positions.
+    const shopSlotCount = 6;
+    const newShopItems: Item[] = [];
+    const lockedItems: Map<number, Item> = new Map();
+    for (const index of this.lockedShopItems) {
+      if (this.shopItems[index]) {
+        lockedItems.set(index, this.shopItems[index]);
+      }
+    }
+
+    // Generate new items for unlocked slots (BROTATO-STYLE WEIGHTED).
+    const unlockedSlotCount = shopSlotCount - lockedItems.size;
+    const newItems = ItemDatabase.getWeightedShopItems(
+      unlockedSlotCount,
+      this.waveManager.currentWave,
+      this.playerStats.items,
+      this.playerStats.getLuck()
+    );
+
+    let newItemIndex = 0;
+    for (let i = 0; i < shopSlotCount; i++) {
+      if (lockedItems.has(i)) {
+        newShopItems.push(lockedItems.get(i)!);
+      } else {
+        newShopItems.push(newItems[newItemIndex++]);
+      }
+    }
+    this.shopItems = newShopItems;
+
+    // DYNAMIC REROLL COST: scale per reroll this wave (always at least +1).
+    const wave = this.waveManager.currentWave;
+    const rerollScaling = Math.max(1, Math.floor(wave * 0.4));
+    this.shopRerollCost = Math.min(
+      this.metaProgression.getRerollDiscount().maxCost,
+      this.shopRerollCost + rerollScaling
+    );
+
+    this.shopRerolls++;
+    return true;
+  }
+
+  /**
+   * Auto-Buy: greedily buy every affordable item in the shop, then reroll and
+   * repeat, until neither another item nor a reroll can be afforded. A hard
+   * iteration cap guards against any pathological non-terminating case (e.g. a
+   * locked-but-unaffordable card the player can never buy while rerolls stay free).
+   */
+  private autoBuyAll(): void {
+    if (!this.player) return;
+
+    let didAnything = false;
+    const MAX_PASSES = 1000;
+    for (let pass = 0; pass < MAX_PASSES; pass++) {
+      // Buy every affordable item in the current shop (cheapest reachable first
+      // falls out naturally as gold drops through the slot order).
+      let boughtThisPass = false;
+      for (let i = 0; i < this.shopItems.length; i++) {
+        if (this.purchaseShopItem(i)) {
+          boughtThisPass = true;
+          didAnything = true;
+        }
+      }
+
+      // Then try to reroll for a fresh set to buy from.
+      if (this.rerollShop()) {
+        didAnything = true;
+        continue;
+      }
+
+      // Can't reroll. If we also bought nothing this pass, we're done.
+      if (!boughtThisPass) break;
+    }
+
+    if (didAnything) this.audio.playPurchase();
   }
 
   private startNextWave(opts?: { elite?: boolean; boss?: boolean }): void {
@@ -3274,6 +3380,12 @@ export class Game {
       }
     }
 
+    for (const coin of this.coins) {
+      if (this.entityCuller.isVisible(coin)) {
+        coin.draw(ctx);
+      }
+    }
+
     this.player.draw(ctx);
 
     // Orbiting orbs draw over the player so the ring reads clearly.
@@ -3341,7 +3453,8 @@ export class Game {
       ...this.particles,
       ...this.meleeAttacks,
       ...this.healthOrbs,
-      ...this.xpOrbs
+      ...this.xpOrbs,
+      ...this.coins
     ];
     const visibleCount = allEntities.filter(e => this.entityCuller.isVisible(e)).length;
     const culledCount = allEntities.length - visibleCount;
@@ -3353,7 +3466,7 @@ export class Game {
       damageNumbers: this.damageNumbers.length,
       meleeAttacks: this.meleeAttacks.length,
       healthOrbs: this.healthOrbs.length,
-      xpOrbs: this.xpOrbs.length,
+      xpOrbs: this.xpOrbs.length + this.coins.length,
       quadtreeNodes: quadtreeStats.nodeCount,
       quadtreeDepth: quadtreeStats.maxDepth,
       quadtreeObjects: quadtreeStats.totalObjects,
@@ -3553,6 +3666,7 @@ export class Game {
   private drawShop(): void {
     const { s, isMobile, cols, itemWidth, itemHeight, gap, startX, startY, lockButtonSize,
       buttonWidth, buttonHeight, continueY, rerollY,
+      splitButtonWidth, rerollX, autoBuyX,
       iconY, iconSize, nameY, nameSize, descY, descSize, costY, costSize,
       synergySize } = this.getShopLayout();
     const ctx = this.renderer.getContext();
@@ -3944,18 +4058,37 @@ export class Game {
       isMobile
     );
 
-    // Reroll button - ALWAYS SECOND (below continue)
+    // Second row: Reroll (left half) + Auto-Buy (right half), side by side.
     const freeReroll = this.shopItems.filter(item => item !== null && item !== undefined).length === 0;
     const effectiveRerollCost = freeReroll ? 0 : this.shopRerollCost;
     const canAffordReroll = this.player.gold >= effectiveRerollCost;
     this.renderer.drawButton(
-      this.canvas.width / 2 - buttonWidth / 2,
+      rerollX - splitButtonWidth / 2,
       rerollY,
-      buttonWidth,
+      splitButtonWidth,
       buttonHeight,
       freeReroll ? 'Reroll (FREE)' : `Reroll (${this.shopRerollCost}g)`,
       false,
       canAffordReroll,
+      isMobile
+    );
+
+    // Auto-Buy — enabled when the player can afford at least the cheapest shop
+    // item OR a reroll.
+    const cheapestPrice = this.shopItems.reduce((min, it) => {
+      if (!it) return min;
+      const p = this.playerStats.getItemPrice(it, this.waveManager.currentWave);
+      return Math.min(min, p);
+    }, Infinity);
+    const canAutoBuy = this.player.gold >= cheapestPrice || canAffordReroll;
+    this.renderer.drawButton(
+      autoBuyX - splitButtonWidth / 2,
+      rerollY,
+      splitButtonWidth,
+      buttonHeight,
+      'Auto-Buy',
+      false,
+      canAutoBuy,
       isMobile
     );
 
