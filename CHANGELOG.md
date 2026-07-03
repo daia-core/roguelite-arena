@@ -8,6 +8,24 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-03 (evening) — AoE danger zones are now pixel art (no smooth circles)
+
+- **Telegraphed AoE zones render as chunky pixels.** The red "danger" markers that bosses,
+  mini-bosses and ranged enemies paint on the ground before an attack were the last in-world VFX
+  still drawn as smooth anti-aliased circles/rings with gradient fills and a dashed border. They now
+  rasterize into `PX=6` pixel-aligned scanlines with image smoothing off — the same chunky look as
+  the nova/shockwave rings and every sprite — so nothing in the arena is "drawn directly" anymore.
+  The growing telegraph fill, the pulse, the ring shape and the white detonation flash are all
+  preserved; damage timing is unchanged.
+
+Commit `99f5914`. Verified live at 390×844: bundle `index-wRamu91r.js` serving; `qa-aoe-pixel.mjs`
+spawns a circle + a ring zone in-arena, 0 console errors, 60k+ danger pixels painted, screenshots
+confirm chunky stair-stepped edges (not smooth), and the player takes zone damage on detonation.
+(Known remaining vector element: the between-battle node-map board circles are still smooth by
+design — a deliberate Slay-the-Spire-style UI, left for Felix's call, not an in-arena entity.)
+
+---
+
 ## 2026-07-03 (evening) — every item is a hand-drawn pixel sprite (zero emoji) + stat caps
 
 Two changes shipped together:
