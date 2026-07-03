@@ -8,6 +8,32 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-03 (night) — your shots now show your build's element
+
+- **An elemental build finally LOOKS elemental.** Until now every player bullet was the same cyan
+  regardless of your build — a fire/ignite build, a freeze build and a raw-damage build all fired
+  identical shots. Now each shot is tinted to the **dominant element of your build**: burn/ignite →
+  **fiery orange**, freeze → **icy blue-white**, chain-lightning → **yellow**, poison → **green**.
+  The bullet's trail takes the color and a small element-colored core sits over it, so a glance at
+  your fire tells you what your build is applying. A build with no elemental stat keeps the default
+  cyan.
+- **Purely visual — zero balance change.** This does not change damage, or which status effects roll
+  on hit (those still come from your build's per-hit chances, unchanged). It's readability/juice, and
+  it plumbs an `element` tag onto every projectile that a future fire-vs-frozen combo pass can build
+  on (that combo layer is deliberately left for a play-feel/numbers call — see t-75ba64).
+- **Under the hood:** `damageType` added to `Projectile` (task t-89b66d / DEEP-REVIEW P2-4).
+  `PlayerStats.getShotElement()` picks the strongest of burn/freeze/chain/poison; `Player.tryShoot`
+  tags every projectile in the volley (all weapon patterns — bullets, shotgun, orbital, laser) via
+  `Projectile.setElement`, which tints the trail and drives the core overlay.
+- Commit `ec6a250`. **Live-verified:** production `roguelite-game-blush.vercel.app` serving bundle
+  `index-GJQESzf8.js` (HTTP 200, no auth wall, `getShotElement` + `damageType` + the fire/ice colors
+  present in the shipped bundle). QA: new `qa-proj-element.mjs` drives the **genuine `Player.tryShoot()`
+  path** with a real enemy + forceFire and asserts the returned projectiles carry the right element +
+  color across all 5 elements + the priority tie-break — **7/7 cases PASS, 0 console errors**;
+  `qa-roguelite` + `qa-stat-caps` regression green; `tsc` clean.
+
+---
+
 ## 2026-07-03 (night) — hit-stop "punch" on impactful kills
 
 - **Killing a boss or an elite now lands with a beat.** Added a hit-stop (freeze-frame): the game
