@@ -8,6 +8,25 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-03 (evening) — stat numbers abbreviate cleanly (no scientific notation, no raw floats)
+
+- **Fixed the ugly stat readouts Felix screenshotted** — deep-run values like `6.82e+278` and
+  `2979.5297380553598` no longer leak into the UI. Every numeric stat now runs through the existing
+  `formatShort` helper (K/M/B/T abbreviation), so a maxed build reads `DMG 1000T`, `HP 100/10K`,
+  `+143Kx crit`, `264/s` — never scientific notation, never a raw multi-decimal float.
+- Two surfaces fixed in `Game.ts`:
+  - **Full-stats popup** (`drawStatsPopup`) — OFFENSE / DEFENSE / UTILITY / SPECIAL rows now use
+    `num`/`pct`/`mult`/`rate` helpers. Max Health (the `2979.5297` bug), Damage, multipliers,
+    regen/fire-rate all abbreviate.
+  - **Shop stats summary panel** — the exact panel from the screenshot; `HP`, `DMG`, `FIRE`, `SPD`,
+    `CRIT`, `MULTI` were rendering raw (`HP 100/10769.60000000001`, 16-digit `DMG`) and now abbreviate.
+- QA: extended `qa-stats-popup.mjs` to stack 80 synthetic stress items, force-recompute the memoized
+  aggregation, hook `drawText` to capture every rendered string, and **fail** on any scientific-notation
+  or raw-float glyph. Green at mobile-390 + desktop-1280; `qa-numberformat` and `qa-stat-caps` also green.
+- Live build **`index-DU_mKMQ4.js`** (verified: HTTP 200, live bundle == shipped build, no auth wall).
+
+---
+
 ## 2026-07-03 (evening) — skeleton sprite modernized (form-lit bone + glowing eyes)
 
 - **New skeleton enemy sprite** — second sprite in the modern-technique pass, same silhouette-preserving

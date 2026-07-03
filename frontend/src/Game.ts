@@ -3733,13 +3733,16 @@ export class Game {
     // Remember the panel bounds so updateShop can make it tappable (→ full stats popup).
     this.statsPanelRect = { x: statPanelX, y: statPanelY, width: statPanelWidth, height: statPanelHeight };
 
+    // formatShort on every numeric field so deep-run values stay readable and never
+    // render as raw floats or scientific notation (the stats-panel bug Felix flagged).
+    const fr = this.playerStats.getFireRate();
     const stats: Array<[string, string, string]> = [
-      ['HP', `${Math.floor(this.player.health)}/${this.playerStats.getMaxHealth()}`, '#ff6b6b'],
-      ['DMG', `${Math.floor(this.playerStats.getDamage())}`, '#ffa94d'],
-      ['FIRE', `${this.playerStats.getFireRate().toFixed(1)}/S`, '#ff8787'],
-      ['SPD', `${Math.floor(this.playerStats.getSpeed())}`, '#66d9e8'],
-      ['CRIT', `${Math.floor(this.playerStats.getCritChance() * 100)}%`, '#ffd43b'],
-      ['MULTI', `${this.playerStats.getMultishot()}`, '#69db7c'],
+      ['HP', `${formatShort(Math.ceil(this.player.health))}/${formatShort(this.playerStats.getMaxHealth())}`, '#ff6b6b'],
+      ['DMG', `${formatShort(this.playerStats.getDamage())}`, '#ffa94d'],
+      ['FIRE', `${fr >= 1000 ? formatShort(fr) : fr.toFixed(1)}/S`, '#ff8787'],
+      ['SPD', `${formatShort(this.playerStats.getSpeed())}`, '#66d9e8'],
+      ['CRIT', `${formatShort(Math.floor(this.playerStats.getCritChance() * 100))}%`, '#ffd43b'],
+      ['MULTI', `${formatShort(this.playerStats.getMultishot())}`, '#69db7c'],
     ];
 
     if (isMobile) {
@@ -4096,34 +4099,40 @@ export class Game {
 
     // Build grouped rows. Each row is [label, value, alwaysShow?]. A row is shown
     // if alwaysShow OR its value string isn't a "zero/none" default.
-    const pct = (v: number) => `${Math.round(v * 100)}%`;
-    const mult = (v: number) => `${v.toFixed(2)}x`;
+    // All numeric formatting routes through formatShort so deep-run values stay
+    // readable (K/M/B/T) and never render as raw floats or scientific notation
+    // (e.g. "2979.5297" or "6.82e+278" — the pre-cap ugliness Felix flagged).
+    const num = (v: number) => formatShort(v);
+    const pct = (v: number) => `${formatShort(Math.round(v * 100))}%`;
+    const mult = (v: number) => (v >= 1000 ? `${formatShort(v)}x` : `${v.toFixed(2)}x`);
+    const rate = (v: number, dp: number, suf: string) =>
+      `${v >= 1000 ? formatShort(v) : v.toFixed(dp)}${suf}`;
     type Row = [string, string, boolean];
     const groups: Array<[string, string, Row[]]> = [
       ['OFFENSE', '#ffa94d', [
-        ['Damage', `${Math.floor(ps.getDamage())}`, true],
-        ['Fire Rate', `${ps.getFireRate().toFixed(2)}/s`, true],
-        ['Multishot', `+${ps.getMultishot()}`, ps.getMultishot() > 0],
+        ['Damage', num(ps.getDamage()), true],
+        ['Fire Rate', rate(ps.getFireRate(), 2, '/s'), true],
+        ['Multishot', `+${num(ps.getMultishot())}`, ps.getMultishot() > 0],
         ['Crit Chance', pct(ps.getCritChance()), true],
         ['Crit Damage', mult(ps.getCritMultiplier()), true],
-        ['Piercing', `${ps.getPiercing()}`, ps.getPiercing() > 0],
-        ['Knockback', `${Math.round(ps.getKnockback())}`, ps.getKnockback() > 0],
-        ['Projectile Speed', `${Math.round(ps.getProjectileSpeed())}`, false],
+        ['Piercing', num(ps.getPiercing()), ps.getPiercing() > 0],
+        ['Knockback', num(ps.getKnockback()), ps.getKnockback() > 0],
+        ['Projectile Speed', num(ps.getProjectileSpeed()), false],
         ['Melee Dmg', mult(ps.getMeleeDamageMult()), ps.getMeleeDamageMult() > 1.001],
         ['Ranged Dmg', mult(ps.getRangedDamageMult()), ps.getRangedDamageMult() > 1.001],
         ['Elemental Dmg', mult(ps.getElementalDamageMult()), ps.getElementalDamageMult() > 1.001],
       ]],
       ['DEFENSE', '#74c0fc', [
-        ['Max Health', `${ps.getMaxHealth()}`, true],
-        ['Armor', `${Math.round(ps.getArmor())}`, ps.getArmor() > 0],
+        ['Max Health', num(ps.getMaxHealth()), true],
+        ['Armor', num(ps.getArmor()), ps.getArmor() > 0],
         ['Dodge', pct(ps.getDodgeChance()), ps.getDodgeChance() > 0],
-        ['HP Regen', `${ps.getHealthRegen().toFixed(1)}/s`, ps.getHealthRegen() > 0],
+        ['HP Regen', rate(ps.getHealthRegen(), 1, '/s'), ps.getHealthRegen() > 0],
         ['Shield', ps.hasShield() ? 'YES' : '-', ps.hasShield()],
         ['Lifesteal', pct(ps.getLifesteal()), ps.getLifesteal() > 0],
-        ['Thorns', `${Math.round(ps.getThorns())}`, ps.getThorns() > 0],
+        ['Thorns', num(ps.getThorns()), ps.getThorns() > 0],
       ]],
       ['UTILITY', '#8ce99a', [
-        ['Move Speed', `${Math.round(ps.getSpeed())}`, true],
+        ['Move Speed', num(ps.getSpeed()), true],
         ['XP Magnet', mult(ps.getXPMagnet()), ps.getXPMagnet() > 1.001],
       ]],
       ['ECONOMY', '#ffd43b', [
@@ -4141,7 +4150,7 @@ export class Game {
         ['Homing', ps.hasHoming() ? 'YES' : '-', ps.hasHoming()],
         ['Explode on Kill', ps.hasExplosionOnKill() ? 'YES' : '-', ps.hasExplosionOnKill()],
         ['Explode on Hit', ps.hasExplosionOnHit() ? 'YES' : '-', ps.hasExplosionOnHit()],
-        ['Orbit Orbs', `${ps.getOrbitOrbCount()}`, ps.getOrbitOrbCount() > 0],
+        ['Orbit Orbs', num(ps.getOrbitOrbCount()), ps.getOrbitOrbCount() > 0],
         ['Bomb Drop', ps.hasBombDrop() ? 'YES' : '-', ps.hasBombDrop()],
         ['Nova Pulse', ps.hasNova() ? 'YES' : '-', ps.hasNova()],
         ['Aux Melee', ps.hasAuxMelee() ? 'YES' : '-', ps.hasAuxMelee()],
