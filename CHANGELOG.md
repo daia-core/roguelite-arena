@@ -8,6 +8,24 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-03 (evening) — skeleton sprite modernized (form-lit bone + glowing eyes)
+
+- **New skeleton enemy sprite** — second sprite in the modern-technique pass, same silhouette-preserving
+  method as the player (interior tones remapped, hitbox unchanged):
+  - **Skull** was a flat beige box; it's now lit from the top-left — warm highlight on the upper-left of
+    the skull, cooler hue-shifted shadow down the right side and under the jaw, so it reads as rounded bone.
+  - **Eyes** were two flat green slabs; they're now matched **glowing sockets** — a green rim with a hot
+    near-white core glowing toward the skull's midline, so the skeleton reads as alive/undead rather than
+    wearing green stickers.
+  - **Sword** got a bright steel rim-highlight on its lit edge; the loincloth gained a subtle warm highlight.
+  - Proven visibly better via `qa-sprite-compare.mjs` before/after (`shots/sprite-compare/skeleton.png`),
+    iterated once to fix eye symmetry.
+- QA: pixel-art, sprite-conversion round-trip, and gameplay/collision regression all green, 0 errors.
+- Commit `49ecfb9` → live build **`index-BbVrxpq4.js`** (verified: HTTP 200, correct title, no auth wall,
+  live hash == shipped commit's build).
+
+---
+
 ## 2026-07-03 (evening) — player sprite modernized + sprite source pipeline restored
 
 - **New player hero sprite.** The player was redrawn with modern pixel-art technique while keeping
