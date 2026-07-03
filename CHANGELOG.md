@@ -8,6 +8,28 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-03 (early morning) — Fix: you can never lose your weapon to a shop purchase (live index-4UCzVocG.js)
+
+**Bug (Felix, B4):** *"my projectile / orb spiral removed after i bought some upgrade — it shouldn't
+be possible to lose a weapon like that."* Root cause: a `weaponType` item **replaces** the active
+firing style (`getWeaponType()` picks the first owned weapon). So once you'd committed to a build,
+the shop could still offer you *another* weapon item — and buying what looked like an upgrade
+silently swapped away (destroyed) the weapon you'd built around.
+
+**Fix — you pick your weapon once, and no purchase can take it from you.** The shop now **locks out
+all further weapon offers** the moment you're weapon-committed: either you own an explicit weapon
+item (orbital, flamethrower, …) **or** you've invested in the default auto-aim gun (multishot /
+piercing / homing). Weapon items simply stop appearing in the roll, so there's no way to
+accidentally overwrite your build. (Existing safeguard held too: buying a 2nd weapon while already
+weapon-committed is ignored/wasted rather than a swap — now it can't even be offered.)
+
+Repro probe (`probe-weapon-loss.mjs`, rebuilds from source): grants an orb-spiral build, then buys
+**every other item** one at a time — the orb build survives all of them, weapon stays `orbital`,
+orbs never drop. Offer-layer check: **0** weapon items across 40×6 shop rolls for both a
+committed-weapon build and an auto-aim build. 0 console/page errors. Commit `7372dfb`.
+
+---
+
 ## 2026-07-03 (early morning) — Build your Village: a walkable between-runs base (live index-2QTFxGkM.js)
 
 The flat "Permanent Upgrades" grid is gone. In its place is a **Village** — a walkable,

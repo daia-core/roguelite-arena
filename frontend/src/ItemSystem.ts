@@ -2695,10 +2695,21 @@ export class ItemDatabase {
       playerItems.filter(i => !this.itemStacks(i)).map(i => i.id)
     );
 
+    // WEAPON LOCK: a weaponType item REPLACES the active firing style (getWeaponType
+    // picks the first weapon), so offering one to a player who's already committed to a
+    // build silently destroys their weapon when they buy what looks like an upgrade.
+    // Once the player owns a weapon, OR has invested in the default auto-aim gun
+    // (multishot / piercing / homing), never offer another weaponType item again — you
+    // pick your weapon once, and no purchase can take it from you.
+    const weaponCommitted =
+      playerItems.some(i => i.weaponType) ||
+      playerItems.some(i => i.multishot || i.piercing || i.homing);
+
     // Get tier-appropriate items for this wave (owned non-stacking items filtered out)
     const getWaveAppropriteItems = (): Item[] => {
       return this.getUnlockedItems().filter(item => {
         if (nonStackOwned.has(item.id)) return false; // already own it and a dupe is useless
+        if (weaponCommitted && item.weaponType) return false; // never swap a committed weapon
         if (wave <= 2) return item.tier === ItemTier.Common;
         if (wave <= 5) return item.tier <= ItemTier.Uncommon;
         if (wave <= 10) return item.tier <= ItemTier.Rare;
