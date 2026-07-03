@@ -8,6 +8,26 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-03 (afternoon) — chunkier XP orbs, gold as collectable coins, shop Auto-Buy & cleaner shop cards
+
+Four changes from Felix's play feedback, all in one deploy:
+
+- **XP orbs are chunkier.** The XP gems were tiny specks; their pickup radius went 4 → 6 and the
+  sprite is drawn ~23% bigger, so they read as proper chunky pixel crystals on the ground.
+- **Gold now drops as coins you vacuum up.** Kills no longer bank gold instantly. Instead each kill
+  scatters up to 4 gold coins that magnet toward you and bank their value on contact — same
+  satisfying pop → home → collect loop as the XP gems, so money is now something you sweep up rather
+  than a silent number tick.
+- **Shop Auto-Buy button.** A one-tap **Auto-Buy** greedily buys every affordable item, rerolls, and
+  repeats until you can't afford another item or a reroll — for clearing the shop fast when you don't
+  want to click through every card.
+- **Cleaner shop cards.** The item cards were cramped on mobile — the icon overlapped the name and the
+  synergy tags crowded the top edge. Reworked the internal spacing (smaller mobile icon, name pushed
+  clear below it) and moved **Reroll + Auto-Buy onto one side-by-side row** so the cards keep their
+  full height. Reads cleanly on phone portrait and desktop.
+
+---
+
 ## 2026-07-03 (afternoon) — event reward cards, skippable artifacts, more artifacts & a mid-run gear menu
 
 Four player-facing gaps closed, all from Felix's play feedback:
