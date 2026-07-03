@@ -8,6 +8,45 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-04 (night) — item redesign batch 2: 13 high-rarity fillers get real identities
+
+- **Every Legendary and combat/utility Rare that was just a stack of flat numbers now DOES
+  something.** Batch 1 gave 10 mid-tier fillers trade-off identities; this pass finishes the
+  high-rarity shelf. A Legendary should feel build-defining the moment you see it, and a bland
+  "+X% damage, +Y% crit" Legendary never did. The 6 Legendaries + 7 Rares below now each carry a
+  distinct mechanic drawn from the existing engine (zero new engine code, so nothing else could
+  regress):
+  - **Phoenix Feather** (Legendary) — +60 HP / +6 HP·s, and near death you *rage harder* (Last-Stand
+    power) while your hits **ignite**. A defensive item with teeth.
+  - **Midas Touch** (Legendary) — gold ×1.8, and your gold total now **fuels your damage** (the more
+    you're sitting on, the harder you hit). Greed as a weapon.
+  - **Berserker Soul** (Legendary) — +40% damage and **every kill stacks more damage** + lifesteal,
+    paid for with −20 max HP. Snowball glass-cannon.
+  - **Cosmic Dice** (Legendary) — luck + gold + crit, plus a **25% multicast** chance (attacks fire
+    twice). Chaos that pays out.
+  - **Philosopher's Stone** (Legendary) — an economy anchor that also sustains you (interest + luck +
+    regen + lifesteal): wealth that keeps you alive.
+  - **Jackpot** (Legendary) — huge crit chance + ×2 crit damage, and crits now **explode on hit**.
+    All-in crit build enabler.
+  - **Rares** (7): Critical Synergy (crit + **bleed**), Guardian Aura (armor + **thorns** + a
+    defensive **nova pulse**), Deadly Precision (crit + **+3 pierce**, trading a little fire rate),
+    Compound Interest (gold that **scales your damage**), and the three economy rings
+    (Merchant's / Golden Vault / Treasure Map) sharpened into clearly-different money builds —
+    shopping/recycle, banking/interest, and loot/pickup.
+- **Why it matters:** the earlier "everything's maxed by wave 7" feel came partly from filler items
+  that only nudged numbers. Items that *change how you play* keep runs interesting deeper in, and
+  make a high-rarity drop feel like a decision, not a stat bump.
+- **Under the hood:** all identities reuse shipped engine fields (burn/bleed/thorns/pierce/nova,
+  the Last-Stand / kill-stack / gold-scale conditional-damage layer, multicast, explosion-on-hit),
+  verified reachable end-to-end. The redesign QA harness (`qa-item-redesign.mjs`) now data- and
+  behaviorally-checks all 22 redesigned items green (and its per-item isolation was hardened to
+  reset the transformation tracker between checks); the 5 relevant regression harnesses
+  (synergy, stat-caps, triggered-items, status-engines, evolution) all pass.
+- Commit `d842028`. **Live-verified:** production `roguelite-game-blush.vercel.app` serving the new
+  bundle (HTTP 200, batch-2 item mechanics baked into the shipped JS).
+
+---
+
 ## 2026-07-03 (night) — all 5 bosses hand-drawn from scratch
 
 - **Every boss is now a bespoke, hand-crafted sprite instead of a filtered auto-enhance.** The five
