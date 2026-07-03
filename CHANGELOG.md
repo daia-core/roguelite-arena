@@ -8,6 +8,28 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-03 (evening) — every artifact hand-crafted (dedicated glyphs, not reused item art)
+
+- **All 20 artifacts now have their own dedicated, hand-crafted 12×12 sprite** instead of borrowing an
+  existing item glyph. Following Felix's "go through and hand craft each", each artifact was drawn from
+  scratch with its own palette (black outline, top-left light, hue-shifted ramp, catch-light) so the
+  reward-pick card reads at a glance: Titan's Heart = armored heart, Momentum Engine = cyan gear,
+  Berserk Core = glowing core, Assassin's Guile = hooded red-eyed mask, Warlord's Banner = pennant,
+  Crown of Slaughter = gem crown, Stormcaller = cloud+bolt, Sniper's Focus = scope, etc.
+  - New render path: artifacts now resolve via `getArtifactIcon(id)` → `art_<id>` glyph (not the emoji
+    `getItemIcon` map), drawn through `Renderer.drawArtifactIcon`. Reward-pick + event-granted cards
+    both use it. This decouples artifact art from item art so each can evolve independently.
+- **Two weak item glyphs redrawn** while in the file: `fist` (was a featureless red blob reused across
+  7 melee items) → a boxing-glove fist with knuckle highlights + cuff; `gun` (ambiguous L-pipe) → a
+  clear side-view pistol with slide + grip.
+- QA: `qa-artifact-icons.mjs` now drives the real `getArtifactIcon` path and asserts each paints >8px
+  across ≥3 colours (a real authored glyph, not a flat fallback) — **20/20 pass, 0 console errors**;
+  sheet eyeballed at `shots/pixel-art/artifact-icons.png`. Item icons 112/112 still pass. Menu
+  eyeballed at 390×844.
+- **Live:** `index-pd5ruj3D.js` verified serving on production (HTTP 200, title correct).
+
+---
+
 ## 2026-07-03 (evening) — pixel-art icons for every artifact (last emoji holdouts)
 
 - **All 20 run-long artifacts now have a distinct pixel-art icon** on the reward-pick card and the

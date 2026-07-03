@@ -1,7 +1,7 @@
 // Canvas rendering with effects
 
 import { UISprites } from './UISprites';
-import { getItemIcon } from './items/itemIcons';
+import { getItemIcon, getArtifactIcon } from './items/itemIcons';
 import { drawPanel, WOOD_THEME, STONE_THEME, type PanelTheme } from './pixel/panel';
 import { OffscreenCanvasCache } from './OffscreenCanvasCache';
 import { StardewBackground } from './StardewBackground';
@@ -402,7 +402,30 @@ export class Renderer {
     box: number,
     align: 'center' | 'left' = 'center'
   ): void {
-    const sprite = getItemIcon(emoji);
+    this.blitIconSprite(getItemIcon(emoji), x, topY, box, align);
+  }
+
+  /**
+   * Draw an artifact's hand-crafted pixel-art icon by its id. Same layout rules
+   * as `drawItemIcon`; used on the reward-pick and event-result screens.
+   */
+  drawArtifactIcon(
+    id: string,
+    x: number,
+    topY: number,
+    box: number,
+    align: 'center' | 'left' = 'center'
+  ): void {
+    this.blitIconSprite(getArtifactIcon(id), x, topY, box, align);
+  }
+
+  private blitIconSprite(
+    sprite: HTMLCanvasElement,
+    x: number,
+    topY: number,
+    box: number,
+    align: 'center' | 'left'
+  ): void {
     const ar = sprite.width / sprite.height;
     let w = box, h = box;
     if (ar >= 1) h = box / ar; else w = box * ar;

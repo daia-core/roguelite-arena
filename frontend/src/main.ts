@@ -4,7 +4,7 @@ import { Game } from './Game';
 import { AoeZone } from './AoeZone';
 import { SpriteSheet } from './sprites';
 import { UISprites } from './UISprites';
-import { getItemIcon } from './items/itemIcons';
+import { getItemIcon, getArtifactIcon } from './items/itemIcons';
 import { panelCanvas, WOOD_THEME } from './pixel/panel';
 import './style.css';
 
@@ -16,6 +16,8 @@ UISprites.init();
 (window as unknown as { __SpriteSheet: typeof SpriteSheet }).__SpriteSheet = SpriteSheet;
 // Dev/QA hook: lets tooling render/inspect item icons. Not a public API.
 (window as unknown as { __getItemIcon: typeof getItemIcon }).__getItemIcon = getItemIcon;
+// Dev/QA hook: lets tooling render/inspect the hand-crafted artifact icons.
+(window as unknown as { __getArtifactIcon: typeof getArtifactIcon }).__getArtifactIcon = getArtifactIcon;
 
 // Pixel-art wood textures for the DOM menu buttons (see .menu-btn in style.css)
 const HOVER_WOOD = { ...WOOD_THEME, face: '#9a6a3e', faceLight: '#b98756', faceDark: '#7a4e2a' };

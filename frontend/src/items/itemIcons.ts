@@ -1265,7 +1265,7 @@ const GLYPHS: Record<string, Glyph> = {
 
   // ---- artifact glyphs (hand-crafted, one per artifact) ----
   art_glass_cannon: {
-    p: [, , , , , ],
+    p: ['transparent', '#0f172a', '#334155', '#64748b', '#93c5fd', '#f97316'],
     g: [
       [0,0,0,0,0,0,0,0,0,0,0,0],
       [0,0,0,0,0,0,0,0,1,1,1,0],
@@ -1282,7 +1282,7 @@ const GLYPHS: Record<string, Glyph> = {
     ],
   },
   art_titans_heart: {
-    p: [, , , , , ],
+    p: ['transparent', '#3a0a12', '#b91c1c', '#f87171', '#cbd5e1', '#64748b'],
     g: [
       [0,1,1,0,0,0,0,0,1,1,0,0],
       [1,2,2,1,0,0,0,1,2,2,1,0],
@@ -1299,7 +1299,7 @@ const GLYPHS: Record<string, Glyph> = {
     ],
   },
   art_scholars_codex: {
-    p: [, , , , , ],
+    p: ['transparent', '#1e1b4b', '#4338ca', '#818cf8', '#fbbf24', '#fef9c3'],
     g: [
       [0,0,0,0,0,0,0,0,0,0,0,0],
       [0,1,1,1,1,1,1,1,1,1,1,0],
@@ -1316,7 +1316,7 @@ const GLYPHS: Record<string, Glyph> = {
     ],
   },
   art_fleetfoot: {
-    p: [, , , , , ],
+    p: ['transparent', '#14532d', '#a16207', '#d97706', '#fcd34d', '#ecfccb'],
     g: [
       [0,0,0,0,0,1,1,1,0,0,0,0],
       [0,0,0,0,1,3,3,2,1,0,0,0],
@@ -1333,7 +1333,7 @@ const GLYPHS: Record<string, Glyph> = {
     ],
   },
   art_executioner: {
-    p: [, , , , , ],
+    p: ['transparent', '#111418', '#6b7280', '#d1d5db', '#7c2d12', '#f8fafc'],
     g: [
       [0,0,0,0,0,0,1,1,0,0,0,0],
       [0,0,1,1,1,1,5,3,1,0,0,0],
@@ -1350,7 +1350,7 @@ const GLYPHS: Record<string, Glyph> = {
     ],
   },
   art_second_wind: {
-    p: [, , , , , ],
+    p: ['transparent', '#7c2d12', '#ea580c', '#f59e0b', '#fef08a', '#fff7ed'],
     g: [
       [0,0,0,0,0,1,1,0,0,0,0,0],
       [0,0,0,0,1,4,3,1,0,0,0,0],
@@ -1367,7 +1367,7 @@ const GLYPHS: Record<string, Glyph> = {
     ],
   },
   art_vampiric_field: {
-    p: [, , , , , ],
+    p: ['transparent', '#450a0a', '#dc2626', '#fca5a5', '#f8fafc', '#e5e7eb'],
     g: [
       [0,1,1,1,1,1,1,1,1,1,1,0],
       [1,4,4,4,4,4,4,4,4,4,4,1],
@@ -1384,7 +1384,7 @@ const GLYPHS: Record<string, Glyph> = {
     ],
   },
   art_momentum: {
-    p: [, , , , ],
+    p: ['transparent', '#0f172a', '#0e7490', '#22d3ee', '#a5f3fc'],
     g: [
       [0,0,0,1,1,0,0,1,1,0,0,0],
       [0,0,1,3,3,1,1,3,3,1,0,0],
@@ -1401,7 +1401,7 @@ const GLYPHS: Record<string, Glyph> = {
     ],
   },
   art_berserk_core: {
-    p: [, , , , , ],
+    p: ['transparent', '#450a0a', '#b91c1c', '#f97316', '#fde047', '#fff7ed'],
     g: [
       [0,0,0,0,1,1,1,1,0,0,0,0],
       [0,0,1,1,2,2,2,2,1,1,0,0],
@@ -1418,7 +1418,7 @@ const GLYPHS: Record<string, Glyph> = {
     ],
   },
   art_spiked_aura: {
-    p: [, , , , ],
+    p: ['transparent', '#1c1917', '#57534e', '#a8a29e', '#e7e5e4'],
     g: [
       [0,0,0,1,0,0,0,0,1,0,0,0],
       [0,0,0,1,1,0,1,1,1,0,0,0],
@@ -1435,7 +1435,7 @@ const GLYPHS: Record<string, Glyph> = {
     ],
   },
   art_ironbark_totem: {
-    p: [, , , , , ],
+    p: ['transparent', '#1c1006', '#78350f', '#b45309', '#fcd34d', '#22c55e'],
     g: [
       [0,0,1,1,1,1,1,1,1,1,0,0],
       [0,1,3,3,3,3,3,3,3,3,1,0],
@@ -1452,7 +1452,7 @@ const GLYPHS: Record<string, Glyph> = {
     ],
   },
   art_duelists_edge: {
-    p: [, , , , , ],
+    p: ['transparent', '#111418', '#9ca3af', '#f8fafc', '#a16207', '#fcd34d'],
     g: [
       [0,0,0,0,0,0,0,0,0,1,1,0],
       [0,0,0,0,0,0,0,0,1,3,2,1],
@@ -1469,7 +1469,7 @@ const GLYPHS: Record<string, Glyph> = {
     ],
   },
   art_stormcaller: {
-    p: [, , , , , ],
+    p: ['transparent', '#1e293b', '#475569', '#94a3b8', '#e2e8f0', '#facc15'],
     g: [
       [0,0,0,0,1,1,1,0,0,0,0,0],
       [0,0,1,1,3,3,3,1,1,0,0,0],
@@ -1486,7 +1486,7 @@ const GLYPHS: Record<string, Glyph> = {
     ],
   },
   art_assassins_guile: {
-    p: [, , , , , ],
+    p: ['transparent', '#0b1020', '#334155', '#1f2937', '#ef4444', '#64748b'],
     g: [
       [0,0,1,1,1,1,1,1,1,1,0,0],
       [0,1,2,2,2,2,2,2,2,2,1,0],
@@ -1503,7 +1503,7 @@ const GLYPHS: Record<string, Glyph> = {
     ],
   },
   art_warlords_banner: {
-    p: [, , , , , ],
+    p: ['transparent', '#3f0a0a', '#b91c1c', '#f87171', '#78350f', '#fcd34d'],
     g: [
       [0,0,1,0,0,0,0,0,0,0,0,0],
       [0,1,5,1,1,1,1,1,1,1,0,0],
@@ -1520,7 +1520,7 @@ const GLYPHS: Record<string, Glyph> = {
     ],
   },
   art_prodigys_insight: {
-    p: [, , , , , ],
+    p: ['transparent', '#1e1b4b', '#4338ca', '#a5b4fc', '#f8fafc', '#c4b5fd'],
     g: [
       [0,0,0,0,0,0,0,0,0,0,0,0],
       [0,0,0,1,1,1,1,1,1,0,0,0],
@@ -1537,7 +1537,7 @@ const GLYPHS: Record<string, Glyph> = {
     ],
   },
   art_windrunner_boots: {
-    p: [, , , , , ],
+    p: ['transparent', '#0c2a1e', '#0e7490', '#22d3ee', '#a5f3fc', '#ecfeff'],
     g: [
       [0,0,0,0,0,0,1,1,1,1,0,0],
       [0,0,0,0,0,1,4,3,3,1,0,0],
@@ -1554,7 +1554,7 @@ const GLYPHS: Record<string, Glyph> = {
     ],
   },
   art_colossus_plating: {
-    p: [, , , , , ],
+    p: ['transparent', '#0f172a', '#475569', '#94a3b8', '#e2e8f0', '#38bdf8'],
     g: [
       [0,0,1,1,1,1,1,1,1,1,0,0],
       [0,1,4,4,4,4,4,4,4,4,1,0],
@@ -1571,7 +1571,7 @@ const GLYPHS: Record<string, Glyph> = {
     ],
   },
   art_snipers_focus: {
-    p: [, , , , , ],
+    p: ['transparent', '#0b0f14', '#334155', '#94a3b8', '#ef4444', '#e2e8f0'],
     g: [
       [0,0,0,0,1,1,1,1,0,0,0,0],
       [0,0,1,1,3,5,5,3,1,1,0,0],
@@ -1588,7 +1588,7 @@ const GLYPHS: Record<string, Glyph> = {
     ],
   },
   art_crown_of_slaughter: {
-    p: [, , , , , ],
+    p: ['transparent', '#3f2d0a', '#a16207', '#fcd34d', '#dc2626', '#fff7ed'],
     g: [
       [0,0,0,0,0,0,0,0,0,0,0,0],
       [1,0,0,0,1,0,0,1,0,0,0,1],
