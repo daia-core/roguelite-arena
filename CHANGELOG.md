@@ -8,6 +8,37 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-03 (evening) — player sprite modernized + sprite source pipeline restored
+
+- **New player hero sprite.** The player was redrawn with modern pixel-art technique while keeping
+  the exact same silhouette (so it drops in with no gameplay/hitbox change):
+  - **Eyes** now have a bright catch-light — the hero reads as alive and looking forward instead of
+    two dead dark blocks.
+  - **Face** lost its crude "left-half-light / right-half-dark" vertical seam; it's now lit from the
+    top-left with a warm brow/cheek highlight and a hue-shifted shadow down the right edge and under
+    the chin, so the head reads as a rounded form.
+  - **Hair** gained a top-left highlight and a right-side shadow (volume, not a flat brown slab).
+  - **Torso** — two stray brown "dirt" pixels removed; the hard light/dark shirt seam became a
+    smooth 4-step blue ramp with a rim-highlight on the lit shoulder.
+  - **Legs** got a subtle highlight down the lit side.
+  Every change was proven visibly better than the old sprite via a new 8×-zoom before/after
+  comparison harness (`qa-sprite-compare.mjs`), iterated across three passes until it was a clear win.
+
+- **Under the hood:** the per-sprite JSON sources that `build-sprite-data.mjs` consumes had been
+  lost, leaving the generated `spriteData.ts` as the only source of truth (a dead-end for further
+  art work). All 39 sprites were extracted back to `tools/pixel-art/sprites/*.json` and round-trip
+  verified (rebuild reproduces `spriteData.ts` byte-for-byte), so future sprite passes go through
+  the documented, safe workflow.
+
+Commit `3a7fec7`. **This deploy also finally made the previous "status effects" batch actually
+live** — that entry claimed `index-B7X9IJQL.js` but B7X9IJQL was the *stale* pre-status build that
+was still serving in production; the status-effect commit had never deployed. Verified live at
+390×844: bundle **`index-BBZIxvq_.js`** now serving (HTTP 200, `<title>Roguelite Arena</title>`, no
+auth wall). QA before deploy: `qa-pixel-art`, `qa-item-icons`, `qa-status-visuals`, `qa-roguelite`
+gameplay, and `qa-stats-parity` all pass with 0 console/page errors. Before/after: `shots/sprite-compare/player.png`.
+
+---
+
 ## 2026-07-03 (evening) — status effects are now visible on enemies (pixel-art overlays)
 
 - **Every DoT/status now shows on the enemy that has it.** The Phase 3b status engines
