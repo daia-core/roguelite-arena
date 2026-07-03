@@ -8,6 +8,40 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-04 (night) — batch-7 enemy sprites hand-crafted: the brute/demon family (3)
+
+- **The three brute/demon-class enemies are now bespoke hand-drawn sprites instead of the batch
+  auto-enhancer.** Continuing Felix's "go through EACH monster/enemy and hand craft improvements"
+  (same ask that redrew all 20 artifacts + the spectral and caster families). Each now sells its
+  in-game role at a glance:
+  - **Imp** (small, fast, teleports on hit) — was a vague red lump that read almost like a cat.
+    Now a lean mischievous devil: two tall **pointed horns**, big angry yellow eyes, a wide fanged
+    grin, a barbed **spade tail**, and a purple/cyan **teleport-shimmer** accent (the blink tell).
+    Clearly the smallest of the three.
+  - **Troll** (slow, 200 HP, regenerates) — a hulking hunched tusked **ogre**: tiny head sunk
+    between huge shoulders, giant dragging fists, warty darker-green spots, underbite tusks, clawed
+    feet, and a soft green **regen-glow** in the pale belly (its self-heal identity). Distinct from
+    the upright, weapon-carrying orc (also green) by the hunch + bulk + tusks.
+  - **Demon** (biggest non-boss, 500 HP, shoots bursts) — a winged **fire-demon**: broad spread
+    **bat wings** (the big silhouette statement), curved horns, a fanged maw, a fire core, and a
+    charged **fire-bolt in the claw** (the burst-shooter tell). The wings deliberately set it apart
+    from the flamefiend **boss** (horns + flame mane, no wings) and from the small imp.
+- **Subtle 1px "breathe" idle** on each (settles one row on frame 2) so they stay alive next to the
+  bobbing regular enemies.
+- **Under the hood:** batch-7 in the hand-craft pipeline (`handcraft/batch7-brutes.mjs` → per-name
+  `sprites/*.json` → `build-sprite-data.mjs` → `spriteData.ts`, overriding the legacy auto-enhanced
+  art). Each drawn with ≥2 render→look→fix cycles, then grass-verified together on a contact sheet
+  **against the orc and the flamefiend boss** as clearly-different creatures (the two enemies they
+  were most at risk of blurring with).
+- **Remaining on auto-enhance:** bat, spider, evader, exploder, mushroom, orbiter, spiraler,
+  necroegg, mimic — all read decently; next pull = the beasts/critters family (batch-8).
+- **Commit:** `0c7f038`. **Live-verified:** production `roguelite-game-blush.vercel.app` flipped
+  from the batch-6 bundle `index-DSqnpMKG.js` → `index-PqBuxm59.js` (HTTP 200, no SSO wall); all 5
+  batch-7 palette markers baked into the shipped bundle (imp shimmer `#b6f0ff`, imp base `#9c1f1f`,
+  troll regen `#8fe08a`, demon crimson `#8b1a1a`, demon fire `#ff7a1a`).
+
+---
+
 ## 2026-07-04 (night) — batch-6 enemy sprites hand-crafted: the caster/support family (5)
 
 - **Every caster/support enemy is now a bespoke, hand-drawn sprite instead of the batch auto-enhancer.**

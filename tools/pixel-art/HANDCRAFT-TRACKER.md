@@ -71,28 +71,45 @@ five distinct silhouettes + readable roles, grass-verified as a contact sheet:
 Subtle 1px "breathe" idle (whole creature settles 1 row on frame 2) keeps them alive next to the
 bobbing regular enemies. Distinct from the spectral family (batch-4) — those float pale/tattered;
 these are grounded, solid, robed humanoids.
+**Batch-7** (`handcraft/batch7-brutes.mjs`) — the BRUTE / DEMON FAMILY (Felix: "go through EACH
+monster/enemy"). The three brute/demon-class enemies were still on the auto-enhancer and each
+failed to sell its in-game role. Redrawn from scratch, grass-verified against the orc + flamefiend
+boss as clearly-different creatures:
+- **imp** (16×16, the small fast teleporter) — was a vague red lump reading almost like a cat.
+  Now a lean mischievous devil: two tall POINTED horns, big angry yellow eyes, a wide fanged grin,
+  a barbed spade TAIL, purple/cyan teleport-shimmer accent (the blink-on-hit tell). Clearly the
+  smallest of the three.
+- **troll** (18×18, slow green regenerator, 200 HP) — hulking hunched tusked OGRE: tiny head sunk
+  between huge shoulders, giant dragging fists, warty darker-green spots, underbite tusks, clawed
+  feet, and a soft green regen-GLOW in the pale belly (its self-heal identity). Distinct from the
+  upright, weapon-carrying orc (also green) by the hunch + bulk + tusks.
+- **demon** (18×18, huge crimson burst-shooter, 500 HP — biggest non-boss) — winged FIRE-DEMON:
+  broad spread BAT WINGS (the big silhouette statement), two curved horns, a fanged maw, a fire
+  core, a charged fire-bolt in the claw (the "shoots bursts" tell). The WINGS deliberately
+  differentiate it from the flamefiend BOSS (horns + flame mane, no wings) and from the small imp.
+Subtle 1px breathe idle like the other families.
 
 ## Still auto-enhanced — future batches, worst-first
 
 Re-audited on grass contact sheets 2026-07-03 (evening, after batch-3); caster family cleared in
-batch-6 (Jul-4). The genuinely-broken cases are all fixed; what remains reads decently — but per
-Felix's "go through EACH", the goal is still full coverage, so keep pulling the next family.
+batch-6 and brute/demon family in batch-7 (both Jul-4). The genuinely-broken cases are all fixed;
+what remains reads decently — but per Felix's "go through EACH", the goal is still full coverage,
+so keep pulling the next family.
 
-**Remaining roster (next batches — the beasts/critters):**
-- **Brutes/demons** (candidate batch-7): troll, demon, imp — big melee bruisers; give them bulk +
-  bespoke menace rather than the auto-enhance filter.
+**Remaining roster (next batch — the beasts/critters, batch-8):**
 - **Critters**: bat (purple, red eyes — good), spider (black + red abdomen — good), evader
   (blue cat — fine), exploder (round bomb-creature — fine, distinct from bombardier), mushroom,
   orbiter (eye-diamond), spiraler (snail), necroegg (simple), mimic (chest) — all read decently on
-  grass; redraw for a clear win as each family comes up.
+  grass; redraw for a clear win as each comes up. Pick the ugliest holdout first (mushroom/orbiter/
+  spiraler/necroegg/mimic are likelier wins than the already-good bat/spider/evader/exploder).
 
-**Bosses (24×24) — ✅ ALL DONE (batch-5).** Casters — ✅ ALL DONE (batch-6). Spectral — ✅ (batch-4).
+**Bosses (24×24) — ✅ ALL DONE (batch-5).** Casters — ✅ (batch-6). Brutes/demons — ✅ (batch-7). Spectral — ✅ (batch-4).
 
-**Roster status (Jul-4):** hand-crafted now = player, skeleton, orc + batches 1–6 (gargoyle, golem,
+**Roster status (Jul-4):** hand-crafted now = player, skeleton, orc + batches 1–7 (gargoyle, golem,
 construct, dasher, phaser, spinner, druid, cyclops, slime, goblin, blob, bombardier, swarm, ghost,
-phantom, wraith, banshee, 5 bosses, **wizard, necromancer, healer, shielder, summoner**). Left on
-auto-enhance: troll, demon, imp, bat, spider, evader, exploder, mushroom, orbiter, spiraler,
-necroegg, mimic — all read decently; next pull = the brute/demon family (batch-7).
+phantom, wraith, banshee, 5 bosses, wizard, necromancer, healer, shielder, summoner, **imp, troll,
+demon**). Left on auto-enhance: bat, spider, evader, exploder, mushroom, orbiter, spiraler,
+necroegg, mimic — all read decently; next pull = the beasts/critters family (batch-8).
 
 ## Method reminder
 
