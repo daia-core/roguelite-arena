@@ -8,6 +8,29 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-03 (morning, follow-up) — projectile pass-through: widen collision candidate query (live index-DrFjavMF.js)
+
+Closes the residual gap in the earlier tunneling fix. The swept-collision test
+(`segmentCircleHit`) was already correct — but the **candidate set** it tested came from an
+**endpoint-only** quadtree query (`enemyQuadtree.retrieve(proj)`). A fast projectile whose endpoint
+resolves into a *different* quadtree leaf than an enemy it swept **through** never listed that enemy
+as a candidate, so the swept test never ran on it and the shot visibly passed through — exactly
+Felix's *"projectiles seem to pass through enemies quite a lot."*
+
+**Fix (`Game.ts`):** query the whole swept segment (`px0,py0 → proj.x,proj.y`) padded by the largest
+enemy radius (90px), not just the endpoint. Any enemy on the path is now a candidate; the per-enemy
+`segmentCircleHit` + `hasHit` + `dead` gates still decide actual hits, so this only *widens*
+candidates — never over-hits.
+
+**Verified (`qa-swept-collision.mjs`, real Quadtree + real segmentCircleHit, 400 randomized layouts):**
+across 154 trials with a genuine swept hit, the OLD endpoint query dropped **140 real hits across 105
+trials (68%)**; the NEW swept-box query drops **0**. tsc clean, build clean, live bundle changed
+`index-DDef9XaJ.js → index-DrFjavMF.js` (HTTP 200, verified serving the new build).
+
+Commit 7aaac8a.
+
+---
+
 ## 2026-07-03 (morning) — HUD viewport clip, late-game difficulty ramp, shop price scaling, village walk-away, projectile tunneling (live index-DDef9XaJ.js)
 
 Five things Felix hit while playing on his phone (wave 13+, a broken 2.3M-damage build).
