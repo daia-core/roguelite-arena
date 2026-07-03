@@ -67,7 +67,7 @@ export class ItemDatabase {
 
   // BROTATO-INSPIRED WEIGHTED SHOP SYSTEM
   // Promotes synergistic builds by weighting shop offerings based on owned items
-  static getWeightedShopItems(count: number, wave: number, playerItems: Item[], luck: number = 0): Item[] {
+  static getWeightedShopItems(count: number, wave: number, playerItems: Item[], luck: number = 0, stats?: PlayerStats): Item[] {
     const result: Item[] = [];
 
     // Owned items that gain NOTHING from a duplicate — never offer these again.
@@ -90,6 +90,8 @@ export class ItemDatabase {
       return this.getUnlockedItems().filter(item => {
         if (nonStackOwned.has(item.id)) return false; // already own it and a dupe is useless
         if (weaponCommitted && item.weaponType) return false; // never swap a committed weapon
+        if (stats && stats.isItemFullyCapped(item)) return false; // every stat it grants is already maxed
+
         if (wave <= 2) return item.tier === ItemTier.Common;
         if (wave <= 5) return item.tier <= ItemTier.Uncommon;
         if (wave <= 10) return item.tier <= ItemTier.Rare;
@@ -265,6 +267,23 @@ export class PlayerStats {
   baseCritMultiplier: number = 2.0;
   baseProjectileSpeed: number = 400;
 
+  // ---- STAT CAPS ----
+  // Philosophy (Felix's steer): enemies scale their HP/damage to meet your COMBAT
+  // output, so damage / fire rate / crit-damage / multishot / piercing / armor stay
+  // UNCAPPED — a broken one-shot build is meant to be reachable. What we DO cap are
+  // the quality-of-life & economy stats that enemies never scale against, because
+  // past their useful maximum they only trivialise non-combat play (or, for recycle,
+  // open an infinite-gold loop). Each is a single tunable constant.
+  static readonly GOLD_MULT_CAP = 10;     // ×10 total gold earned (=1000%)
+  static readonly XP_MAGNET_CAP = 10;     // ×10 pickup radius (base 95 → ~950px, ~full screen)
+  static readonly RECYCLE_CAP = 3;        // +300% → recycle refunds at most 100% of item cost (break-even)
+  static readonly DODGE_CAP = 0.75;       // 75% (already enforced; named here for the offer filter)
+  // Purely a numerical-safety ceiling, NOT a balance cap: unbounded multiplicative
+  // stacking on a very deep run overflowed to literal Infinity (the player's "Melee
+  // Dmg: Infinityx"), which breaks the UI and risks NaN. 1e15 is astronomically
+  // strong (still one-shots everything forever) yet keeps every product finite.
+  static readonly SANITY_MULT_CAP = 1e15;
+
   // ---- ARTIFACT contributions (ArtifactSystem folds its static roster into these) ----
   // Defaults are identity (×1 / +0) so a run with no artifacts behaves exactly as before.
   artifactDamageMult: number = 1;
@@ -400,22 +419,23 @@ export class PlayerStats {
     damage *= this.duos.getTotalBonuses().damageMultiplier;
     // ARTIFACT (static) + runtime (momentum ramp) contributions
     damage *= this.artifactDamageMult * this.runtimeDamageMult;
-    return damage;
+    // Numerical-safety only (not a balance cap) — keep runaway builds finite.
+    return Math.min(PlayerStats.SANITY_MULT_CAP, damage);
   }
 
   // ---- Per-damage-type multipliers (layer on top of getDamage) ----
   // Each is the product of the matching item field, defaulting to 1 when no item
   // carries it — so builds without type items behave exactly as before.
   getMeleeDamageMult(): number {
-    return this.ensureAgg().meleeDamageMult;
+    return Math.min(PlayerStats.SANITY_MULT_CAP, this.ensureAgg().meleeDamageMult);
   }
 
   getRangedDamageMult(): number {
-    return this.ensureAgg().rangedDamageMult;
+    return Math.min(PlayerStats.SANITY_MULT_CAP, this.ensureAgg().rangedDamageMult);
   }
 
   getElementalDamageMult(): number {
-    return this.ensureAgg().elementalDamageMult;
+    return Math.min(PlayerStats.SANITY_MULT_CAP, this.ensureAgg().elementalDamageMult);
   }
 
   /** Damage for a melee-weapon swing: global damage × melee multiplier. */
@@ -437,7 +457,8 @@ export class PlayerStats {
     rate *= this.duos.getTotalBonuses().fireRateMultiplier;
     // ARTIFACT (static) + runtime (berserk ramp) contributions
     rate *= this.artifactFireRateMult * this.runtimeFireRateMult;
-    return rate;
+    // Numerical-safety only (not a balance cap) — keep runaway builds finite.
+    return Math.min(PlayerStats.SANITY_MULT_CAP, rate);
   }
 
   getSpeed(): number {
@@ -481,7 +502,8 @@ export class PlayerStats {
     mult *= this.transformations.getTotalBonuses().critDamageMultiplier;
     // ARTIFACT contribution
     mult *= this.artifactCritMultMult;
-    return mult;
+    // Numerical-safety only (not a balance cap) — keep runaway builds finite.
+    return Math.min(PlayerStats.SANITY_MULT_CAP, mult);
   }
 
   getHealthRegen(): number {
@@ -534,18 +556,20 @@ export class PlayerStats {
     let magnet = this.ensureAgg().xpMagnetMult;
     // TRANSFORMATION BONUS
     magnet *= this.transformations.getTotalBonuses().xpMagnet;
-    return magnet;
+    // Pure pickup-convenience — enemies don't scale against it, so cap it.
+    return Math.min(PlayerStats.XP_MAGNET_CAP, magnet);
   }
 
   getGoldBonus(): number {
     let bonus = this.ensureAgg().goldMult;
     // TRANSFORMATION BONUS
     bonus *= this.transformations.getTotalBonuses().goldBonus;
-    return bonus;
+    // Economy stat with no monster counter-scaling — cap it (Felix's example).
+    return Math.min(PlayerStats.GOLD_MULT_CAP, bonus);
   }
 
   getDodgeChance(): number {
-    return Math.min(0.75, this.ensureAgg().dodge);
+    return Math.min(PlayerStats.DODGE_CAP, this.ensureAgg().dodge);
   }
 
   getChainLightningChance(): number {
@@ -600,7 +624,9 @@ export class PlayerStats {
   }
 
   getRecycleBonus(): number {
-    return this.ensureAgg().recycleBonus;
+    // Cap so a buy→recycle loop can at best break even (refund ≤ 100% of cost),
+    // never mint infinite gold. Enemies don't scale against economy, so it's capped.
+    return Math.min(PlayerStats.RECYCLE_CAP, this.ensureAgg().recycleBonus);
   }
 
   // Banking: extra interest rate on gold you hold entering the shop
@@ -639,6 +665,79 @@ export class PlayerStats {
 
   getMultishot(): number {
     return this.ensureAgg().multishot;
+  }
+
+  // ---- OFFER-FILTER: hide items whose every effect is an already-maxed stat ----
+  // Field groups used to inspect an arbitrary item. Multiplicative fields are neutral
+  // at 1, additive at 0; boolean/weapon fields always carry potential value.
+  private static readonly OFFER_MULT_FIELDS: (keyof Item)[] = [
+    'damageMultiplier', 'meleeDamageMult', 'rangedDamageMult', 'elementalDamageMult',
+    'fireRateMultiplier', 'speedMultiplier', 'critDamageMultiplier', 'projectileSpeed',
+    'xpMagnet', 'goldBonus', 'orbitDamageMult', 'auxMeleeDamageMult', 'bombDamageMult',
+    'bombCooldownMult', 'novaDamageMult', 'novaCooldownMult', 'swingDamageMult',
+    'swingCooldownMult', 'aoeRadiusMult',
+  ];
+  private static readonly OFFER_ADD_FIELDS: (keyof Item)[] = [
+    'critChance', 'maxHealthBonus', 'healthRegen', 'armor', 'lifesteal', 'thorns',
+    'knockback', 'piercing', 'multishot', 'dodge', 'chainLightning', 'freeze', 'burn',
+    'bleed', 'doom', 'wound', 'multicast', 'rerollDiscount', 'shopDiscount',
+    'recycleBonus', 'interestBonus', 'luck', 'orbitOrbs', 'swingRangeBonus',
+    'swingArcBonus', 'swingAoe',
+  ];
+  private static readonly OFFER_BOOL_FIELDS: (keyof Item)[] = [
+    'explosionOnHit', 'shield', 'homing', 'poison', 'poisonSpread', 'auxMelee',
+    'bombDrop', 'novaPulse',
+  ];
+
+  // Which capped stats are currently AT their cap. Only stats that HAVE a cap appear
+  // here; uncapped combat stats (damage, multishot, piercing, armor, …) are absent on
+  // purpose, so an item touching one of them is never treated as fully capped.
+  private cappedFieldsMaxed(): Partial<Record<keyof Item, boolean>> {
+    const agg = this.ensureAgg();
+    return {
+      dodge: this.getDodgeChance() >= PlayerStats.DODGE_CAP,
+      critChance: this.getCritChance() >= 1,
+      lifesteal: this.getLifesteal() >= 1,
+      shopDiscount: this.getShopDiscount() >= 0.5,
+      rerollDiscount: this.getRerollDiscount() >= 0.9,
+      interestBonus: this.getInterestBonus() >= 0.4,
+      luck: this.getLuck() >= 2.0,
+      chainLightning: this.getChainLightningChance() >= 1,
+      freeze: this.getFreezeChance() >= 1,
+      burn: this.getBurnChance() >= 1,
+      bleed: this.getBleedChance() >= 1,
+      doom: this.getDoomChance() >= 1,
+      wound: this.getWoundChance() >= 1,
+      multicast: this.getMulticastChance() >= 0.9,
+      goldBonus: agg.goldMult >= PlayerStats.GOLD_MULT_CAP,
+      xpMagnet: agg.xpMagnetMult >= PlayerStats.XP_MAGNET_CAP,
+      recycleBonus: agg.recycleBonus >= PlayerStats.RECYCLE_CAP,
+    };
+  }
+
+  // True when EVERY effect this item provides is a capped stat already at its cap, so
+  // buying it would do literally nothing — e.g. a pure Dodge item once Dodge is 75%.
+  // Anything with an uncapped stat or a boolean/weapon effect returns false (still useful).
+  isItemFullyCapped(item: Item): boolean {
+    if (item.weaponType) return false;
+    for (const b of PlayerStats.OFFER_BOOL_FIELDS) {
+      if (item[b]) return false;
+    }
+    const maxed = this.cappedFieldsMaxed();
+    let sawCappedStat = false;
+    for (const f of PlayerStats.OFFER_MULT_FIELDS) {
+      const v = item[f] as number | undefined;
+      if (typeof v !== 'number' || v === 1) continue; // neutral multiplier
+      if (!maxed[f]) return false;                    // uncapped, or capped-but-not-maxed → useful
+      sawCappedStat = true;
+    }
+    for (const f of PlayerStats.OFFER_ADD_FIELDS) {
+      const v = item[f] as number | undefined;
+      if (typeof v !== 'number' || v === 0) continue; // neutral additive
+      if (!maxed[f]) return false;
+      sawCappedStat = true;
+    }
+    return sawCappedStat;
   }
 
   // Advanced synergy detection with tag system
