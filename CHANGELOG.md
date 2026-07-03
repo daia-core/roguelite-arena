@@ -32,7 +32,7 @@ all 5 sprites resolve with painted pixels and zero console errors; regressions g
 (qa-stacking-weapons, qa-new-enemies, qa-zoom-xporbs, qa-magnet). Sprite sheet screenshot in
 `shots/pixel-art/converted-sprites.png`.
 
-Commit: _pending_ · Live build: _pending verify_
+Commit: `f165d01` · Live build `index-D3HUcno6.js` verified on blush alias (HTTP 200).
 
 ---
 
