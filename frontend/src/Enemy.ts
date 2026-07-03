@@ -582,9 +582,6 @@ export class Enemy {
   knockbackVelocityX: number = 0;
   knockbackVelocityY: number = 0;
 
-  // GAME FEEL: Hitstun
-  hitstunTimer: number = 0;
-
   // GAME FEEL: White flash on hit
   hitFlashTimer: number = 0;
 
@@ -785,7 +782,6 @@ export class Enemy {
 
   update(dt: number, playerX: number, playerY: number): EnemyUpdateResult {
     // GAME FEEL: Update timers
-    this.hitstunTimer = Math.max(0, this.hitstunTimer - dt);
     this.hitFlashTimer = Math.max(0, this.hitFlashTimer - dt);
 
     // GAME FEEL: Apply knockback velocity with smooth decay
@@ -801,17 +797,6 @@ export class Enemy {
       // Stop if very small
       if (Math.abs(this.knockbackVelocityX) < 1) this.knockbackVelocityX = 0;
       if (Math.abs(this.knockbackVelocityY) < 1) this.knockbackVelocityY = 0;
-    }
-
-    // GAME FEEL: Skip update if in hitstun
-    if (this.hitstunTimer > 0) {
-      return {
-        shouldShoot: false,
-        shouldTeleport: false,
-        shouldSummon: false,
-        shouldScream: false,
-        shouldStomp: false
-      };
     }
 
     const dx = playerX - this.x;
@@ -1524,8 +1509,8 @@ export class Enemy {
       }
     }
 
-    // GAME FEEL: Trigger hitstun and hit flash
-    this.hitstunTimer = 0.1; // 100ms pause
+    // GAME FEEL: Trigger white hit flash (no hitstun — enemies never freeze,
+    // impact is conveyed by knockback + flash + particles to keep motion fluid)
     this.hitFlashTimer = 0.032; // 2 frames at 60fps
 
     // Phaser has chance to phase on hit

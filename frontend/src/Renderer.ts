@@ -8,9 +8,6 @@ import { StardewBackground } from './StardewBackground';
 export class Renderer {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
-  private screenShake: number = 0;
-  private shakeOffsetX: number = 0;
-  private shakeOffsetY: number = 0;
   private hitFlash: number = 0;
   private impactFlashes: Array<{ x: number; y: number; radius: number; alpha: number }> = [];
 
@@ -140,17 +137,6 @@ export class Renderer {
   }
 
   update(dt: number): void {
-    // Update screen shake
-    if (this.screenShake > 0) {
-      this.screenShake -= dt;
-      const intensity = this.screenShake * 15;
-      this.shakeOffsetX = (Math.random() - 0.5) * intensity;
-      this.shakeOffsetY = (Math.random() - 0.5) * intensity;
-    } else {
-      this.shakeOffsetX = 0;
-      this.shakeOffsetY = 0;
-    }
-
     // Update hit flash
     if (this.hitFlash > 0) {
       this.hitFlash = Math.max(0, this.hitFlash - dt * 5);
@@ -166,7 +152,6 @@ export class Renderer {
 
   beginFrame(): void {
     this.ctx.save();
-    this.ctx.translate(this.shakeOffsetX, this.shakeOffsetY);
   }
 
   endFrame(): void {
@@ -228,10 +213,6 @@ export class Renderer {
     }
 
     this.ctx.restore();
-  }
-
-  addScreenShake(intensity: number): void {
-    this.screenShake = Math.max(this.screenShake, intensity);
   }
 
   addHitFlash(intensity: number = 1): void {

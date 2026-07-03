@@ -22,7 +22,7 @@ import { PerformanceMonitor } from './PerformanceMonitor';
 import { QualityManager } from './QualityManager';
 import { EntityCuller } from './EntityCuller';
 import { PathfindingSystem } from './PathfindingSystem';
-import { ScreenEffects, ShakePresets } from './ScreenEffects';
+import { ScreenEffects } from './ScreenEffects';
 import { ParticleBatchRenderer } from './ParticleBatchRenderer';
 import { drawPanel, DARK_WOOD_THEME } from './pixel/panel';
 import { DUO_COMBOS } from './DuoSystem';
@@ -112,15 +112,11 @@ export class Game {
   // PATHFINDING: Smart navigation for intelligent enemies
   private pathfindingSystem: PathfindingSystem;
 
-  // GAME FEEL: Screen effects (shake, zoom, flash)
+  // GAME FEEL: Screen effects (colored flash only — no shake, no time-warp)
   private screenEffects: ScreenEffects;
 
   // PERFORMANCE: Batch particle rendering (40-60% faster)
   private particleBatchRenderer: ParticleBatchRenderer;
-
-  // GAME FEEL: Hit pause / time scale system
-  timeScale: number = 1.0;
-  hitPauseTimer: number = 0;
 
   // Shop state - ADVANCED BROTATO-LEVEL MECHANICS
   shopItems: Item[] = [];
@@ -553,17 +549,6 @@ export class Game {
   private updatePlaying(dt: number): void {
     if (!this.player) return;
 
-    // GAME FEEL: Hit pause / time scale
-    if (this.hitPauseTimer > 0) {
-      this.hitPauseTimer -= dt;
-      this.timeScale = 0.05; // Almost frozen during hit pause
-    } else {
-      this.timeScale = 1.0;
-    }
-
-    // Apply time scale to delta time
-    const scaledDt = dt * this.timeScale;
-
     // Wave modifier announcement timer
     if (this.waveModifierTimer > 0) {
       this.waveModifierTimer -= dt; // UI timers not affected by time scale
@@ -577,15 +562,15 @@ export class Game {
 
     // ARTIFACT runtime hooks (momentum ramps damage while moving; berserk ramps
     // fire rate as HP drops). Recomputed every frame; identity when not held.
-    this.updateArtifactRuntime(scaledDt, movement.x !== 0 || movement.y !== 0);
+    this.updateArtifactRuntime(dt, movement.x !== 0 || movement.y !== 0);
 
     // Player update
-    this.player.update(scaledDt, movement.x, movement.y, this.worldWidth, this.worldHeight);
+    this.player.update(dt, movement.x, movement.y, this.worldWidth, this.worldHeight);
 
     // Health regen (items + meta) — previously sold but never ticked
     const regen = this.playerStats.getHealthRegen() + this.metaProgression.getStartingRegenBonus();
     if (regen > 0 && this.player.health < this.player.maxHealth) {
-      this.player.heal(regen * scaledDt);
+      this.player.heal(regen * dt);
     }
 
     // Dodge popups so Evasion items visibly do something
@@ -635,12 +620,11 @@ export class Game {
     //   if (blast.success) {
     //     this.audio.playBlast();
     //     this.handleBlastDamage(blast.damage, blast.radius);
-    //     this.renderer.addScreenShake(0.5); // Bigger shake for blast ability
     //   }
     // }
 
     // Wave manager
-    this.enemies = this.waveManager.update(scaledDt, this.enemies, this.worldWidth, this.worldHeight);
+    this.enemies = this.waveManager.update(dt, this.enemies, this.worldWidth, this.worldHeight);
 
     // Waves-within-waves: flash the new sub-phase banner when a phase begins.
     if (this.waveManager.phaseJustChanged) {
@@ -656,15 +640,15 @@ export class Game {
           this.player.x,
           this.player.y,
           this.pathfindingSystem,
-          scaledDt
+          dt
         );
       }
 
       // Status effects (wired item mechanics: Frost Orb, Toxic Vial, ...)
-      if (enemy.frozenTimer > 0) enemy.frozenTimer -= scaledDt;
+      if (enemy.frozenTimer > 0) enemy.frozenTimer -= dt;
       if (enemy.poisonTimer > 0) {
-        enemy.poisonTimer -= scaledDt;
-        enemy.health -= 7 * scaledDt;
+        enemy.poisonTimer -= dt;
+        enemy.health -= 7 * dt;
         if (enemy.health <= 0 && !enemy.dead) {
           enemy.dead = true;
           this.handleEnemyKill(enemy);
@@ -672,7 +656,7 @@ export class Game {
         }
       }
 
-      const result = enemy.update(scaledDt, this.player.x, this.player.y);
+      const result = enemy.update(dt, this.player.x, this.player.y);
 
       // Skip further processing for dead enemies
       if (enemy.dead) continue;
@@ -690,7 +674,6 @@ export class Game {
         if (distSq < stompRadius * stompRadius) {
           const damaged = this.player.takeDamage(enemy.typeData.damage * 1.5);
           if (damaged) {
-            this.renderer.addScreenShake(0.6);
             this.renderer.addHitFlash(0.6);
             // PERFORMANCE: Use pooled particles (quality-adjusted)
             const particleCount = this.getParticleCount(15);
@@ -726,7 +709,6 @@ export class Game {
             gravity: 200
           }));
         }
-        this.renderer.addScreenShake(0.4);
       }
 
       // Poison trail - PERFORMANCE: Use pooled particle
@@ -858,13 +840,12 @@ export class Game {
       // Enemy-player collision — enemies persist and keep attacking on a
       // cooldown (kamikaze contact made melee pressure evaporate); only
       // true suicide types still die on touch
-      enemy.contactCooldown -= scaledDt;
+      enemy.contactCooldown -= dt;
       if (enemy.contactCooldown <= 0 && enemy.collidesWith(this.player.x, this.player.y, this.player.radius)) {
         enemy.contactCooldown = 0.8;
         const damaged = this.player.takeDamage(enemy.typeData.damage);
         if (damaged) {
           this.applyThorns(enemy.typeData.damage, enemy);
-          this.renderer.addScreenShake(0.3);
           this.renderer.addHitFlash(0.5);
           // PERFORMANCE: Use pooled particles
           for (let i = 0; i < 12; i++) {
@@ -926,7 +907,7 @@ export class Game {
         let delta = desired - current;
         while (delta > Math.PI) delta -= Math.PI * 2;
         while (delta < -Math.PI) delta += Math.PI * 2;
-        const maxTurn = proj.turnSpeed * scaledDt;
+        const maxTurn = proj.turnSpeed * dt;
         const turn = Math.max(-maxTurn, Math.min(maxTurn, delta));
         const speed = Math.hypot(proj.vx, proj.vy);
         proj.vx = Math.cos(current + turn) * speed;
@@ -935,7 +916,7 @@ export class Game {
       // Capture pre-move position so we can sweep the whole path this frame
       // (fast projectiles + the loop's dt cap can otherwise tunnel past small enemies).
       const px0 = proj.x, py0 = proj.y;
-      proj.update(scaledDt, this.worldWidth, this.worldHeight);
+      proj.update(dt, this.worldWidth, this.worldHeight);
 
       // Skip collision detection for projectiles that are already dead
       if (proj.dead) continue;
@@ -967,16 +948,6 @@ export class Game {
             let damage = isCrit ? this.player.getCritDamage(proj.damage) : proj.damage;
             if (enemy.typeData.isBoss) {
               damage *= this.metaProgression.getBossDamageMultiplier();
-            }
-
-            // GAME FEEL: Trigger hit pause on player damage to enemy
-            this.hitPauseTimer = isCrit ? 0.08 : 0.05; // Longer pause on crit
-
-            // GAME FEEL: Screen shake on hit (bigger on crit)
-            if (isCrit) {
-              this.screenEffects.addShake(ShakePresets.CRIT.intensity, ShakePresets.CRIT.duration);
-            } else {
-              this.screenEffects.addShake(ShakePresets.SMALL.intensity, ShakePresets.SMALL.duration);
             }
 
             const splits = enemy.takeDamage(damage);
@@ -1018,8 +989,7 @@ export class Game {
               }));
             }
             this.damageNumbers.push(this.createDamageNumber(enemy.x, enemy.y - 20, damage, isCrit));
-            // GAME FEEL: More shake on all hits
-            this.renderer.addScreenShake(isCrit ? 0.25 : 0.15);
+            // GAME FEEL: impact flash on every hit
             this.renderer.addImpactFlash(enemy.x, enemy.y);
 
             if (enemy.dead) {
@@ -1035,7 +1005,6 @@ export class Game {
           const damaged = this.player.takeDamage(proj.damage);
           if (damaged) {
             this.applyThorns(proj.damage);
-            this.renderer.addScreenShake(0.25);
             this.renderer.addHitFlash(0.4);
             // PERFORMANCE: Use pooled particles
             for (let i = 0; i < 10; i++) {
@@ -1061,7 +1030,7 @@ export class Game {
     // Melee attacks
     for (const melee of this.meleeAttacks) {
       if (!this.player) continue;
-      melee.update(scaledDt, this.player.x, this.player.y);
+      melee.update(dt, this.player.x, this.player.y);
 
       // PERFORMANCE: Only check nearby enemies using quadtree
       const nearbyEnemies = this.enemyQuadtree.retrieve({ x: this.player.x, y: this.player.y, radius: melee.range + 30 });
@@ -1076,9 +1045,6 @@ export class Game {
           if (enemy.typeData.isBoss) {
             damage *= this.metaProgression.getBossDamageMultiplier();
           }
-
-          // Hit pause
-          this.hitPauseTimer = isCrit ? 0.08 : 0.05;
 
           const splits = enemy.takeDamage(damage);
           if (splits && splits.length > 0) {
@@ -1115,7 +1081,6 @@ export class Game {
             }));
           }
           this.damageNumbers.push(this.createDamageNumber(enemy.x, enemy.y - 20, damage, isCrit));
-          this.renderer.addScreenShake(isCrit ? 0.25 : 0.15);
           this.renderer.addImpactFlash(enemy.x, enemy.y);
 
           if (enemy.dead) {
@@ -1127,23 +1092,23 @@ export class Game {
 
     // AUXILIARY STACKING WEAPONS — orbiting orbs, dropped bombs, nova pulses and a
     // whirling melee arc. These run in ADDITION to the primary weapon each frame.
-    this.updateAuxWeapons(scaledDt);
+    this.updateAuxWeapons(dt);
 
     // Particles
     for (const particle of this.particles) {
-      particle.update(scaledDt);
+      particle.update(dt);
     }
 
     // Damage numbers
     for (const num of this.damageNumbers) {
-      num.update(scaledDt);
+      num.update(dt);
     }
 
     // Health orbs — magnet attraction (getXPMagnet drives a real pickup range)
     const pickupMagnet = this.playerStats.getXPMagnet();
     const attractRadius = 60 * pickupMagnet; // baseline vacuum, widened by magnet items
     for (const orb of this.healthOrbs) {
-      orb.update(scaledDt);
+      orb.update(dt);
 
       // Pull orbs within attraction range toward the player (speed ramps as they close in)
       const dx = this.player.x - orb.x;
@@ -1151,7 +1116,7 @@ export class Game {
       const dist = Math.hypot(dx, dy);
       if (dist > 0 && dist <= attractRadius) {
         const pull = 170 + (1 - dist / attractRadius) * 300; // 170..470 px/s, faster than the player
-        const step = Math.min(dist, pull * scaledDt);
+        const step = Math.min(dist, pull * dt);
         orb.x += (dx / dist) * step;
         orb.y += (dy / dist) * step;
       }
@@ -1183,7 +1148,7 @@ export class Game {
     // does the pop-then-home motion itself and returns true once it reaches the player.
     const xpMagnetRadius = 95 * pickupMagnet;
     for (const orb of this.xpOrbs) {
-      if (orb.update(scaledDt, this.player.x, this.player.y, xpMagnetRadius)) {
+      if (orb.update(dt, this.player.x, this.player.y, xpMagnetRadius)) {
         this.grantXP(orb.xpAmount);
         orb.dead = true;
       }
@@ -1251,7 +1216,7 @@ export class Game {
     this.removeDeadEntities(this.xpOrbs);
     this.removeDeadEntities(this.bombs);
     this.removeDeadEntities(this.shockwaves);
-    this.updateAoeZones(scaledDt);
+    this.updateAoeZones(dt);
     this.removeDeadEntities(this.aoeZones);
 
     // Check wave completion
@@ -1306,7 +1271,6 @@ export class Game {
 
   //   // GAME FEEL: Extra shake based on how many enemies were hit
   //   if (hitCount > 0) {
-  //     this.renderer.addScreenShake(0.3 + Math.min(hitCount * 0.1, 0.5));
   //   }
 
   //   // Visual effect
@@ -1462,7 +1426,6 @@ export class Game {
       zone.update(dt);
       if (zone.justDetonated) {
         // Impact burst FX at the marked spot.
-        this.renderer.addScreenShake(0.15);
         for (let i = 0; i < 14; i++) {
           const angle = (Math.PI * 2 * i) / 14;
           const speed = 120 + Math.random() * 160;
@@ -1483,7 +1446,6 @@ export class Game {
         const damaged = this.player.takeDamage(dmg);
         if (damaged) {
           this.applyThorns(dmg);
-          this.renderer.addScreenShake(0.35);
           this.renderer.addHitFlash(0.5);
         }
       }
@@ -1504,7 +1466,6 @@ export class Game {
       if (distSq < rSq) this.dealAuxDamage(enemy, bomb.damage, '#ffaa00');
     }
     // Blast VFX + feedback.
-    this.renderer.addScreenShake(0.35);
     this.audio.playHit();
     const pc = this.getParticleCount(24);
     for (let i = 0; i < pc; i++) {
@@ -1527,10 +1488,7 @@ export class Game {
     if (!leveledUp) return;
     this.audio.playLevelUp();
     // VAMPIRE SURVIVORS JUICE: Make level-ups feel MASSIVE
-    this.renderer.addScreenShake(0.6);
     this.renderer.addHitFlash(0.4);
-    this.screenEffects.addShake(ShakePresets.LEVEL_UP.intensity, ShakePresets.LEVEL_UP.duration);
-    this.screenEffects.setZoom(1.05, 0.3);
     this.screenEffects.flash('#ffff00', 0.25);
     const colors = ['#ffff00', '#00ffff', '#ff00ff', '#ff6600', '#00ff00', '#ff0000', '#ffffff'];
     const levelUpParticleCount = this.getParticleCount(20);
@@ -1558,7 +1516,6 @@ export class Game {
     // Track boss kills
     if (enemy.type === 'demon') {
       this.bossKills++;
-      this.renderer.addScreenShake(0.8); // Extreme shake for boss death
     }
 
     this.audio.playKill();
@@ -1593,11 +1550,6 @@ export class Game {
         gravity: -60
       }));
     }
-
-    // GAME FEEL: Enhanced shake on all kills (bigger than just hits)
-    const shakeAmount = enemy.type === 'demon' ? 0.8 :
-                       (enemy.type === 'troll' || enemy.type === 'golem') ? 0.5 : 0.3;
-    this.renderer.addScreenShake(shakeAmount);
 
     // XP and gold with meta-progression multipliers
     const xpMultiplier = this.metaProgression.getXPGainMultiplier();
@@ -1692,8 +1644,7 @@ export class Game {
         }));
       }
 
-      // Screen shake
-      this.screenEffects.addShake(ShakePresets.LARGE.intensity, ShakePresets.LARGE.duration);
+      // Damage flash (exploder detonation)
       this.screenEffects.flash('#ff4400', 0.2);
 
       // OPTIMIZATION: Use squared distance to avoid sqrt
@@ -1841,7 +1792,6 @@ export class Game {
         fadeOut: true
       }));
     }
-    this.renderer.addScreenShake(0.35);
   }
 
   private enterShop(): void {
@@ -1908,7 +1858,6 @@ export class Game {
     this.audio.playWaveComplete();
 
     // GAME FEEL: Wave complete effects
-    this.screenEffects.addShake(ShakePresets.WAVE_COMPLETE.intensity, ShakePresets.WAVE_COMPLETE.duration);
     this.screenEffects.flash('#00ff00', 0.2); // Green flash for wave complete
 
     // Save progress
@@ -2228,9 +2177,7 @@ export class Game {
             if (newDuos.length > 0) {
               for (const duo of newDuos) {
                 console.log(`🎉 DUO UNLOCKED: ${duo.name} - ${duo.description}`);
-                this.screenEffects.addShake(ShakePresets.MEDIUM.intensity, ShakePresets.MEDIUM.duration);
                 this.screenEffects.flash(duo.glowColor || '#ff00ff', 0.3);
-                this.screenEffects.setZoom(1.08, 0.4);
               }
             }
 
@@ -3030,9 +2977,7 @@ export class Game {
 
     const ctx = this.renderer.getContext();
 
-    // GAME FEEL: Apply screen effects (shake, zoom) before rendering
     ctx.save();
-    this.screenEffects.applyToContext(ctx, this.canvas.width, this.canvas.height);
 
     // PERFORMANCE: Update entity culler viewport
     this.entityCuller.updateViewport(0, 0, this.worldWidth, this.worldHeight, 100);
