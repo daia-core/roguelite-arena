@@ -136,8 +136,12 @@ export class Game {
   // ---- MAP / NODE META-LAYER state ----
   currentEvent: GameEvent | null = null;    // active `?` event, or null
   eventResultText: string | null = null;    // outcome shown after picking an option
+  // The concrete item/artifact an event granted, so the result screen can show a
+  // proper card (name + rarity + what it does) instead of just a line of text.
+  private eventReward: { name: string; rarity: string; desc: string } | null = null;
   rewardChoices: Artifact[] = [];            // the 1-of-3 artifact offer
   rewardTitle: string = '';                  // header for the reward screen
+  rewardSkippable: boolean = false;          // show a Skip button (elite/treasure/boss)
   private rewardThen: (() => void) | null = null; // what to do once an artifact is picked
   private pendingWaveArtifact: boolean = false;   // elite/boss wave grants spoils on clear
   restResolved: boolean = false;             // rest node: an option has been taken
@@ -559,6 +563,14 @@ export class Game {
 
   private updatePlaying(dt: number): void {
     if (!this.player) return;
+
+    // Gear button (top-right) opens the pause/menu overlay. Checked before any
+    // gameplay input so a tap on it never leaks through to movement/shooting.
+    if (this.input.mouseDown && pointInRect(this.input.mouseX, this.input.mouseY, this.gearButtonRect())) {
+      this.state = 'paused';
+      this.input.mouseDown = false;
+      return;
+    }
 
     // Wave modifier announcement timer
     if (this.waveModifierTimer > 0) {
@@ -2479,6 +2491,7 @@ export class Game {
       case 'event':
         this.currentEvent = randomEvent();
         this.eventResultText = null;
+        this.eventReward = null;
         this.state = 'event';
         break;
       case 'treasure':
@@ -2505,6 +2518,7 @@ export class Game {
     this.rewardChoices = shuffled.slice(0, Math.min(3, shuffled.length));
     this.rewardTitle = title;
     this.rewardThen = then;
+    this.rewardSkippable = true; // elite/treasure/boss spoils can always be declined
     this.state = 'reward';
     this.input.mouseDown = false;
   }
@@ -2570,6 +2584,22 @@ export class Game {
    *  and hit-test math share one implementation (see `Renderer.wrapLines`). */
   private wrapText(text: string, maxWidth: number, fontPx: number): string[] {
     return this.renderer.wrapLines(text, maxWidth, fontPx);
+  }
+
+  /** The in-run gear button, top-right just under the wave panel. One source of
+   *  truth so drawHUD (paints it) and updatePlaying (hit-tests it) never drift. */
+  private gearButtonRect(): { x: number; y: number; width: number; height: number } {
+    const zoom = this.canvas.clientWidth ? this.canvas.width / this.canvas.clientWidth : 1;
+    const s = (v: number) => Math.round(v * zoom);
+    const topY = s(6) + this.safeAreaTop(zoom);
+    const rPanelH = s(8) * 2 + s(34); // mirrors the wave panel height in drawHUD
+    const size = s(34);
+    return {
+      x: this.canvas.width - size - s(6),
+      y: topY + rPanelH + s(6),
+      width: size,
+      height: size,
+    };
   }
 
   private paintBackdrop(): void {
@@ -2668,6 +2698,34 @@ export class Game {
 
   // ---- EVENT screen ----
 
+  /** Shared rarity → colour for reward/event cards. */
+  private static readonly RARITY_COLOR: Record<string, string> = {
+    common: '#cbd5e1', rare: '#74c0fc', epic: '#b06bd9', legendary: '#f2b04e',
+  };
+
+  /** Height of the event-result reward card (0 if the event granted no item). */
+  private eventRewardCardHeight(cardW: number, s: (v: number) => number, isMobile: boolean): number {
+    if (!this.eventReward) return 0;
+    const bodyPx = s(isMobile ? 8 : 9);
+    const descLines = this.wrapText(this.eventReward.desc, cardW - s(24), bodyPx).length;
+    return s(isMobile ? 32 : 34) + descLines * (bodyPx + s(3)) + s(10);
+  }
+
+  /** Draw the card showing exactly which item/artifact an event just granted. */
+  private drawEventRewardCard(x0: number, y: number, cardW: number, s: (v: number) => number, isMobile: boolean): void {
+    if (!this.eventReward) return;
+    const ctx = this.renderer.getContext();
+    const h = this.eventRewardCardHeight(cardW, s, isMobile);
+    drawPanel(ctx, x0, y, cardW, h, DARK_WOOD_THEME, 23, 67);
+    const color = Game.RARITY_COLOR[this.eventReward.rarity] || '#ffffff';
+    this.renderer.drawText(this.eventReward.name, x0 + s(12), y + s(isMobile ? 15 : 17), { size: s(isMobile ? 11 : 13), align: 'left', color });
+    this.renderer.drawText(this.eventReward.rarity.toUpperCase(), x0 + cardW - s(12), y + s(isMobile ? 15 : 17), { size: s(7), align: 'right', color });
+    const bodyPx = s(isMobile ? 8 : 9);
+    for (const [li, line] of this.wrapText(this.eventReward.desc, cardW - s(24), bodyPx).entries()) {
+      this.renderer.drawText(line, x0 + s(12), y + s(isMobile ? 32 : 34) + li * (bodyPx + s(3)), { size: bodyPx, align: 'left', color: '#d8c9a8' });
+    }
+  }
+
   private drawEvent(): void {
     const ctx = this.renderer.getContext();
     const { s, W, H, isMobile } = this.screenScale();
@@ -2705,6 +2763,12 @@ export class Game {
         this.renderer.drawText(line, W / 2, y, { size: bodyPx, align: 'center', color: '#8ce99a' });
         y += bodyPx + s(5);
       }
+      y += s(10);
+      const cardW = contentW - s(16);
+      if (this.eventReward) {
+        this.drawEventRewardCard((W - cardW) / 2, y, cardW, s, isMobile);
+        y += this.eventRewardCardHeight(cardW, s, isMobile);
+      }
       y += s(12);
       const r = this.columnRects(1, y, s, W, isMobile)[0];
       this.renderer.drawButton(r.x, r.y, r.width, r.height, 'Continue', true, true, isMobile);
@@ -2740,12 +2804,16 @@ export class Game {
         }
       }
     } else {
-      y += this.wrapText(this.eventResultText, contentW - s(24), bodyPx).length * (bodyPx + s(5)) + s(12);
+      y += this.wrapText(this.eventResultText, contentW - s(24), bodyPx).length * (bodyPx + s(5)) + s(10);
+      const cardW = contentW - s(16);
+      if (this.eventReward) y += this.eventRewardCardHeight(cardW, s, isMobile);
+      y += s(12);
       const r = this.columnRects(1, y, s, W, isMobile)[0];
       if (pointInRect(mx, my, r)) {
         this.input.mouseDown = false;
         this.currentEvent = null;
         this.eventResultText = null;
+        this.eventReward = null;
         this.state = 'map';
       }
     }
@@ -2772,12 +2840,20 @@ export class Game {
         break;
       case 'artifact': {
         const pool = ARTIFACTS.filter(a => !this.artifacts.has(a.id));
-        if (pool.length) this.grantArtifact(pool[Math.floor(Math.random() * pool.length)]);
+        if (pool.length) {
+          const picked = pool[Math.floor(Math.random() * pool.length)];
+          this.grantArtifact(picked);
+          this.eventReward = { name: picked.name, rarity: picked.rarity, desc: picked.desc };
+        }
         break;
       }
       case 'item': {
         const items = ItemDatabase.getWeightedShopItems(1, this.waveManager.currentWave, this.playerStats.items, this.playerStats.getLuck());
-        if (items[0]) { this.playerStats.addItem(items[0]); this.refreshMaxHealth(); }
+        if (items[0]) {
+          this.playerStats.addItem(items[0]);
+          this.refreshMaxHealth();
+          this.eventReward = { name: items[0].name, rarity: items[0].rarity, desc: items[0].description };
+        }
         break;
       }
       case 'nothing':
@@ -2812,6 +2888,13 @@ export class Game {
         this.renderer.drawText(line, x0 + s(12), y + s(isMobile ? 34 : 36) + li * (bodyPx + s(3)), { size: bodyPx, align: 'left', color: '#d8c9a8' });
       }
     });
+
+    // Optional Skip — decline the artifact (e.g. to keep a tight, focused build).
+    if (this.rewardSkippable) {
+      const skipY = topY + this.rewardChoices.length * (cardH + gap) + s(4);
+      const r = this.columnRects(1, skipY, s, W, isMobile)[0];
+      this.renderer.drawButton(r.x, r.y, r.width, r.height, 'Skip', false, true, isMobile);
+    }
   }
 
   private updateReward(): void {
@@ -2833,8 +2916,23 @@ export class Game {
         const then = this.rewardThen;
         this.rewardChoices = [];
         this.rewardThen = null;
+        this.rewardSkippable = false;
         if (then) then();
         return;
+      }
+    }
+
+    // Skip button (same geometry as the draw pass).
+    if (this.rewardSkippable) {
+      const skipY = topY + this.rewardChoices.length * (cardH + gap) + s(4);
+      const r = this.columnRects(1, skipY, s, W, isMobile)[0];
+      if (pointInRect(mx, my, r)) {
+        this.input.mouseDown = false;
+        const then = this.rewardThen;
+        this.rewardChoices = [];
+        this.rewardThen = null;
+        this.rewardSkippable = false;
+        if (then) then();
       }
     }
   }
@@ -2910,35 +3008,35 @@ export class Game {
     void H;
   }
 
+  // Pause/menu overlay buttons — shared geometry so drawPaused and updatePaused
+  // can never drift (the old code drew centred but hit-tested at a fixed y).
+  private pausedTopY(s: (v: number) => number, isMobile: boolean): number {
+    return s(isMobile ? 150 : 172);
+  }
+
   private updatePaused(): void {
-    const mouseX = this.input.mouseX;
-    const mouseY = this.input.mouseY;
+    if (!this.input.mouseDown) return;
+    const { s, W, isMobile } = this.screenScale();
+    const rects = this.columnRects(5, this.pausedTopY(s, isMobile), s, W, isMobile);
+    const mx = this.input.mouseX;
+    const my = this.input.mouseY;
 
-    const buttonWidth = 200;
-    const buttonHeight = 50;
-    const spacing = 20;
-
-    // Resume button
-    const resumeBtn = { x: this.canvas.width / 2 - buttonWidth / 2, y: 250, width: buttonWidth, height: buttonHeight };
-    // Restart button
-    const restartBtn = { x: this.canvas.width / 2 - buttonWidth / 2, y: 250 + buttonHeight + spacing, width: buttonWidth, height: buttonHeight };
-    // Main menu button
-    const menuBtn = { x: this.canvas.width / 2 - buttonWidth / 2, y: 250 + (buttonHeight + spacing) * 2, width: buttonWidth, height: buttonHeight };
-
-    if (pointInRect(mouseX, mouseY, resumeBtn) && this.input.mouseDown) {
+    if (pointInRect(mx, my, rects[0])) {          // Resume
       this.state = 'playing';
       this.input.mouseDown = false;
-    }
-
-    if (pointInRect(mouseX, mouseY, restartBtn) && this.input.mouseDown) {
-      this.startNewGame();
+    } else if (pointInRect(mx, my, rects[1])) {   // Sound toggle
+      this.audio.toggle();
       this.input.mouseDown = false;
-    }
-
-    if (pointInRect(mouseX, mouseY, menuBtn) && this.input.mouseDown) {
+    } else if (pointInRect(mx, my, rects[2])) {   // End Run — cash out souls now
+      this.input.mouseDown = false;
+      this.gameOver();
+    } else if (pointInRect(mx, my, rects[3])) {   // Restart Run
+      this.input.mouseDown = false;
+      this.startNewGame();
+    } else if (pointInRect(mx, my, rects[4])) {   // Main Menu (abandons the run)
+      this.input.mouseDown = false;
       this.state = 'menu';
       SaveManager.clearRun();
-      this.input.mouseDown = false;
     }
   }
 
@@ -3386,6 +3484,13 @@ export class Game {
       rx + rPanelW / 2, topY + pad + s(22),
       { size: s(8), align: 'center', color: t <= 5 ? '#ffd43b' : '#cfd8e3' }
     );
+
+    // --- Gear button (opens the pause/menu overlay to cash out souls, restart, etc.) ---
+    const g = this.gearButtonRect();
+    drawPanel(ctx, g.x, g.y, g.width, g.height, DARK_WOOD_THEME, art, 9);
+    this.renderer.drawText('\u2699', g.x + g.width / 2, g.y + g.height / 2 + s(1), {
+      size: s(18), align: 'center', baseline: 'middle', color: '#ffe8b0'
+    });
 
     // --- Boss health bar (bottom center, with name) ---
     const boss = this.enemies.find((e) => e.typeData.isBoss);
@@ -4101,84 +4206,45 @@ export class Game {
   }
 
   private drawPaused(): void {
-    const ctx = this.renderer.getContext();
-    const isMobile = this.canvas.width < 800;
+    // Keep the frozen arena visible behind the overlay so pause reads as "stopped
+    // mid-run", not a blank screen.
+    this.drawPlaying();
 
-    // Dim background with stronger overlay
+    const ctx = this.renderer.getContext();
+    const { s, W, H, isMobile } = this.screenScale();
+
+    // Dim the arena.
     ctx.save();
-    ctx.globalAlpha = 0.8;
+    ctx.globalAlpha = 0.82;
     ctx.fillStyle = '#000000';
-    ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    ctx.fillRect(0, 0, W, H);
     ctx.restore();
 
-    // Pause menu panel
-    const panelWidth = isMobile ? Math.min(400, this.canvas.width - 40) : 500;
-    const panelHeight = isMobile ? 450 : 400;
-    const panelX = (this.canvas.width - panelWidth) / 2;
-    const panelY = (this.canvas.height - panelHeight) / 2;
-
-    // Panel background with gradient
-    const gradient = ctx.createLinearGradient(panelX, panelY, panelX, panelY + panelHeight);
-    gradient.addColorStop(0, '#2a2a2a');
-    gradient.addColorStop(1, '#1a1a1a');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(panelX, panelY, panelWidth, panelHeight);
-
-    // Panel border
-    ctx.strokeStyle = '#4a9eff';
-    ctx.lineWidth = 4;
-    ctx.strokeRect(panelX, panelY, panelWidth, panelHeight);
-
-    // Inner border for depth
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(panelX + 3, panelY + 3, panelWidth - 6, panelHeight - 6);
-
-    // Title
-    this.renderer.drawText('⏸ PAUSED', this.canvas.width / 2, panelY + 60, {
-      size: isMobile ? 56 : 64,
-      bold: true,
-      align: 'center',
-      color: '#4a9eff'
+    const titleY = s(isMobile ? 96 : 100);
+    this.renderer.drawText('PAUSED', W / 2, titleY, {
+      size: s(isMobile ? 26 : 40), bold: true, align: 'center', color: '#ffd700',
     });
 
-    const buttonWidth = isMobile ? Math.min(300, panelWidth - 40) : 280;
-    const buttonHeight = isMobile ? 70 : 60;
-    const spacing = 20;
-    const startY = panelY + 150;
+    // Make "End Run" an informed choice: show what banking now is worth.
+    const souls = MetaProgression.calculateSoulsEarned(this.waveManager.currentWave, this.bossKills);
+    this.renderer.drawText(
+      `Wave ${this.waveManager.currentWave}  ·  end now to bank ${souls} souls`,
+      W / 2, titleY + s(isMobile ? 24 : 34),
+      { size: s(isMobile ? 10 : 12), align: 'center', color: '#c8b998' }
+    );
 
-    this.renderer.drawButton(
-      this.canvas.width / 2 - buttonWidth / 2,
-      startY,
-      buttonWidth,
-      buttonHeight,
+    const labels = [
       'Resume',
-      false,
-      true,
-      isMobile
-    );
-
-    this.renderer.drawButton(
-      this.canvas.width / 2 - buttonWidth / 2,
-      startY + buttonHeight + spacing,
-      buttonWidth,
-      buttonHeight,
+      this.audio.isEnabled() ? 'Sound: On' : 'Sound: Off',
+      'End Run',
       'Restart Run',
-      false,
-      true,
-      isMobile
-    );
-
-    this.renderer.drawButton(
-      this.canvas.width / 2 - buttonWidth / 2,
-      startY + (buttonHeight + spacing) * 2,
-      buttonWidth,
-      buttonHeight,
       'Main Menu',
-      false,
-      true,
-      isMobile
-    );
+    ];
+    const rects = this.columnRects(labels.length, this.pausedTopY(s, isMobile), s, W, isMobile);
+    for (let i = 0; i < labels.length; i++) {
+      const r = rects[i];
+      this.renderer.drawButton(r.x, r.y, r.width, r.height, labels[i], false, true, isMobile);
+    }
   }
 
   private drawVillage(): void {

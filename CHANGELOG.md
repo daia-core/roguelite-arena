@@ -8,6 +8,39 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-03 (afternoon) — event reward cards, skippable artifacts, more artifacts & a mid-run gear menu
+
+Four player-facing gaps closed, all from Felix's play feedback:
+
+- **Event results now show a real reward card.** After an event that grants something, you used to
+  get only a thin green line. Now the result text is followed by a proper card — item/artifact
+  **name**, rarity colour + tag, and exactly what it does — matching the reward-screen look, so you
+  always see what you got.
+- **Artifact rewards are skippable.** The 1-of-3 artifact offer (after elites, treasure, bosses) now
+  has a **Skip** button, so you can decline and keep a tight, focused build instead of being forced
+  to take one.
+- **Roster doubled: 10 → 20 artifacts.** Ten new high-impact pure-stat artifacts (Ironbark Totem,
+  Duelist's Edge, Stormcaller, Assassin's Guile, Warlord's Banner, Prodigy's Insight, Windrunner
+  Boots, Colossus Plating, Sniper's Focus, and the legendary Crown of Slaughter) — more variety in
+  every offer. Kept pure-stat so they all resolve through the existing `applyStatic()` path.
+- **Mid-run gear menu (top-right).** A gear button under the wave panel opens a pause overlay with
+  **Resume / Sound / End Run / Restart Run / Main Menu**. **End Run** cashes out your souls
+  immediately (via the same `gameOver()` path) — so an endless run can be banked on demand instead
+  of having to die first. The overlay was rewritten with the shared zoom-scaled geometry, fixing an
+  old draw/hit-test mismatch in the pause screen, and it shows the souls you'd bank before you commit.
+
+Also exposed a dev/QA hook (`window.__game`) so headless tooling can drive the real game instance.
+
+QA: new `qa-gear-menu.mjs` drives the live instance on desktop + mobile — gear opens pause, Sound
+toggles, End Run banks souls (state→gameover, souls increase), Restart resets to the map, an
+artifact event captures + renders its card, Continue clears it, and Skip declines without granting;
+zero console errors. Regression: qa-roguelite, qa-shop-inputguard, qa-event-title, qa-node-map,
+qa-stacking-weapons, qa-magnet, qa-new-enemies all PASS.
+
+Commit: __PENDING__ · Live build: __PENDING__
+
+---
+
 ## 2026-07-03 (afternoon) — pixel-art: worms, orbs, bombs & XP gems now use real sprites
 
 User report: some things were still drawn as raw circles/arcs instead of pixel art. Converted the

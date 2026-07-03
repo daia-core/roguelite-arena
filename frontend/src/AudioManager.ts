@@ -289,6 +289,10 @@ export class AudioManager {
     this.enabled = !this.enabled;
   }
 
+  isEnabled(): boolean {
+    return this.enabled;
+  }
+
   setVolume(volume: number): void {
     this.masterGain.gain.value = volume;
   }

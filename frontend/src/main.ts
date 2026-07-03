@@ -42,6 +42,9 @@ app.innerHTML = `
 const canvas = document.querySelector<HTMLCanvasElement>('#gameCanvas')!;
 const game = new Game(canvas);
 
+// Dev/QA hook: lets headless tooling drive/inspect the game. Not a public API.
+(window as unknown as { __game: Game }).__game = game;
+
 // Game loop
 let lastTime = performance.now();
 let lastState: string = game.state;

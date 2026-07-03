@@ -53,7 +53,8 @@ export interface Artifact {
 }
 
 // The roster. A deliberate mix of numeric-huge and rule-changing so the layer
-// never feels like "just more items". Kept tight (10) and high-impact.
+// never feels like "just more items". High-impact; the first 10 include the
+// rule-changing flags, the rest are big pure-stat swings.
 export const ARTIFACTS: Artifact[] = [
   {
     id: 'glass_cannon', name: 'Glass Cannon', icon: '', rarity: 'epic',
@@ -104,6 +105,57 @@ export const ARTIFACTS: Artifact[] = [
     id: 'spiked_aura', name: 'Spiked Aura', icon: '', rarity: 'rare',
     desc: 'Reflect 40% of contact damage back to attackers.',
     flags: ['thorns'], thornsFrac: 0.4,
+  },
+  // ---- expanded roster (pure-stat, high-impact) ----
+  {
+    id: 'ironbark_totem', name: 'Ironbark Totem', icon: '', rarity: 'rare',
+    desc: '+45 max health and +10% damage.',
+    maxHealthBonus: 45, damageMult: 1.1,
+  },
+  {
+    id: 'duelists_edge', name: "Duelist's Edge", icon: '', rarity: 'rare',
+    desc: '+25% damage and +8% crit chance.',
+    damageMult: 1.25, critChanceBonus: 0.08,
+  },
+  {
+    id: 'stormcaller', name: 'Stormcaller', icon: '', rarity: 'epic',
+    desc: '+40% fire rate and +15% move speed.',
+    fireRateMult: 1.4, speedMult: 1.15,
+  },
+  {
+    id: 'assassins_guile', name: "Assassin's Guile", icon: '', rarity: 'epic',
+    desc: '+18% crit chance and +40% crit damage.',
+    critChanceBonus: 0.18, critMultMult: 1.4,
+  },
+  {
+    id: 'warlords_banner', name: "Warlord's Banner", icon: '', rarity: 'epic',
+    desc: '+45% damage and +20 max health.',
+    damageMult: 1.45, maxHealthBonus: 20,
+  },
+  {
+    id: 'prodigys_insight', name: "Prodigy's Insight", icon: '', rarity: 'rare',
+    desc: '+60% XP gained and +12% fire rate.',
+    xpMult: 1.6, fireRateMult: 1.12,
+  },
+  {
+    id: 'windrunner_boots', name: 'Windrunner Boots', icon: '', rarity: 'rare',
+    desc: '+35% move speed and +25% XP gained.',
+    speedMult: 1.35, xpMult: 1.25,
+  },
+  {
+    id: 'colossus_plating', name: 'Colossus Plating', icon: '', rarity: 'epic',
+    desc: '+90 max health, but -10% move speed.',
+    maxHealthBonus: 90, speedMult: 0.9,
+  },
+  {
+    id: 'snipers_focus', name: "Sniper's Focus", icon: '', rarity: 'rare',
+    desc: '+100% crit damage.',
+    critMultMult: 2.0,
+  },
+  {
+    id: 'crown_of_slaughter', name: 'Crown of Slaughter', icon: '', rarity: 'legendary',
+    desc: '+25% damage, +15% crit chance and +80% crit damage.',
+    damageMult: 1.25, critChanceBonus: 0.15, critMultMult: 1.8,
   },
 ];
 
