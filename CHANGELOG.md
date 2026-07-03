@@ -8,6 +8,34 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-03 (afternoon) — shop: responsive layout (no overlap, any size) + no held-touch insta-buy
+
+Two reported bugs, both fixed and live.
+
+**Overlapping shop buttons (user report) — fixed.** The shop now sizes itself from a single
+vertical budget: it reserves a fixed band for the header and for the Continue/Reroll button row,
+then fits the item cards into whatever height is left — so a card can never grow into the buttons,
+on any screen. Column count is now decided by width, not a device flag: portrait stacks 1-wide,
+landscape/desktop uses the 3-wide grid (a 6-tall column can't fit a short landscape screen). On
+desktop the grid now sits in the gap *between* the left stats panel and the right inventory panel,
+which also killed a pre-existing collision where the leftmost card overlapped the stats panel on
+~1024-px-wide windows.
+
+**Held-touch insta-buy — fixed.** Holding the screen to move when a wave ended and the shop opened
+under your finger instantly bought whatever card appeared there. Every screen transition now
+disarms a held press: a finger that was already down can't register as a click — a fresh touchdown
+is required. Applies to all pop-up screens (shop, reward, event, rest, map, game-over), not just
+the shop.
+
+**Verified:** `qa-shop-layout.mjs` asserts zero overlaps (cards vs buttons, cards vs cards,
+cards vs panels, in-bounds) across 11 screen sizes — phones (portrait/landscape), tablets, and
+desktop/narrow/short windows — all PASS, screenshots captured. `qa-shop-inputguard.mjs` confirms a
+held press buys nothing on shop entry while a fresh press still purchases. Full regression suite
+(melee-stack, stats-parity, stacking-weapons, joystick) green. Commit `e9fa1c6`, live build
+`index-DLNbfPQh.js` verified on the blush alias.
+
+---
+
 ## 2026-07-03 (afternoon) — architecture: item data split out + per-frame stat aggregation memoized
 
 Felix: *"improve the underlying architecture so it's optimized and will support your continued
