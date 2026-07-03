@@ -839,8 +839,9 @@ export class VillageScene {
       this.d.renderer.drawText(`${u.currentLevel}/${u.maxLevel}`, rx + rw - this.s(76), ry + this.s(9), {
         size: this.s(mobile ? 7 : 8), color: isMax ? '#ffd43b' : '#aab6c3',
       });
-      this.d.renderer.drawText(u.description, rx + this.s(30), ry + this.s(26), {
-        size: this.s(mobile ? 6 : 7), color: '#c8b998', maxWidth: rw - this.s(120),
+      this.d.renderer.drawWrappedText(u.description, rx + this.s(30), ry + this.s(26), {
+        size: this.s(mobile ? 6 : 7), color: '#c8b998',
+        maxWidth: rw - this.s(120), maxLines: 2,
       });
 
       // Buy / MAX button on the right.

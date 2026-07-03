@@ -8,6 +8,64 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-03 (early morning) — Standardized text boxes: descriptive copy never overflows or clips in portrait (live PENDING)
+
+**Felix's ask (B3):** *"Artifacts description also doesn't wrap. You need to standardize text boxes
+like this so they are always handled nicely."* The earlier fixes patched three specific surfaces
+ad-hoc (event body, artifact desc, HUD clip); the underlying cause — **three competing text-drawing
+patterns** plus one box with **zero** overflow protection — was still there, so the next long string
+somewhere else would clip again.
+
+**Fix — one canonical wrap, one standardized text-box primitive, everywhere.**
+- `Renderer.wrapLines()` is now the **single source of truth** for wrapping. It uses the font-load-safe
+  char-count heuristic (Press Start 2P is monospace, ~1 em/glyph → `floor(maxWidth / fontSize)`),
+  *not* `ctx.measureText()` — which under-measures before the webfont loads (and in headless QA) and
+  was the root of the portrait overflow.
+- `Renderer.drawWrappedText()` is the standardized box: it wraps through `wrapLines`, and if a
+  `maxLines` cap is set it shrinks the font as a **last resort** so a box is **never** overflowed or
+  clipped, however long the string.
+- The two previously-divergent wrap implementations (`Game.wrapText` char-count; a local
+  `measureText`-based `wrap` in the combos guide) now **delegate** to `wrapLines`, so every panel
+  wraps identically and the event/artifact draw + hit-test math stays in lockstep.
+- Routed the unprotected boxes through the primitive: the **shop item description** (previously had
+  *no* wrap/maxWidth at all — a long description ran straight off the card) and the **village upgrade
+  descriptions**, each capped to their card's real line budget.
+
+**Player-visible:** every descriptive box — shop, village, event, artifact — wraps cleanly at phone
+width; no more copy running off a card or panel edge, and no more shrink-to-illegible.
+
+**Commit:** `PENDING` — built to `frontend/dist`, deployed to daiacore production, verified live.
+
+**Verification (`qa-textbox.mjs` + `qa-event-title.mjs` regression, shipped `frontend/dist` @ 390×844
+portrait):** `wrapLines` — long copy wraps lossless, every line ≤ maxChars. `drawWrappedText` — a wide
+box honours `maxLines` exactly (cap 2→2, cap 3→3); a pathologically narrow box shrinks the block as a
+last resort (10→5 lines, font floored at 4 px). Shop rendered with a 190-char stress description →
+wraps inside the card, longest line 34 ≤ 36 maxChars, clean console; portrait screenshot inspected.
+Event-title regression still passes (65-char title → 3 lines, fits). Live bundle `PENDING`.
+
+---
+
+## 2026-07-03 (early morning) — Polish: long event titles wrap inside the panel in portrait (live index-CuFk86hj.js)
+
+**Issue:** A long event title (e.g. *"The Wandering Merchant of the Deep Caverns and the Forgotten
+Halls"*) rendered as a single fixed-size line and ran off the edges of the event panel in portrait —
+clipping the text on a phone.
+
+**Fix — the title now wraps.** `drawEvent()` runs the title through the same `wrapText()` the body
+already used (Press Start 2P, 1 em/glyph) at the panel content width, stacking as many lines as it
+needs. `updateEvent()` was updated with the **identical** wrap formula so the option-button tap
+targets stay pinned to the real bottom of the (now taller) title block — the rendering math and the
+hit-test math cannot drift.
+
+**Commit:** `79249cd` — built to `frontend/dist`, deployed to daiacore production, verified live.
+
+**Verification (`qa-event-title.mjs`, shipped `frontend/dist` @ 390×844 portrait):** forced a 65-char
+title → wraps to 3 lines, longest line 23 ≤ 24 maxChars (fits the panel), both option buttons remain
+on-screen, clean console. Portrait screenshot inspected. Live bundle `index-CuFk86hj.js` matches the
+committed build.
+
+---
+
 ## 2026-07-03 (early morning) — Fix: you can never lose your weapon to a shop purchase (live index-4UCzVocG.js)
 
 **Bug (Felix, B4):** *"my projectile / orb spiral removed after i bought some upgrade — it shouldn't

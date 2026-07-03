@@ -2463,24 +2463,10 @@ export class Game {
     return rects;
   }
 
-  /** Word-wrap `text` to `maxWidth` px at the given font size. The renderer draws
-   *  in `Press Start 2P`, a MONOSPACE pixel font whose advance is ~1em/char and
-   *  ~2x wider than sans-serif — so we wrap on a deterministic 1em/char estimate
-   *  rather than `measureText` (which mis-measures before the webfont loads and
-   *  in headless QA, letting body copy overflow the panel in narrow portrait). */
+  /** Word-wrap helper — delegates to the renderer's single canonical wrap so draw
+   *  and hit-test math share one implementation (see `Renderer.wrapLines`). */
   private wrapText(text: string, maxWidth: number, fontPx: number): string[] {
-    const charW = fontPx; // Press Start 2P: one em per glyph (incl. spaces)
-    const maxChars = Math.max(1, Math.floor(maxWidth / charW));
-    const words = text.split(' ');
-    const lines: string[] = [];
-    let line = '';
-    for (const w of words) {
-      const test = line ? `${line} ${w}` : w;
-      if (test.length > maxChars && line) { lines.push(line); line = w; }
-      else line = test;
-    }
-    if (line) lines.push(line);
-    return lines;
+    return this.renderer.wrapLines(text, maxWidth, fontPx);
   }
 
   private paintBackdrop(): void {
@@ -3688,20 +3674,24 @@ export class Game {
 
       // Description (more compact) — swapped for the combo payoff when you'd complete a duo,
       // so the card tells you WHAT the synergy does at the moment of decision, not just its name.
-      if (completesDuo && duoInfo) {
-        this.renderer.drawText(duoInfo.effect, x + itemWidth / 2, y + descY, {
+      // Wrapped through the standardized text-box primitive: it fills the space between the
+      // description row and the cost row, wrapping onto as many lines as fit and shrinking only
+      // as a last resort — so a long description never overflows the card (portrait) or shrinks
+      // to an unreadable single line, however long the copy.
+      const descMaxW = itemWidth - s(12);
+      const descLineH = descSize + Math.max(2, Math.round(descSize * 0.35));
+      const descMaxLines = Math.max(1, Math.floor((costY - descY) / descLineH));
+      this.renderer.drawWrappedText(
+        completesDuo && duoInfo ? duoInfo.effect : item.description,
+        x + itemWidth / 2, y + descY,
+        {
           size: descSize,
           align: 'center',
-          color: '#ffe066',
-          maxWidth: itemWidth - s(12)
-        });
-      } else {
-        this.renderer.drawText(item.description, x + itemWidth / 2, y + descY, {
-          size: descSize,
-          align: 'center',
-          color: '#e5d9c3'
-        });
-      }
+          color: completesDuo && duoInfo ? '#ffe066' : '#e5d9c3',
+          maxWidth: descMaxW,
+          maxLines: descMaxLines,
+        }
+      );
 
       // Cost with better styling (bottom, prominent)
       const finalPrice = this.playerStats.getItemPrice(item, this.waveManager.currentWave);
@@ -3880,21 +3870,10 @@ export class Game {
     const potential = this.playerStats.getPotentialDuos();
 
     // Word-wrap helper (drawText auto-shrinks but doesn't wrap).
-    const wrap = (text: string, px: number, maxW: number): string[] => {
-      ctx.save();
-      ctx.font = `${px}px 'Press Start 2P', 'Courier New', monospace`;
-      const words = text.split(' ');
-      const lines: string[] = [];
-      let line = '';
-      for (const w of words) {
-        const test = line ? `${line} ${w}` : w;
-        if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = w; }
-        else line = test;
-      }
-      if (line) lines.push(line);
-      ctx.restore();
-      return lines;
-    };
+    // Wrap through the renderer's single canonical wrap (font-load-safe 1 em/glyph
+    // estimate) so the combos guide breaks lines identically to every other panel.
+    const wrap = (text: string, px: number, maxW: number): string[] =>
+      this.renderer.wrapLines(text, maxW, px);
 
     const pad = s(16);
     const contentW = Math.min(W - pad * 2, s(isMobile ? 360 : 560));

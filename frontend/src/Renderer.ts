@@ -292,6 +292,76 @@ export class Renderer {
     ctx.restore();
   }
 
+  /**
+   * Word-wrap `text` to `maxWidth` px at `size`. The game draws in Press Start 2P,
+   * a MONOSPACE pixel font whose advance is ~1 em/glyph and ~2× wider than a
+   * sans-serif — so we wrap on a deterministic 1 em/glyph estimate rather than
+   * `measureText`, which mis-measures before the webfont loads and in headless QA
+   * (it returns the narrower fallback-font width → under-wraps → copy overflows the
+   * panel in narrow portrait). This is the single source of truth for wrapping —
+   * every multi-line text box wraps through here (the codebase previously had two
+   * divergent wrap implementations, which is what made text boxes render
+   * inconsistently). Returns at least one (possibly empty) line. `bold` is accepted
+   * for call-site symmetry; it does not change the monospace advance.
+   */
+  wrapLines(text: string, maxWidth: number, size: number, _bold = false): string[] {
+    const maxChars = Math.max(1, Math.floor(maxWidth / size)); // 1 em per glyph
+    const words = String(text).split(' ');
+    const lines: string[] = [];
+    let line = '';
+    for (const w of words) {
+      const test = line ? `${line} ${w}` : w;
+      if (test.length > maxChars && line) { lines.push(line); line = w; }
+      else line = test;
+    }
+    if (line) lines.push(line);
+    return lines.length ? lines : [''];
+  }
+
+  /**
+   * The standardized text-box primitive. Draws `text` as a wrapped block inside a
+   * box `maxWidth` px wide, starting at (x, y). It wraps via `wrapLines`, and if
+   * `maxLines` is set and the copy still won't fit, it shrinks the font as a LAST
+   * resort so a box is NEVER overflowed or clipped — however long the string.
+   * Returns the number of lines drawn and the total height consumed so callers can
+   * lay out content beneath it. Use this for any descriptive/paragraph text box
+   * (event/artifact/shop/village/tooltip copy); short single-line labels can keep
+   * plain `drawText` (which auto-shrinks one line to fit).
+   */
+  drawWrappedText(text: string, x: number, y: number, opts: {
+    maxWidth: number;
+    size?: number;
+    color?: string;
+    align?: CanvasTextAlign;
+    bold?: boolean;
+    stroke?: boolean;
+    strokeWidth?: number;
+    lineGap?: number;   // extra px between lines (default ≈35% of the font size)
+    maxLines?: number;  // hard cap; the font shrinks so the block fits within it
+  }): { lines: number; height: number } {
+    let size = opts.size ?? 16;
+    let lines = this.wrapLines(text, opts.maxWidth, size, opts.bold);
+    if (opts.maxLines && opts.maxLines > 0) {
+      let guard = 0;
+      while (lines.length > opts.maxLines && size > 4 && guard++ < 32) {
+        size = Math.max(4, size - 1);
+        lines = this.wrapLines(text, opts.maxWidth, size, opts.bold);
+      }
+    }
+    const lineH = size + (opts.lineGap ?? Math.max(2, Math.round(size * 0.35)));
+    for (let i = 0; i < lines.length; i++) {
+      this.drawText(lines[i], x, y + i * lineH, {
+        size,
+        color: opts.color,
+        align: opts.align,
+        bold: opts.bold,
+        stroke: opts.stroke,
+        strokeWidth: opts.strokeWidth,
+      });
+    }
+    return { lines: lines.length, height: lines.length * lineH };
+  }
+
   drawCircle(x: number, y: number, radius: number, color: string): void {
     this.ctx.fillStyle = color;
     this.ctx.beginPath();
