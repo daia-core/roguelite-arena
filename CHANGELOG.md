@@ -28,7 +28,7 @@ armor invested. Heavy-armor builds are still tanky, just not invincible.
 **Verified:** new `qa-armor-damage.mjs` harness — with +15 meta armor and zero run items,
 standing in a wave-1 swarm for 10s now costs **59 HP over 13 hits** (~4 dmg/hit after mitigation)
 vs. near-zero under the old flat formula. `qa-melee-stack` combat regression PASS, 0 console
-errors. Commit `PENDING` · live build `PENDING`.
+errors. Commit `b9b5011` · live build `index-LqjJLBD_.js` (blush alias verified).
 
 ---
 
