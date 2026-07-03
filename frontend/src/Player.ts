@@ -29,6 +29,15 @@ export class Player {
   shootCooldown: number = 0;
   shield: boolean = false; // Active shield
 
+  // ARTIFACT hooks (set by Game from the ArtifactSystem):
+  //  • incomingDamageMult — Glass Cannon scales incoming damage up.
+  //  • secondWindArmed — Second Wind: the first lethal hit each wave leaves you at
+  //    1 HP instead of dying; consumed on use, re-armed at each wave start.
+  incomingDamageMult: number = 1;
+  secondWindArmed: boolean = false;
+  /** Set for one frame when Second Wind saves you, so Game can flash feedback. */
+  secondWindTriggered: boolean = false;
+
   // GAME FEEL: Invincibility frames
   invincibilityTimer: number = 0;
   /** Dodged hits waiting for a "DODGE" popup (consumed by Game). */
@@ -253,13 +262,24 @@ export class Player {
       return false; // No damage taken
     }
 
+    // ARTIFACT: Glass Cannon multiplies incoming damage (applied before armor so
+    // armor still shaves the same flat amount off the scaled hit).
+    amount *= this.incomingDamageMult;
+
     // Armor: flat reduction, but a hit always deals at least 1
     amount = Math.max(1, amount - this.stats.getArmor());
 
     this.health -= amount;
     if (this.health <= 0) {
-      this.health = 0;
-      this.dead = true;
+      // ARTIFACT: Second Wind — survive the first lethal hit of the wave at 1 HP.
+      if (this.secondWindArmed) {
+        this.secondWindArmed = false;
+        this.secondWindTriggered = true;
+        this.health = 1;
+      } else {
+        this.health = 0;
+        this.dead = true;
+      }
     }
 
     // GAME FEEL: Grant invincibility frames after taking damage

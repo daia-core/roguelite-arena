@@ -54,9 +54,15 @@ export class WaveManager {
 
   constructor() {}
 
-  startWave(waveNumber: number): void {
+  /**
+   * Start a wave. `opts` lets the map layer force a node's flavour:
+   *   • elite → guaranteed elite modifier (tougher enemies, better loot)
+   *   • boss  → treat as a boss wave regardless of the wave number
+   * When neither is set the usual number-based boss check + random modifier roll runs.
+   */
+  startWave(waveNumber: number, opts?: { elite?: boolean; boss?: boolean }): void {
     this.currentWave = waveNumber;
-    this.isBossWave = waveNumber % 10 === 0;
+    this.isBossWave = waveNumber % 10 === 0 || !!opts?.boss;
     this.isHordeWave = false;
     this.waveModifier = 'none';
     this.waveModifierText = '';
@@ -65,7 +71,11 @@ export class WaveManager {
     this.phaseJustChanged = false;
     this.phaseText = '';
 
-    if (!this.isBossWave && waveNumber > 1) {
+    if (opts?.elite && !this.isBossWave) {
+      // Map "elite battle" node: force the elite modifier, skip the random roll.
+      this.waveModifier = 'elite';
+      this.waveModifierText = 'ELITE BATTLE - Tougher enemies, better loot!';
+    } else if (!this.isBossWave && waveNumber > 1) {
       const roll = Math.random();
       if (waveNumber % 5 === 0) {
         this.waveModifier = 'reward';

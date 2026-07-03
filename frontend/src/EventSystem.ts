@@ -1,0 +1,145 @@
+// Event nodes (the `?` rooms). A text choice screen with 2-3 options, each with
+// an outcome the game applies (grant an artifact, gamble gold, heal-for-a-cost,
+// take a boon with a downside…). Kept data-driven: effects are descriptors that
+// Game.ts resolves at the combat/economy sites it already owns.
+
+export type EventEffect =
+  | { kind: 'artifact' }                 // grant a random un-held artifact (pick)
+  | { kind: 'gold'; amount: number }     // +/- gold
+  | { kind: 'heal'; frac: number }       // heal frac * maxHP
+  | { kind: 'hurt'; frac: number }       // lose frac * maxHP (event damage never kills)
+  | { kind: 'maxHp'; amount: number }    // +/- max HP
+  | { kind: 'item' }                     // grant a random shop-tier item
+  | { kind: 'nothing' };
+
+export interface EventOption {
+  label: string;
+  effects: EventEffect[];
+  /** Shown after the option is chosen, before returning to the map. */
+  result: string;
+}
+
+export interface GameEvent {
+  id: string;
+  title: string;
+  text: string;
+  options: EventOption[];
+}
+
+// ~9 events — a mix of pure upside (rare), gamble, and cost/benefit trades so the
+// `?` node always feels like a real decision rather than free loot.
+export const EVENTS: GameEvent[] = [
+  {
+    id: 'shrine',
+    title: 'The Forgotten Shrine',
+    text: 'A cracked altar hums with old power. An offering bowl waits.',
+    options: [
+      { label: 'Offer 30 gold', effects: [{ kind: 'gold', amount: -30 }, { kind: 'artifact' }],
+        result: 'The shrine drinks your gold and answers with power.' },
+      { label: 'Pray (costs nothing)', effects: [{ kind: 'heal', frac: 0.4 }],
+        result: 'A warm calm restores some of your wounds.' },
+      { label: 'Leave it be', effects: [{ kind: 'nothing' }],
+        result: 'You step past. Some doors are best left shut.' },
+    ],
+  },
+  {
+    id: 'wager',
+    title: 'The Gambler',
+    text: 'A grinning figure shuffles bones. "Double or nothing on your luck?"',
+    options: [
+      { label: 'Bet 40 gold', effects: [{ kind: 'gold', amount: 40 }],
+        result: 'The bones fall your way — you pocket the winnings.' },
+      { label: 'Bet your blood', effects: [{ kind: 'hurt', frac: 0.2 }, { kind: 'artifact' }],
+        result: 'Pain buys power. The figure cackles and vanishes.' },
+      { label: 'Walk away', effects: [{ kind: 'nothing' }],
+        result: 'You keep your gold and your blood. Wise.' },
+    ],
+  },
+  {
+    id: 'cache',
+    title: 'Abandoned Cache',
+    text: 'A supply crate, half-buried. The lock is rusted but weak.',
+    options: [
+      { label: 'Force it open', effects: [{ kind: 'item' }],
+        result: 'The lid gives way — gear inside, still usable.' },
+      { label: 'Take the coin pouch', effects: [{ kind: 'gold', amount: 50 }],
+        result: 'A heavy pouch of gold. That will do nicely.' },
+    ],
+  },
+  {
+    id: 'transfusion',
+    title: 'The Blood Pact',
+    text: 'A vial of dark ichor promises strength woven into your veins.',
+    options: [
+      { label: 'Drink it', effects: [{ kind: 'maxHp', amount: 40 }, { kind: 'artifact' }],
+        result: 'Your heart pounds harder — and something new stirs.' },
+      { label: 'Pour it out', effects: [{ kind: 'heal', frac: 0.5 }],
+        result: 'You wash your wounds with it instead. Refreshing.' },
+      { label: 'Refuse', effects: [{ kind: 'nothing' }],
+        result: 'You leave the vial untouched.' },
+    ],
+  },
+  {
+    id: 'merchant',
+    title: 'Wandering Merchant',
+    text: 'A cloaked trader spreads curious wares on a rug.',
+    options: [
+      { label: 'Buy the relic (60g)', effects: [{ kind: 'gold', amount: -60 }, { kind: 'artifact' }],
+        result: 'A fair trade. The relic is yours.' },
+      { label: 'Buy a trinket (20g)', effects: [{ kind: 'gold', amount: -20 }, { kind: 'item' }],
+        result: 'A modest but useful buy.' },
+      { label: 'Browse and leave', effects: [{ kind: 'nothing' }],
+        result: 'Nothing catches your eye today.' },
+    ],
+  },
+  {
+    id: 'fountain',
+    title: 'The Healing Fountain',
+    text: 'Clear water bubbles up, faintly glowing. It smells of mint and iron.',
+    options: [
+      { label: 'Drink deeply', effects: [{ kind: 'heal', frac: 0.7 }],
+        result: 'Vitality floods back into you.' },
+      { label: 'Bottle it for later', effects: [{ kind: 'maxHp', amount: 25 }],
+        result: 'You feel permanently hardier for carrying it.' },
+    ],
+  },
+  {
+    id: 'gauntlet',
+    title: 'Trial of the Reckless',
+    text: 'Runes offer power to those willing to fight wounded.',
+    options: [
+      { label: 'Accept the trial', effects: [{ kind: 'hurt', frac: 0.3 }, { kind: 'artifact' }, { kind: 'gold', amount: 30 }],
+        result: 'Blood, gold, and power — the trial rewards the bold.' },
+      { label: 'Decline', effects: [{ kind: 'nothing' }],
+        result: 'You are not so desperate. Not yet.' },
+    ],
+  },
+  {
+    id: 'beggar',
+    title: 'The Grateful Beggar',
+    text: 'A ragged figure asks for coin. Their eyes are strangely knowing.',
+    options: [
+      { label: 'Give 25 gold', effects: [{ kind: 'gold', amount: -25 }, { kind: 'artifact' }],
+        result: 'The beggar straightens, bows, and presses a gift into your hand.' },
+      { label: 'Give nothing', effects: [{ kind: 'nothing' }],
+        result: 'You keep walking. The eyes follow you out.' },
+    ],
+  },
+  {
+    id: 'armory',
+    title: 'Ruined Armory',
+    text: 'Racks of broken gear line the walls. One piece still gleams.',
+    options: [
+      { label: 'Salvage the gleaming piece', effects: [{ kind: 'item' }],
+        result: 'You pry it loose — a genuine find.' },
+      { label: 'Melt scrap for coin', effects: [{ kind: 'gold', amount: 35 }],
+        result: 'The scrap fetches a decent price.' },
+      { label: 'Rest among the ruins', effects: [{ kind: 'heal', frac: 0.35 }],
+        result: 'A quiet moment mends you a little.' },
+    ],
+  },
+];
+
+export function randomEvent(): GameEvent {
+  return EVENTS[Math.floor(Math.random() * EVENTS.length)];
+}

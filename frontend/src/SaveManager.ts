@@ -8,6 +8,8 @@ export interface SaveData {
   gold: number;
   health: number;
   items: string[]; // Item IDs
+  artifactIds: string[]; // Held artifact IDs (map-granted run modifiers)
+  actMap: any; // Serialized node-map (branching act graph + current position)
 
   // Meta progression
   unlockedItems: string[];

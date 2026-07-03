@@ -2834,6 +2834,20 @@ export class PlayerStats {
   baseCritMultiplier: number = 2.0;
   baseProjectileSpeed: number = 400;
 
+  // ---- ARTIFACT contributions (ArtifactSystem folds its static roster into these) ----
+  // Defaults are identity (×1 / +0) so a run with no artifacts behaves exactly as before.
+  artifactDamageMult: number = 1;
+  artifactFireRateMult: number = 1;
+  artifactSpeedMult: number = 1;
+  artifactMaxHealthBonus: number = 0;
+  artifactCritChanceBonus: number = 0;
+  artifactCritMultMult: number = 1;
+  artifactXpMult: number = 1;
+  // Per-frame runtime multipliers for context-sensitive artifacts (momentum, berserk).
+  // Game.ts recomputes these each frame; identity when the artifact isn't held.
+  runtimeDamageMult: number = 1;
+  runtimeFireRateMult: number = 1;
+
   constructor() {
     // Randomly assign 2 affinity tags
     const allTags: ItemTag[] = ['melee', 'ranged', 'defensive', 'economic', 'elemental', 'utility'];
@@ -2871,6 +2885,8 @@ export class PlayerStats {
     damage *= this.transformations.getTotalBonuses().damageMultiplier;
     // DUO COMBO BONUS
     damage *= this.duos.getTotalBonuses().damageMultiplier;
+    // ARTIFACT (static) + runtime (momentum ramp) contributions
+    damage *= this.artifactDamageMult * this.runtimeDamageMult;
     return damage;
   }
 
@@ -2914,6 +2930,8 @@ export class PlayerStats {
     rate *= this.transformations.getTotalBonuses().fireRateMultiplier;
     // DUO COMBO BONUS
     rate *= this.duos.getTotalBonuses().fireRateMultiplier;
+    // ARTIFACT (static) + runtime (berserk ramp) contributions
+    rate *= this.artifactFireRateMult * this.runtimeFireRateMult;
     return rate;
   }
 
@@ -2926,6 +2944,8 @@ export class PlayerStats {
     speed *= this.transformations.getTotalBonuses().speedMultiplier;
     // DUO COMBO BONUS
     speed *= this.duos.getTotalBonuses().speedMultiplier;
+    // ARTIFACT contribution
+    speed *= this.artifactSpeedMult;
     return Math.min(speed, this.maxSpeed); // clamp so broken builds can't zoom off-screen
   }
 
@@ -2936,6 +2956,8 @@ export class PlayerStats {
     });
     // TRANSFORMATION BONUS
     health += this.transformations.getTotalBonuses().maxHealthBonus;
+    // ARTIFACT contribution
+    health += this.artifactMaxHealthBonus;
     return Math.max(1, health);
   }
 
@@ -2948,6 +2970,8 @@ export class PlayerStats {
     chance += this.transformations.getTotalBonuses().critChance;
     // DUO COMBO BONUS
     chance += this.duos.getTotalBonuses().critChance;
+    // ARTIFACT contribution
+    chance += this.artifactCritChanceBonus;
     return Math.min(1, chance);
   }
 
@@ -2958,6 +2982,8 @@ export class PlayerStats {
     });
     // TRANSFORMATION BONUS
     mult *= this.transformations.getTotalBonuses().critDamageMultiplier;
+    // ARTIFACT contribution
+    mult *= this.artifactCritMultMult;
     return mult;
   }
 

@@ -27,8 +27,18 @@ import { ParticleBatchRenderer } from './ParticleBatchRenderer';
 import { drawPanel, DARK_WOOD_THEME } from './pixel/panel';
 import { DUO_COMBOS } from './DuoSystem';
 import { UISprites } from './UISprites';
+import { MapSystem, nodeIcon, nodeLabel, serializeMap, deserializeMap, type NodeType } from './MapSystem';
+import { ArtifactSystem, ARTIFACTS, getArtifactById, type Artifact } from './ArtifactSystem';
+import { randomEvent, type GameEvent, type EventEffect } from './EventSystem';
 
-export type GameState = 'menu' | 'playing' | 'shop' | 'paused' | 'gameover' | 'upgrades';
+// The map/node meta-layer adds three between-wave screens on top of the core loop:
+//   'map'    — the Slay-the-Spire-style branching node picker (route your run)
+//   'event'  — a `?` node's text choice screen
+//   'reward' — a "pick 1 of 3 artifacts" screen (treasure / elite / boss spoils)
+//   'rest'   — a campfire node: heal or upgrade
+export type GameState =
+  | 'menu' | 'playing' | 'shop' | 'paused' | 'gameover' | 'upgrades'
+  | 'map' | 'event' | 'reward' | 'rest';
 
 export class Game {
   private canvas: HTMLCanvasElement;
@@ -72,6 +82,8 @@ export class Game {
   waveManager: WaveManager;
   playerStats: PlayerStats;
   metaProgression: MetaProgression;
+  mapSystem: MapSystem = new MapSystem();
+  artifacts: ArtifactSystem = new ArtifactSystem();
 
   // PERFORMANCE: Object pools
   private projectilePool: ObjectPool<Projectile>;
@@ -115,6 +127,18 @@ export class Game {
   showCombosOverlay: boolean = false; // COMBOS guide overlay (explains synergies/duos)
   showStatsPopup: boolean = false; // Full stats breakdown popup (tap the shop stats panel)
   private statsPanelRect: { x: number; y: number; width: number; height: number } = { x: 0, y: 0, width: 0, height: 0 };
+
+  // ---- MAP / NODE META-LAYER state ----
+  currentEvent: GameEvent | null = null;    // active `?` event, or null
+  eventResultText: string | null = null;    // outcome shown after picking an option
+  rewardChoices: Artifact[] = [];            // the 1-of-3 artifact offer
+  rewardTitle: string = '';                  // header for the reward screen
+  private rewardThen: (() => void) | null = null; // what to do once an artifact is picked
+  private pendingWaveArtifact: boolean = false;   // elite/boss wave grants spoils on clear
+  restResolved: boolean = false;             // rest node: an option has been taken
+  restResultText: string = '';               // rest node outcome line
+  // Momentum artifact: seconds the player has been continuously moving.
+  private momentumTime: number = 0;
 
   // Stats
   kills: number = 0;
@@ -382,12 +406,27 @@ export class Game {
     this.soulsEarnedThisRun = 0;
 
     this.waveManager.reset();
-    this.waveManager.startWave(1 + this.metaProgression.getWaveSkip());
-    this.waveModifierTimer = 3;
-    this.phaseBannerText = this.waveManager.phaseText;
-    this.phaseBannerTimer = 2.6;
+    // The map layer drives wave numbers now: the first battle node starts wave
+    // waveSkip+1, so seed the counter at waveSkip and open the act-1 map.
+    this.waveManager.currentWave = this.metaProgression.getWaveSkip();
+    this.artifacts.reset();
+    this.artifacts.applyStatic(this.playerStats);
+    this.mapSystem.reset();
+    this.mapSystem.generateAct(1);
+    this.refreshMaxHealth();
+    this.pendingWaveArtifact = false;
 
-    this.state = 'playing';
+    this.state = 'map';
+  }
+
+  /** Recompute the player's max health after an artifact changes it, granting the delta. */
+  private refreshMaxHealth(): void {
+    if (!this.player) return;
+    const newMax = this.playerStats.getMaxHealth();
+    const delta = newMax - this.player.maxHealth;
+    this.player.maxHealth = newMax;
+    if (delta > 0) this.player.health += delta; // new HP is granted, not just capacity
+    this.player.health = Math.min(this.player.health, this.player.maxHealth);
   }
 
   continueGame(): void {
@@ -403,7 +442,24 @@ export class Game {
       });
     }
 
+    // Restore held artifacts and fold their static contributions back into stats
+    // BEFORE the Player is built so its maxHealth reflects them.
+    this.artifacts.reset();
+    if (save.artifactIds) {
+      for (const id of save.artifactIds) {
+        const art = getArtifactById(id);
+        if (art) this.artifacts.add(art, this.playerStats);
+      }
+    }
+    this.artifacts.applyStatic(this.playerStats);
+
     this.player = new Player(this.worldWidth / 2, this.worldHeight / 2, this.playerStats);
+    this.syncArtifactStatic();
+
+    // Restore the node-map so routing resumes where it left off.
+    const restoredMap = deserializeMap(save.actMap);
+    if (restoredMap) this.mapSystem.map = restoredMap;
+    else { this.mapSystem.reset(); this.mapSystem.generateAct(1); }
 
     // Restore stats
     if (save.level) {
@@ -465,6 +521,18 @@ export class Game {
       case 'upgrades':
         this.updateUpgrades();
         break;
+      case 'map':
+        this.updateMap();
+        break;
+      case 'event':
+        this.updateEvent();
+        break;
+      case 'reward':
+        this.updateReward();
+        break;
+      case 'rest':
+        this.updateRest();
+        break;
     }
   }
 
@@ -500,6 +568,10 @@ export class Game {
 
     // Input
     const movement = this.input.getMovementVector();
+
+    // ARTIFACT runtime hooks (momentum ramps damage while moving; berserk ramps
+    // fire rate as HP drops). Recomputed every frame; identity when not held.
+    this.updateArtifactRuntime(scaledDt, movement.x !== 0 || movement.y !== 0);
 
     // Player update
     this.player.update(scaledDt, movement.x, movement.y, this.worldWidth, this.worldHeight);
@@ -1161,7 +1233,15 @@ export class Game {
 
     // Check wave completion
     if (this.waveManager.isWaveComplete()) {
-      this.enterShop();
+      if (this.pendingWaveArtifact) {
+        // Elite / boss nodes grant guaranteed spoils: an artifact pick, then the
+        // usual shop. Extra gold is added here so the reward feels distinct.
+        this.pendingWaveArtifact = false;
+        this.player.addGold(40);
+        this.offerArtifactReward('VICTORY SPOILS', () => this.enterShop());
+      } else {
+        this.enterShop();
+      }
     }
 
     // Check game over
@@ -1501,7 +1581,7 @@ export class Game {
     const goldMultiplier = this.metaProgression.getGoldGainMultiplier();
 
     // Apply modifiers from wave type
-    let finalXP = enemy.typeData.xpValue * xpMultiplier;
+    let finalXP = enemy.typeData.xpValue * xpMultiplier * this.playerStats.artifactXpMult;
     let finalGold = enemy.typeData.goldValue * goldMultiplier;
     // Item-based gold bonuses (Coin Purse, Midas Touch, Merchant) — were
     // sold but never applied
@@ -1539,6 +1619,10 @@ export class Game {
       this.xpOrbs.push(new XPOrb(enemy.x, enemy.y, share));
     }
     this.player.addGold(Math.floor(finalGold));
+
+    // ARTIFACT: Vampiric Field — every kill restores a flat amount of HP.
+    const vamp = this.artifacts.killHeal();
+    if (vamp > 0) this.player.heal(vamp);
 
     // Mushroom explodes on death - PERFORMANCE: Use pooled particles
     if (enemy.type === 'mushroom') {
@@ -1860,9 +1944,10 @@ export class Game {
     }
   }
 
-  /** Thorns (Spiked Armor): reflect a share of damage taken to nearby enemies. */
+  /** Thorns (Spiked Armor item + Spiked Aura artifact): reflect a share of damage taken. */
   private applyThorns(amount: number, source?: Enemy): void {
-    const thorns = this.playerStats.getThorns();
+    // Item thorns and the Spiked Aura artifact stack additively.
+    const thorns = this.playerStats.getThorns() + this.artifacts.thornsFraction();
     if (thorns <= 0 || !this.player) return;
     const reflected = amount * thorns;
     const targets = source
@@ -2163,7 +2248,7 @@ export class Game {
     };
 
     if (pointInRect(mouseX, mouseY, continueBtn) && this.input.mouseDown) {
-      this.startNextWave();
+      this.toMapFromShop();
       this.input.mouseDown = false;
     }
 
@@ -2233,8 +2318,13 @@ export class Game {
     }
   }
 
-  private startNextWave(): void {
-    this.waveManager.startWave(this.waveManager.currentWave + 1);
+  private startNextWave(opts?: { elite?: boolean; boss?: boolean }): void {
+    // ARTIFACT: re-arm Second Wind and reset the momentum ramp at each wave start.
+    if (this.player) this.player.secondWindArmed = this.artifacts.hasSecondWind();
+    this.momentumTime = 0;
+    this.syncArtifactStatic();
+
+    this.waveManager.startWave(this.waveManager.currentWave + 1, opts);
     this.waveModifierTimer = 3; // Show wave modifier for 3 seconds
     // Always flash the wave's unique intro line (phase 0 text) so every wave
     // reads as named/themed, even the plain ones with no modifier.
@@ -2244,6 +2334,477 @@ export class Game {
 
     // Reset mouse state to prevent accidental clicks
     this.input.mouseDown = false;
+  }
+
+  // ===================================================================
+  // MAP / NODE META-LAYER
+  // ===================================================================
+
+  /** Open the map after the shop. Generates the next act if the boss was cleared. */
+  private toMapFromShop(): void {
+    if (this.mapSystem.isActComplete() || !this.mapSystem.map) {
+      const nextAct = (this.mapSystem.map?.act ?? 0) + 1;
+      this.mapSystem.generateAct(nextAct);
+    }
+    this.state = 'map';
+    this.input.mouseDown = false;
+  }
+
+  /** Resolve a picked map node into the appropriate game state / reward. */
+  private onMapNodePicked(nodeId: string): void {
+    const node = this.mapSystem.pick(nodeId);
+    if (!node) return;
+    this.input.mouseDown = false;
+    switch (node.type) {
+      case 'battle':
+        this.startNextWave();
+        break;
+      case 'elite':
+        this.pendingWaveArtifact = true;
+        this.startNextWave({ elite: true });
+        break;
+      case 'boss':
+        this.pendingWaveArtifact = true;
+        this.startNextWave({ boss: true });
+        break;
+      case 'event':
+        this.currentEvent = randomEvent();
+        this.eventResultText = null;
+        this.state = 'event';
+        break;
+      case 'treasure':
+        // Free artifact pick, no fight; return to the map afterward.
+        this.offerArtifactReward('TREASURE', () => { this.state = 'map'; });
+        break;
+      case 'rest':
+        this.restResolved = false;
+        this.restResultText = '';
+        this.state = 'rest';
+        break;
+    }
+  }
+
+  /** Build a 1-of-3 artifact offer and show the reward screen. */
+  private offerArtifactReward(title: string, then: () => void): void {
+    const pool = ARTIFACTS.filter(a => !this.artifacts.has(a.id));
+    if (pool.length === 0) {
+      // Nothing left to grant — skip straight to the continuation.
+      then();
+      return;
+    }
+    const shuffled = [...pool].sort(() => Math.random() - 0.5);
+    this.rewardChoices = shuffled.slice(0, Math.min(3, shuffled.length));
+    this.rewardTitle = title;
+    this.rewardThen = then;
+    this.state = 'reward';
+    this.input.mouseDown = false;
+  }
+
+  /** Grant an artifact: fold its static stats in, refresh max HP, sync runtime flags. */
+  private grantArtifact(artifact: Artifact): void {
+    this.artifacts.add(artifact, this.playerStats);
+    this.refreshMaxHealth();
+    this.syncArtifactStatic();
+    if (this.player) this.player.secondWindArmed = this.artifacts.hasSecondWind();
+  }
+
+  /** Push constant (non-per-frame) artifact hooks onto the player. */
+  private syncArtifactStatic(): void {
+    if (this.player) this.player.incomingDamageMult = this.artifacts.incomingDamageMult();
+  }
+
+  /** Per-frame runtime artifact effects: momentum (moving) + berserk (low HP). */
+  private updateArtifactRuntime(dt: number, moving: boolean): void {
+    if (!this.player) return;
+    // Momentum: ramp up over ~3s of continuous movement, reset when standing still.
+    const momentumMax = this.artifacts.momentumBonus();
+    if (momentumMax > 0) {
+      this.momentumTime = moving ? Math.min(3, this.momentumTime + dt) : 0;
+      this.playerStats.runtimeDamageMult = 1 + momentumMax * (this.momentumTime / 3);
+    } else {
+      this.playerStats.runtimeDamageMult = 1;
+    }
+    // Berserk: extra fire rate as HP drops (0 at full HP, full bonus near death).
+    const berserkMax = this.artifacts.berserkBonus();
+    if (berserkMax > 0) {
+      const missing = 1 - this.player.health / Math.max(1, this.player.maxHealth);
+      this.playerStats.runtimeFireRateMult = 1 + berserkMax * missing;
+    } else {
+      this.playerStats.runtimeFireRateMult = 1;
+    }
+  }
+
+  // ---- shared UI helpers for the meta-layer screens ----
+
+  /** Zoom-scale helper shared by the map/event/reward/rest screens. */
+  private screenScale() {
+    const zoom = this.canvas.clientWidth ? this.canvas.width / this.canvas.clientWidth : 1;
+    const s = (v: number) => Math.round(v * zoom);
+    const W = this.canvas.width;
+    const H = this.canvas.height;
+    const isMobile = W / zoom < 800;
+    return { zoom, s, W, H, isMobile };
+  }
+
+  /** A centred vertical stack of button rects — geometry both draw & update use. */
+  private columnRects(n: number, topY: number, s: (v: number) => number, W: number, isMobile: boolean) {
+    const bw = Math.min(W - s(40), s(isMobile ? 320 : 440));
+    const bh = s(isMobile ? 54 : 48);
+    const gap = s(12);
+    const x = (W - bw) / 2;
+    const rects: { x: number; y: number; width: number; height: number }[] = [];
+    for (let i = 0; i < n; i++) rects.push({ x, y: topY + i * (bh + gap), width: bw, height: bh });
+    return rects;
+  }
+
+  /** Word-wrap `text` to `maxWidth` px at the given font size (approximate measure). */
+  private wrapText(text: string, maxWidth: number, fontPx: number): string[] {
+    const ctx = this.renderer.getContext();
+    ctx.save();
+    ctx.font = `${fontPx}px sans-serif`;
+    const words = text.split(' ');
+    const lines: string[] = [];
+    let line = '';
+    for (const w of words) {
+      const test = line ? `${line} ${w}` : w;
+      if (ctx.measureText(test).width > maxWidth && line) { lines.push(line); line = w; }
+      else line = test;
+    }
+    if (line) lines.push(line);
+    ctx.restore();
+    return lines;
+  }
+
+  private paintBackdrop(): void {
+    const ctx = this.renderer.getContext();
+    ctx.save();
+    ctx.fillStyle = '#120b05';
+    ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    ctx.restore();
+  }
+
+  // ---- MAP screen ----
+
+  private drawMap(): void {
+    const ctx = this.renderer.getContext();
+    const { s, W, H, isMobile } = this.screenScale();
+    this.paintBackdrop();
+    const map = this.mapSystem.map;
+    if (!map) return;
+
+    this.renderer.drawText('CHOOSE YOUR PATH', W / 2, s(28), { size: s(isMobile ? 15 : 22), align: 'center', color: '#ffd700' });
+    this.renderer.drawText(`Act ${map.act}`, W / 2, s(28) + s(isMobile ? 16 : 22), { size: s(isMobile ? 9 : 11), align: 'center', color: '#c8b998' });
+
+    const placements = this.mapSystem.layout(W, H, s);
+    const reachable = new Set(this.mapSystem.reachable());
+
+    // Edges first (behind the nodes). Live edges (from the current node to a
+    // pickable node) glow gold; the rest are dim brown scaffolding.
+    ctx.save();
+    ctx.lineWidth = Math.max(1, s(2));
+    for (const node of map.nodes) {
+      const from = placements.get(node.id);
+      if (!from) continue;
+      for (const eid of node.edges) {
+        const to = placements.get(eid);
+        if (!to) continue;
+        const live = map.currentId === node.id && reachable.has(eid);
+        ctx.strokeStyle = live ? 'rgba(242,217,78,0.9)' : 'rgba(120,90,50,0.35)';
+        ctx.beginPath();
+        ctx.moveTo(from.x, from.y);
+        ctx.lineTo(to.x, to.y);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+
+    const colors: Record<NodeType, string> = {
+      battle: '#c0855a', elite: '#d9534f', event: '#5bc0de',
+      treasure: '#f2d94e', rest: '#8ce99a', boss: '#b06bd9',
+    };
+
+    for (const node of map.nodes) {
+      const p = placements.get(node.id);
+      if (!p) continue;
+      const canPick = reachable.has(node.id);
+      const isCurrent = map.currentId === node.id;
+      ctx.save();
+      ctx.globalAlpha = (canPick || isCurrent || node.visited) ? 1 : 0.4;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = (node.visited && !isCurrent) ? '#3a2c1a' : colors[node.type];
+      ctx.fill();
+      ctx.lineWidth = s(canPick ? 3 : 2);
+      ctx.strokeStyle = isCurrent ? '#ffffff' : (canPick ? '#fff2b0' : '#2a1c0e');
+      ctx.stroke();
+      ctx.restore();
+
+      this.renderer.drawText(nodeIcon(node.type), p.x, p.y - s(5), { size: s(isMobile ? 14 : 17), align: 'center', color: '#1a1008' });
+      this.renderer.drawText(nodeLabel(node.type), p.x, p.y + p.r + s(3), { size: s(isMobile ? 7 : 8), align: 'center', color: canPick ? '#ffffff' : '#9a8a6a' });
+    }
+
+    this.renderer.drawText(
+      map.currentId ? 'Tap a lit node to advance' : 'Tap a starting node',
+      W / 2, H - s(22), { size: s(isMobile ? 8 : 9), align: 'center', color: '#c8b998' }
+    );
+  }
+
+  private updateMap(): void {
+    if (!this.input.mouseDown) return;
+    const { s, W, H } = this.screenScale();
+    const placements = this.mapSystem.layout(W, H, s);
+    const mx = this.input.mouseX;
+    const my = this.input.mouseY;
+    for (const id of this.mapSystem.reachable()) {
+      const p = placements.get(id);
+      if (!p) continue;
+      const dx = mx - p.x;
+      const dy = my - p.y;
+      const hit = p.r * 1.6; // generous tap target for mobile
+      if (dx * dx + dy * dy <= hit * hit) {
+        this.input.mouseDown = false;
+        this.onMapNodePicked(id);
+        return;
+      }
+    }
+  }
+
+  // ---- EVENT screen ----
+
+  private drawEvent(): void {
+    const ctx = this.renderer.getContext();
+    const { s, W, H, isMobile } = this.screenScale();
+    this.paintBackdrop();
+    const ev = this.currentEvent;
+    if (!ev) return;
+
+    const contentW = Math.min(W - s(24), s(isMobile ? 372 : 560));
+    const x0 = (W - contentW) / 2;
+    drawPanel(ctx, x0 - s(8), s(12), contentW + s(16), H - s(24), DARK_WOOD_THEME, 7, 31);
+
+    let y = s(isMobile ? 26 : 34);
+    this.renderer.drawText(ev.title, W / 2, y, { size: s(isMobile ? 14 : 18), align: 'center', color: '#ffd700' });
+    y += s(isMobile ? 20 : 26);
+
+    const bodyPx = s(isMobile ? 9 : 11);
+    for (const line of this.wrapText(ev.text, contentW - s(24), bodyPx)) {
+      this.renderer.drawText(line, W / 2, y, { size: bodyPx, align: 'center', color: '#d8c9a8' });
+      y += bodyPx + s(5);
+    }
+    y += s(10);
+
+    if (this.eventResultText === null) {
+      const rects = this.columnRects(ev.options.length, y, s, W, isMobile);
+      ev.options.forEach((opt, i) => {
+        const r = rects[i];
+        this.renderer.drawButton(r.x, r.y, r.width, r.height, opt.label, false, true, isMobile);
+      });
+    } else {
+      for (const line of this.wrapText(this.eventResultText, contentW - s(24), bodyPx)) {
+        this.renderer.drawText(line, W / 2, y, { size: bodyPx, align: 'center', color: '#8ce99a' });
+        y += bodyPx + s(5);
+      }
+      y += s(12);
+      const r = this.columnRects(1, y, s, W, isMobile)[0];
+      this.renderer.drawButton(r.x, r.y, r.width, r.height, 'Continue', true, true, isMobile);
+    }
+  }
+
+  private updateEvent(): void {
+    if (!this.input.mouseDown) return;
+    const ev = this.currentEvent;
+    if (!ev) return;
+    const { s, W, H, isMobile } = this.screenScale();
+    const mx = this.input.mouseX;
+    const my = this.input.mouseY;
+
+    // Recompute the same vertical anchor the draw pass uses.
+    const contentW = Math.min(W - s(24), s(isMobile ? 372 : 560));
+    let y = s(isMobile ? 26 : 34) + s(isMobile ? 20 : 26);
+    const bodyPx = s(isMobile ? 9 : 11);
+    y += this.wrapText(ev.text, contentW - s(24), bodyPx).length * (bodyPx + s(5));
+    y += s(10);
+
+    if (this.eventResultText === null) {
+      const rects = this.columnRects(ev.options.length, y, s, W, isMobile);
+      for (let i = 0; i < ev.options.length; i++) {
+        if (pointInRect(mx, my, rects[i])) {
+          this.input.mouseDown = false;
+          const opt = ev.options[i];
+          for (const eff of opt.effects) this.applyEventEffect(eff);
+          this.eventResultText = opt.result;
+          return;
+        }
+      }
+    } else {
+      y += this.wrapText(this.eventResultText, contentW - s(24), bodyPx).length * (bodyPx + s(5)) + s(12);
+      const r = this.columnRects(1, y, s, W, isMobile)[0];
+      if (pointInRect(mx, my, r)) {
+        this.input.mouseDown = false;
+        this.currentEvent = null;
+        this.eventResultText = null;
+        this.state = 'map';
+      }
+    }
+    void H;
+  }
+
+  private applyEventEffect(effect: EventEffect): void {
+    if (!this.player) return;
+    switch (effect.kind) {
+      case 'gold':
+        this.player.gold = Math.max(0, this.player.gold + effect.amount);
+        break;
+      case 'heal':
+        this.player.health = Math.min(this.player.maxHealth, this.player.health + Math.round(effect.frac * this.player.maxHealth));
+        break;
+      case 'hurt': {
+        const dmg = Math.round(effect.frac * this.player.maxHealth);
+        this.player.health = Math.max(1, this.player.health - dmg); // event damage never kills
+        break;
+      }
+      case 'maxHp':
+        this.playerStats.baseMaxHealth += effect.amount;
+        this.refreshMaxHealth();
+        break;
+      case 'artifact': {
+        const pool = ARTIFACTS.filter(a => !this.artifacts.has(a.id));
+        if (pool.length) this.grantArtifact(pool[Math.floor(Math.random() * pool.length)]);
+        break;
+      }
+      case 'item': {
+        const items = ItemDatabase.getWeightedShopItems(1, this.waveManager.currentWave, this.playerStats.items, this.playerStats.getLuck());
+        if (items[0]) { this.playerStats.addItem(items[0]); this.refreshMaxHealth(); }
+        break;
+      }
+      case 'nothing':
+        break;
+    }
+  }
+
+  // ---- REWARD screen (1-of-3 artifact pick) ----
+
+  private drawReward(): void {
+    const ctx = this.renderer.getContext();
+    const { s, W, isMobile } = this.screenScale();
+    this.paintBackdrop();
+
+    this.renderer.drawText(this.rewardTitle || 'CHOOSE AN ARTIFACT', W / 2, s(isMobile ? 26 : 34), { size: s(isMobile ? 14 : 20), align: 'center', color: '#ffd700' });
+    this.renderer.drawText('Artifacts last the whole run', W / 2, s(isMobile ? 26 : 34) + s(isMobile ? 16 : 20), { size: s(isMobile ? 8 : 9), align: 'center', color: '#c8b998' });
+
+    const rarityColor: Record<string, string> = { rare: '#74c0fc', epic: '#b06bd9', legendary: '#f2b04e' };
+    const cardW = Math.min(W - s(32), s(isMobile ? 340 : 460));
+    const cardH = s(isMobile ? 74 : 68);
+    const gap = s(12);
+    const x0 = (W - cardW) / 2;
+    const topY = s(isMobile ? 72 : 92);
+    const bodyPx = s(isMobile ? 8 : 9);
+
+    this.rewardChoices.forEach((a, i) => {
+      const y = topY + i * (cardH + gap);
+      drawPanel(ctx, x0, y, cardW, cardH, DARK_WOOD_THEME, 11 + i, 53);
+      this.renderer.drawText(a.name, x0 + s(12), y + s(isMobile ? 16 : 18), { size: s(isMobile ? 11 : 13), align: 'left', color: rarityColor[a.rarity] || '#ffffff' });
+      this.renderer.drawText(a.rarity.toUpperCase(), x0 + cardW - s(12), y + s(isMobile ? 16 : 18), { size: s(7), align: 'right', color: rarityColor[a.rarity] || '#ffffff' });
+      for (const [li, line] of this.wrapText(a.desc, cardW - s(24), bodyPx).entries()) {
+        this.renderer.drawText(line, x0 + s(12), y + s(isMobile ? 34 : 36) + li * (bodyPx + s(3)), { size: bodyPx, align: 'left', color: '#d8c9a8' });
+      }
+    });
+  }
+
+  private updateReward(): void {
+    if (!this.input.mouseDown) return;
+    const { s, W, isMobile } = this.screenScale();
+    const cardW = Math.min(W - s(32), s(isMobile ? 340 : 460));
+    const cardH = s(isMobile ? 74 : 68);
+    const gap = s(12);
+    const x0 = (W - cardW) / 2;
+    const topY = s(isMobile ? 72 : 92);
+    const mx = this.input.mouseX;
+    const my = this.input.mouseY;
+
+    for (let i = 0; i < this.rewardChoices.length; i++) {
+      const y = topY + i * (cardH + gap);
+      if (pointInRect(mx, my, { x: x0, y, width: cardW, height: cardH })) {
+        this.input.mouseDown = false;
+        this.grantArtifact(this.rewardChoices[i]);
+        const then = this.rewardThen;
+        this.rewardChoices = [];
+        this.rewardThen = null;
+        if (then) then();
+        return;
+      }
+    }
+  }
+
+  // ---- REST screen ----
+
+  private drawRest(): void {
+    const ctx = this.renderer.getContext();
+    const { s, W, H, isMobile } = this.screenScale();
+    this.paintBackdrop();
+
+    const contentW = Math.min(W - s(24), s(isMobile ? 372 : 520));
+    const x0 = (W - contentW) / 2;
+    drawPanel(ctx, x0 - s(8), s(12), contentW + s(16), H - s(24), DARK_WOOD_THEME, 19, 61);
+
+    let y = s(isMobile ? 30 : 40);
+    this.renderer.drawText('A QUIET CAMPFIRE', W / 2, y, { size: s(isMobile ? 14 : 18), align: 'center', color: '#ffd700' });
+    y += s(isMobile ? 22 : 28);
+    const bodyPx = s(isMobile ? 9 : 11);
+
+    if (!this.restResolved) {
+      this.renderer.drawText('Take a moment. Choose one.', W / 2, y, { size: bodyPx, align: 'center', color: '#d8c9a8' });
+      y += s(isMobile ? 18 : 22);
+      const rects = this.columnRects(2, y, s, W, isMobile);
+      this.renderer.drawButton(rects[0].x, rects[0].y, rects[0].width, rects[0].height, 'Rest — heal 40% HP', false, true, isMobile);
+      this.renderer.drawButton(rects[1].x, rects[1].y, rects[1].width, rects[1].height, 'Train — +15 max HP', false, true, isMobile);
+    } else {
+      for (const line of this.wrapText(this.restResultText, contentW - s(24), bodyPx)) {
+        this.renderer.drawText(line, W / 2, y, { size: bodyPx, align: 'center', color: '#8ce99a' });
+        y += bodyPx + s(5);
+      }
+      y += s(12);
+      const r = this.columnRects(1, y, s, W, isMobile)[0];
+      this.renderer.drawButton(r.x, r.y, r.width, r.height, 'Continue', true, true, isMobile);
+    }
+  }
+
+  private updateRest(): void {
+    if (!this.input.mouseDown || !this.player) return;
+    const { s, W, H, isMobile } = this.screenScale();
+    const mx = this.input.mouseX;
+    const my = this.input.mouseY;
+    let y = s(isMobile ? 30 : 40) + s(isMobile ? 22 : 28);
+    const bodyPx = s(isMobile ? 9 : 11);
+
+    if (!this.restResolved) {
+      y += s(isMobile ? 18 : 22);
+      const rects = this.columnRects(2, y, s, W, isMobile);
+      if (pointInRect(mx, my, rects[0])) {
+        this.input.mouseDown = false;
+        this.player.health = Math.min(this.player.maxHealth, this.player.health + Math.round(0.4 * this.player.maxHealth));
+        this.restResolved = true;
+        this.restResultText = 'You rest by the fire and recover your strength.';
+        return;
+      }
+      if (pointInRect(mx, my, rects[1])) {
+        this.input.mouseDown = false;
+        this.playerStats.baseMaxHealth += 15;
+        this.refreshMaxHealth();
+        this.restResolved = true;
+        this.restResultText = 'You train through the night. You feel permanently hardier.';
+        return;
+      }
+    } else {
+      const contentW = Math.min(W - s(24), s(isMobile ? 372 : 520));
+      y += this.wrapText(this.restResultText, contentW - s(24), bodyPx).length * (bodyPx + s(5)) + s(12);
+      const r = this.columnRects(1, y, s, W, isMobile)[0];
+      if (pointInRect(mx, my, r)) {
+        this.input.mouseDown = false;
+        this.state = 'map';
+      }
+    }
+    void H;
   }
 
   private updatePaused(): void {
@@ -2384,7 +2945,9 @@ export class Game {
       level: this.player.level,
       gold: this.player.gold,
       health: this.player.health,
-      items: this.playerStats.items.map(item => item.id)
+      items: this.playerStats.items.map(item => item.id),
+      artifactIds: this.artifacts.held.map(a => a.id),
+      actMap: serializeMap(this.mapSystem.map)
     });
   }
 
@@ -2410,6 +2973,18 @@ export class Game {
         break;
       case 'upgrades':
         this.drawUpgrades();
+        break;
+      case 'map':
+        this.drawMap();
+        break;
+      case 'event':
+        this.drawEvent();
+        break;
+      case 'reward':
+        this.drawReward();
+        break;
+      case 'rest':
+        this.drawRest();
         break;
     }
 
