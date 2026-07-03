@@ -8,6 +8,33 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-03 (evening) — batch-2 enemy sprites hand-crafted (the two most-seen enemies + toxic blob)
+
+- **Slime and goblin — the two enemies you meet every single run (waves 1-2) — are hand-drawn from
+  scratch.** These were the last two enemies still on the original flat legacy sprite path, never
+  migrated to the data pipeline; every other enemy already had at least an auto-enhanced pass. Now:
+  - **Slime** — gooey translucent green dome, glossy top-left shine, cool-sunk base, two catch-lit
+    eyes (left slightly bigger for personality), a little grin, one edge drip. Saturated + dark-
+    outlined + hot shine so it never camouflages into the grass.
+  - **Goblin** — hunched olive humanoid (distinct yellow-green skin, NOT the slime's pure green),
+    oversized pointed ears (one bigger), hooked nose, angry glowing amber eyes, jagged fang grin,
+    crude brown loincloth + legs. Frame 2 snarls (grin closes to a fanged line).
+- **Blob re-drawn** — the worst-reading remaining enemy (it read as a plain tomato). Now an angry
+  TOXIC red cousin of the slime: lopsided amorphous body, glowing acid-green eyes with black brows +
+  a scowl, sickly acid bubbles inside and at the edges, cool-crimson underside. Clearly a menacing
+  variant, not a vegetable.
+- Each drawn per SPRITE-STYLE.md (black outline, top-left light, hue-shifted warm-hi/cool-shadow
+  ramp, asymmetry, readable chunky silhouette, catch-lit eyes) over 2+ render→look→fix cycles and
+  eyeballed on the actual grass background before shipping. 2-frame idle (slime breathes, blob
+  churns, goblin snarls). Remaining enemies (imp/bat/spider etc.) already read decently — left as-is
+  rather than padding with low-value redraws.
+- QA: `qa-new-enemies` PASS (lifecycle invariant holds — no dead-in-array over 120 frames),
+  `qa-sprite-conversion` PASS (0 console errors), `qa-pixel-art` + `qa-roguelite` clean (0 errors).
+  spriteData rebuilt to 41 sprites (slime/goblin/blob confirmed present, overriding legacy). `tsc` clean.
+- **Live:** verified serving on production (HTTP 200, title correct) — sha below.
+
+---
+
 ## 2026-07-03 (evening) — wave-scaling curve v2 (sim-driven softening) + QA harness repair
 
 - **Early game is no longer a wall.** The morning's enemy-scaling bump over-corrected: a fresh run
