@@ -8,6 +8,33 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-03 (evening) — every item is a hand-drawn pixel sprite (zero emoji) + stat caps
+
+Two changes shipped together:
+
+- **Pixel-art item icons — no more emoji, anywhere.** Every item now shows a hand-authored 12x12
+  pixel-art glyph (the same treatment the monsters got), not an OS emoji. A new sprite library
+  (`items/itemIcons.ts`) holds 76 authored glyphs and maps all **112** catalog icons to one — with
+  **zero** procedural-rune fallbacks, so no item ever falls back to rendering a raw emoji glyph.
+  Every on-canvas emoji site was swept: inventory, shop cards, duo/synergy panels, village upgrade
+  rows, the shop lock/recycle buttons and the meta-upgrade icons all draw crisp sprites now; the
+  village building signs, the interact prompt and the game-over stat lines became clean pixel-font
+  text. The one remaining non-ASCII glyph is the monochrome soul marker (a text dingbat, never a
+  colour emoji).
+- **Stat caps.** Combat output (damage, fire rate, crit dmg, multishot, piercing, armor) stays
+  UNCAPPED — enemies scale to meet it. Only the stats enemies never counter-scale are capped: gold
+  ×10, XP magnet ×10, recycle break-even (+300%), dodge 75%, plus a 1e15 numerical-safety ceiling
+  that stops a deep run overflowing to "Infinityx" / NaN. The shop also hides any item whose every
+  effect is an already-maxed capped stat, so no shop slot is wasted on a dead pick.
+
+**Commits** `e97bc01` (stat caps), `1e658f8` (pixel-art sprites + emoji removal)
+**Live verified** blush domain serves `index-B9kcLwnw.js` (== the fresh build), HTTP 200, new JS
+asset 200, no auth wall; `qa-item-icons.mjs` proves **112/112** item icons paint real pixels
+(painted-pixel + colour assertions) with **0 console errors**, and the enlarged icon sheet was
+reviewed by eye — every glyph is a recognisable pixel sprite.
+
+---
+
 ## 2026-07-03 (afternoon) — chunkier XP orbs, gold as collectable coins, shop Auto-Buy & cleaner shop cards
 
 Four changes from Felix's play feedback, all in one deploy:
