@@ -151,6 +151,22 @@ export class Game {
   // Momentum artifact: seconds the player has been continuously moving.
   private momentumTime: number = 0;
 
+  // ---- Conditional-item run state (drives the triggered-damage items) ----
+  // Grindstone: whole waves cleared this run (permanent per-wave ramp).
+  private wavesSurvived: number = 0;
+  // Killing Spree: a decaying on-kill damage stack. Each kill adds one (up to
+  // KILL_STACK_MAX) and refreshes the grace timer; after KILL_STACK_GRACE seconds
+  // without a kill the stacks drain away, so the bonus rewards sustained pace.
+  private killStackCount: number = 0;
+  private killStackTimer: number = 0;
+  private static readonly KILL_STACK_MAX = 20;      // ceiling on stacks
+  private static readonly KILL_STACK_GRACE = 2.0;   // seconds before stacks start draining
+  private static readonly KILL_STACK_DRAIN = 12;    // stacks lost per second once draining
+  private static readonly LOW_HP_THRESHOLD = 0.35;  // "low HP" = at/under 35% max
+  private static readonly HIGH_HP_THRESHOLD = 0.90; // "high HP" = at/over 90% max
+  private static readonly GOLD_SCALE_PER = 100;     // gold per +1 unit of goldScaleDamage
+  private static readonly GOLD_SCALE_CAP = 2.0;     // cap the gold-scaling factor at +200% dmg
+
   // Stats
   kills: number = 0;
   bossKills: number = 0;
@@ -431,6 +447,10 @@ export class Game {
     this.hitPauseTimer = 0;
     this.bossKills = 0;
     this.soulsEarnedThisRun = 0;
+    // Reset conditional-item run state (fresh run = no ramp, no kill streak).
+    this.wavesSurvived = 0;
+    this.killStackCount = 0;
+    this.killStackTimer = 0;
 
     this.waveManager.reset();
     // The map layer drives wave numbers now: the first battle node starts wave
@@ -618,7 +638,7 @@ export class Game {
 
     // ARTIFACT runtime hooks (momentum ramps damage while moving; berserk ramps
     // fire rate as HP drops). Recomputed every frame; identity when not held.
-    this.updateArtifactRuntime(dt, movement.x !== 0 || movement.y !== 0);
+    this.updateRuntimeModifiers(dt, movement.x !== 0 || movement.y !== 0);
 
     // Player update
     this.player.update(dt, movement.x, movement.y, this.worldWidth, this.worldHeight);
@@ -1668,6 +1688,12 @@ export class Game {
 
     this.kills++;
 
+    // Killing Spree: every kill adds a decaying damage stack and refreshes the grace
+    // window. Only meaningful if a killStackDamage item is held, but the counter is
+    // cheap to keep always (updateRuntimeModifiers reads it against the held rate).
+    this.killStackCount = Math.min(Game.KILL_STACK_MAX, this.killStackCount + 1);
+    this.killStackTimer = 0;
+
     // Track boss kills
     if (enemy.type === 'demon') {
       this.bossKills++;
@@ -2644,6 +2670,9 @@ export class Game {
     // ARTIFACT: re-arm Second Wind and reset the momentum ramp at each wave start.
     if (this.player) this.player.secondWindArmed = this.artifacts.hasSecondWind();
     this.momentumTime = 0;
+    // Grindstone: one more wave entered. Ramp pays out on (wavesSurvived-1), so
+    // wave 1 grants nothing and every wave cleared thereafter adds a permanent tick.
+    this.wavesSurvived++;
     this.syncArtifactStatic();
 
     this.waveManager.startWave(this.waveManager.currentWave + 1, opts);
@@ -2737,25 +2766,74 @@ export class Game {
     if (this.player) this.player.incomingDamageMult = this.artifacts.incomingDamageMult();
   }
 
-  /** Per-frame runtime artifact effects: momentum (moving) + berserk (low HP). */
-  private updateArtifactRuntime(dt: number, moving: boolean): void {
+  /**
+   * Per-frame runtime damage/fire-rate modifiers — the single composition point for
+   * every CONDITIONAL bonus (both artifacts and the new triggered items). Each source
+   * multiplies into a running factor (identity 1 when not held / condition unmet), so
+   * they stack cleanly and getDamage()/getFireRate() just read the product. Artifacts:
+   * momentum (moving), berserk (low HP). Items: Grindstone (wave ramp), Last Stand
+   * (low HP), Killing Spree (kill streak), Juggernaut (high HP), Miser's Hoard (gold).
+   */
+  private updateRuntimeModifiers(dt: number, moving: boolean): void {
     if (!this.player) return;
+    let dmg = 1;
+    let fr = 1;
+
+    const hpFrac = this.player.health / Math.max(1, this.player.maxHealth);
+
+    // --- ARTIFACTS ---
     // Momentum: ramp up over ~3s of continuous movement, reset when standing still.
     const momentumMax = this.artifacts.momentumBonus();
     if (momentumMax > 0) {
       this.momentumTime = moving ? Math.min(3, this.momentumTime + dt) : 0;
-      this.playerStats.runtimeDamageMult = 1 + momentumMax * (this.momentumTime / 3);
-    } else {
-      this.playerStats.runtimeDamageMult = 1;
+      dmg *= 1 + momentumMax * (this.momentumTime / 3);
     }
     // Berserk: extra fire rate as HP drops (0 at full HP, full bonus near death).
     const berserkMax = this.artifacts.berserkBonus();
     if (berserkMax > 0) {
-      const missing = 1 - this.player.health / Math.max(1, this.player.maxHealth);
-      this.playerStats.runtimeFireRateMult = 1 + berserkMax * missing;
-    } else {
-      this.playerStats.runtimeFireRateMult = 1;
+      fr *= 1 + berserkMax * (1 - hpFrac);
     }
+
+    // --- CONDITIONAL ITEMS ---
+    // Grindstone: permanent +dmg per wave survived this run (wavesSurvived-1 so wave 1 = 0).
+    const waveRamp = this.playerStats.getWaveRampDamage();
+    if (waveRamp > 0) {
+      dmg *= 1 + waveRamp * Math.max(0, this.wavesSurvived - 1);
+    }
+    // Last Stand: while at/under the low-HP threshold, +dmg AND +fire rate. Full bonus
+    // the moment you cross the line (a clean "danger power" spike, not a gradual ramp).
+    const lowHp = this.playerStats.getLowHpPower();
+    if (lowHp > 0 && hpFrac <= Game.LOW_HP_THRESHOLD) {
+      dmg *= 1 + lowHp;
+      fr *= 1 + lowHp;
+    }
+    // Killing Spree: decaying on-kill stack. Drain once the grace window lapses.
+    if (this.killStackCount > 0) {
+      this.killStackTimer += dt;
+      if (this.killStackTimer > Game.KILL_STACK_GRACE) {
+        this.killStackCount = Math.max(0, this.killStackCount - Game.KILL_STACK_DRAIN * dt);
+      }
+    }
+    const killStack = this.playerStats.getKillStackDamage();
+    if (killStack > 0 && this.killStackCount > 0) {
+      dmg *= 1 + killStack * this.killStackCount;
+    }
+    // Juggernaut: while at/over the high-HP threshold (staying unhurt), +dmg. The
+    // glass-cannon inverse of Last Stand — rewards clean, no-hit play.
+    const highHp = this.playerStats.getHighHpPower();
+    if (highHp > 0 && hpFrac >= Game.HIGH_HP_THRESHOLD) {
+      dmg *= 1 + highHp;
+    }
+    // Miser's Hoard: +dmg scaling with unspent gold on hand (capped), so hoarding for
+    // power trades against spending in the shop — a real, ongoing decision.
+    const goldScale = this.playerStats.getGoldScaleDamage();
+    if (goldScale > 0) {
+      const factor = Math.min(Game.GOLD_SCALE_CAP, goldScale * (this.player.gold / Game.GOLD_SCALE_PER));
+      dmg *= 1 + factor;
+    }
+
+    this.playerStats.runtimeDamageMult = dmg;
+    this.playerStats.runtimeFireRateMult = fr;
   }
 
   // ---- shared UI helpers for the meta-layer screens ----

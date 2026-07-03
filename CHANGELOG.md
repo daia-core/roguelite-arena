@@ -8,6 +8,41 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-03 (night) — items that reward how you PLAY (first conditional/triggered layer)
+
+- **Five new items whose power depends on the moment, not just owning them.** Until now every item in
+  the game was a flat, always-on stat (+15% damage, +0.5 HP/sec). These are the first items that only
+  pay out while a **run condition** holds — so they reward a playstyle instead of sitting there:
+  - **Grindstone** 🪨 — permanent **+6% damage for every wave you survive** this run. A slow-burn item
+    that turns a long, careful run into a snowball.
+  - **Last Stand** 🩸 — while **below 35% HP: +60% damage AND +60% fire rate**. A comeback/clutch item:
+    the closer to death, the harder you hit.
+  - **Killing Spree** 💀 — **+4% damage per kill, stacking up to 20×** (+80%), and the stacks **drain**
+    if you stop killing. Rewards keeping the arena churning.
+  - **Juggernaut Plating** 🛡️ — while **at/above 90% HP (unhurt): +40% damage**. The glass-cannon
+    inverse of Last Stand — pays out for clean, no-hit play.
+  - **Miser's Hoard** 💰 — **+8% damage per 100 gold on hand**, up to **+200%**. A real tension: hoard
+    for power or spend in the shop — you can't do both.
+- **Why it matters:** the game had 206 items but *zero* conditional effects — every build decision was
+  "which flat stat." These add a whole new axis (danger, streak, hoarding, survival) so builds now have
+  a rhythm, and they stack with duplicates. Drawn from a Brotato / Risk-of-Rain / Binding-of-Isaac
+  research pass on what makes item effects feel impactful.
+- **Under the hood:** a new *triggered-effect layer* — `waveRampDamage / lowHpPower / killStackDamage /
+  highHpPower / goldScaleDamage` on `Item`, folded into the memoized `ItemAgg`, and paid out per-frame
+  by the renamed **`Game.updateRuntimeModifiers`** (was `updateArtifactRuntime`) — the single place that
+  now composes BOTH the momentum/berserk artifacts AND these items into `runtimeDamageMult` /
+  `runtimeFireRateMult`, so everything stacks cleanly and `getDamage()/getFireRate()` just read the
+  product. Run state (`wavesSurvived`, decaying `killStackCount`) resets each run; wave counter ticks in
+  `startNextWave`, kill stack bumps in `handleEnemyKill`. Combat stays **uncapped by design** (enemies
+  scale to meet output), so these are intentionally punchy; each threshold/cap is a single tunable const.
+- Commit `PENDING`. **Live-verified:** production `roguelite-game-blush.vercel.app` serving bundle
+  `index-B0HYLfkG.js` (HTTP 200, `<title>Roguelite Arena</title>`, matches local `dist`). QA: new
+  **`qa-triggered-items.mjs`** drives the real `g.update()` loop and checks all five conditions pay out
+  correctly (and pay *nothing* when unmet, and identity with no item held) — **13/13 PASS**. Regression:
+  `qa-roguelite` 0 errors, `qa-stat-caps` PASS, `verify-mechanics` ALL PASS.
+
+---
+
 ## 2026-07-03 (night) — your shots now show your build's element
 
 - **An elemental build finally LOOKS elemental.** Until now every player bullet was the same cyan

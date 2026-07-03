@@ -225,6 +225,9 @@ interface ItemAgg {
   multicast: number; rerollDiscount: number; shopDiscount: number; recycleBonus: number;
   interestBonus: number; luck: number; orbitOrbs: number; swingRangeBonus: number;
   swingArcBonus: number; swingAoe: number;
+  // conditional/triggered (additive rates; paid out at runtime by Game when the condition holds)
+  waveRampDamage: number; lowHpPower: number; killStackDamage: number;
+  highHpPower: number; goldScaleDamage: number;
   // boolean
   explosionOnHit: boolean; shield: boolean; homing: boolean; poison: boolean; poisonSpread: boolean;
   auxMelee: boolean; bombDrop: boolean; novaPulse: boolean;
@@ -243,6 +246,8 @@ function freshAgg(): ItemAgg {
     multicast: 0, rerollDiscount: 0, shopDiscount: 0, recycleBonus: 0,
     interestBonus: 0, luck: 0, orbitOrbs: 0, swingRangeBonus: 0,
     swingArcBonus: 0, swingAoe: 0,
+    waveRampDamage: 0, lowHpPower: 0, killStackDamage: 0,
+    highHpPower: 0, goldScaleDamage: 0,
     explosionOnHit: false, shield: false, homing: false, poison: false, poisonSpread: false,
     auxMelee: false, bombDrop: false, novaPulse: false,
   };
@@ -361,6 +366,12 @@ export class PlayerStats {
       if (item.swingRangeBonus) a.swingRangeBonus += item.swingRangeBonus;
       if (item.swingArcBonus) a.swingArcBonus += item.swingArcBonus;
       if (item.swingAoe) a.swingAoe += item.swingAoe;
+      // Conditional/triggered (additive rates; Game pays them out per-frame)
+      if (item.waveRampDamage) a.waveRampDamage += item.waveRampDamage;
+      if (item.lowHpPower) a.lowHpPower += item.lowHpPower;
+      if (item.killStackDamage) a.killStackDamage += item.killStackDamage;
+      if (item.highHpPower) a.highHpPower += item.highHpPower;
+      if (item.goldScaleDamage) a.goldScaleDamage += item.goldScaleDamage;
       // Boolean (any item carries it)
       if (item.explosionOnHit) a.explosionOnHit = true;
       if (item.shield) a.shield = true;
@@ -661,6 +672,17 @@ export class PlayerStats {
   getLuck(): number {
     return Math.min(1.0, this.ensureAgg().luck); // cap +100% (was +200%) so legendaries don't flood the shop by wave 7
   }
+
+  // ---- CONDITIONAL / TRIGGERED effect rates (summed across copies) ----
+  // These return the raw summed rate; the CONDITION (wave count, current HP, kill
+  // streak, gold held) and the payout are applied per-frame in Game.updateRuntimeModifiers,
+  // which folds the result into runtimeDamageMult / runtimeFireRateMult. Uncapped here
+  // (combat scales with enemies); Game applies the per-mechanic ceilings.
+  getWaveRampDamage(): number { return this.ensureAgg().waveRampDamage; }
+  getLowHpPower(): number { return this.ensureAgg().lowHpPower; }
+  getKillStackDamage(): number { return this.ensureAgg().killStackDamage; }
+  getHighHpPower(): number { return this.ensureAgg().highHpPower; }
+  getGoldScaleDamage(): number { return this.ensureAgg().goldScaleDamage; }
 
   hasPiercing(): boolean {
     return this.getPiercing() > 0;

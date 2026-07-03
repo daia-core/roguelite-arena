@@ -2862,5 +2862,73 @@ export const ITEM_CATALOG: Item[] = [
       auxMelee: true,
       orbitOrbs: 1,
       novaPulse: true
+    },
+
+    // ==================== CONDITIONAL / TRIGGERED ITEMS ====================
+    // The game's first non-static effects: each only pays out while a run CONDITION
+    // holds (wave count, current HP, kill streak, gold held), so they reward a play
+    // pattern rather than mere ownership. Payout is folded into the per-frame runtime
+    // damage/fire-rate multiplier by Game.updateRuntimeModifiers. Stacking duplicates
+    // deepens the effect (additive rates). Combat is uncapped by design (enemies scale
+    // to meet output), so these are intentionally punchy — they exist to shape builds.
+    {
+      id: 'grindstone_t3',
+      name: 'Grindstone',
+      description: 'Permanent +6% damage for every wave you survive this run',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 42,
+      icon: '🪨',
+      unlocked: true,
+      tags: ['melee', 'utility'],
+      waveRampDamage: 0.06
+    },
+    {
+      id: 'last_stand_t3',
+      name: 'Last Stand',
+      description: 'Below 35% HP: +60% damage AND +60% fire rate',
+      rarity: 'rare',
+      tier: ItemTier.Rare,
+      cost: 46,
+      icon: '🩸',
+      unlocked: true,
+      tags: ['defensive', 'melee'],
+      lowHpPower: 0.6
+    },
+    {
+      id: 'killing_spree_t3',
+      name: 'Killing Spree',
+      description: 'Each kill: +4% damage, stacking up to 20× — decays if you stop killing',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 48,
+      icon: '💀',
+      unlocked: true,
+      tags: ['melee'],
+      killStackDamage: 0.04
+    },
+    {
+      id: 'juggernaut_t3',
+      name: 'Juggernaut Plating',
+      description: 'While above 90% HP (unhurt): +40% damage',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 40,
+      icon: '🛡️',
+      unlocked: true,
+      tags: ['defensive'],
+      highHpPower: 0.4
+    },
+    {
+      id: 'misers_hoard_t3',
+      name: "Miser's Hoard",
+      description: '+8% damage per 100 gold on hand (caps at +200%) — spend it and you lose it',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 52,
+      icon: '💰',
+      unlocked: true,
+      tags: ['economic'],
+      goldScaleDamage: 0.08
     }
 ];

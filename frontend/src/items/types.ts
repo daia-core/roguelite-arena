@@ -149,6 +149,19 @@ export interface Item {
   recycleBonus?: number; // Increase recycle value
   interestBonus?: number; // Additional interest rate on banked gold (additive, e.g. 0.05 = +5%)
   luck?: number; // Raises shop rarity + health-orb drop chance (additive, e.g. 0.15 = +15%)
+
+  // ---- CONDITIONAL / TRIGGERED DAMAGE (the game's first non-static item layer) ----
+  // Unlike every field above (a flat always-on stat), these only pay out when a run
+  // CONDITION is met — so they reward a play pattern, not just ownership. Each is an
+  // additive rate summed across copies (stacking duplicates deepens the effect) and
+  // is folded into the per-frame runtime damage/fire-rate multiplier by Game
+  // (updateRuntimeModifiers), exactly like the momentum/berserk artifacts. Values are
+  // "+fraction" (0.5 = +50%). Thresholds/caps live as constants in Game.ts.
+  waveRampDamage?: number;   // Grindstone: permanent +dmg for each wave survived this run
+  lowHpPower?: number;       // Last Stand: while HP is low, +dmg AND +fire rate
+  killStackDamage?: number;  // Killing Spree: each kill adds a decaying +dmg stack
+  highHpPower?: number;      // Juggernaut: while HP is high (unhurt), +dmg
+  goldScaleDamage?: number;  // Miser's Hoard: +dmg scaling with unspent gold on hand
 }
 
 export interface Weapon {
