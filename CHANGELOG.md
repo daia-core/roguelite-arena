@@ -8,6 +8,52 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-03 (early morning) — 55 new build-defining items + balance pass (live index-rc2tFmEl.js)
+
+Felix asked for *"a lot of item diversity — all unique and impactful — plus a pricing/shop balance
+review so shop choices feel impactful. At least 50 new items."* Shipped **55 new items** (roster is
+now **188**, all unique, every one wired to a real effect — no dead stats).
+
+**What's new — each item is a trade-off, not a plain +damage clone.** They deepen every build axis so
+the shop always offers a real specialisation choice:
+
+- **Ranged/gun:** Hollow Points, Full Auto, Armor-Piercing Rounds, Deadeye Module, Gatling Core,
+  Overclock Chip, Heavy Ordnance — hard-hitting-slow vs spray-fast tension.
+- **Multishot:** Split Shot, Volley Rig, Hydra Rounds (+1/+2/+4 projectiles at a damage cost).
+- **Melee:** Whetstone, Bone Cleaver, Berserker's Axe, Executioner's Blade, Titan's Gauntlet.
+- **Crit:** Keen Edge, Bloodhound Sight, Deadly Precision, Executioner's Mark.
+- **Elemental (poison/freeze/chain/explosion all wired):** Ember Rounds, Plague Bearer, Glacier
+  Shard, Tesla Coil, Wildfire, Absolute Zero, Chain Reactor.
+- **Tank:** Kite Shield, Stalwart Plate, Bulwark, Spiked Shell, Retaliation Core, Juggernaut.
+- **Sustain:** Bloodletter, Sanguine Pact, Phoenix Heart.
+- **Speed/dodge:** Windwalker Boots, Momentum Engine, Phantom Cloak, Blink Boots.
+- **Crowd control:** Shockwave Gloves, Cryo Repulsor.
+- **Economy/meta:** Bargain Bin, Scavenger Kit, Merchant's Scale, Compound Interest, Treasure Map,
+  Philosopher's Stone, Jackpot.
+- **Aux-weapon deepeners (stack alongside the gun):** Satellite, Dervish Charm, Detonator,
+  Shockwave Amplifier, and the legendary **War Machine** (blades + orb + novas at once).
+
+**Balance / broken-build review** (Felix's *"review all broken build possibilities"*):
+- Audited every stack. The engine is already well-guarded — dodge is hard-capped at 75%, crit at
+  100%, speed clamped to maxSpeed, and armor is `max(1, dmg − armor)` so a hit **always chips ≥1**
+  (stacking armor never grants immunity). No infinite/invuln builds exist.
+- **The one uncapped outlier: lifesteal.** Capped `getLifesteal()` at 100% — a dedicated vampire
+  build can now fully convert damage to healing but no more (overheal was already wasted since
+  `heal()` clamps to maxHP); an uncapped value made heavy-lifesteal trivially unkillable.
+- Naming consolidation: the melee "Leech Blade" is now **Sanguine Edge** (`sanguine_edge_t3`),
+  complementing the ranged **Siphon Rounds** added earlier — two distinct lifesteal lanes, no
+  remaining duplicate id or name.
+
+Pricing follows the existing cost-per-power curve (Common ~6–14, Uncommon ~22–40, Rare ~48–84,
+Legendary ~130–165), so higher tiers gate correctly through the wave-based shop.
+
+**Verified:** clean `tsc`; `qa-stacking-weapons.mjs` + `qa-zoom-xporbs.mjs` regressions PASS on the
+freshly-built `dist`; a roster validation confirmed 188 unique items, zero dead-stat items, and the
+lifesteal cap holding — 0 console errors. Live build **`index-rc2tFmEl.js`** (hash + 287 KB size
+match local; new item names present in the shipped bundle). Commit `dad5f03`.
+
+---
+
 ## 2026-07-02 (late night) — Build-diversity audit: dup-item bug fixed + new ranged-lifesteal item
 
 Ran a full item-roster audit (`tools/qa/_audit-items.mjs`) against Felix's ask to *"review all
