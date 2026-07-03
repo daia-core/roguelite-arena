@@ -8,6 +8,42 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-03 (late morning) — remove all screen-shake + time-warp (maximum fluidity)
+
+Felix: *"Remove screen shake or things that alter time. I want the game to feel as fluid as
+possible."* Done — the game now runs at a **constant, uninterrupted timestep**: the camera never
+shakes and time never slows, stops, or freezes. Impact is conveyed purely by knockback, hit-flashes,
+expanding impact rings and particles — feedback that never costs you a frame of motion.
+
+**Player-visible:**
+- **No screen-shake.** Both independent shake systems removed (`ScreenEffects` shake + the
+  `Renderer` shake) — the view stays rock-steady.
+- **No time-warp.** The global hitstop that dropped the sim to **0.05× for 50–80 ms on every hit**
+  is gone. That was the single biggest fluidity killer — with a flooded arena you were triggering it
+  constantly, so the game stuttered on nearly every frame of combat. Now motion is perfectly smooth.
+- **Enemies never freeze.** The per-enemy **100 ms hitstun** that halted an enemy's AI + movement
+  every time it was hit is removed — enemies keep flowing toward you, so the swarm reads as one
+  continuous tide instead of a stop-motion flicker.
+- **No more zoom creep.** Killed a buggy dynamic camera-zoom that never returned to 1.0, so the
+  view no longer slowly drifts zoomed-in over a run.
+
+**Kept all the non-time juice:** colored screen flashes, white hit-flash, expanding impact rings,
+exponential-decay knockback, physics-arc damage numbers, and the 10+ pooled particle types. Feedback
+stays punchy; it just never interrupts motion.
+
+**Under the hood:** removed `timeScale`/`hitPauseTimer` from `Game.ts` (every `scaledDt` → `dt`),
+the two shake systems, `Enemy.hitstunTimer` + its early-return, and the dynamic zoom. Net **−283/+40
+lines** — a real simplification, not a toggle. Typecheck clean.
+
+**Verified:** `qa-flood.mjs` on the shipped bundle — wave 1 **playing, 45-enemy swarm, 132 HP,
+0 console/page errors**; combat regression (kills, damage numbers, particles all fire, lifecycle
+invariant holds). Mobile screenshot (390×844, `shots/flood-mobile.png`) reviewed — dense swarm reads
+clearly, motion smooth, HUD clean. `qa-mobile-playthrough.mjs` 427 FPS / 0 errors. Commit `55e3099`;
+**live-verified** — `roguelite-game-blush.vercel.app` serves bundle `index-14FNgVCe.js` (this
+commit's build), HTTP 200.
+
+---
+
 ## 2026-07-03 (late morning) — flood the arena (vampire-survivors density) + tankier enemies
 
 Felix: *"I want the stage to be flooded with enemies (like vampire survivor), also give them more
