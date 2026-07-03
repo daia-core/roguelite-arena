@@ -51,7 +51,7 @@ Dodge (75%) and lifesteal (100%) are already capped. Regen and armor should get 
 
 **10. `Game.ts` is a 4,500-line god class.** Every state's input+update+draw lives in it (only `VillageScene` is extracted). The prior architecture review's recommendation stands: split into per-screen `Scene` classes (Menu/Map/Playing/Shop/Event/Reward/Rest). No urgency, but it's the one change that unblocks everything else (e.g. pause-from-any-screen, which is currently impossible — you can only pause from `playing`).
 
-**11. The balance simulator has bit-rotted.** `tools/qa/simulate-balance.mjs` is our data-driven balancing tool (auto-play bot logging per-wave TTK/economy). It now stalls at "wave 0" because the game added the node-map layer between start and combat — the bot clicks `#startBtn` and waits for a wave that never auto-starts. Fixing it (make the bot pick a map node) restores empirical balance testing, which is exactly what we need to tune P1 properly instead of by math. **Recommend fixing this next — it's the multiplier on all future balance work.**
+**11. The balance simulator has bit-rotted.** ✅ **FIXED (this run).** `tools/qa/simulate-balance.mjs` stalled at "wave 0" because the node-map layer was added between start and combat. Now driven properly: the bot picks a combat map node, routes shop→map via `toMapFromShop()` (not `startNextWave()`), auto-resolves reward/event/rest, and records deaths correctly (state is `'gameover'`, not `'gameOver'` — that casing bug was masking deaths as "STUCK"). Empirical balance testing is restored — and it immediately paid off (see "Shipped this run": the v2 curve was tuned entirely on its data). The sibling QA gates `verify-mechanics` + `verify-luck` had the same node-map rot plus a stale-memoization pitfall; both repaired to ALL PASS.
 
 ---
 
@@ -59,11 +59,13 @@ Dodge (75%) and lifesteal (100%) are already capped. Regen and armor should get 
 
 - **Enemy-scaling + economy rebalance** (commit `62feae7`, live `index-BeJvcJwf.js`): enemy waveScale steepened (wave 20: ×12→×73), item prices ramp harder (×20→×100), income/discount caps tightened (gold ×10→×4, shop 50→30%, reroll 90→60%, luck +200→+100%). Fixes the wave-7 everything-maxed report. QA: stat-caps 21/21, regression green.
 - **Audio coverage for unlock moments** — wired the previously-silent dodge, duo-unlock, and transformation SFX (methods existed, never called). Pure additive feel; regression green.
+- **Balance simulator + QA-gate repair** (commit `650f07d`) — fixed the bit-rotted sim (P4-11) and the two sibling QA gates. This is the multiplier on all future balance work: it turned the very next change from a math guess into a measured fix.
+- **Wave-scaling curve v2 — sim-driven softening** (commit `650f07d`, live). The morning's v1 bump (compound onset wave 4) over-corrected the EARLY game: the repaired sim showed the kite-bot dying at wave 3-6 (8/8 runs, avg ~4), swarmed before a run has defensive items. Softened to linear 0.15 + compound onset wave 7 → fresh runs establish, coherent builds reach wave 10+, incoherent ones still die early (correct shape). Late bite stays high (wave 20 ~33×, well above the old immortality-causing 12×). Deployed + verified live (`(1+(e-1)*.15)*1.18**Math.max(0,e-7)` confirmed in the production bundle).
 
 ## Recommended next (in order)
 
-1. **Fix the balance simulator** (P4-11) — unblocks data-driven tuning. Safe, autonomous.
-2. **Cap regen + armor** (P1-1) — needs your number/feel call, then I ship + QA.
-3. **Wire EvolutionSystem** (P2-3) — marquee depth, autonomous once you bless the direction.
+1. ~~**Fix the balance simulator** (P4-11)~~ ✅ done — data-driven tuning is back online.
+2. **Cap regen + armor** (P1-1) — now measurable on the working sim. Taking this autonomously per Felix's "make your own calls" directive: ship sensible caps (regen ceiling, armor soft-cap) tuned on sim data, then QA. No longer gated on a number call.
+3. **Wire EvolutionSystem** (P2-3) — marquee depth. Taking autonomously (recommendation was "wire it").
 4. **Sprite projectiles + worms** (P3-6) — closes the pixel-art task, autonomous.
 5. Boss-unique mechanics, synergy telegraphing, hit-pause — depth/polish, batch as I go.
