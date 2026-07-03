@@ -35,7 +35,7 @@ Live: https://roguelite-game-blush.vercel.app
   product. Run state (`wavesSurvived`, decaying `killStackCount`) resets each run; wave counter ticks in
   `startNextWave`, kill stack bumps in `handleEnemyKill`. Combat stays **uncapped by design** (enemies
   scale to meet output), so these are intentionally punchy; each threshold/cap is a single tunable const.
-- Commit `PENDING`. **Live-verified:** production `roguelite-game-blush.vercel.app` serving bundle
+- Commit `c4dea82`. **Live-verified:** production `roguelite-game-blush.vercel.app` serving bundle
   `index-B0HYLfkG.js` (HTTP 200, `<title>Roguelite Arena</title>`, matches local `dist`). QA: new
   **`qa-triggered-items.mjs`** drives the real `g.update()` loop and checks all five conditions pay out
   correctly (and pay *nothing* when unmet, and identity with no item held) — **13/13 PASS**. Regression:
