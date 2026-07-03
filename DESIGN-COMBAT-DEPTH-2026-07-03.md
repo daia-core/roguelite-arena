@@ -121,9 +121,11 @@ report **once** to `#gamedev` with the changelog + this plan link. No piecemeal 
 - [x] Phase 3a — 8 new swing/AOE build items (Whirlwind Cleaver, Twin Fangs, Executioner's Maul, Vampiric Edge, Warglaive Storm, Titan Gauntlets, Ring of Widening, Cataclysm Core) — plug into the shipped swing/AOE mechanics; qa-melee-stack still PASS
 - [x] Phase 3b — status ENGINES built + verified (`qa-status-engines.mjs` PASS, 0 errors): **Burn** (fast fire DoT), **Bleed** (DoT that hits harder while the enemy moves), **Poison-spread** (poisoned deaths infect a neighbor via `killByDot`), **Doom** (stores damage then detonates, executes low-HP), **Wound** (amplifies all DoTs on a target), **Multicast** (bonus ranged volley). All apply from BOTH ranged and melee. **Bug fixed:** melee swings now call `applyOnHitEffects` (previously statuses only procced from projectiles). 10 new items: Ember Brand, Wildfire Torch, Serrated Edge, Hemorrhage Fang, Plague Bearer, Doom Sigil, Harbinger's Seal, Rending Mark, Echo Prism, Twin Echo Core.
 - [ ] Phase 3c — review all 194 items for uniqueness/impact; uniquify generic stat-sticks
-- [ ] Phase 4 — effect/projectile sprites
-- [ ] Phase 5 — item sprites + emoji removal
+- [x] Phase 4 — **status-effect visuals** (`qa-status-visuals.mjs` PASS, 0 errors): six chunky pixel-art overlays on the enemy so the Phase-3b DoT engines finally SHOW — cyan frost tint + shards (frozen), orange/red flame plume (burn), green bubbles (poison), red drip (bleed), red wound cross-hatch (wound-amplify), blinking purple→magenta doom rune above the head (urgency-tinted + faster blink as the fuse runs down). Overlays sit in `Enemy.drawStatusEffects()`, wired into all three enemy draw paths (worm/eggsac/normal). QA drives the shipped `dist`, lights every status on live wave enemies, samples the canvas per-palette (frozen>100, burn/poison/bleed>10 px) + an exact-location doom-rune isolation pass, asserts 0 console/page errors.
+- [ ] Phase 4b — **element-keyed projectile sprites** (split out): `Projectile.ts` has no `damageType`/element field, so tinting bullets by their element needs that plumbed from the weapon/on-hit path first. Deferred as its own follow-up.
+- [x] Phase 5 — item sprites + emoji removal (shipped earlier: 16×16 pixel-art item icons replace emoji across cards/shop/HUD; `qa-item-sprites.mjs` PASS)
 
-**Deployed live (2026-07-03):** Phase 1 + 2 + 3a shipped to Vercel production
-(`dpl_6U6jvzww5VVHkNr337UYcRh6gsdm`, alias `roguelite-game-blush.vercel.app`, bundle
-`index-Nz03E4wJ.js`, READY, no SSO wall). Next phases (3b/3c/4/5) still to build + deploy.
+**Deployed live (2026-07-03, evening):** Phases 1 + 2 + 3a + 3b + 4 + 5 all shipped to Vercel
+production (alias `roguelite-game-blush.vercel.app`, current bundle `index-B7X9IJQL.js`, READY, no
+SSO wall). Remaining: Phase 3c (item-uniqueness review — Felix-gated) and Phase 4b (element-keyed
+projectile sprites — needs `damageType` plumbed into `Projectile.ts` first).

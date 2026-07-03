@@ -8,6 +8,31 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-03 (evening) — status effects are now visible on enemies (pixel-art overlays)
+
+- **Every DoT/status now shows on the enemy that has it.** The Phase 3b status engines
+  (Ignite/Bleed/Poison/Doom/Wound/Freeze) dealt real damage but fired *invisibly* — you couldn't
+  tell a burning enemy from a healthy one, so status builds had no feedback. Enemies now wear a
+  chunky pixel-art overlay for each status they carry:
+  - **Frozen** — an icy blue tint disc + white ice shards (the enemy is also visibly halted).
+  - **Burn (Ignite)** — orange/red flame pixels flickering and rising off the body.
+  - **Poison** — green bubbles drifting upward; they turn lime when the poison can *spread* on death.
+  - **Bleed** — dark-red droplets dripping below the enemy.
+  - **Wound** — a small red "X" mark (this enemy takes amplified damage-over-time).
+  - **Doom** — a purple rune blinking above the head that blinks faster and reddens as its
+    stored-damage execute nears detonation.
+  Stacked statuses layer, so a fully-afflicted enemy reads at a glance. Purely a rendering pass —
+  damage numbers, timers and detonation logic are unchanged.
+
+Commit `f312fc4`. Verified live at 390×844: bundle `index-B7X9IJQL.js` serving (HTTP 200, no auth
+wall). `qa-status-visuals.mjs` builds the shipped dist fresh, enters a live wave, lights all six
+statuses on real enemies and asserts each overlay paints (frozen ~1.7k px, burn ~1.4k, poison ~5.5k,
+bleed ~600, plus an exact-location isolation pass for doom's tiny blinking rune ~90–160 px summed),
+with **0 console/page errors**. Screenshots: `shots/status-effects.png` (multi-status cluster),
+`shots/status-doom.png` (isolated doom rune).
+
+---
+
 ## 2026-07-03 (evening) — AoE danger zones are now pixel art (no smooth circles)
 
 - **Telegraphed AoE zones render as chunky pixels.** The red "danger" markers that bosses,
