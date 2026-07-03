@@ -1525,5 +1525,103 @@ export class SpriteSheet {
 
     this.drawPixels(ctx2, goldPixels, goldColors, 5);
     this.sprites.set('gold', gold);
+
+    // Orbiting energy orb (9x9 base * 4 = 36px). Cyan core + white hot centre.
+    const orb = this.createCanvas(36, 36);
+    const orbCtx = orb.getContext('2d')!;
+    const orbPixels = [
+      [0,0,0,1,1,1,0,0,0],
+      [0,0,1,2,2,2,1,0,0],
+      [0,1,2,3,3,3,2,1,0],
+      [1,2,3,3,4,3,3,2,1],
+      [1,2,3,4,4,4,3,2,1],
+      [1,2,3,3,4,3,3,2,1],
+      [0,1,2,3,3,3,2,1,0],
+      [0,0,1,2,2,2,1,0,0],
+      [0,0,0,1,1,1,0,0,0],
+    ];
+    const orbColors = [
+      'transparent',
+      '#003b5c',     // 1 - dark rim
+      '#0aa5cc',     // 2 - deep cyan
+      '#22e0ff',     // 3 - cyan body
+      '#ffffff',     // 4 - white hot core
+    ];
+    this.drawPixels(orbCtx, orbPixels, orbColors, 4);
+    this.sprites.set('orbiting_orb', orb);
+
+    // Bomb (9x11 base * 4 = 36x44px). Round black body, grey highlight, lit fuse.
+    const bomb = this.createCanvas(36, 44);
+    const bombCtx = bomb.getContext('2d')!;
+    const bombPixels = [
+      [0,0,0,0,0,4,4,0,0],  // fuse spark
+      [0,0,0,0,3,3,3,0,0],  // fuse stem
+      [0,0,0,0,0,3,0,0,0],
+      [0,0,1,1,1,1,1,0,0],
+      [0,1,2,2,2,2,2,1,0],
+      [1,2,2,5,5,2,2,2,1],  // highlight (5)
+      [1,2,5,5,2,2,2,2,1],
+      [1,2,2,2,2,2,2,2,1],
+      [1,2,2,2,2,2,2,2,1],
+      [0,1,2,2,2,2,2,1,0],
+      [0,0,1,1,1,1,1,0,0],
+    ];
+    const bombColors = [
+      'transparent',
+      '#000000',     // 1 - outline
+      '#1a1a1a',     // 2 - body
+      '#553311',     // 3 - fuse stem (brown)
+      '#ff7a00',     // 4 - fuse spark (lit)
+      '#444444',     // 5 - highlight
+    ];
+    this.drawPixels(bombCtx, bombPixels, bombColors, 4);
+    this.sprites.set('bomb', bomb);
+
+    // Worm head (9x9 base * 6 = 54px). Orange segmented disc with eyes + rim.
+    const wormHead = this.createCanvas(54, 54);
+    const wormHeadCtx = wormHead.getContext('2d')!;
+    const wormHeadPixels = [
+      [0,0,1,1,1,1,1,0,0],
+      [0,1,2,2,2,2,2,1,0],
+      [1,2,2,3,3,3,2,2,1],
+      [1,2,3,3,3,3,3,2,1],
+      [1,2,3,3,3,3,3,2,1],
+      [1,4,2,3,3,3,2,4,1],  // eyes (4)
+      [1,2,2,2,2,2,2,2,1],
+      [0,1,2,2,2,2,2,1,0],
+      [0,0,1,1,1,1,1,0,0],
+    ];
+    const wormHeadColors = [
+      'transparent',
+      '#7a3803',     // 1 - dark rim
+      '#e67e22',     // 2 - body orange
+      '#f39c12',     // 3 - inner highlight
+      '#2c1200',     // 4 - eyes
+    ];
+    this.drawPixels(wormHeadCtx, wormHeadPixels, wormHeadColors, 6);
+    this.sprites.set('worm_head', wormHead);
+
+    // Worm body (9x9 base * 6 = 54px). Darker segmented disc, no face.
+    const wormBody = this.createCanvas(54, 54);
+    const wormBodyCtx = wormBody.getContext('2d')!;
+    const wormBodyPixels = [
+      [0,0,1,1,1,1,1,0,0],
+      [0,1,2,2,2,2,2,1,0],
+      [1,2,2,3,3,3,2,2,1],
+      [1,2,3,3,3,3,3,2,1],
+      [1,2,3,3,3,3,3,2,1],
+      [1,2,2,3,3,3,2,2,1],
+      [1,2,2,2,2,2,2,2,1],
+      [0,1,2,2,2,2,2,1,0],
+      [0,0,1,1,1,1,1,0,0],
+    ];
+    const wormBodyColors = [
+      'transparent',
+      '#5a2a02',     // 1 - dark rim
+      '#d35400',     // 2 - body (darker orange)
+      '#e67e22',     // 3 - inner highlight
+    ];
+    this.drawPixels(wormBodyCtx, wormBodyPixels, wormBodyColors, 6);
+    this.sprites.set('worm_body', wormBody);
   }
 }

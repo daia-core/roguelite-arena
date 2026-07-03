@@ -1727,45 +1727,21 @@ export class Enemy {
     ctx.fillRect(this.x - barWidth / 2, barY, barWidth * healthPercent, barHeight);
   }
 
-  /** A single worm segment: a rounded body disc with a darker rim; the head also
-   *  gets eyes + mandibles so the leading segment reads as the "front". */
+  /** A single worm segment drawn from a pixel-art sprite; the head sprite has
+   *  eyes so the leading segment reads as the "front". */
   private drawWormSegment(ctx: CanvasRenderingContext2D): void {
     const r = this.typeData.radius;
     const isHead = this.type === 'wormhead';
-    // Body: two-tone disc for a segmented, glossy look.
-    ctx.fillStyle = isHead ? '#e67e22' : '#d35400';
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
-    ctx.fill();
-    // Inner highlight ring.
-    ctx.fillStyle = isHead ? '#f39c12' : '#e67e22';
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, r * 0.6, 0, Math.PI * 2);
-    ctx.fill();
-    // Dark rim.
-    ctx.strokeStyle = '#7a3803';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
-    ctx.stroke();
+    const sprite = SpriteSheet.get(isHead ? 'worm_head' : 'worm_body');
+    if (!sprite) return;
+    const size = r * 2.2;
+    const dx = this.x - size / 2;
+    const dy = this.y - size / 2;
+    ctx.imageSmoothingEnabled = false;
     if (this.hitFlashTimer > 0.016) {
-      ctx.globalAlpha = 0.6;
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.globalAlpha = 1;
-    }
-    if (isHead) {
-      // Face the direction of travel (toward the player-facing angle stored on move).
-      const a = this.wormWriggle; // reused as a facing hint; falls back to any value
-      const ex = Math.cos(a) * r * 0.4;
-      const ey = Math.sin(a) * r * 0.4;
-      ctx.fillStyle = '#2c1200';
-      ctx.beginPath();
-      ctx.arc(this.x + ex - 3, this.y + ey - 3, 2.5, 0, Math.PI * 2);
-      ctx.arc(this.x + ex + 3, this.y + ey + 3, 2.5, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.drawImage(tintSilhouette(sprite, '#ffffff'), dx, dy, size, size);
+    } else {
+      ctx.drawImage(sprite, dx, dy, size, size);
     }
   }
 

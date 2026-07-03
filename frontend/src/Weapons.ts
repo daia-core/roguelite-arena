@@ -4,6 +4,8 @@
 // itself and exposes a hit test; Game.ts owns the actual damage application so all
 // the crit / knockback / kill / particle logic stays in one place.
 
+import { SpriteSheet } from './sprites';
+
 /**
  * A pixel energy orb that circles the player at a fixed radius. Contact damages
  * enemies, with a short per-enemy re-hit cooldown so it grinds rather than
@@ -60,20 +62,15 @@ export class OrbitingOrb {
   draw(ctx: CanvasRenderingContext2D): void {
     ctx.save();
     ctx.imageSmoothingEnabled = false;
-    const r = this.radius;
-    // Outer dark ring for contrast
-    ctx.fillStyle = '#003b5c';
-    ctx.beginPath();
-    ctx.arc(Math.floor(this.x), Math.floor(this.y), r, 0, Math.PI * 2);
-    ctx.fill();
-    // Cyan energy body
-    ctx.fillStyle = '#22e0ff';
-    ctx.beginPath();
-    ctx.arc(Math.floor(this.x), Math.floor(this.y), r - 3, 0, Math.PI * 2);
-    ctx.fill();
-    // White hot core
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(Math.floor(this.x) - 2, Math.floor(this.y) - 2, 4, 4);
+    const sprite = SpriteSheet.get('orbiting_orb');
+    const size = this.radius * 2.2; // sprite drawn a touch larger than the hit radius
+    ctx.drawImage(
+      sprite!,
+      Math.floor(this.x - size / 2),
+      Math.floor(this.y - size / 2),
+      Math.floor(size),
+      Math.floor(size)
+    );
     ctx.restore();
   }
 }
@@ -111,24 +108,29 @@ export class Bomb {
   draw(ctx: CanvasRenderingContext2D): void {
     ctx.save();
     ctx.imageSmoothingEnabled = false;
-    const x = Math.floor(this.x);
-    const y = Math.floor(this.y);
-    // Blink rate accelerates toward detonation.
+    const sprite = SpriteSheet.get('bomb')!;
+    // Sprite is 36x44 (9x11 base); draw around a ~24px body footprint.
+    const w = 26;
+    const h = w * (sprite.height / sprite.width);
+    const x = Math.floor(this.x - w / 2);
+    // Anchor so the body sits on (this.x, this.y); the fuse rises above.
+    const y = Math.floor(this.y - h * 0.66);
+    ctx.drawImage(sprite, x, y, Math.floor(w), Math.floor(h));
+
+    // Blink the fuse spark faster as detonation nears (overdraw a bright pixel).
     const t = 1 - this.fuse / this.maxFuse;
     const blinkHz = 3 + t * 12;
     const lit = Math.floor(this.fuse * blinkHz) % 2 === 0;
-    // Body
-    ctx.fillStyle = '#111111';
-    ctx.beginPath();
-    ctx.arc(x, y, 10, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#333333';
-    ctx.beginPath();
-    ctx.arc(x, y, 7, 0, Math.PI * 2);
-    ctx.fill();
-    // Fuse spark
-    ctx.fillStyle = lit ? '#ff3300' : '#ffcc00';
-    ctx.fillRect(x - 2, y - 14, 4, 5);
+    if (lit) {
+      ctx.fillStyle = '#ffee66';
+      const sparkSize = Math.max(3, Math.floor(w * 0.18));
+      ctx.fillRect(
+        Math.floor(this.x - sparkSize / 2),
+        Math.floor(y),
+        sparkSize,
+        sparkSize
+      );
+    }
     ctx.restore();
   }
 }

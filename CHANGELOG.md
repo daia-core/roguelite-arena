@@ -8,6 +8,34 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-03 (afternoon) — pixel-art: worms, orbs, bombs & XP gems now use real sprites
+
+User report: some things were still drawn as raw circles/arcs instead of pixel art. Converted the
+remaining directly-drawn game entities to proper pixel-art sprites (the `SpriteSheet.get()` +
+`drawImage()` path everything else already uses):
+
+- **Worm segments** (`wormhead`/`wormbody`) — were arc-drawn discs; now `worm_head` (orange segment
+  with eyes + rim) and `worm_body` (darker trailing segment) sprites, with the white hit-flash
+  silhouette like every other enemy.
+- **Orbiting orb** (stacking weapon) — was an arc ring + core; now an `orbiting_orb` sprite (cyan
+  body, white hot cross-core).
+- **Bomb** (stacking weapon) — was an arc body; now a `bomb` sprite (round black body, grey
+  highlight, brown fuse) with the fuse spark still blinking faster toward detonation.
+- **XP gem** — was procedural nested `fillRect`s; now uses the existing `xp` crystal sprite.
+
+Left as intentional shapes (effects/telegraphs, not entities): AoE danger zones, the player
+shield ring/dash shadow, miniboss aura glow, the sprite-less enemy fallback disc, and particles.
+The egg-sac keeps its animated shell/crack telegraph (a live countdown, not a static entity).
+
+Draw-only change — no collision/lifecycle code touched. QA: new `qa-sprite-conversion.mjs` verifies
+all 5 sprites resolve with painted pixels and zero console errors; regressions green
+(qa-stacking-weapons, qa-new-enemies, qa-zoom-xporbs, qa-magnet). Sprite sheet screenshot in
+`shots/pixel-art/converted-sprites.png`.
+
+Commit: _pending_ · Live build: _pending verify_
+
+---
+
 ## 2026-07-03 (afternoon) — shop: responsive layout (no overlap, any size) + no held-touch insta-buy
 
 Two reported bugs, both fixed and live.

@@ -122,16 +122,16 @@ export class XPOrb {
     ctx.save();
     ctx.imageSmoothingEnabled = false;
     const pulse = Math.sin(this.pulseOffset) * 0.2 + 1;
-    const r = Math.max(2, Math.round(this.radius * pulse));
-    const cx = Math.round(this.x);
-    const cy = Math.round(this.y);
-    // Small cyan gem: bright core + darker edge, pure pixel blocks (no glow).
-    ctx.fillStyle = '#1c6fb0';
-    ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
-    ctx.fillStyle = '#4dc3ff';
-    ctx.fillRect(cx - r + 1, cy - r + 1, r * 2 - 2, r * 2 - 2);
-    ctx.fillStyle = '#bff0ff';
-    ctx.fillRect(cx - 1, cy - 1, 2, 2);
+    // Pixel-art XP gem sprite (blue crystal). Sized to ~2.6x the pickup radius.
+    const sprite = SpriteSheet.get('xp')!;
+    const size = this.radius * 2.6 * pulse;
+    ctx.drawImage(
+      sprite,
+      Math.round(this.x - size / 2),
+      Math.round(this.y - size / 2),
+      Math.round(size),
+      Math.round(size)
+    );
     ctx.restore();
   }
 }
