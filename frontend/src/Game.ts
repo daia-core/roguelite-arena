@@ -14,6 +14,7 @@ import { AudioManager } from './AudioManager';
 import { pointInRect } from './utils';
 import { HealthOrb, XPOrb } from './Pickup';
 import { OrbitingOrb, Bomb, Shockwave } from './Weapons';
+import { AoeZone } from './AoeZone';
 import { MetaProgression } from './MetaProgression';
 import { ObjectPool } from './ObjectPool';
 import { Quadtree } from './Quadtree';
@@ -51,6 +52,9 @@ export class Game {
   orbitingOrbs: OrbitingOrb[] = [];
   bombs: Bomb[] = [];
   shockwaves: Shockwave[] = [];
+
+  // Telegraphed enemy AoE attacks (red ground markers -> delayed hit).
+  aoeZones: AoeZone[] = [];
   private bombTimer: number = 0;
   private novaTimer: number = 0;
   private auxMeleeTimer: number = 0;
@@ -135,6 +139,11 @@ export class Game {
 
   // Wave modifier announcement
   waveModifierTimer: number = 0;
+
+  // Mid-wave sub-phase banner ("waves-within-waves"): flashes a shorter, lower
+  // announcement when the WaveManager advances to a new phase mid-fight.
+  phaseBannerTimer: number = 0;
+  phaseBannerText: string = '';
 
   constructor(canvas: HTMLCanvasElement) {
     // Dev/QA hook: lets tooling (screenshot scripts, the shots-qa harness)
@@ -373,6 +382,8 @@ export class Game {
     this.waveManager.reset();
     this.waveManager.startWave(1 + this.metaProgression.getWaveSkip());
     this.waveModifierTimer = 3;
+    this.phaseBannerText = this.waveManager.phaseText;
+    this.phaseBannerTimer = 2.6;
 
     this.state = 'playing';
   }
@@ -481,6 +492,9 @@ export class Game {
     if (this.waveModifierTimer > 0) {
       this.waveModifierTimer -= dt; // UI timers not affected by time scale
     }
+    if (this.phaseBannerTimer > 0) {
+      this.phaseBannerTimer -= dt;
+    }
 
     // Input
     const movement = this.input.getMovementVector();
@@ -547,6 +561,12 @@ export class Game {
 
     // Wave manager
     this.enemies = this.waveManager.update(scaledDt, this.enemies, this.worldWidth, this.worldHeight);
+
+    // Waves-within-waves: flash the new sub-phase banner when a phase begins.
+    if (this.waveManager.phaseJustChanged) {
+      this.phaseBannerText = this.waveManager.phaseText;
+      this.phaseBannerTimer = 2.4;
+    }
 
     // Enemies
     for (const enemy of this.enemies) {
@@ -732,6 +752,24 @@ export class Game {
             fadeOut: true
           }));
         }
+      }
+
+      // Telegraphed AoE attacks (bosses / ranged enemies): spawn a red ground
+      // marker at each requested spot; it deals damage only after its warning window.
+      if (result.aoeAttacks) {
+        for (const a of result.aoeAttacks) {
+          this.spawnAoeZone(new AoeZone(a.x, a.y, a.radius, a.damage, a.telegraph, {
+            shape: a.shape,
+            color: a.color
+          }));
+        }
+      }
+
+      // Egg sac hatched (timer elapsed while it survived): spawn its tougher
+      // payload and remove the egg. Killing the egg first prevents this.
+      if (enemy.eggShouldHatch && !enemy.dead) {
+        this.hatchEgg(enemy);
+        continue;
       }
 
       // Check wall collision for cyclops
@@ -1116,6 +1154,8 @@ export class Game {
     this.removeDeadEntities(this.xpOrbs);
     this.removeDeadEntities(this.bombs);
     this.removeDeadEntities(this.shockwaves);
+    this.updateAoeZones(scaledDt);
+    this.removeDeadEntities(this.aoeZones);
 
     // Check wave completion
     if (this.waveManager.isWaveComplete()) {
@@ -1174,6 +1214,7 @@ export class Game {
     this.orbitingOrbs = [];
     this.bombs = [];
     this.shockwaves = [];
+    this.aoeZones = [];
     this.bombTimer = 0;
     this.novaTimer = 0;
     this.auxMeleeTimer = 0;
@@ -1306,6 +1347,47 @@ export class Game {
       }
       this.auxMeleeTimer = 1.1;
     }
+  }
+
+  // Advance every telegraphed enemy AoE: tick its timer, spawn a burst when it
+  // detonates, and damage the player if they're standing in the zone at impact.
+  private updateAoeZones(dt: number): void {
+    if (!this.player || this.aoeZones.length === 0) return;
+    for (const zone of this.aoeZones) {
+      zone.update(dt);
+      if (zone.justDetonated) {
+        // Impact burst FX at the marked spot.
+        this.renderer.addScreenShake(0.15);
+        for (let i = 0; i < 14; i++) {
+          const angle = (Math.PI * 2 * i) / 14;
+          const speed = 120 + Math.random() * 160;
+          this.particles.push(this.createParticle({
+            x: zone.x,
+            y: zone.y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            color: i % 2 === 0 ? '#ff5555' : '#ffcc44',
+            size: 4 + Math.random() * 5,
+            lifetime: 350 + Math.random() * 300,
+            gravity: 120
+          }));
+        }
+      }
+      const dmg = zone.damageToPlayer(this.player.x, this.player.y, this.player.radius);
+      if (dmg > 0) {
+        const damaged = this.player.takeDamage(dmg);
+        if (damaged) {
+          this.applyThorns(dmg);
+          this.renderer.addScreenShake(0.35);
+          this.renderer.addHitFlash(0.5);
+        }
+      }
+    }
+  }
+
+  /** Queue a telegraphed AoE attack (used by bosses / ranged enemies). */
+  spawnAoeZone(zone: AoeZone): void {
+    this.aoeZones.push(zone);
   }
 
   private detonateBomb(bomb: Bomb): void {
@@ -1525,6 +1607,17 @@ export class Game {
       }
     }
 
+    // Segmented worm: when a segment dies, the chain SPLITS. Every body segment
+    // that was following the dead one (directly or transitively) is severed; the
+    // one immediately behind the break is promoted to a new independent head so
+    // the two halves crawl off on their own. Killing the head splits at the neck.
+    if (enemy.type === 'wormhead' || enemy.type === 'wormbody') {
+      this.splitWorm(enemy);
+    }
+
+    // Egg sac: if it was destroyed BEFORE hatching, the threat is neutralised — no
+    // spawn. (The dangerous hatch is handled separately when its timer elapses.)
+
     // Health orb drop (18% base, raised by luck)
     if (Math.random() < 0.18 * (1 + this.playerStats.getLuck())) {
       this.healthOrbs.push(new HealthOrb(enemy.x, enemy.y));
@@ -1574,6 +1667,72 @@ export class Game {
         }));
       }
     }
+  }
+
+  /**
+   * Sever a worm chain at the dead segment. Any living segment whose follow-link
+   * points (directly or transitively) at the dead one gets severed; the segment
+   * that was following the dead one is promoted to a new head so the trailing
+   * half crawls off on its own. This is what makes worms "split" on a body hit.
+   */
+  private splitWorm(dead: Enemy): void {
+    // Find the segment that was directly following the one that died.
+    const follower = this.enemies.find(
+      e => !e.dead && e.type === 'wormbody' && e.wormLeader === dead
+    );
+    if (follower) {
+      // Promote it: it becomes an independent head and drags whatever trails it.
+      follower.type = 'wormhead';
+      follower.wormIsHead = true;
+      follower.wormLeader = null;
+      follower.usePathfinding = false;
+      // Small green splatter at the break so the split reads clearly.
+      for (let i = 0; i < 10; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 60 + Math.random() * 80;
+        this.particles.push(this.createParticle({
+          x: follower.x,
+          y: follower.y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          color: Math.random() > 0.5 ? '#e67e22' : '#d35400',
+          size: 4 + Math.random() * 3,
+          lifetime: 500 + Math.random() * 300,
+          fadeOut: true
+        }));
+      }
+    }
+    // If anything else still points at the dead segment as leader (shouldn't
+    // after promotion, but guard against stale links), null it so nothing chases a corpse.
+    for (const e of this.enemies) {
+      if (!e.dead && e.wormLeader === dead && e !== follower) e.wormLeader = null;
+    }
+  }
+
+  /**
+   * Egg sac reached the end of its timer without being killed: replace it with a
+   * tougher enemy (its `eggHatchType`) at the egg's position, with a burst FX.
+   */
+  private hatchEgg(egg: Enemy): void {
+    egg.dead = true;
+    const spawned = new Enemy(egg.x, egg.y, egg.eggHatchType, 1.0);
+    this.enemies.push(spawned);
+    // Hatch burst — yellow shell shards.
+    for (let i = 0; i < 16; i++) {
+      const angle = (Math.PI * 2 * i) / 16;
+      const speed = 90 + Math.random() * 70;
+      this.particles.push(this.createParticle({
+        x: egg.x,
+        y: egg.y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        color: i % 2 === 0 ? '#f1c40f' : '#e67e22',
+        size: 5 + Math.random() * 4,
+        lifetime: 600 + Math.random() * 300,
+        fadeOut: true
+      }));
+    }
+    this.renderer.addScreenShake(0.35);
   }
 
   private enterShop(): void {
@@ -2061,6 +2220,10 @@ export class Game {
   private startNextWave(): void {
     this.waveManager.startWave(this.waveManager.currentWave + 1);
     this.waveModifierTimer = 3; // Show wave modifier for 3 seconds
+    // Always flash the wave's unique intro line (phase 0 text) so every wave
+    // reads as named/themed, even the plain ones with no modifier.
+    this.phaseBannerText = this.waveManager.phaseText;
+    this.phaseBannerTimer = 2.6;
     this.state = 'playing';
 
     // Reset mouse state to prevent accidental clicks
@@ -2318,6 +2481,10 @@ export class Game {
     for (const wave of this.shockwaves) wave.draw(ctx);
     for (const bomb of this.bombs) bomb.draw(ctx);
 
+    // Telegraphed enemy AoE markers: on the ground, under enemies, so the red
+    // danger zones read as floor markings the player can step out of.
+    for (const zone of this.aoeZones) zone.draw(ctx);
+
     for (const enemy of this.enemies) {
       if (this.entityCuller.isVisible(enemy)) {
         enemy.draw(ctx);
@@ -2375,6 +2542,22 @@ export class Game {
         color: modifierColor
       });
 
+      ctx.restore();
+    }
+
+    // Mid-wave sub-phase banner (waves-within-waves) — smaller, lower, and it
+    // does not fight the main wave banner for the same screen real estate.
+    if (this.phaseBannerTimer > 0 && this.phaseBannerText) {
+      const alpha = Math.min(1, this.phaseBannerTimer / 0.8);
+      const ctx = this.renderer.getContext();
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      this.renderer.drawText(this.phaseBannerText, this.canvas.width / 2, this.canvas.height / 2 + 10, {
+        size: 24,
+        bold: true,
+        align: 'center',
+        color: '#ffd24d'
+      });
       ctx.restore();
     }
 

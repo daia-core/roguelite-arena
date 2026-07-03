@@ -8,6 +8,40 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-03 (early morning) — Waves reborn: formations, splitting worms, egg-layers, telegraphed enemy AoE, mini-bosses (live index-CsyCryoz.js)
+
+The biggest combat-feel pass yet. Every wave now plays differently and enemies fight back with
+readable, dodgeable attacks.
+
+**Waves that build.** Each non-boss wave now runs as **phases** — an opening skirmish, a mid beat,
+and a closing surge — with its own on-screen banner ("The horde thickens…") so a wave feels like a
+fight with structure instead of a flat trickle. Enemies spawn in **formations** — lines abreast,
+V-wedges, encircling rings, two-sided pincers, tight clusters — instead of one-at-a-time randomness.
+
+**New enemy types:**
+- **Segmented worms** — a head towing 4–6 body segments that snake toward you. Kill a *middle*
+  segment and the worm **splits**: the trailing half promotes its lead segment to a new head and
+  keeps coming. Two threats from one.
+- **Egg sacs** — stationary eggs that pulse and crack with growing urgency; leave one alive too long
+  and it **hatches a tougher enemy**. Kill it in time and the threat never arrives.
+- **Bombardiers** — hold their distance and **lob mortar AoE**: a red danger circle telegraphs on the
+  ground for ~1s before it detonates, so you can walk out.
+
+**Enemies now use telegraphed AoE.** Every boss got a signature ground-attack pattern (Necrolord ring,
+Flamefiend pool, Voidbeast rift-donut, Stormking scatter-strike, Golem slam), painted in red before it
+lands — fair but threatening. Mini-bosses lob a slam of their own.
+
+**Mini-bosses.** Waves can now roll a **mini-boss** — a stronger, larger, dark-red-auraed version of a
+regular enemy (1.4× HP, 1.25× damage, ~1.6× size, 3× rewards) with its own telegraphed slam.
+
+Regression-verified with a new headless harness (`qa-new-enemies.mjs`): worm split promotes correctly,
+eggs hatch on timer / don't hatch if killed early, bombardier + mini-boss both spawn detonating AoE
+zones, and no entity is ever dead-but-still-in-array across 120 frames. All existing regressions
+(stacking weapons, zoom/XP orbs) still pass; mobile playthrough holds **183 FPS under a 22-enemy swarm**,
+console clean. Commit `SHASHA` → live and verified.
+
+---
+
 ## 2026-07-03 (early morning) — Uniqueness pass: no two items share a mechanic (live index-DQFaxL90.js)
 
 A data-driven audit of all 188 items found **7 pairs that were mechanically identical** (same effect,

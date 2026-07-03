@@ -5,7 +5,7 @@ import { SpriteSheet } from './sprites';
 import { tintSilhouette, drawDithered } from './pixel/sprite';
 import { PathfindingSystem, type PathNode } from './PathfindingSystem';
 
-export type EnemyType = 'slime' | 'goblin' | 'skeleton' | 'imp' | 'orc' | 'wraith' | 'necromancer' | 'troll' | 'banshee' | 'demon' | 'bat' | 'wizard' | 'mimic' | 'spider' | 'golem' | 'ghost' | 'mushroom' | 'gargoyle' | 'blob' | 'necroegg' | 'cyclops' | 'phantom' | 'druid' | 'construct' | 'swarm' | 'dasher' | 'evader' | 'orbiter' | 'spiraler' | 'spinner' | 'shielder' | 'exploder' | 'healer' | 'summoner' | 'phaser' | 'boss_necrolord' | 'boss_flamefiend' | 'boss_voidbeast' | 'boss_stormking' | 'boss_ancientgolem';
+export type EnemyType = 'slime' | 'goblin' | 'skeleton' | 'imp' | 'orc' | 'wraith' | 'necromancer' | 'troll' | 'banshee' | 'demon' | 'bat' | 'wizard' | 'mimic' | 'spider' | 'golem' | 'ghost' | 'mushroom' | 'gargoyle' | 'blob' | 'necroegg' | 'cyclops' | 'phantom' | 'druid' | 'construct' | 'swarm' | 'dasher' | 'evader' | 'orbiter' | 'spiraler' | 'spinner' | 'shielder' | 'exploder' | 'healer' | 'summoner' | 'phaser' | 'wormhead' | 'wormbody' | 'eggsac' | 'bombardier' | 'boss_necrolord' | 'boss_flamefiend' | 'boss_voidbeast' | 'boss_stormking' | 'boss_ancientgolem';
 
 export interface EnemyTypeData {
   health: number;
@@ -20,6 +20,36 @@ export interface EnemyTypeData {
   firePattern?: 'single' | 'ring' | 'homing' | 'spiral' | 'burst';
   spriteName: string;
   isBoss?: boolean; // Mark as boss enemy
+}
+
+// A telegraphed AoE the enemy wants Game to spawn this frame (red ground marker
+// that detonates after `telegraph`s). Game turns this into an AoeZone at the
+// given world position; enemies never touch the zone list directly.
+export interface AoeAttackRequest {
+  x: number;
+  y: number;
+  radius: number;
+  damage: number;
+  telegraph: number;
+  shape?: 'circle' | 'ring';
+  color?: string;
+}
+
+// The per-frame result of Enemy.update(): a bundle of "the game should do X" flags
+// so all world-mutating side effects stay in Game, not the enemy.
+export interface EnemyUpdateResult {
+  shouldShoot: boolean;
+  shouldTeleport?: boolean;
+  shouldSummon?: boolean;
+  shouldScream?: boolean;
+  shouldStomp?: boolean;
+  splitInto?: Enemy[];
+  poisonTrail?: { x: number; y: number };
+  sporeCloud?: { x: number; y: number };
+  shouldHeal?: boolean;
+  shouldSpawnMinion?: boolean;
+  /** Telegraphed AoE(s) to spawn this frame. */
+  aoeAttacks?: AoeAttackRequest[];
 }
 
 // Global multiplier on every enemy's base move speed. Early waves felt sluggish
@@ -399,6 +429,54 @@ export const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
     spriteName: 'phaser'
   },
 
+  // NEW: Worm head — leads a trailing chain of body segments. Killing a body
+  // segment SPLITS the worm: the tail behind the break becomes a new worm.
+  wormhead: {
+    health: 130,
+    speed: 95,
+    damage: 12,
+    radius: 15,
+    color: '#e67e22',
+    xpValue: 14,
+    goldValue: 4,
+    spriteName: '' // custom segmented draw (no sprite)
+  },
+  // Worm body segment — follows the segment ahead of it; damageable.
+  wormbody: {
+    health: 70,
+    speed: 95,
+    damage: 10,
+    radius: 13,
+    color: '#d35400',
+    xpValue: 6,
+    goldValue: 1,
+    spriteName: ''
+  },
+  // NEW: Egg sac — stationary, low HP. If NOT killed within its hatch timer it
+  // hatches into a much nastier enemy. Kill it fast or pay the price.
+  eggsac: {
+    health: 55,
+    speed: 0,
+    damage: 6,
+    radius: 16,
+    color: '#f1c40f',
+    xpValue: 10,
+    goldValue: 3,
+    spriteName: ''
+  },
+  // NEW: Bombardier — keeps its distance and lobs telegraphed AoE mortars
+  // (red ground markers) instead of straight shots. Forces the player to move.
+  bombardier: {
+    health: 95,
+    speed: 55,
+    damage: 14,
+    radius: 14,
+    color: '#c0392b',
+    xpValue: 20,
+    goldValue: 6,
+    spriteName: ''
+  },
+
   // ==================== BOSS ENEMIES ====================
   // Bosses appear every 10 waves and have 3-phase mechanics
 
@@ -643,9 +721,39 @@ export class Enemy {
   phaserInvincibleTimer: number = 0;
   phaserPhaseOnHitChance: number = 0.5; // 50% chance to phase on hit
 
+  // NEW: Worm — segment chain. `wormLeader` is the segment ahead in the chain
+  // (null for the head). Segments trail their leader at `wormFollowGap` px.
+  // `wormIsHead` heads chase the player; bodies just follow. Managed by Game so
+  // the split logic (kill a body -> tail becomes a new worm) stays centralised.
+  wormLeader: Enemy | null = null;
+  wormIsHead: boolean = false;
+  wormFollowGap: number = 26;
+  /** Small render offset so the segmented body wriggles as it moves. */
+  wormWriggle: number = Math.random() * Math.PI * 2;
+
+  // NEW: Egg sac — hatches into a tougher enemy if not killed in time.
+  eggHatchTimer: number = 6;
+  /** What this egg hatches into if it survives. */
+  eggHatchType: EnemyType = 'orc';
+  /** Set true by update() the frame it hatches; Game reads it to swap the enemy. */
+  eggShouldHatch: boolean = false;
+
+  // NEW: Bombardier — lobs telegraphed AoE mortars on a cooldown.
+  bombardierCooldown: number = 2.5;
+
   // BOSS: Multi-phase system (behavior changes at 66% and 33% HP)
   bossPhase: number = 1; // 1, 2, or 3
   bossSpecialAttackCooldown: number = 0;
+  /** Cooldown for a boss's telegraphed AoE ground attack. */
+  bossAoeCooldown: number = 3;
+  /** Rotating index for multi-part telegraphed patterns (e.g. cross slams). */
+  bossAoePhase: number = 0;
+
+  // MINIBOSS: a scaled, styled elite version of a regular enemy (set by
+  // WaveManager). It gets a menacing tint, a larger body, and its own
+  // telegraphed AoE slam so it fights like a mini-boss, not just a big grunt.
+  isMiniboss: boolean = false;
+  minibossAoeCooldown: number = 3.5;
 
   constructor(x: number, y: number, type: EnemyType, waveMultiplier: number = 1, canSplit: boolean = true) {
     this.id = Enemy.nextId++;
@@ -675,18 +783,7 @@ export class Enemy {
     this.usePathfinding = smartEnemies.includes(type);
   }
 
-  update(dt: number, playerX: number, playerY: number): {
-    shouldShoot: boolean;
-    shouldTeleport?: boolean;
-    shouldSummon?: boolean;
-    shouldScream?: boolean;
-    shouldStomp?: boolean;
-    splitInto?: Enemy[];
-    poisonTrail?: { x: number; y: number };
-    sporeCloud?: { x: number; y: number };
-    shouldHeal?: boolean;
-    shouldSpawnMinion?: boolean;
-  } {
+  update(dt: number, playerX: number, playerY: number): EnemyUpdateResult {
     // GAME FEEL: Update timers
     this.hitstunTimer = Math.max(0, this.hitstunTimer - dt);
     this.hitFlashTimer = Math.max(0, this.hitFlashTimer - dt);
@@ -731,6 +828,7 @@ export class Enemy {
     let sporeCloud: { x: number; y: number } | undefined;
     let shouldHeal = false;
     let shouldSpawnMinion = false;
+    let aoeAttacks: AoeAttackRequest[] | undefined;
 
     // Movement behavior based on type
     if (dist > 0) {
@@ -1075,6 +1173,75 @@ export class Enemy {
         // Phasing behavior handled in takeDamage method
       }
 
+      // NEW AI: Worm body — follow the segment ahead in the chain instead of the
+      // player. Trails at a fixed gap so the chain stays connected and wriggly.
+      if (this.type === 'wormbody') {
+        this.wormWriggle += dt * 8;
+        const leader = this.wormLeader;
+        if (leader && !leader.dead) {
+          const ldx = leader.x - this.x;
+          const ldy = leader.y - this.y;
+          const ld = Math.sqrt(ldx * ldx + ldy * ldy);
+          if (ld > this.wormFollowGap) {
+            // Speed up if lagging so the chain doesn't stretch apart.
+            const catchUp = Math.min(2.2, ld / this.wormFollowGap);
+            this.x += (ldx / ld) * moveSpeed * catchUp * dt;
+            this.y += (ldy / ld) * moveSpeed * catchUp * dt;
+          }
+        } else {
+          // No leader (it died and split logic hasn't promoted us yet): crawl
+          // toward the player so a lone segment still poses a threat.
+          this.x += nx * moveSpeed * 0.8 * dt;
+          this.y += ny * moveSpeed * 0.8 * dt;
+        }
+        shouldMove = false;
+      }
+      if (this.type === 'wormhead') {
+        // Store the facing angle so the drawn eyes point toward the player.
+        this.wormWriggle = Math.atan2(dy, dx);
+        // Head uses default chase (shouldMove stays true).
+      }
+
+      // NEW AI: Egg sac — stationary, ticks toward hatching. Game reads
+      // eggShouldHatch to replace it with a tougher enemy.
+      if (this.type === 'eggsac') {
+        shouldMove = false;
+        this.eggHatchTimer -= dt;
+        if (this.eggHatchTimer <= 0 && !this.eggShouldHatch) {
+          this.eggShouldHatch = true;
+        }
+      }
+
+      // NEW AI: Bombardier — hold at range and lob telegraphed AoE mortars.
+      if (this.type === 'bombardier') {
+        if (dist < 220 && !this.enraged) {
+          // Too close: back away.
+          this.x -= nx * moveSpeed * dt;
+          this.y -= ny * moveSpeed * dt;
+          shouldMove = false;
+        } else if (dist > 420) {
+          shouldMove = true; // close the gap
+        } else {
+          shouldMove = false; // hold position and bombard
+        }
+        this.bombardierCooldown -= dt;
+        if (this.bombardierCooldown <= 0 && dist < 520) {
+          // Lob a mortar onto the player's position with a little scatter, so
+          // standing still is punished but a moving player can slip the marker.
+          const scatter = 45;
+          aoeAttacks = aoeAttacks ?? [];
+          aoeAttacks.push({
+            x: playerX + (Math.random() - 0.5) * scatter,
+            y: playerY + (Math.random() - 0.5) * scatter,
+            radius: 70,
+            damage: this.typeData.damage * 1.6,
+            telegraph: 1.1,
+            color: '#ff5a3c'
+          });
+          this.bombardierCooldown = 2.6 + Math.random() * 0.8;
+        }
+      }
+
       // ==================== BOSS AI ====================
       // Bosses have 3-phase mechanics (behavior changes at 66% and 33% HP)
       if (this.typeData.isBoss) {
@@ -1174,6 +1341,38 @@ export class Enemy {
               this.bossSpecialAttackCooldown = 3.0;
             }
           }
+        }
+
+        // ---- Telegraphed AoE ground attacks (fair, dodgeable, boss-signature) ----
+        // Every boss lobs a red-marked zone on its own cadence; the pattern is the
+        // boss's identity and it grows more dangerous each phase. The player always
+        // gets a warning window to step out.
+        this.bossAoeCooldown -= dt;
+        if (this.bossAoeCooldown <= 0) {
+          const dmg = this.typeData.damage * 2.2;
+          const tele = this.bossPhase >= 3 ? 0.85 : this.bossPhase === 2 ? 1.05 : 1.3;
+          aoeAttacks = this.buildBossAoe(playerX, playerY, dmg, tele);
+          // Cadence tightens as HP drops.
+          this.bossAoeCooldown = (this.bossPhase >= 3 ? 2.6 : this.bossPhase === 2 ? 3.4 : 4.2)
+            + Math.random() * 0.8;
+        }
+      }
+
+      // Miniboss telegraphed slam: a fair, dodgeable AoE on the player's spot so
+      // an elite grunt has a signature threat beyond raw stats.
+      if (this.isMiniboss && !this.typeData.isBoss) {
+        this.minibossAoeCooldown -= dt;
+        if (this.minibossAoeCooldown <= 0 && dist < 560) {
+          aoeAttacks = aoeAttacks ?? [];
+          aoeAttacks.push({
+            x: playerX,
+            y: playerY,
+            radius: 95,
+            damage: this.typeData.damage * 1.8,
+            telegraph: 1.15,
+            color: '#ff8c1a'
+          });
+          this.minibossAoeCooldown = 3.5 + Math.random() * 1.2;
         }
       }
 
@@ -1293,7 +1492,7 @@ export class Enemy {
       }
     }
 
-    return { shouldShoot, shouldTeleport, shouldSummon, shouldScream, shouldStomp, splitInto, poisonTrail, sporeCloud, shouldHeal, shouldSpawnMinion };
+    return { shouldShoot, shouldTeleport, shouldSummon, shouldScream, shouldStomp, splitInto, poisonTrail, sporeCloud, shouldHeal, shouldSpawnMinion, aoeAttacks };
   }
 
   takeDamage(amount: number, attackAngle?: number): Enemy[] | null {
@@ -1442,11 +1641,42 @@ export class Enemy {
   draw(ctx: CanvasRenderingContext2D): void {
     ctx.save();
 
+    // Custom-drawn types (no sprite): worms as segmented bodies, egg sacs as a
+    // pulsing shell with a countdown crack. Drawn here so they read distinctly.
+    if (this.type === 'wormhead' || this.type === 'wormbody') {
+      this.drawWormSegment(ctx);
+      this.drawHealthBar(ctx);
+      ctx.restore();
+      return;
+    }
+    if (this.type === 'eggsac') {
+      this.drawEggSac(ctx);
+      this.drawHealthBar(ctx);
+      ctx.restore();
+      return;
+    }
+
+    // Miniboss aura: a pulsing dark-red glow ring behind the (enlarged) sprite so
+    // an elite reads as a distinct threat at a glance.
+    if (this.isMiniboss) {
+      const pulse = 0.5 + 0.3 * Math.sin(performance.now() / 180);
+      ctx.globalAlpha = 0.35 * pulse;
+      ctx.fillStyle = '#b30000';
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.typeData.radius * 1.15, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
     const sprite = SpriteSheet.get(this.typeData.spriteName);
 
     if (sprite) {
-      const dx = this.x - sprite.width / 2;
-      const dy = this.y - sprite.height / 2;
+      // Minibosses draw their sprite enlarged to match their bigger radius.
+      const scale = this.isMiniboss ? 1.55 : 1;
+      const sw = sprite.width * scale;
+      const sh = sprite.height * scale;
+      const dx = this.x - sw / 2;
+      const dy = this.y - sh / 2;
 
       if (this.invulnerable) {
         // Wraith phasing: mostly-there dithered transparency
@@ -1457,9 +1687,9 @@ export class Enemy {
         drawDithered(ctx, sprite, dx, dy, 0.2);
       } else if (this.hitFlashTimer > 0.016) {
         // Pixel-perfect white silhouette flash (not a white box)
-        ctx.drawImage(tintSilhouette(sprite, '#ffffff'), dx, dy);
+        ctx.drawImage(tintSilhouette(sprite, '#ffffff'), dx, dy, sw, sh);
       } else {
-        ctx.drawImage(sprite, dx, dy);
+        ctx.drawImage(sprite, dx, dy, sw, sh);
       }
     } else {
       // Fallback for types without a sprite yet: flat disc, no gradient
@@ -1472,27 +1702,104 @@ export class Enemy {
       ctx.stroke();
     }
 
-    // Health bar only once damaged — full-health bars are visual clutter
-    if (this.health < this.maxHealth) {
-      const isMobile = ctx.canvas.width < ctx.canvas.height;
-      const barWidth = this.typeData.radius * 2.6;
-      const barHeight = isMobile ? 6 : 5;
-      const barY = this.y - this.typeData.radius - 14;
-
-      const healthPercent = this.health / this.maxHealth;
-      const healthColor =
-        healthPercent > 0.6 ? '#4ade80' : healthPercent > 0.3 ? '#fbbf24' : '#ef4444';
-
-      // Crisp pixel bar: black frame, dark background, solid fill
-      ctx.fillStyle = '#000000';
-      ctx.fillRect(this.x - barWidth / 2 - 1, barY - 1, barWidth + 2, barHeight + 2);
-      ctx.fillStyle = '#3c0000';
-      ctx.fillRect(this.x - barWidth / 2, barY, barWidth, barHeight);
-      ctx.fillStyle = healthColor;
-      ctx.fillRect(this.x - barWidth / 2, barY, barWidth * healthPercent, barHeight);
-    }
+    this.drawHealthBar(ctx);
 
     ctx.restore();
+  }
+
+  /** Health bar (only once damaged — full-health bars are visual clutter). */
+  private drawHealthBar(ctx: CanvasRenderingContext2D): void {
+    if (this.health >= this.maxHealth) return;
+    const isMobile = ctx.canvas.width < ctx.canvas.height;
+    const barWidth = this.typeData.radius * 2.6;
+    const barHeight = isMobile ? 6 : 5;
+    const barY = this.y - this.typeData.radius - 14;
+
+    const healthPercent = this.health / this.maxHealth;
+    const healthColor =
+      healthPercent > 0.6 ? '#4ade80' : healthPercent > 0.3 ? '#fbbf24' : '#ef4444';
+
+    // Crisp pixel bar: black frame, dark background, solid fill
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(this.x - barWidth / 2 - 1, barY - 1, barWidth + 2, barHeight + 2);
+    ctx.fillStyle = '#3c0000';
+    ctx.fillRect(this.x - barWidth / 2, barY, barWidth, barHeight);
+    ctx.fillStyle = healthColor;
+    ctx.fillRect(this.x - barWidth / 2, barY, barWidth * healthPercent, barHeight);
+  }
+
+  /** A single worm segment: a rounded body disc with a darker rim; the head also
+   *  gets eyes + mandibles so the leading segment reads as the "front". */
+  private drawWormSegment(ctx: CanvasRenderingContext2D): void {
+    const r = this.typeData.radius;
+    const isHead = this.type === 'wormhead';
+    // Body: two-tone disc for a segmented, glossy look.
+    ctx.fillStyle = isHead ? '#e67e22' : '#d35400';
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
+    ctx.fill();
+    // Inner highlight ring.
+    ctx.fillStyle = isHead ? '#f39c12' : '#e67e22';
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, r * 0.6, 0, Math.PI * 2);
+    ctx.fill();
+    // Dark rim.
+    ctx.strokeStyle = '#7a3803';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
+    ctx.stroke();
+    if (this.hitFlashTimer > 0.016) {
+      ctx.globalAlpha = 0.6;
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+    if (isHead) {
+      // Face the direction of travel (toward the player-facing angle stored on move).
+      const a = this.wormWriggle; // reused as a facing hint; falls back to any value
+      const ex = Math.cos(a) * r * 0.4;
+      const ey = Math.sin(a) * r * 0.4;
+      ctx.fillStyle = '#2c1200';
+      ctx.beginPath();
+      ctx.arc(this.x + ex - 3, this.y + ey - 3, 2.5, 0, Math.PI * 2);
+      ctx.arc(this.x + ex + 3, this.y + ey + 3, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  /** An egg sac: a pulsing pale-yellow ovoid with veins; nearer to hatching it
+   *  reddens and cracks widen, telegraphing the imminent spawn. */
+  private drawEggSac(ctx: CanvasRenderingContext2D): void {
+    const r = this.typeData.radius;
+    // Urgency 0..1 as the timer runs down (starts ~6s).
+    const urgency = Math.max(0, Math.min(1, 1 - this.eggHatchTimer / 6));
+    const pulse = 1 + 0.08 * Math.sin(performance.now() / (140 - urgency * 90));
+    // Shell — pales yellow → angry orange as it nears hatching.
+    const shell = urgency < 0.5 ? '#f1c40f' : urgency < 0.8 ? '#e67e22' : '#e74c3c';
+    ctx.fillStyle = shell;
+    ctx.beginPath();
+    ctx.ellipse(this.x, this.y, r * 0.85 * pulse, r * pulse, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Veins / cracks — more and brighter as it's about to hatch.
+    ctx.strokeStyle = urgency > 0.6 ? '#c0392b' : '#b7950b';
+    ctx.lineWidth = 1.5 + urgency * 2;
+    const cracks = 3 + Math.round(urgency * 3);
+    for (let i = 0; i < cracks; i++) {
+      const a = (Math.PI * 2 * i) / cracks + i;
+      ctx.beginPath();
+      ctx.moveTo(this.x, this.y);
+      ctx.lineTo(this.x + Math.cos(a) * r * 0.9, this.y + Math.sin(a) * r * 0.95);
+      ctx.stroke();
+    }
+    // Rim.
+    ctx.strokeStyle = '#7a5c00';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(this.x, this.y, r * 0.85 * pulse, r * pulse, 0, 0, Math.PI * 2);
+    ctx.stroke();
   }
 
   getAngleToPlayer(playerX: number, playerY: number): number {
@@ -1514,6 +1821,79 @@ export class Enemy {
     minion.maxHealth = minion.typeData.health;
     minion.health = minion.maxHealth;
     return minion;
+  }
+
+  // Build this boss's signature telegraphed AoE pattern. Each boss has a distinct
+  // shape so the fight reads differently; phase scales size/count via `bossPhase`.
+  private buildBossAoe(px: number, py: number, dmg: number, tele: number): AoeAttackRequest[] {
+    const p = this.bossPhase;
+    switch (this.type) {
+      case 'boss_necrolord': {
+        // Grave eruptions in a ring AROUND the player — safe spot is the centre.
+        const zones: AoeAttackRequest[] = [];
+        const count = 5 + p; // 6..8
+        const ringR = 150;
+        this.bossAoePhase += 0.5;
+        for (let i = 0; i < count; i++) {
+          const a = this.bossAoePhase + (Math.PI * 2 * i) / count;
+          zones.push({
+            x: px + Math.cos(a) * ringR,
+            y: py + Math.sin(a) * ringR,
+            radius: 60,
+            damage: dmg,
+            telegraph: tele,
+            color: '#9b59ff'
+          });
+        }
+        return zones;
+      }
+      case 'boss_flamefiend': {
+        // A large fire pool right on the player + (phase 3) two flanking pools.
+        const zones: AoeAttackRequest[] = [
+          { x: px, y: py, radius: 110 + p * 15, damage: dmg, telegraph: tele, color: '#ff6b2b' }
+        ];
+        if (p >= 3) {
+          const off = 170;
+          zones.push({ x: px - off, y: py, radius: 90, damage: dmg, telegraph: tele * 1.1, color: '#ff6b2b' });
+          zones.push({ x: px + off, y: py, radius: 90, damage: dmg, telegraph: tele * 1.1, color: '#ff6b2b' });
+        }
+        return zones;
+      }
+      case 'boss_voidbeast': {
+        // A void RING (donut) centred on the player — must move to mid-band, not
+        // just away — plus a rift at the beast's own position.
+        return [
+          { x: px, y: py, radius: 200 + p * 10, damage: dmg, telegraph: tele, shape: 'ring', color: '#b98bff' },
+          { x: this.x, y: this.y, radius: 90, damage: dmg * 0.8, telegraph: tele, color: '#7c4dff' }
+        ];
+      }
+      case 'boss_stormking': {
+        // Scattered lightning strikes: several small fast-telegraph bolts, more per phase.
+        const zones: AoeAttackRequest[] = [];
+        const strikes = 3 + p; // 4..6
+        for (let i = 0; i < strikes; i++) {
+          const a = Math.random() * Math.PI * 2;
+          const d = Math.random() * 220;
+          zones.push({
+            x: px + Math.cos(a) * d,
+            y: py + Math.sin(a) * d,
+            radius: 55,
+            damage: dmg,
+            telegraph: tele * 0.7, // lightning is fast — tighter window
+            color: '#4dd2ff'
+          });
+        }
+        return zones;
+      }
+      case 'boss_ancientgolem': {
+        // One massive slam zone centred on the golem — huge but slow to land.
+        return [
+          { x: this.x, y: this.y, radius: 220 + p * 20, damage: dmg * 1.3, telegraph: tele * 1.2, color: '#c8a24d' }
+        ];
+      }
+      default:
+        return [{ x: px, y: py, radius: 100, damage: dmg, telegraph: tele }];
+    }
   }
 
   /**
