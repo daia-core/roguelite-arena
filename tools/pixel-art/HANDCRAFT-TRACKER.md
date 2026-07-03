@@ -39,6 +39,20 @@ read as a purple CAT (ear-bumps). Redrawn as four DISTINCT silhouettes so they n
 - **banshee** — long flowing hair framing a wide-open screaming mouth (the AoE-scream tell) with
   two cold sound-ripple arcs flanking the head that push outward + brighten on the scream frame.
 Verified on a grass contact sheet before shipping (four clearly-different creatures).
+**Batch-5** (`handcraft/batch5-bosses.mjs`) — ALL 5 BOSSES (24×24, own tier). Were still on the
+auto-enhancer and missed the boss bar (regalia / a silhouette distinct from every regular enemy).
+Redrawn from scratch, grass-verified as five clearly-different boss silhouettes:
+- **boss_necrolord** — bone LICH KING: gold spiked crown + red gem, skull face with glowing green
+  soul-eyes, broad navy robe with a green ribcage-clasp, gold soul-staff (green orb) at his side.
+- **boss_flamefiend** — hulking FIRE DEMON: two bold up-curving horns (asymmetric, right bigger),
+  flame mane, snarling fanged face, molten cracks glowing amber across a red hulk, blazing fists.
+- **boss_voidbeast** — floating ELDRITCH EYE-HORROR: one huge magenta central eye + lesser eyes,
+  a jagged void-maw, writhing purple tentacles, cosmic sparkle accents (blink/pulse idle).
+- **boss_stormking** — armored STORM SOVEREIGN: gold spiked crown, glowing eyes, plated blue armor
+  with a lightning emblem, a cape at one shoulder, a bright thunder-bolt scepter raised at his side.
+- **boss_ancientgolem** — colossal rune STONE TITAN: blocky shoulders + heavy fists, cracked body
+  with a glowing amber core + rune eyes, moss-green accents for "ancient" (core-breathe idle).
+Idle frames are a living-glow pulse (recolor of glow indices, + small bob on voidbeast), not a redraw.
 
 ## Still auto-enhanced — future batches, worst-first
 
@@ -56,8 +70,12 @@ cases are now fixed; what remains all reads decently — this is now polish, so 
 - demon, wizard, necromancer, healer, shielder, summoner, mimic, troll, orc
   (ghost/phantom/banshee/wraith now hand-crafted → batch-4 above)
 
-**Bosses (24×24, own tier — handle as a dedicated batch, not mixed with trash):**
-boss_ancientgolem, boss_flamefiend, boss_necrolord, boss_stormking, boss_voidbeast
+**Bosses (24×24) — ✅ ALL DONE (batch-5 above).** Nothing left in this tier.
+
+**Roster status:** every enemy that read poorly is now hand-crafted. What remains auto-enhanced
+(bat, spider, evader, exploder, mushroom, orbiter, spiraler, necroegg, imp, demon, wizard,
+necromancer, healer, shielder, summoner, mimic) all reads decently — redraw only on a clear win,
+never for its own sake.
 
 ## Method reminder
 
