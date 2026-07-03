@@ -1,6 +1,7 @@
 // Canvas rendering with effects
 
 import { UISprites } from './UISprites';
+import { getItemIcon } from './items/itemIcons';
 import { drawPanel, WOOD_THEME, STONE_THEME, type PanelTheme } from './pixel/panel';
 import { OffscreenCanvasCache } from './OffscreenCanvasCache';
 import { StardewBackground } from './StardewBackground';
@@ -386,6 +387,32 @@ export class Renderer {
     );
 
     this.ctx.restore();
+  }
+
+  /**
+   * Draw an item's pixel-art icon (replaces emoji `drawText(item.icon)`).
+   * `box` is the target square size in px. `align` controls horizontal anchoring
+   * at `x`: 'center' (default) or 'left'. The icon top sits at `topY`.
+   * Preserves the sprite's aspect ratio, centred within the box.
+   */
+  drawItemIcon(
+    emoji: string,
+    x: number,
+    topY: number,
+    box: number,
+    align: 'center' | 'left' = 'center'
+  ): void {
+    const sprite = getItemIcon(emoji);
+    const ar = sprite.width / sprite.height;
+    let w = box, h = box;
+    if (ar >= 1) h = box / ar; else w = box * ar;
+    const left = align === 'center' ? x - w / 2 : x;
+    const top = topY + (box - h) / 2;
+    const ctx = this.gameCtx || this.ctx;
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(sprite, Math.round(left), Math.round(top), Math.round(w), Math.round(h));
+    ctx.restore();
   }
 
   drawHealthBar(x: number, y: number, width: number, height: number, current: number, max: number): void {

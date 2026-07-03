@@ -6,7 +6,7 @@ import { Projectile } from './Projectile';
 import { MeleeAttack } from './MeleeAttack';
 import { Particle, DamageNumber } from './Particle';
 import { WaveManager } from './WaveManager';
-import { PlayerStats, ItemDatabase, getItemKinds, type Item, type ItemTag } from './ItemSystem';
+import { PlayerStats, ItemDatabase, getItemKinds, type Item } from './ItemSystem';
 import { SaveManager } from './SaveManager';
 import { Input } from './Input';
 import { Renderer } from './Renderer';
@@ -1915,7 +1915,8 @@ export class Game {
       shopSlotCount - lockedItems.length,
       currentWave,
       this.playerStats.items, // Pass owned items for weighted generation
-      this.playerStats.getLuck() // Luck tilts the shop toward higher rarities
+      this.playerStats.getLuck(), // Luck tilts the shop toward higher rarities
+      this.playerStats // Hide items whose only effect is an already-maxed capped stat
     );
     this.shopItems = [];
 
@@ -2485,7 +2486,8 @@ export class Game {
       unlockedSlotCount,
       this.waveManager.currentWave,
       this.playerStats.items,
-      this.playerStats.getLuck()
+      this.playerStats.getLuck(),
+      this.playerStats // Hide items whose only effect is an already-maxed capped stat
     );
 
     let newItemIndex = 0;
@@ -2954,7 +2956,7 @@ export class Game {
         break;
       }
       case 'item': {
-        const items = ItemDatabase.getWeightedShopItems(1, this.waveManager.currentWave, this.playerStats.items, this.playerStats.getLuck());
+        const items = ItemDatabase.getWeightedShopItems(1, this.waveManager.currentWave, this.playerStats.items, this.playerStats.getLuck(), this.playerStats);
         if (items[0]) {
           this.playerStats.addItem(items[0]);
           this.refreshMaxHealth();
@@ -3825,11 +3827,8 @@ export class Game {
         const x = gridStartX + col * (iconSize + s(4));
         const y = gridStartY + row * (iconSize + s(4));
 
-        // Item icon
-        this.renderer.drawText(item.icon, x + iconSize / 2, y + s(2), {
-          size: s(16),
-          align: 'center'
-        });
+        // Item icon (pixel-art sprite)
+        this.renderer.drawItemIcon(item.icon, x + iconSize / 2, y + s(2), s(18));
 
         // Count badge (only show if count > 1)
         if (count > 1) {
@@ -3918,10 +3917,7 @@ export class Game {
       ctx.restore();
 
       // Lock icon
-      this.renderer.drawText(isLocked ? '🔒' : '🔓', lockButtonX + lockButtonSize / 2, lockButtonY + Math.round(lockButtonSize * 0.15), {
-        size: Math.round(lockButtonSize * 0.6),
-        align: 'center'
-      });
+      this.renderer.drawItemIcon(isLocked ? '🔒' : '🔓', lockButtonX + lockButtonSize / 2, lockButtonY + Math.round(lockButtonSize * 0.12), Math.round(lockButtonSize * 0.76), 'center');
 
       // Recycle button in bottom-left corner (if player owns this item)
       const ownsItem = this.playerStats.items.some(owned => owned.id === item.id);
@@ -3940,10 +3936,7 @@ export class Game {
         ctx.restore();
 
         // Recycle icon
-        this.renderer.drawText('♻️', recycleButtonX + recycleButtonSize / 2, recycleButtonY + Math.round(recycleButtonSize * 0.18), {
-          size: Math.round(recycleButtonSize * 0.55),
-          align: 'center'
-        });
+        this.renderer.drawItemIcon('♻️', recycleButtonX + recycleButtonSize / 2, recycleButtonY + Math.round(recycleButtonSize * 0.12), Math.round(recycleButtonSize * 0.76), 'center');
       }
 
       // Synergy indicator — NAME the combo so it's legible, not a vague "SYNERGY".
@@ -3953,27 +3946,19 @@ export class Game {
         let indicatorColor = '#00ff00';
         if (completesDuo && duoInfo) {
           // You own the partner — buying this fires the combo now.
-          indicatorText = `⚡ ${duoInfo.name.toUpperCase()}`;
+          indicatorText = duoInfo.name.toUpperCase();
           indicatorColor = '#ffd43b';
         } else if (duoInfo) {
           // Part of a named combo you don't have the partner for yet — teach the pairing.
-          indicatorText = `🔗 + ${duoInfo.partner}`;
+          indicatorText = `+ ${duoInfo.partner}`;
           indicatorColor = '#74c0fc';
         } else if (hasTagMatch) {
-          // Show which tags match
-          const tagIcons: Record<ItemTag, string> = {
-            melee: '⚔️',
-            ranged: '🏹',
-            defensive: '🛡️',
-            economic: '💰',
-            elemental: '🔥',
-            utility: '🔧'
-          };
-          const matchIcons = matchingTags.map(t => tagIcons[t] || '⚡').join('');
-          indicatorText = `${matchIcons} FITS BUILD`;
+          // Show which tags match (as uppercase text, not emoji)
+          const tagLabel = matchingTags.map(t => t.toUpperCase()).join('/');
+          indicatorText = `${tagLabel} FIT`;
           indicatorColor = '#7bd94a';
         } else if (hasSynergy) {
-          indicatorText = '⚡ GOOD FIT';
+          indicatorText = 'GOOD FIT';
           indicatorColor = '#7bd94a';
         }
 
@@ -3987,11 +3972,8 @@ export class Game {
         }
       }
 
-      // Icon with better positioning
-      this.renderer.drawText(item.icon, x + itemWidth / 2, y + iconY, {
-        size: iconSize,
-        align: 'center'
-      });
+      // Icon with better positioning (pixel-art sprite)
+      this.renderer.drawItemIcon(item.icon, x + itemWidth / 2, y + iconY, iconSize);
 
       // Name — pixel font is wide, so sizes are tuned to fit the card width
       this.renderer.drawText(item.name, x + itemWidth / 2, y + nameY, {
@@ -4269,8 +4251,9 @@ export class Game {
       y += lineH;
     } else {
       for (const duo of active) {
-        this.renderer.drawText(`${duo.icon} ${duo.name}`, x0, y, {
-          size: bodySize, align: 'left', color: '#ffe066', maxWidth: contentW
+        this.renderer.drawItemIcon(duo.icon, x0, y - s(1), bodySize + s(2), 'left');
+        this.renderer.drawText(duo.name, x0 + bodySize + s(4), y, {
+          size: bodySize, align: 'left', color: '#ffe066', maxWidth: contentW - bodySize - s(4)
         });
         y += lineH;
         for (const l of wrap(duo.specialEffect || duo.description, bodySize, contentW - s(10))) {
@@ -4294,8 +4277,9 @@ export class Game {
       // Cap the list so it never overflows the screen on tiny devices.
       const maxShown = isMobile ? 4 : 6;
       for (const { duo, owned, needed } of potential.slice(0, maxShown)) {
-        this.renderer.drawText(`${duo.icon} ${duo.name}`, x0, y, {
-          size: bodySize, align: 'left', color: '#74c0fc', maxWidth: contentW
+        this.renderer.drawItemIcon(duo.icon, x0, y - s(1), bodySize + s(2), 'left');
+        this.renderer.drawText(duo.name, x0 + bodySize + s(4), y, {
+          size: bodySize, align: 'left', color: '#74c0fc', maxWidth: contentW - bodySize - s(4)
         });
         y += lineH;
         const pairLine = `have ${owned?.name ?? '?'} + get ${needed?.name ?? '?'}`;
@@ -4400,7 +4384,7 @@ export class Game {
     ctx.save();
     ctx.translate(this.canvas.width / 2, isMobile ? 60 : 80);
     ctx.scale(pulseScale, pulseScale);
-    this.renderer.drawText('💀 GAME OVER', 0, 0, {
+    this.renderer.drawText('GAME OVER', 0, 0, {
       size: isMobile ? 56 : 72,
       bold: true,
       align: 'center',
@@ -4436,28 +4420,28 @@ export class Game {
     const lineSpacing = isMobile ? 45 : 40;
     const statSize = isMobile ? 24 : 22;
 
-    this.renderer.drawText(`🌊 Wave: ${this.gameOverStats.wavesReached}`, this.canvas.width / 2, statsY, {
+    this.renderer.drawText(`Wave: ${this.gameOverStats.wavesReached}`, this.canvas.width / 2, statsY, {
       size: statSize,
       bold: true,
       align: 'center',
       color: '#4a9eff'
     });
 
-    this.renderer.drawText(`⚔️ Kills: ${this.gameOverStats.enemiesKilled}`, this.canvas.width / 2, statsY + lineSpacing, {
+    this.renderer.drawText(`Kills: ${this.gameOverStats.enemiesKilled}`, this.canvas.width / 2, statsY + lineSpacing, {
       size: statSize,
       bold: true,
       align: 'center',
       color: '#ef4444'
     });
 
-    this.renderer.drawText(`💰 Gold: ${this.gameOverStats.goldEarned}`, this.canvas.width / 2, statsY + lineSpacing * 2, {
+    this.renderer.drawText(`Gold: ${this.gameOverStats.goldEarned}`, this.canvas.width / 2, statsY + lineSpacing * 2, {
       size: statSize,
       bold: true,
       align: 'center',
       color: '#ffd700'
     });
 
-    this.renderer.drawText(`🎁 Items: ${this.gameOverStats.itemsCollected}`, this.canvas.width / 2, statsY + lineSpacing * 3, {
+    this.renderer.drawText(`Items: ${this.gameOverStats.itemsCollected}`, this.canvas.width / 2, statsY + lineSpacing * 3, {
       size: statSize,
       bold: true,
       align: 'center',
@@ -4469,7 +4453,7 @@ export class Game {
     ctx.save();
     ctx.shadowBlur = 25;
     ctx.shadowColor = '#9370db';
-    this.renderer.drawText(`✨ Souls Earned: ${this.gameOverStats.soulsEarned} ✨`, this.canvas.width / 2, soulsY, {
+    this.renderer.drawText(`Souls Earned: ${this.gameOverStats.soulsEarned}`, this.canvas.width / 2, soulsY, {
       size: isMobile ? 32 : 36,
       bold: true,
       align: 'center',

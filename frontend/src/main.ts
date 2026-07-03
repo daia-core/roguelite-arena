@@ -3,6 +3,7 @@
 import { Game } from './Game';
 import { SpriteSheet } from './sprites';
 import { UISprites } from './UISprites';
+import { getItemIcon } from './items/itemIcons';
 import { panelCanvas, WOOD_THEME } from './pixel/panel';
 import './style.css';
 
@@ -12,6 +13,8 @@ UISprites.init();
 
 // Dev/QA hook: lets tooling inspect the sprite registry. Not a public API.
 (window as unknown as { __SpriteSheet: typeof SpriteSheet }).__SpriteSheet = SpriteSheet;
+// Dev/QA hook: lets tooling render/inspect item icons. Not a public API.
+(window as unknown as { __getItemIcon: typeof getItemIcon }).__getItemIcon = getItemIcon;
 
 // Pixel-art wood textures for the DOM menu buttons (see .menu-btn in style.css)
 const HOVER_WOOD = { ...WOOD_THEME, face: '#9a6a3e', faceLight: '#b98756', faceDark: '#7a4e2a' };

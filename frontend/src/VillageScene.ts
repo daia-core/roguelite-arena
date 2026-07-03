@@ -683,7 +683,7 @@ export class VillageScene {
     const w = bw * 0.9, h = this.s(16);
     const x = ax - w / 2, y = ay + this.s(6);
     drawPanel(ctx, x, y, w, h, gold ? WOOD_THEME : DARK_WOOD_THEME, 3, def.name.length);
-    this.d.renderer.drawText(`${def.icon} ${def.name}`, ax, y + h / 2 - this.s(4), {
+    this.d.renderer.drawText(def.name, ax, y + h / 2 - this.s(4), {
       size: this.s(this.isMobile ? 6 : 7), align: 'center', color: gold ? '#ffe26a' : '#f4e6c2',
       maxWidth: w - this.s(6),
     });
@@ -744,7 +744,7 @@ export class VillageScene {
     } else {
       const b = BUILDINGS.find(x => x.id === this.nearId)!;
       wx = b.fx * this.worldW; wy = b.fy * this.worldH;
-      label = `⚙ ${b.name}`;
+      label = `▶ ${b.name}`;
     }
     const sx = wx - this.camX;
     const sy = wy - this.camY - this.s(this.nearId === 'shrine' ? 58 : 96);
@@ -817,7 +817,7 @@ export class VillageScene {
 
     drawPanel(ctx, px, py, pw, ph, DARK_WOOD_THEME, 4, 3);
 
-    this.d.renderer.drawText(`${def.icon} ${def.name}`, W / 2, py + this.s(12), {
+    this.d.renderer.drawText(def.name, W / 2, py + this.s(12), {
       size: this.s(mobile ? 11 : 14), align: 'center', color: '#ffe26a', maxWidth: pw - this.s(20),
     });
     this.d.renderer.drawText(`✦ ${this.d.meta.souls} souls`, W / 2, py + this.s(32), {
@@ -841,7 +841,7 @@ export class VillageScene {
       ctx.strokeRect(Math.round(rx) + this.s(3), Math.round(ry) + this.s(3), Math.round(rw) - this.s(6), Math.round(rowH) - this.s(6));
       ctx.restore();
 
-      this.d.renderer.drawText(u.icon, rx + this.s(10), ry + this.s(8), { size: this.s(13) });
+      this.d.renderer.drawItemIcon(u.icon, rx + this.s(10), ry + this.s(8), this.s(14), 'left');
       this.d.renderer.drawText(u.name.toUpperCase(), rx + this.s(30), ry + this.s(9), {
         size: this.s(mobile ? 7 : 8), color: '#f4e6c2', maxWidth: rw * 0.5,
       });
