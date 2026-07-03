@@ -34,7 +34,12 @@ Live: https://roguelite-game-blush.vercel.app
   wave 8 → base replaced by evolved, catalyst kept, banner fired, 0 console errors. Also asserts
   evolved weapons never appear across 3,600 shop draws. `qa-roguelite` + `qa-stat-caps` re-run clean
   (no regression to the shared shop-draw path). `tsc` clean.
-- **Live:** commit `SHA_PLACEHOLDER`, bundle `BUNDLE_PLACEHOLDER` verified serving on production.
+- **Banner auto-fits on mobile.** Mobile-viewport screenshot QA caught the fixed-30px banner
+  overflowing both edges of a 390px portrait ("...PON EVOLVED — Hellfire Barra..."). Added
+  `maxWidth` so the renderer shrinks the text to fit — verified centered and fully on-screen.
+- **Live:** commit `b91d412`, bundle `index-DFPdtlOl.js` verified serving on production
+  (roguelite-game-blush.vercel.app, HTTP 200, no auth wall; live bundle confirmed to contain all
+  four evolved-weapon names + the "WEAPON EVOLVED" banner) via CLI deploy.
 
 ---
 
