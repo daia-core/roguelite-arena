@@ -113,6 +113,8 @@ export class Game {
   itemsPurchasedThisWave: number = 0; // Track for free reroll bonus
   lastInterestGained: number = 0; // Gold earned from banking interest this shop (for display)
   showCombosOverlay: boolean = false; // COMBOS guide overlay (explains synergies/duos)
+  showStatsPopup: boolean = false; // Full stats breakdown popup (tap the shop stats panel)
+  private statsPanelRect: { x: number; y: number; width: number; height: number } = { x: 0, y: 0, width: 0, height: 0 };
 
   // Stats
   kills: number = 0;
@@ -2032,6 +2034,20 @@ export class Game {
       return;
     }
 
+    // Full-stats popup: same own-all-input pattern as the combos overlay.
+    if (this.showStatsPopup) {
+      if (this.input.mouseDown) {
+        this.showStatsPopup = false;
+        this.input.mouseDown = false;
+      }
+      return;
+    }
+    if (pointInRect(mouseX, mouseY, this.statsPanelRect) && this.input.mouseDown) {
+      this.showStatsPopup = true;
+      this.input.mouseDown = false;
+      return;
+    }
+
     for (let i = 0; i < this.shopItems.length; i++) {
       const item = this.shopItems[i];
 
@@ -2809,6 +2825,8 @@ export class Game {
 
     // Stats panel: wood, pixel font, no emoji
     drawPanel(ctx, statPanelX, statPanelY, statPanelWidth, statPanelHeight, DARK_WOOD_THEME, 4, 11);
+    // Remember the panel bounds so updateShop can make it tappable (→ full stats popup).
+    this.statsPanelRect = { x: statPanelX, y: statPanelY, width: statPanelWidth, height: statPanelHeight };
 
     const stats: Array<[string, string, string]> = [
       ['HP', `${Math.floor(this.player.health)}/${this.playerStats.getMaxHealth()}`, '#ff6b6b'],
@@ -2841,6 +2859,17 @@ export class Game {
         this.renderer.drawText(value, statPanelX + statPanelWidth - statPanelPadding - 4, rowY, {
           size: statSize, color, align: 'right'
         });
+      });
+    }
+
+    // "Tap for all stats" affordance — small hint so players know the panel opens a full breakdown.
+    if (isMobile) {
+      this.renderer.drawText('TAP ▸ ALL STATS', statPanelX + statPanelWidth - statPanelPadding - 2, statPanelY + statPanelHeight - s(5), {
+        size: s(5.5), color: '#ffe08a', align: 'right'
+      });
+    } else {
+      this.renderer.drawText('TAP FOR ALL STATS ▸', statPanelX + statPanelWidth / 2, statPanelY + statPanelHeight - s(9), {
+        size: s(7), color: '#ffe08a', align: 'center'
       });
     }
 
@@ -3125,6 +3154,125 @@ export class Game {
 
     // COMBOS guide overlay draws last so it sits on top of the whole shop.
     if (this.showCombosOverlay) this.drawCombosOverlay();
+    // Full-stats popup draws on top of everything (opened by tapping the stats panel).
+    if (this.showStatsPopup) this.drawStatsPopup();
+  }
+
+  // Full-screen breakdown of EVERY stat and bonus (not just the six on the shop
+  // panel). Grouped into Offense / Defense / Utility / Economy / Special, two
+  // columns on desktop, one on mobile. Only rows that differ from the base value
+  // or are actually active are shown, so the list reads as "what makes YOUR build".
+  // Mobile-safe: opened by a tap on the stats panel, dismissed by a tap anywhere.
+  private drawStatsPopup(): void {
+    const ctx = this.renderer.getContext();
+    const zoom = this.canvas.clientWidth ? this.canvas.width / this.canvas.clientWidth : 1;
+    const s = (v: number) => Math.round(v * zoom);
+    const W = this.canvas.width;
+    const H = this.canvas.height;
+    const isMobile = W / zoom < 800;
+    const ps = this.playerStats;
+
+    // Build grouped rows. Each row is [label, value, alwaysShow?]. A row is shown
+    // if alwaysShow OR its value string isn't a "zero/none" default.
+    const pct = (v: number) => `${Math.round(v * 100)}%`;
+    const mult = (v: number) => `${v.toFixed(2)}x`;
+    type Row = [string, string, boolean];
+    const groups: Array<[string, string, Row[]]> = [
+      ['OFFENSE', '#ffa94d', [
+        ['Damage', `${Math.floor(ps.getDamage())}`, true],
+        ['Fire Rate', `${ps.getFireRate().toFixed(2)}/s`, true],
+        ['Multishot', `+${ps.getMultishot()}`, ps.getMultishot() > 0],
+        ['Crit Chance', pct(ps.getCritChance()), true],
+        ['Crit Damage', mult(ps.getCritMultiplier()), true],
+        ['Piercing', `${ps.getPiercing()}`, ps.getPiercing() > 0],
+        ['Knockback', `${Math.round(ps.getKnockback())}`, ps.getKnockback() > 0],
+        ['Projectile Speed', `${Math.round(ps.getProjectileSpeed())}`, false],
+        ['Melee Dmg', mult(ps.getMeleeDamageMult()), ps.getMeleeDamageMult() > 1.001],
+        ['Ranged Dmg', mult(ps.getRangedDamageMult()), ps.getRangedDamageMult() > 1.001],
+        ['Elemental Dmg', mult(ps.getElementalDamageMult()), ps.getElementalDamageMult() > 1.001],
+      ]],
+      ['DEFENSE', '#74c0fc', [
+        ['Max Health', `${ps.getMaxHealth()}`, true],
+        ['Armor', `${Math.round(ps.getArmor())}`, ps.getArmor() > 0],
+        ['Dodge', pct(ps.getDodgeChance()), ps.getDodgeChance() > 0],
+        ['HP Regen', `${ps.getHealthRegen().toFixed(1)}/s`, ps.getHealthRegen() > 0],
+        ['Shield', ps.hasShield() ? 'YES' : '-', ps.hasShield()],
+        ['Lifesteal', pct(ps.getLifesteal()), ps.getLifesteal() > 0],
+        ['Thorns', `${Math.round(ps.getThorns())}`, ps.getThorns() > 0],
+      ]],
+      ['UTILITY', '#8ce99a', [
+        ['Move Speed', `${Math.round(ps.getSpeed())}`, true],
+        ['XP Magnet', mult(ps.getXPMagnet()), ps.getXPMagnet() > 1.001],
+      ]],
+      ['ECONOMY', '#ffd43b', [
+        ['Gold Bonus', pct(ps.getGoldBonus() - 1), ps.getGoldBonus() > 1.001],
+        ['Luck', pct(ps.getLuck()), ps.getLuck() > 0],
+        ['Shop Discount', pct(ps.getShopDiscount()), ps.getShopDiscount() > 0],
+        ['Reroll Discount', pct(ps.getRerollDiscount()), ps.getRerollDiscount() > 0],
+        ['Recycle Bonus', pct(ps.getRecycleBonus()), ps.getRecycleBonus() > 0],
+        ['Bank Interest', pct(ps.getInterestBonus()), ps.getInterestBonus() > 0],
+      ]],
+      ['SPECIAL', '#e599f7', [
+        ['Chain Lightning', pct(ps.getChainLightningChance()), ps.getChainLightningChance() > 0],
+        ['Freeze', pct(ps.getFreezeChance()), ps.getFreezeChance() > 0],
+        ['Poison', ps.hasPoison() ? 'YES' : '-', ps.hasPoison()],
+        ['Homing', ps.hasHoming() ? 'YES' : '-', ps.hasHoming()],
+        ['Explode on Kill', ps.hasExplosionOnKill() ? 'YES' : '-', ps.hasExplosionOnKill()],
+        ['Explode on Hit', ps.hasExplosionOnHit() ? 'YES' : '-', ps.hasExplosionOnHit()],
+        ['Orbit Orbs', `${ps.getOrbitOrbCount()}`, ps.getOrbitOrbCount() > 0],
+        ['Bomb Drop', ps.hasBombDrop() ? 'YES' : '-', ps.hasBombDrop()],
+        ['Nova Pulse', ps.hasNova() ? 'YES' : '-', ps.hasNova()],
+        ['Aux Melee', ps.hasAuxMelee() ? 'YES' : '-', ps.hasAuxMelee()],
+      ]],
+    ];
+
+    // Opaque backdrop + framed content column (same treatment as the combos guide).
+    ctx.save();
+    ctx.fillStyle = '#120b05';
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+    const contentW = Math.min(W - s(24), s(isMobile ? 372 : 620));
+    const x0 = (W - contentW) / 2;
+    drawPanel(ctx, x0 - s(8), s(10), contentW + s(16), H - s(20), DARK_WOOD_THEME, 4, 77);
+
+    const headSize = s(isMobile ? 11 : 14);
+    const bodySize = s(isMobile ? 7.5 : 9);
+    const lineH = bodySize + s(6);
+    let y = s(isMobile ? 20 : 28);
+    this.renderer.drawText('ALL STATS & BONUSES', W / 2, y, { size: headSize, align: 'center', color: '#ffd700' });
+    y += headSize + s(5);
+    this.renderer.drawText('Tap anywhere to close', W / 2, y, { size: s(7), align: 'center', color: '#9a8a6a' });
+    y += s(7) + s(10);
+
+    // Two columns on desktop, one on mobile. Groups flow top-to-bottom within a
+    // column, wrapping to the next column when the first fills the height budget.
+    const cols = isMobile ? 1 : 2;
+    const colGap = s(16);
+    const colW = (contentW - colGap * (cols - 1)) / cols;
+    const yStart = y;
+    const yBudget = H - s(30);
+    let col = 0;
+    let cy = yStart;
+    const colX = (c: number) => x0 + c * (colW + colGap);
+
+    const drawGroup = (title: string, color: string, rows: Row[]) => {
+      const visible = rows.filter(([, , show]) => show);
+      if (visible.length === 0) return;
+      const blockH = lineH + visible.length * lineH + s(6);
+      // Wrap to next column if this group would overflow the height budget.
+      if (cy + blockH > yBudget && col < cols - 1) { col++; cy = yStart; }
+      const cx = colX(col);
+      this.renderer.drawText(title, cx, cy, { size: bodySize, align: 'left', color });
+      cy += lineH;
+      for (const [label, value] of visible) {
+        this.renderer.drawText(label, cx + s(6), cy, { size: bodySize, align: 'left', color: '#c8b998' });
+        this.renderer.drawText(value, cx + colW - s(6), cy, { size: bodySize, align: 'right', color: '#ffffff' });
+        cy += lineH;
+      }
+      cy += s(6);
+    };
+
+    for (const [title, color, rows] of groups) drawGroup(title, color, rows);
   }
 
   // Full-screen synergy guide: explains, in plain language, what your active
