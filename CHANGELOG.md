@@ -8,6 +8,31 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-03 (evening) — all 37 enemy sprites modernized (form-lit hue-shifted shading)
+
+- **Every remaining enemy sprite** got the modern pixel-art treatment in one pass, using a
+  generalized silhouette-preserving enhancer (`tools/pixel-art/enhance-sprite.mjs`) rather than 37
+  bespoke scripts. This completes the sprite-modernization arc started with player → skeleton → orc.
+  - **Technique:** each enemy's interior fill tones are re-lit from the top-left — cells on a lit
+    top/left edge get a warm (toward-yellow) hue-shifted highlight; cells on a bottom/right edge get
+    a cooler hue-shifted shadow; corners are lifted/dropped harder. This gives every body real volume
+    instead of flat fill, while the **black outline and transparent cells are copied verbatim** so
+    every silhouette and hitbox is byte-identical to before.
+  - **Glows and eyes preserved:** saturated-bright cells (catch-lights, glowing eyes, gems, magic
+    orbs) are detected and left untouched, so nothing that was meant to glow got dulled.
+  - Covers all standard enemies, the 6 special enemies (exploder/healer/phaser/shielder/spinner/
+    summoner) and all 5 bosses (ancientgolem/flamefiend/necrolord/stormking/voidbeast).
+  - Every enemy proven visibly better (or at minimum not worse) via before/after contact sheets
+    (`shots/sprite-compare/`, tiled with `tools/pixel-art/montage.mjs`) — ~30 clear wins, the rest
+    subtle-but-improved, **0 regressions**. Verified 37/37 enhanced with player/skeleton untouched
+    (`tools/pixel-art/verify-enhanced.mjs`).
+- QA: pixel-art (662 distinct colors, up from 611), sprite-conversion round-trip, and
+  gameplay/collision regression all green, 0 errors.
+- Commit `8b2e1d6` → live build **`index-CcGX2hD_.js`** (verified: HTTP 200, live bundle == shipped
+  commit's build, correct title, no auth wall).
+
+---
+
 ## 2026-07-03 (evening) — orc sprite modernized (form-lit body + glowing inward eyes)
 
 - **New orc enemy sprite** — third sprite in the modern-technique pass, same silhouette-preserving
