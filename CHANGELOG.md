@@ -51,7 +51,7 @@ past a small enemy in one step, testing only the spot *beyond* it. **Fix:** swep
 enemy's radius (+ projectile radius), for both player→enemy and enemy→player. No more tunneling; a
 genuine side-pass still correctly misses.
 
-**Commit:** `TBD` — built to `frontend/dist`, deployed to daiacore production, verified live.
+**Commit:** `0319742` — built to `frontend/dist`, deployed to daiacore production, verified live.
 
 **Verification:** `npx tsc --noEmit` clean; `qa-node-map.mjs` PASS (every node type routes, all
 screens render, persistence round-trips). Balance probe on the shipped bundle: waveScale
