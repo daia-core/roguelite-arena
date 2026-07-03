@@ -8,6 +8,40 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-04 (night) — item redesign batch 3: 8 redundant Rare stat-cards get distinct identities
+
+- **The Rare shelf had too many near-twins.** After batches 1–2 finished the Legendary/Epic shelf,
+  the remaining bland Rares weren't "boring stat sticks" so much as *duplicates* — three +speed
+  cards, three +crit cards, two +fire-rate, two +armor, all reading almost identically. A Rare drop
+  should be a decision, not "oh, another speed ring." This pass keeps ONE clean anchor per core stat
+  and gives each redundant twin a distinct hook (still zero new engine code — every field reused):
+  - **Steel Band** — melee/swing damage now, with a small fire-rate cost (a melee-build card, not a
+    generic damage ring).
+  - **Rapid Gauntlets** — fire rate **+1 projectile** (ranged-fan identity vs. plain Rapid Fire).
+  - **Running Shoes** — move speed **+ dodge** (a mobility-survival hybrid, distinct from the
+    pure-dodge Evasion Cloak).
+  - **Precision Charm** — crit chance **+1 pierce** (crit that punches through a line).
+  - **Chain Mail** — armor **+ regen** (an endurance anchor, not a second flat-armor card).
+  - **Berserker Rage** — +damage, and **+35% damage & fire rate below 30% HP** (a Last-Stand
+    aggressor).
+  - **Swift Blade** — speed + fire rate **+ homing shots** (kiting build enabler).
+  - **Bloodhound Sight** — crit **+ pickup range + luck** (a hunter/economy hybrid).
+- **Why it matters:** same reason as batch 2 — items that change *how you play* keep deep runs
+  interesting and make a drop feel meaningful. Removing near-duplicate Rares also makes each shop roll
+  more distinct. The six intentional clean anchors (Vitality Ring, Precision Scope, Rapid Fire, Armor
+  Plating, Regeneration, Speed Demon) were deliberately left as-is — a clean baseline per stat is good
+  design; the redundancy was the problem, not stat cards existing.
+- **Under the hood:** all identities reuse shipped engine fields (meleeDamageMult, multishot, dodge,
+  piercing, healthRegen, lowHpPower, homing, xpMagnet, luck), verified reachable catalog → ItemSystem
+  aggregation → getters → Game.ts runtime. `qa-item-redesign.mjs` now data- and behaviorally-checks
+  all **30** redesigned items green; the 5 relevant regression harnesses (synergy, stat-caps,
+  triggered-items, status-engines, evolution) all pass; `tsc` clean.
+- Commit `56a7e6c`. **Live-verified:** production `roguelite-game-blush.vercel.app` serving bundle
+  `index-t5ftjerN.js` (md5 `0b7f9b50…` byte-identical to local dist), batch-3 markers present in the
+  shipped JS, HTTP 200, no SSO wall.
+
+---
+
 ## 2026-07-04 (night) — item redesign batch 2: 13 high-rarity fillers get real identities
 
 - **Every Legendary and combat/utility Rare that was just a stack of flat numbers now DOES
