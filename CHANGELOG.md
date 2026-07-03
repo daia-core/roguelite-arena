@@ -8,6 +8,36 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-03 (evening) — weapon evolution goes live (VS-style signature upgrades)
+
+- **Committed weapon builds now pay off with a signature evolution.** `EvolutionSystem` existed but
+  was dead code — it referenced weapon IDs (`magic_wand`, `excalibur`, …) that exist nowhere in the
+  catalog, so it could never fire and was never wired into the loop. Rebuilt it against the game's
+  REAL weapon model (weaponType items + passive catalysts) and hooked it into the wave-clear flow.
+- **Four evolutions, each = a real weapon + a thematically-fitting passive, at wave 8+:**
+  - **Scatter Gun + Demolition Kit → Hellfire Barrage** 🌋 — a wall of exploding pellets (6 shots,
+    ×1.4 dmg, explode-on-hit).
+  - **Beam Rifle + Storm Essence → Arc Lance** 🌩️ — a chaining, piercing beam (faster fire, chain
+    lightning, higher projectile speed).
+  - **Satellite Orbs + Trident → Orbital Halo** 🌀 — a dense ring of heavy orbs (6 orbs, ×1.5 dmg,
+    ×1.6 orbit damage).
+  - **Thunder Hammer + Wildfire Torch → Molten Warhammer** ⚒️ — a faster, wider, burning quake
+    (×4.5 melee, +140 AoE, +40 range, ×1.4 elemental, big knockback).
+- **Genuinely reachable, not a phantom feature.** Every base weapon and every catalyst is a
+  shop-obtainable (`unlocked:true`) item, so the precondition can be assembled in a normal run. The
+  evolved weapons are `unlocked:false` — they NEVER roll in the shop, so the only way to get one is
+  to actually evolve. On evolve the base weapon is replaced in-place; the catalyst is kept (its
+  effect keeps stacking). A gold **"WEAPON EVOLVED — <name>!"** banner + a rising transformation
+  chime announce it at the wave-clear screen.
+- QA: new `qa-evolution.mjs` — 27 checks, all PASS, incl. an **end-to-end reachability test that
+  drives the genuine `updatePlaying` wave-clear loop** (not the handler directly): base+catalyst at
+  wave 8 → base replaced by evolved, catalyst kept, banner fired, 0 console errors. Also asserts
+  evolved weapons never appear across 3,600 shop draws. `qa-roguelite` + `qa-stat-caps` re-run clean
+  (no regression to the shared shop-draw path). `tsc` clean.
+- **Live:** commit `SHA_PLACEHOLDER`, bundle `BUNDLE_PLACEHOLDER` verified serving on production.
+
+---
+
 ## 2026-07-03 (evening) — batch-3 enemy sprites: bombardier (was a bare disc) + swarm hand-crafted
 
 - **Bombardier now looks like an enemy, not a red dot.** It was the single worst-reading thing in

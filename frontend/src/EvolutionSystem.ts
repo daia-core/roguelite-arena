@@ -1,90 +1,91 @@
 /**
  * Weapon Evolution System (Vampire Survivors inspired)
  *
- * Weapons can evolve into more powerful versions when you have:
- * 1. The base weapon
- * 2. A specific "catalyst" item
- * 3. Reach a certain level (usually level 5+)
+ * A weapon evolves into a more powerful signature version when the player has all of:
+ * 1. The base weapon item (a real weaponType/heavy-melee item from the catalog)
+ * 2. A specific "catalyst" passive item that thematically fits the weapon
+ * 3. Reached a wave threshold (default: wave 8)
  *
- * Example: "Magic Wand" + "Spell Book" → "Holy Wand" (shoots 3 projectiles)
+ * The evolved weapon is a real catalog item flagged `unlocked: false`, so it never rolls
+ * in the shop — it is obtainable ONLY through evolution. On evolve, the base weapon item is
+ * replaced in-place by the evolved item; the catalyst is kept (its effect stacks on).
+ *
+ * Example: "Scatter Gun" + "Demolition Kit" (wave 8+) → "Hellfire Barrage"
+ *
+ * The evolution check runs at wave-clear (Game.checkWeaponEvolution → enterShop), so it is
+ * reachable through genuine play: every base weapon and every catalyst is a shop-obtainable
+ * `unlocked: true` item, so the precondition can actually be assembled in a normal run.
  */
 
 import type { Item } from './ItemSystem';
 
 export interface Evolution {
   id: string;
-  baseWeaponId: string;      // The weapon to evolve
-  catalystItemId: string;     // Required passive item
-  evolvedWeaponId: string;    // Result weapon
-  requiredLevel?: number;     // Minimum level (default: 5)
+  baseWeaponId: string;      // The weapon to evolve (a real catalog weapon item)
+  catalystItemId: string;     // Required passive item (a real, shop-obtainable item)
+  evolvedWeaponId: string;    // Result weapon (a real catalog item, unlocked:false)
+  requiredWave?: number;      // Minimum wave reached (default: 8)
   name: string;
   description: string;
 }
 
-// Define all weapon evolutions
+// How far into a run evolutions unlock. Wave 8 is deliberately just past the wave-7
+// power spike, so a committed weapon+catalyst build gets a signature payoff mid-run.
+export const DEFAULT_EVOLUTION_WAVE = 8;
+
+// Define all weapon evolutions. Every id below is a real item in items/catalog.ts.
 export const EVOLUTIONS: Evolution[] = [
-  // MAGIC WAND → HOLY WAND (with spell book)
+  // SCATTER GUN → HELLFIRE BARRAGE (with Demolition Kit)
   {
-    id: 'wand_evolution',
-    baseWeaponId: 'magic_wand',
-    catalystItemId: 'spell_book',
-    evolvedWeaponId: 'holy_wand',
-    requiredLevel: 5,
-    name: 'Holy Wand',
-    description: 'Magic Wand evolves with Spell Book at level 5+'
+    id: 'shotgun_evolution',
+    baseWeaponId: 'shotgun_weapon_t2',
+    catalystItemId: 'explosive_t3',
+    evolvedWeaponId: 'shotgun_evolved',
+    requiredWave: DEFAULT_EVOLUTION_WAVE,
+    name: 'Hellfire Barrage',
+    description: 'Scatter Gun + Demolition Kit — a wall of exploding pellets'
   },
 
-  // SWORD → EXCALIBUR (with warrior heart)
+  // BEAM RIFLE → ARC LANCE (with Storm Essence)
   {
-    id: 'sword_evolution',
-    baseWeaponId: 'sword',
-    catalystItemId: 'warrior_heart',
-    evolvedWeaponId: 'excalibur',
-    requiredLevel: 5,
-    name: 'Excalibur',
-    description: 'Sword evolves with Warrior Heart at level 5+'
+    id: 'laser_evolution',
+    baseWeaponId: 'laser_weapon_t3',
+    catalystItemId: 'chain_lightning_t3',
+    evolvedWeaponId: 'laser_evolved',
+    requiredWave: DEFAULT_EVOLUTION_WAVE,
+    name: 'Arc Lance',
+    description: 'Beam Rifle + Storm Essence — a chaining piercing beam'
   },
 
-  // BOW → ARTEMIS BOW (with eagle eye)
+  // SATELLITE ORBS → ORBITAL HALO (with Trident)
   {
-    id: 'bow_evolution',
-    baseWeaponId: 'bow',
-    catalystItemId: 'eagle_eye',
-    evolvedWeaponId: 'artemis_bow',
-    requiredLevel: 5,
-    name: 'Artemis Bow',
-    description: 'Bow evolves with Eagle Eye at level 5+'
+    id: 'orbital_evolution',
+    baseWeaponId: 'orbital_weapon_t3',
+    catalystItemId: 'multishot_t3',
+    evolvedWeaponId: 'orbital_evolved',
+    requiredWave: DEFAULT_EVOLUTION_WAVE,
+    name: 'Orbital Halo',
+    description: 'Satellite Orbs + Trident — a dense ring of heavy orbs'
   },
 
-  // FIREBALL → METEOR STORM (with fire tome)
+  // THUNDER HAMMER → MOLTEN WARHAMMER (with Wildfire Torch)
   {
-    id: 'fireball_evolution',
-    baseWeaponId: 'fireball',
-    catalystItemId: 'fire_tome',
-    evolvedWeaponId: 'meteor_storm',
-    requiredLevel: 5,
-    name: 'Meteor Storm',
-    description: 'Fireball evolves with Fire Tome at level 5+'
-  },
-
-  // DAGGER → SHADOW BLADES (with assassin cloak)
-  {
-    id: 'dagger_evolution',
-    baseWeaponId: 'dagger',
-    catalystItemId: 'assassin_cloak',
-    evolvedWeaponId: 'shadow_blades',
-    requiredLevel: 5,
-    name: 'Shadow Blades',
-    description: 'Dagger evolves with Assassin Cloak at level 5+'
+    id: 'hammer_evolution',
+    baseWeaponId: 'hammer_weapon_t3',
+    catalystItemId: 'wildfire_torch_t3',
+    evolvedWeaponId: 'hammer_evolved',
+    requiredWave: DEFAULT_EVOLUTION_WAVE,
+    name: 'Molten Warhammer',
+    description: 'Thunder Hammer + Wildfire Torch — a faster, wider, burning quake'
   }
 ];
 
 export class EvolutionSystem {
   /**
-   * Check if any weapons can evolve based on current items and level
-   * Returns array of possible evolutions
+   * Check if any weapons can evolve given current items and the wave reached.
+   * Returns every currently-available evolution.
    */
-  checkEvolutions(items: Item[], level: number): Evolution[] {
+  checkEvolutions(items: Item[], wave: number): Evolution[] {
     const ownedItemIds = new Set(items.map(item => item.id));
     const possibleEvolutions: Evolution[] = [];
 
@@ -93,13 +94,13 @@ export class EvolutionSystem {
       const hasBaseWeapon = ownedItemIds.has(evolution.baseWeaponId);
       const hasCatalyst = ownedItemIds.has(evolution.catalystItemId);
       const hasEvolvedWeapon = ownedItemIds.has(evolution.evolvedWeaponId);
-      const meetsLevelRequirement = level >= (evolution.requiredLevel || 5);
+      const meetsWaveRequirement = wave >= (evolution.requiredWave ?? DEFAULT_EVOLUTION_WAVE);
 
-      // Only show evolution if:
-      // 1. We have base + catalyst
-      // 2. We meet level requirement
+      // Only offer an evolution if:
+      // 1. We own base + catalyst
+      // 2. We've reached the required wave
       // 3. We don't already have the evolved weapon
-      if (hasBaseWeapon && hasCatalyst && meetsLevelRequirement && !hasEvolvedWeapon) {
+      if (hasBaseWeapon && hasCatalyst && meetsWaveRequirement && !hasEvolvedWeapon) {
         possibleEvolutions.push(evolution);
       }
     }
@@ -144,7 +145,7 @@ export class EvolutionSystem {
   /**
    * Check if a specific weapon can evolve
    */
-  canWeaponEvolve(weaponId: string, items: Item[], level: number): Evolution | null {
+  canWeaponEvolve(weaponId: string, items: Item[], wave: number): Evolution | null {
     const ownedItemIds = new Set(items.map(item => item.id));
 
     for (const evolution of EVOLUTIONS) {
@@ -152,9 +153,9 @@ export class EvolutionSystem {
 
       const hasCatalyst = ownedItemIds.has(evolution.catalystItemId);
       const hasEvolvedWeapon = ownedItemIds.has(evolution.evolvedWeaponId);
-      const meetsLevelRequirement = level >= (evolution.requiredLevel || 5);
+      const meetsWaveRequirement = wave >= (evolution.requiredWave ?? DEFAULT_EVOLUTION_WAVE);
 
-      if (hasCatalyst && meetsLevelRequirement && !hasEvolvedWeapon) {
+      if (hasCatalyst && meetsWaveRequirement && !hasEvolvedWeapon) {
         return evolution;
       }
     }

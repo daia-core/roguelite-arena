@@ -30,6 +30,7 @@ import { UISprites } from './UISprites';
 import { MapSystem, nodeIcon, nodeLabel, serializeMap, deserializeMap, type NodeType } from './MapSystem';
 import { ArtifactSystem, ARTIFACTS, getArtifactById, type Artifact } from './ArtifactSystem';
 import { randomEvent, type GameEvent, type EventEffect } from './EventSystem';
+import { EvolutionSystem, type Evolution } from './EvolutionSystem';
 import { VillageScene } from './VillageScene';
 
 // The map/node meta-layer adds three between-wave screens on top of the core loop:
@@ -180,6 +181,12 @@ export class Game {
   // announcement when the WaveManager advances to a new phase mid-fight.
   phaseBannerTimer: number = 0;
   phaseBannerText: string = '';
+
+  // Weapon evolutions (VS-style): base weapon + catalyst passive at wave 8+ → a
+  // signature evolved weapon. Triggered at wave-clear (checkWeaponEvolution).
+  private evolutionSystem = new EvolutionSystem();
+  evolutionBannerTimer: number = 0;
+  evolutionBannerText: string = '';
 
   constructor(canvas: HTMLCanvasElement) {
     // Dev/QA hook: lets tooling (screenshot scripts, the shots-qa harness)
@@ -513,6 +520,10 @@ export class Game {
 
     // GAME FEEL: Update screen effects
     this.screenEffects.update(dt);
+
+    // Evolution banner ticks in every state (it is set at wave-clear and must keep
+    // counting down while the shop/reward screen is shown, where updatePlaying doesn't run).
+    if (this.evolutionBannerTimer > 0) this.evolutionBannerTimer -= dt;
 
     // On any screen change, disarm a held press so a finger/button that was
     // already down (e.g. holding to move when a wave ends → shop) can't register
@@ -1297,6 +1308,9 @@ export class Game {
 
     // Check wave completion
     if (this.waveManager.isWaveComplete()) {
+      // VS-style weapon evolution: if a committed weapon+catalyst build has come of
+      // age (wave 8+), upgrade the weapon in-place before the reward/shop screens.
+      this.checkWeaponEvolution();
       if (this.pendingWaveArtifact) {
         // Elite / boss nodes grant guaranteed spoils: an artifact pick, then the
         // usual shop. Extra gold is added here so the reward feels distinct.
@@ -1363,6 +1377,36 @@ export class Game {
     this.bombTimer = 0;
     this.novaTimer = 0;
     this.auxMeleeTimer = 0;
+  }
+
+  // VS-STYLE WEAPON EVOLUTION. Called on wave-clear: if a committed build owns a base
+  // weapon + its catalyst passive and has reached the required wave, upgrade the weapon
+  // in-place into its signature evolved form. The evolved item (unlocked:false) is never
+  // shop-rollable, so it is obtainable ONLY here — reachable because every base weapon and
+  // catalyst is a normal shop-obtainable item. One evolution per wave-clear keeps each a
+  // distinct moment. See EvolutionSystem.ts.
+  private checkWeaponEvolution(): void {
+    const wave = this.waveManager.currentWave;
+    const available: Evolution[] = this.evolutionSystem.checkEvolutions(this.playerStats.items, wave);
+    if (available.length === 0) return;
+
+    const evo = available[0];
+    const evolved = ItemDatabase.getItemById(evo.evolvedWeaponId);
+    const base = this.playerStats.items.find(i => i.id === evo.baseWeaponId);
+    if (!evolved || !base) return; // guard: never fire against a missing item
+
+    // Replace the base weapon with the evolved weapon; the catalyst is kept so its
+    // effect stacks on top of the upgrade. removeItem/addItem both recompute stats.
+    this.playerStats.removeItem(evo.baseWeaponId);
+    this.playerStats.addItem(evolved);
+    // Orbital/aux weapon counts can change (e.g. 3 → 7 orbs), so rebuild the aux pool.
+    this.resetAuxWeapons();
+
+    // Feedback: a prominent banner (drawn over both the playing and shop screens) + the
+    // triumphant transformation sting so the payoff reads loud.
+    this.evolutionBannerText = `WEAPON EVOLVED — ${evo.name}!`;
+    this.evolutionBannerTimer = 3.5;
+    this.audio.playTransformation();
   }
 
   // Apply damage from an auxiliary weapon to one enemy, reusing the same crit /
@@ -3303,10 +3347,36 @@ export class Game {
         break;
     }
 
+    // Weapon-evolution banner: a top-level overlay so it reads over BOTH the playing
+    // screen and the shop/reward screen the wave-clear transitions into.
+    this.drawEvolutionBanner();
+
     // LAYERED RENDERING: Composite all layers
     this.renderer.compositeLayers();
 
     this.renderer.endFrame();
+  }
+
+  // Prominent gold banner shown for a few seconds after a weapon evolves. Drawn over
+  // whatever screen is active (playing → shop), so the payoff is never missed.
+  private drawEvolutionBanner(): void {
+    if (this.evolutionBannerTimer <= 0 || !this.evolutionBannerText) return;
+    const ctx = this.renderer.getContext();
+    const alpha = Math.min(1, this.evolutionBannerTimer / 0.6); // fade out over the last 0.6s
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    // Subtle darkened strip behind the text for legibility over busy backdrops.
+    const cx = this.canvas.width / 2;
+    const y = this.canvas.height * 0.18;
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.fillRect(0, y - 30, this.canvas.width, 60);
+    this.renderer.drawText(this.evolutionBannerText, cx, y, {
+      size: 30,
+      bold: true,
+      align: 'center',
+      color: '#ffd43b'
+    });
+    ctx.restore();
   }
 
   private drawMenu(): void {

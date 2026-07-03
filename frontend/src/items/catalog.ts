@@ -656,6 +656,77 @@ export const ITEM_CATALOG: Item[] = [
       knockback: 300
     },
 
+    // ==================== EVOLVED WEAPONS (VS-STYLE EVOLUTIONS) ====================
+    // Obtainable ONLY via EvolutionSystem (base weapon + catalyst passive at wave 8+),
+    // never in the shop — so all are `unlocked: false`. See EvolutionSystem.ts EVOLUTIONS.
+    // Each keeps its base weaponType so the firing style is preserved, and layers a
+    // signature enhancement on top. The catalyst is kept on evolve, so its effect stacks.
+    {
+      id: 'shotgun_evolved', // Scatter Gun + Demolition Kit
+      name: 'Hellfire Barrage',
+      description: 'EVOLVED: 7 exploding pellets, faster and far deadlier',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 0,
+      icon: '🌋',
+      unlocked: false,
+      tags: ['ranged', 'elemental'],
+      weaponType: 'shotgun',
+      multishot: 6, // 1 main + 6 = 7 pellets
+      damageMultiplier: 1.4,
+      fireRateMultiplier: 0.9,
+      explosionOnHit: true
+    },
+    {
+      id: 'laser_evolved', // Beam Rifle + Storm Essence
+      name: 'Arc Lance',
+      description: 'EVOLVED: a piercing beam that chains lightning to nearby foes',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 0,
+      icon: '🌩️',
+      unlocked: false,
+      tags: ['ranged', 'elemental'],
+      weaponType: 'laser',
+      piercing: 999,
+      damageMultiplier: 1.1,
+      fireRateMultiplier: 3.5,
+      projectileSpeed: 1400,
+      chainLightning: 0.6
+    },
+    {
+      id: 'orbital_evolved', // Satellite Orbs + Trident
+      name: 'Orbital Halo',
+      description: 'EVOLVED: a dense ring of 7 heavy orbs',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 0,
+      icon: '🌀',
+      unlocked: false,
+      tags: ['utility', 'ranged'],
+      weaponType: 'orbital',
+      multishot: 6, // 7 orbs total
+      damageMultiplier: 1.5,
+      orbitDamageMult: 1.6
+    },
+    {
+      id: 'hammer_evolved', // Thunder Hammer + Wildfire Torch
+      name: 'Molten Warhammer',
+      description: 'EVOLVED: a faster, wider, burning full-circle quake',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 0,
+      icon: '⚒️',
+      unlocked: false,
+      tags: ['melee', 'elemental'],
+      meleeDamageMult: 4.5,
+      elementalDamageMult: 1.4,
+      swingAoe: 140,
+      swingRangeBonus: 40,
+      swingCooldownMult: 1.1, // faster than the base hammer's 1.6
+      knockback: 450
+    },
+
     // ==================== MELEE SWING BUILDS ====================
     // Each shapes the always-on default swing into a distinct melee playstyle. They
     // STACK on top of the (always-firing) gun, so a melee build still shoots weakly.
