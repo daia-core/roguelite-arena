@@ -8,6 +8,39 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-03 (early morning) — A map between the waves: routes, artifacts, and real choices (live index-CCe5AaXN.js)
+
+The run is no longer a straight line of wave → shop → wave. After each shop you now open a
+**branching map** (Slay-the-Spire style) and **choose your path** to the act boss. Every node is a
+different kind of encounter with its own risk and reward:
+
+- **⚔ Battle** — the normal wave.
+- **☠ Elite** — a tougher wave that pays out an **artifact** on clear.
+- **? Event** — a text choice (shrine, gambler, blood pact, wandering merchant…) with 2–3 real
+  decisions: gamble gold, heal for a cost, take a boon with a downside, or grab a free relic.
+- **◆ Treasure** — a free artifact pick, no fight.
+- **☼ Rest** — a campfire: **heal 40% HP** *or* **train for +15 max HP** permanently.
+- **♠ Boss** — clears the act; the next act's map generates automatically.
+
+**Artifacts** are the new headline layer — run-long modifiers granted by the map (not bought in the
+shop), a mix of huge stat swings and rule-changers: **Glass Cannon** (+120% damage / +60% damage
+taken), **Titan's Heart** (+80% max HP), **Scholar's Codex** (double XP), **Executioner's Mark**
+(+crit), **Second Wind** (survive the first lethal hit each wave at 1 HP), **Vampiric Field** (kills
+heal), **Momentum Engine** (damage ramps while moving), **Berserk Core** (fire faster as HP drops),
+**Spiked Aura** (reflect contact damage), and more. Each is a **1-of-3 pick**, so builds diverge.
+
+The map is **mobile-first**: bottom-to-top, big tap targets, lit nodes show where you can go, gold
+edges show live routes, visited nodes dim. The global wave counter keeps climbing underneath, so the
+difficulty ramp is untouched — the map only chooses *flavour + reward* at each step. Mid-run state
+(held artifacts **and** your position on the map) now persists, so **Continue** resumes a routed run
+faithfully.
+
+Headless QA routes through **all six node types**, renders every screen (map/event/reward/rest/shop),
+and round-trips a save→continue with artifacts + map intact — zero console errors. Commit `2c0c900`
+→ live and verified (`index-CCe5AaXN.js`, HTTP 200).
+
+---
+
 ## 2026-07-03 (early morning) — Shop: tap your stats for a full breakdown (live index-C02SkJZz.js)
 
 The shop's stats panel only ever showed six headline numbers (HP, DMG, FIRE, SPD, CRIT, MULTI).
