@@ -2,7 +2,6 @@
 
 import { PlayerStats } from './ItemSystem';
 import { Projectile } from './Projectile';
-import { MeleeAttack } from './MeleeAttack';
 import { Enemy } from './Enemy';
 import { circleCollision } from './utils';
 import { SpriteSheet } from './sprites';
@@ -181,41 +180,6 @@ export class Player {
     this.shootCooldown = 1 / this.stats.getFireRate();
 
     return projectiles;
-  }
-
-  // Try melee attack (for melee weapons)
-  tryMeleeAttack(enemies: Enemy[]): MeleeAttack | null {
-    if (this.shootCooldown > 0 || enemies.length === 0) return null;
-
-    const weaponType = this.stats.getWeaponType();
-    if (weaponType !== 'melee') return null;
-
-    // Find nearest enemy
-    let nearest: Enemy | null = null;
-    let nearestDist = Infinity;
-
-    for (const enemy of enemies) {
-      const dist = Math.sqrt(
-        (enemy.x - this.x) ** 2 + (enemy.y - this.y) ** 2
-      );
-      if (dist < nearestDist) {
-        nearestDist = dist;
-        nearest = enemy;
-      }
-    }
-
-    if (!nearest) return null;
-
-    const angle = Math.atan2(nearest.y - this.y, nearest.x - this.x);
-    const damage = this.stats.getMeleeDamage();
-    const range = this.stats.getWeaponRange();
-    const arc = this.stats.getWeaponArc();
-    const knockback = this.stats.getKnockback();
-
-    // Reset cooldown
-    this.shootCooldown = 1 / this.stats.getFireRate();
-
-    return new MeleeAttack(this.x, this.y, angle, arc, range, damage, knockback);
   }
 
   // Dash ability

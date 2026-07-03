@@ -581,30 +581,21 @@ export class Game {
       );
     }
 
-    // Player shooting
-    const weaponType = this.playerStats.getWeaponType();
-    if (weaponType === 'melee') {
-      // Melee attack
-      const meleeAttack = this.player.tryMeleeAttack(this.enemies);
-      if (meleeAttack) {
-        this.meleeAttacks.push(meleeAttack);
-        this.audio.playShoot();
+    // Player shooting — the ranged weapon ALWAYS fires. Melee is a separate
+    // stacking swing (see updatePlayerSwing in updateAuxWeapons), so a melee build
+    // still shoots a weak gun instead of losing projectiles entirely.
+    const newProjectiles = this.player.tryShoot(this.enemies);
+    if (newProjectiles.length > 0) {
+      // PERFORMANCE: Use pooled projectiles instead of new ones
+      for (const proj of newProjectiles) {
+        const pooled = this.projectilePool.acquire();
+        pooled.init(proj.x, proj.y, Math.atan2(proj.vy, proj.vx), proj.damage, proj.speed, proj.fromPlayer, proj.piercing);
+        pooled.maxPierceCount = proj.maxPierceCount;
+        pooled.homing = proj.homing;
+        pooled.turnSpeed = proj.turnSpeed;
+        this.projectiles.push(pooled);
       }
-    } else {
-      // Ranged attack
-      const newProjectiles = this.player.tryShoot(this.enemies);
-      if (newProjectiles.length > 0) {
-        // PERFORMANCE: Use pooled projectiles instead of new ones
-        for (const proj of newProjectiles) {
-          const pooled = this.projectilePool.acquire();
-          pooled.init(proj.x, proj.y, Math.atan2(proj.vy, proj.vx), proj.damage, proj.speed, proj.fromPlayer, proj.piercing);
-          pooled.maxPierceCount = proj.maxPierceCount;
-          pooled.homing = proj.homing;
-          pooled.turnSpeed = proj.turnSpeed;
-          this.projectiles.push(pooled);
-        }
-        this.audio.playShoot();
-      }
+      this.audio.playShoot();
     }
 
     // Abilities
@@ -1364,7 +1355,7 @@ export class Game {
     if (this.playerStats.hasBombDrop()) {
       this.bombTimer -= dt;
       if (this.bombTimer <= 0) {
-        this.bombs.push(new Bomb(px, py, 0.9, 110, this.playerStats.getBombDamage()));
+        this.bombs.push(new Bomb(px, py, 0.9, 110 * this.playerStats.getAoeRadiusMult(), this.playerStats.getBombDamage()));
         this.bombTimer = this.playerStats.getBombCooldown();
       }
     }
@@ -1380,7 +1371,7 @@ export class Game {
     if (this.playerStats.hasNova()) {
       this.novaTimer -= dt;
       if (this.novaTimer <= 0) {
-        this.shockwaves.push(new Shockwave(px, py, 240, this.playerStats.getNovaDamage()));
+        this.shockwaves.push(new Shockwave(px, py, 240 * this.playerStats.getAoeRadiusMult(), this.playerStats.getNovaDamage()));
         this.novaTimer = this.playerStats.getNovaCooldown();
         this.audio.playShoot();
       }
@@ -1397,24 +1388,33 @@ export class Game {
       }
     }
 
-    // --- Whirling melee arc: swings on its OWN timer toward the nearest enemy,
-    //     independent of the primary weapon, so a gun build still gets a blade. ---
+    // --- Default melee swing: EVERY player swings on its own timer toward the
+    //     nearest enemy in reach, independent of the always-firing gun. Melee items
+    //     shape its damage/reach/arc/speed and can turn it into a full-circle AOE
+    //     quake (swingAoe). A swing only fires when an enemy is actually in range,
+    //     so it never wastes cooldown on empty air. ---
     this.auxMeleeTimer -= dt;
-    if (this.playerStats.hasAuxMelee() && this.auxMeleeTimer <= 0 && this.enemies.length > 0) {
+    if (this.auxMeleeTimer <= 0 && this.enemies.length > 0) {
+      const range = this.playerStats.getSwingRange();
+      const aoe = this.playerStats.getSwingAoe();
+      const reach = range + aoe; // an AOE swing can connect from further out
       let nearest: Enemy | null = null;
       let nd = Infinity;
       for (const e of this.enemies) {
         const d = (e.x - px) ** 2 + (e.y - py) ** 2;
         if (d < nd) { nd = d; nearest = e; }
       }
-      if (nearest) {
+      // Only swing when something is within reach (+ its own radius); otherwise wait.
+      if (nearest && nd <= (reach + nearest.radius) ** 2) {
         const angle = Math.atan2(nearest.y - py, nearest.x - px);
-        const dmg = this.playerStats.getAuxMeleeDamage();
-        // Wide sweeping arc, pushed through the existing meleeAttacks pipeline so
-        // its collision/knockback/kill handling is shared with real melee.
-        this.meleeAttacks.push(new MeleeAttack(px, py, angle, Math.PI * 0.9, 95, dmg, 120));
+        const dmg = this.playerStats.getSwingDamage();
+        const kb = this.playerStats.getSwingKnockback();
+        // With AOE the swing becomes a full 360° quake; otherwise a directional arc.
+        // Pushed through the shared meleeAttacks pipeline (collision/knockback/kill).
+        const arc = aoe > 0 ? Math.PI * 2 : this.playerStats.getSwingArc();
+        this.meleeAttacks.push(new MeleeAttack(px, py, angle, arc, reach, dmg, kb));
       }
-      this.auxMeleeTimer = 1.1;
+      this.auxMeleeTimer = this.playerStats.getSwingInterval();
     }
   }
 

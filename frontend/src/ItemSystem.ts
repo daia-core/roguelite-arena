@@ -53,6 +53,16 @@ export interface Item {
   novaDamageMult?: number; // scales nova damage
   novaCooldownMult?: number; // <1 = novas fire faster
 
+  // MELEE SWING — every player has a default swing that auto-hits nearby enemies.
+  // These fields let items shape it into distinct melee builds. The swing STACKS on
+  // top of the (always-firing) ranged weapon, so a melee build still shoots weakly.
+  swingDamageMult?: number; // scales the default swing damage (multiplicative)
+  swingRangeBonus?: number; // flat range added to the swing reach (px)
+  swingArcBonus?: number; // radians added to the swing arc width
+  swingCooldownMult?: number; // <1 = swing faster, >1 = slower/heavier
+  swingAoe?: number; // radius of a full-circle AOE burst on each swing (px); makes the swing hit all around
+  aoeRadiusMult?: number; // GLOBAL area multiplier — scales swing AOE, nova, and bomb radii
+
   // Stat modifiers
   damageMultiplier?: number;
   // Per-damage-type multipliers (Brotato-style). These layer ON TOP of the global
@@ -699,18 +709,17 @@ export class ItemDatabase {
     {
       id: 'melee_sword_t2',
       name: 'Crescent Blade',
-      description: 'Melee arc around player',
+      description: 'Wider, faster, harder-hitting swing',
       rarity: 'rare',
       tier: ItemTier.Uncommon,
       cost: 32,
       icon: '🗡️',
       unlocked: true,
       tags: ['melee'],
-      weaponType: 'melee',
-      weaponRange: 80,
-      weaponArc: Math.PI * 0.6, // 108 degrees
-      damageMultiplier: 1.5,
-      fireRateMultiplier: 1.3
+      meleeDamageMult: 1.5, // buffs the swing, not the gun
+      swingRangeBonus: 25,
+      swingArcBonus: Math.PI * 0.15,
+      swingCooldownMult: 0.75 // 33% faster swings
     },
     {
       id: 'orbital_weapon_t3',
@@ -745,18 +754,17 @@ export class ItemDatabase {
     {
       id: 'hammer_weapon_t3',
       name: 'Thunder Hammer',
-      description: 'Heavy melee strikes',
+      description: 'Slow, heavy swing that quakes all around you',
       rarity: 'epic',
       tier: ItemTier.Rare,
       cost: 62,
       icon: '🔨',
       unlocked: true,
       tags: ['melee'],
-      weaponType: 'melee',
-      weaponRange: 100,
-      weaponArc: Math.PI * 0.8, // 144 degrees
-      damageMultiplier: 2.2,
-      fireRateMultiplier: 0.5, // Very slow but hard-hitting
+      meleeDamageMult: 2.2, // buffs the swing, not the gun
+      swingAoe: 90, // full-circle shockwave on each swing
+      swingRangeBonus: 20,
+      swingCooldownMult: 1.6, // very slow but hard-hitting
       knockback: 300
     },
 
@@ -3350,6 +3358,61 @@ export class PlayerStats {
     let mult = 1;
     for (const i of this.items) if (i.auxMeleeDamageMult) mult *= i.auxMeleeDamageMult;
     return this.getMeleeDamage() * 1.1 * mult;
+  }
+
+  // ==================== DEFAULT MELEE SWING ====================
+  // Every player auto-swings at nearby enemies. It STACKS on top of the always-
+  // firing ranged weapon (a melee build just invests items into the swing, and
+  // still shoots a weak gun). Swing items shape damage/reach/arc/speed/AOE.
+
+  /** Swing damage — 60% of melee damage baseline, ramped by swing/aux-melee items. */
+  getSwingDamage(): number {
+    let mult = 0.6; // baseline: the free swing is a light default
+    for (const i of this.items) {
+      if (i.swingDamageMult) mult *= i.swingDamageMult;
+      if (i.auxMeleeDamageMult) mult *= i.auxMeleeDamageMult; // legacy aux-melee items still boost the swing
+    }
+    return this.getMeleeDamage() * mult;
+  }
+
+  /** Swing reach in px (base 70 + item bonuses). */
+  getSwingRange(): number {
+    let r = 70;
+    for (const i of this.items) if (i.swingRangeBonus) r += i.swingRangeBonus;
+    return r;
+  }
+
+  /** Swing arc width in radians (base ~126°, widened by items, capped at full circle). */
+  getSwingArc(): number {
+    let arc = Math.PI * 0.7;
+    for (const i of this.items) if (i.swingArcBonus) arc += i.swingArcBonus;
+    return Math.min(arc, Math.PI * 2);
+  }
+
+  /** Seconds between swings (base 0.85s, scaled by cooldown items). */
+  getSwingInterval(): number {
+    let mult = 1;
+    for (const i of this.items) if (i.swingCooldownMult) mult *= i.swingCooldownMult;
+    return 0.85 * mult;
+  }
+
+  /** Full-circle AOE burst radius on each swing (0 = none), scaled by global area. */
+  getSwingAoe(): number {
+    let r = 0;
+    for (const i of this.items) if (i.swingAoe) r += i.swingAoe;
+    return r * this.getAoeRadiusMult();
+  }
+
+  /** Global area-of-effect multiplier — scales swing AOE, nova, and bomb radii. */
+  getAoeRadiusMult(): number {
+    let mult = 1;
+    for (const i of this.items) if (i.aoeRadiusMult) mult *= i.aoeRadiusMult;
+    return mult;
+  }
+
+  /** Knockback the swing imparts — a light base shove plus any item knockback. */
+  getSwingKnockback(): number {
+    return 40 + this.getKnockback();
   }
 
   hasBombDrop(): boolean {
