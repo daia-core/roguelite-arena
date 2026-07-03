@@ -8,6 +8,30 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-03 (early morning) — Uniqueness pass: no two items share a mechanic (live index-DQFaxL90.js)
+
+A data-driven audit of all 188 items found **7 pairs that were mechanically identical** (same effect,
+different name — one often strictly dominating the cheaper twin, e.g. two items both literally named
+"Lucky Coin"). Every one is now a distinct pick:
+
+- **Precision Charm** (was a 2nd "Lucky Coin") — crit chance **+** crit damage, so it's not just a worse duplicate.
+- **Lucky Coin** — now crit **+** luck (leans into its name), separate lane from the pure-crit charm.
+- **Envenomed Blade** (was "Toxic Touch") — melee poison (poison **+** melee damage), distinct from the ranged Toxic Vial.
+- **Scattergun** (was "Triple Shot") — +2 projectiles **with** heavy knockback, distinct from the Trident.
+- **Guided Rounds** (was "Homing Bullets") — homing **+** ranged damage, distinct from the Seeking Rune.
+- **Evasion Plating** (was "Dodge Master") — dodge **+** armor, distinct from Shadow Step.
+- **Bargain Hunter / Bargain Bin / Salvage Rig** — three economy commons given distinct identities
+  (shop+reroll discount / shop discount+gold / recycle+shop discount) instead of the same flat -10%.
+
+**Bug fix:** three of yesterday's new melee items had knockback set on the wrong scale (2–6 instead of
+~250–450) — knockback is applied as a velocity, so those values were near-invisible. Now they actually shove.
+
+All 22 items referenced by the duo-synergy system were left untouched. tsc clean, both regression QA
+scripts pass, roster still 188 with zero exact-effect duplicates. Commit `8178069` → live and verified
+`index-DQFaxL90.js`.
+
+---
+
 ## 2026-07-03 (early morning) — 55 new build-defining items + balance pass (live index-rc2tFmEl.js)
 
 Felix asked for *"a lot of item diversity — all unique and impactful — plus a pricing/shop balance
@@ -51,6 +75,14 @@ Legendary ~130–165), so higher tiers gate correctly through the wave-based sho
 freshly-built `dist`; a roster validation confirmed 188 unique items, zero dead-stat items, and the
 lifesteal cap holding — 0 console errors. Live build **`index-rc2tFmEl.js`** (hash + 287 KB size
 match local; new item names present in the shipped bundle). Commit `dad5f03`.
+
+**Independent re-verification (heartbeat 06:3x, cp-b3/cp-b7):** live site actually **serves
+`index-rc2tFmEl.js`** (curl-confirmed — deploy propagated, not just a local build); a fresh `npm run
+build` reproduced the **byte-identical hash**, proving the deployed bundle IS the current 55-item
+source; **shop-reachability** confirmed — all 189 active items are `unlocked:true` (the only 3
+`unlocked:false` are commented-out dead code), so every new item genuinely enters the wave-gated shop
+pool; no duplicate ids remain; and a full `qa-mobile-playthrough` on the shipped build ran a live
+wave-1 swarm (22 enemies) at 262 FPS with **0 console/page errors**. End-to-end clean.
 
 ---
 
