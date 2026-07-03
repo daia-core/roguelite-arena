@@ -8,7 +8,7 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
-## 2026-07-03 (early morning) — Standardized text boxes: descriptive copy never overflows or clips in portrait (live PENDING)
+## 2026-07-03 (early morning) — Standardized text boxes: descriptive copy never overflows or clips in portrait (live index-CAj25nIJ.js)
 
 **Felix's ask (B3):** *"Artifacts description also doesn't wrap. You need to standardize text boxes
 like this so they are always handled nicely."* The earlier fixes patched three specific surfaces
@@ -34,14 +34,16 @@ somewhere else would clip again.
 **Player-visible:** every descriptive box — shop, village, event, artifact — wraps cleanly at phone
 width; no more copy running off a card or panel edge, and no more shrink-to-illegible.
 
-**Commit:** `PENDING` — built to `frontend/dist`, deployed to daiacore production, verified live.
+**Commit:** `f318377` — built to `frontend/dist`, deployed to daiacore production, verified live.
 
 **Verification (`qa-textbox.mjs` + `qa-event-title.mjs` regression, shipped `frontend/dist` @ 390×844
 portrait):** `wrapLines` — long copy wraps lossless, every line ≤ maxChars. `drawWrappedText` — a wide
 box honours `maxLines` exactly (cap 2→2, cap 3→3); a pathologically narrow box shrinks the block as a
 last resort (10→5 lines, font floored at 4 px). Shop rendered with a 190-char stress description →
 wraps inside the card, longest line 34 ≤ 36 maxChars, clean console; portrait screenshot inspected.
-Event-title regression still passes (65-char title → 3 lines, fits). Live bundle `PENDING`.
+Event-title regression still passes (65-char title → 3 lines, fits). Live production deployment
+`dpl_435YmR4o…` sha `f318377` == shipped commit; live bundle `index-CAj25nIJ.js` matches the built
+`frontend/dist`; HTTP 200, not an auth wall.
 
 ---
 
