@@ -8,6 +8,39 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-03 (afternoon) — melee STACKS like every weapon (Crescent Blade projectile bug fixed)
+
+Felix: *"the crescent blade item seems to break projectiles being fired"* and *"Melee should
+stack, like all weapons. So you would still have weak projectiles even if melee build."* Both
+fixed — melee is no longer an exclusive weapon *mode*, it's a stacking *layer*.
+
+**Player-visible:**
+- **Your gun always fires.** Picking up a melee weapon (Crescent Blade, Thunder Hammer) no longer
+  silently kills your projectiles. The ranged weapon fires on every build; melee is extra on top.
+- **Everyone gets a default swing.** Every character now auto-swings at the nearest enemy in reach
+  (it only swings when something's actually close, so it never flails at empty air). Melee items
+  make that swing bigger/faster/harder instead of replacing your gun.
+- **Melee items feel distinct.** Crescent Blade → a wider, faster, harder swing. Thunder Hammer →
+  a slow, heavy, *full-circle* AOE quake that hits everything around you. So a "melee build" is now
+  a real build (invest items in the swing) while still plinking with a weak gun.
+- **AOE builds scale.** A new global area multiplier scales the swing-AOE, nova, and bomb radii
+  together — groundwork for the bigger item pass.
+
+**Under the hood:** removed the `weaponType==='melee'` either/or branch in the game loop and
+`Player.tryMeleeAttack`; the swing runs on its own timer through the shared `meleeAttacks` pipeline
+(collision/knockback/kill). New `PlayerStats` getters: `getSwingDamage/Range/Arc/Interval/Aoe/
+Knockback` + `getAoeRadiusMult`. New item stats: `swingDamageMult/RangeBonus/ArcBonus/CooldownMult/
+Aoe` + `aoeRadiusMult`. Crescent Blade & Thunder Hammer rewritten as swing-shapers.
+
+**Verified:** `tsc` clean; `qa-melee-stack.mjs` PASS on the shipped `frontend/dist` — with **no
+items** the swing fires AND the gun fires; **Crescent Blade** keeps `getWeaponType()==='auto-aim'`
+and projectiles keep firing (the reported bug); **Thunder Hammer** grants a 360° AOE swing
+(`swingAoe 90`, arc == 2π); `aoeRadiusMult` defaults to 1; **0 console/page errors**. Commit
+`ef9b773`; **live-verified** — `roguelite-game-blush.vercel.app` serves bundle `index-DoahjPQB.js`
+(this build), HTTP 200.
+
+---
+
 ## 2026-07-03 (late morning) — remove all screen-shake + time-warp (maximum fluidity)
 
 Felix: *"Remove screen shake or things that alter time. I want the game to feel as fluid as
