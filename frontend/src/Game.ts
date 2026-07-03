@@ -941,8 +941,22 @@ export class Game {
       if (proj.dead) continue;
 
       if (proj.fromPlayer) {
-        // PERFORMANCE: Only check nearby enemies using quadtree
-        const nearbyEnemies = this.enemyQuadtree.retrieve(proj);
+        // PERFORMANCE: Only check nearby enemies using quadtree.
+        // Query the WHOLE swept segment (px0,py0 -> proj.x,proj.y), not just the
+        // endpoint: a fast projectile sweeps through cells its endpoint box never
+        // touches, so an enemy sitting mid-path in another quadtree cell was never a
+        // candidate and segmentCircleHit never got to test it — the projectile
+        // visibly passed through. Pad by the largest enemy radius so a swept-past
+        // enemy whose centre is just outside the path is still returned.
+        const minX = Math.min(px0, proj.x), maxX = Math.max(px0, proj.x);
+        const minY = Math.min(py0, proj.y), maxY = Math.max(py0, proj.y);
+        const pad = 90; // >= largest enemy radius
+        const nearbyEnemies = this.enemyQuadtree.retrieve({
+          x: (minX + maxX) / 2,
+          y: (minY + maxY) / 2,
+          width: (maxX - minX) + pad * 2,
+          height: (maxY - minY) + pad * 2,
+        } as any);
 
         for (const enemy of nearbyEnemies) {
           if (enemy.dead) continue; // Corpse still in this frame's quadtree — don't re-kill
