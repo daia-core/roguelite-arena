@@ -24,7 +24,7 @@ Live: https://roguelite-game-blush.vercel.app
 - **New game clears it** — both the kill counter and the banked stacks reset to zero on a fresh
   run.
 
-**Commit `__SHA__`** · live-verified `index-BTjArzVe.js` (HTTP 200, mobile 390×844). QA:
+**Commit `900041f`** · live-verified `index-BTjArzVe.js` (HTTP 200, mobile 390×844). QA:
 new `qa-soultithe.mjs` **13/13** (cadence, permanent-stack, damage-fold, control-without-item,
 and reset), plus regressions green (triggered-items 21/21, status-engines, item-icons, roguelite,
 synergy).
