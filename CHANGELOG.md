@@ -22,12 +22,14 @@ Live: https://roguelite-game-blush.vercel.app
   shorten the cadence. A second copy doesn't shorten the interval either (the flag is OR'd, not
   additive), so it stays a clean, readable "every 10th" beat rather than an opaque proc.
 
-**Commit `PENDING`** · live-verified `PENDING` (HTTP 200, mobile 390×844). QA:
-new `verify-pennib.mjs` **8/8** on the shipped `dist` — present+unlocked+flag, **reachable via
-the real weighted-shop roll** (not just catalog-present), `hasLoadedShot()` true when held, and
-the loaded projectile observed firing on the 10th shot with the exact designed signature (fat
-golden round radius 13, pierces-all `maxPierceCount 999`, damage **exactly 3× the base at that
-same instant**), zero console/page errors.
+**Commit `0f2fce6`** · live-verified `index-CKomoGvO.js` (HTTP 200, mobile 390×844). QA:
+new `qa-pennib.mjs` **9/9** on the shipped `dist`, driving real `updatePlaying` frames — catalog
+entry (`pen_nib_t3`, epic, 🎯, `loadedShot`), fresh-run default (`hasLoadedShot()` false,
+`shotsFired` 0), `hasLoadedShot()` true when held, and the **cadence** proven on live projectiles:
+a loaded round fires on shot **10 and 20 and no other** (not the 9th or 11th), carrying the exact
+designed signature — fat golden round (radius 13, `#ffd43b`), pierces-all (`maxPierceCount 999`),
+damage **exactly 3× the base bullet at that same instant**. Control (no item) never tags a loaded
+round nor ticks `shotsFired`; `startNewGame()` zeroes the counter. Zero console/page errors.
 
 ---
 
