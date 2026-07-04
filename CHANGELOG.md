@@ -8,6 +8,32 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-04 (afternoon) — feature: LEVEL-UP pick-1-of-3 upgrade screen
+
+- **Levelling up is now a real choice, not a silent stat bump.** Every level-up **pauses the fight**
+  and presents **three weighted items** (rolled from the same synergy/rarity/wave-gated pool as the
+  shop, tilted by your luck); tap one to keep it for the run. This is the classic Vampire-Survivors /
+  Brotato level-up beat the game was missing — each level now shapes your build.
+- **What still happens on level-up:** the +2 damage / +10 max-HP / heal and the confetti-burst juice
+  are unchanged — the pick-1-of-3 is layered *on top*, granting a full item (with its duo /
+  transformation / max-HP / shield side effects, exactly like a shop purchase — just free).
+- **Queue handling:** extra level-ups earned while the screen is open (a big XP orb crossing two
+  thresholds, or a second orb resolving) **queue and open back-to-back**, so a level-up can never be
+  swallowed. If the eligible pool is ever empty (e.g. weapon locked + all non-stackables owned) the
+  screen doesn't trap you — it passes through.
+- **UI:** mirrors the artifact-reward screen's visual language — dark backdrop, centred wood-panel
+  cards with icon + rarity-coloured name + wrapped description. Verified at both **390×844 mobile**
+  and desktop; no clipping, readable at phone size, tap targets full-width.
+- **Verification:** `tsc` clean; production build green. New **`qa-levelup.mjs` → 12/12** drives the
+  real game loop: state pauses to `levelup` with 3 item choices, the sim freezes (enemies don't
+  advance), a synthetic tap on a card grants exactly that item and returns to `playing`, the
+  back-to-back queue works, and a miss-tap grants nothing. Regression: `qa-roguelite` (0 errors),
+  `qa-xp-coin-shop` (all OK), `qa-triggered-items` (21/21) all still green. Commit `__SHA__`.
+  **Live-verified:** `index-BRsT97A5.js` serving at the production URL (HTTP 200), hash matches the
+  shipped build.
+
+---
+
 ## 2026-07-04 (afternoon) — feature: execute items (instakill low-HP enemies), the second triggered layer
 
 - **3 new "execute" items** — the first *on-hit conditional* effects (the earlier triggered layer was

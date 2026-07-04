@@ -42,7 +42,7 @@ import { MenuScene } from './scenes/MenuScene';
 //   'rest'   — a campfire node: heal or upgrade
 export type GameState =
   | 'menu' | 'playing' | 'shop' | 'paused' | 'gameover' | 'village'
-  | 'map' | 'event' | 'reward' | 'rest';
+  | 'map' | 'event' | 'reward' | 'rest' | 'levelup';
 
 export class Game {
   // Shared context read by extracted Scenes (see scenes/Scene.ts). `readonly` because
@@ -154,6 +154,13 @@ export class Game {
   rewardTitle: string = '';                  // header for the reward screen
   rewardSkippable: boolean = false;          // show a Skip button (elite/treasure/boss)
   private rewardThen: (() => void) | null = null; // what to do once an artifact is picked
+  // ---- LEVEL-UP pick-1-of-3 state (mirrors the reward screen) ----
+  // On level-up the sim pauses and the player picks ONE of three rolled items,
+  // making each level a real build decision instead of a silent stat bump. Extra
+  // level-ups earned while the screen is open queue up (pendingLevelups) and open
+  // back-to-back, so a big XP orb never eats a choice.
+  levelupChoices: Item[] = [];               // the 1-of-3 item offer
+  private pendingLevelups: number = 0;        // level-ups still owed a choice screen
   private pendingWaveArtifact: boolean = false;   // elite/boss wave grants spoils on clear
   restResolved: boolean = false;             // rest node: an option has been taken
   restResultText: string = '';               // rest node outcome line
@@ -615,6 +622,9 @@ export class Game {
         break;
       case 'reward':
         this.updateReward();
+        break;
+      case 'levelup':
+        this.updateLevelup();
         break;
       case 'rest':
         this.updateRest();
@@ -1674,8 +1684,17 @@ export class Game {
     if (!this.player) return;
     const leveledUp = this.player.addXP(amount);
     if (!leveledUp) return;
+    this.spawnLevelupBurst();
+    // Each level-up owes the player a pick-1-of-3. Queue it; open the screen now if
+    // one isn't already up (extra levels earned mid-screen open back-to-back).
+    this.pendingLevelups++;
+    if (this.state !== 'levelup') this.openNextLevelup();
+  }
+
+  /** Vampire-Survivors level-up juice — sound, flash, and a burst of confetti. */
+  private spawnLevelupBurst(): void {
+    if (!this.player) return;
     this.audio.playLevelUp();
-    // VAMPIRE SURVIVORS JUICE: Make level-ups feel MASSIVE
     this.renderer.addHitFlash(0.4);
     this.screenEffects.flash('#ffff00', 0.25);
     const colors = ['#ffff00', '#00ffff', '#ff00ff', '#ff6600', '#00ff00', '#ff0000', '#ffffff'];
@@ -1694,6 +1713,107 @@ export class Game {
         gravity: -100
       }));
     }
+  }
+
+  /** Roll 3 items and open the level-up choice screen for one owed level-up.
+   *  If the pool is exhausted (nothing left to offer) the level-up passes silently. */
+  private openNextLevelup(): void {
+    if (this.pendingLevelups <= 0) return;
+    this.pendingLevelups--;
+    const choices = ItemDatabase.getWeightedShopItems(
+      3,
+      this.waveManager.currentWave,
+      this.playerStats.items,
+      this.playerStats.getLuck(),
+      this.playerStats
+    ).filter(Boolean);
+    if (choices.length === 0) {
+      // Nothing eligible to offer (e.g. weapon locked + all non-stackables owned) —
+      // don't trap the player on an empty screen; drain any remaining owed levels too.
+      if (this.pendingLevelups > 0) { this.openNextLevelup(); return; }
+      if (this.state === 'levelup') this.state = 'playing';
+      return;
+    }
+    this.levelupChoices = choices;
+    this.state = 'levelup';
+    this.input.mouseDown = false;
+  }
+
+  /** Grant the chosen level-up item, firing the same duo/transformation/HP/shield
+   *  side effects the shop does (minus gold/pricing), then advance the queue. */
+  private grantLevelupItem(item: Item): void {
+    if (!this.player) return;
+    const { newDuos, newTransformations } = this.playerStats.addItem(item);
+    if (newDuos.length > 0) {
+      this.audio.playDuoUnlock();
+      for (const duo of newDuos) this.screenEffects.flash(duo.glowColor || '#ff00ff', 0.3);
+    }
+    if (newTransformations.length > 0) this.audio.playTransformation();
+    if (item.maxHealthBonus) {
+      const oldMax = this.player.maxHealth;
+      this.player.maxHealth = this.playerStats.getMaxHealth();
+      const healthPercent = this.player.health / oldMax;
+      this.player.health = this.player.maxHealth * healthPercent;
+    }
+    if (item.shield) this.player.shield = true;
+
+    this.levelupChoices = [];
+    // Chain to the next owed level-up, or return to the fight.
+    if (this.pendingLevelups > 0) this.openNextLevelup();
+    else this.state = 'playing';
+  }
+
+  private updateLevelup(): void {
+    if (!this.input.mouseDown) return;
+    const { s, W, isMobile } = this.screenScale();
+    const cardW = Math.min(W - s(32), s(isMobile ? 340 : 460));
+    const cardH = s(isMobile ? 74 : 68);
+    const gap = s(12);
+    const x0 = (W - cardW) / 2;
+    const topY = s(isMobile ? 72 : 92);
+    const mx = this.input.mouseX;
+    const my = this.input.mouseY;
+
+    for (let i = 0; i < this.levelupChoices.length; i++) {
+      const y = topY + i * (cardH + gap);
+      if (pointInRect(mx, my, { x: x0, y, width: cardW, height: cardH })) {
+        this.input.mouseDown = false;
+        this.grantLevelupItem(this.levelupChoices[i]);
+        return;
+      }
+    }
+  }
+
+  private drawLevelup(): void {
+    const ctx = this.renderer.getContext();
+    const { s, W, isMobile } = this.screenScale();
+    this.paintBackdrop();
+
+    const lvl = this.player ? this.player.level : 1;
+    this.renderer.drawText(`LEVEL ${lvl} — CHOOSE AN UPGRADE`, W / 2, s(isMobile ? 26 : 34), { size: s(isMobile ? 13 : 20), align: 'center', color: '#ffd700' });
+    this.renderer.drawText('Pick one to keep for the run', W / 2, s(isMobile ? 26 : 34) + s(isMobile ? 16 : 20), { size: s(isMobile ? 8 : 9), align: 'center', color: '#c8b998' });
+
+    const rarityColor: Record<string, string> = { common: '#c8c8c8', rare: '#74c0fc', epic: '#b06bd9', legendary: '#f2b04e' };
+    const cardW = Math.min(W - s(32), s(isMobile ? 340 : 460));
+    const cardH = s(isMobile ? 74 : 68);
+    const gap = s(12);
+    const x0 = (W - cardW) / 2;
+    const topY = s(isMobile ? 72 : 92);
+    const bodyPx = s(isMobile ? 8 : 9);
+
+    const iconBox = s(isMobile ? 28 : 30);
+    const textX = x0 + s(12) + iconBox + s(8);
+    const textW = cardW - (textX - x0) - s(12);
+    this.levelupChoices.forEach((item, i) => {
+      const y = topY + i * (cardH + gap);
+      drawPanel(ctx, x0, y, cardW, cardH, DARK_WOOD_THEME, 11 + i, 53);
+      this.renderer.drawItemIcon(item.icon, x0 + s(12) + iconBox / 2, y + (cardH - iconBox) / 2, iconBox, 'center');
+      this.renderer.drawText(item.name, textX, y + s(isMobile ? 16 : 18), { size: s(isMobile ? 11 : 13), align: 'left', color: rarityColor[item.rarity] || '#ffffff' });
+      this.renderer.drawText(item.rarity.toUpperCase(), x0 + cardW - s(12), y + s(isMobile ? 16 : 18), { size: s(7), align: 'right', color: rarityColor[item.rarity] || '#ffffff' });
+      for (const [li, line] of this.wrapText(item.description, textW, bodyPx).entries()) {
+        this.renderer.drawText(line, textX, y + s(isMobile ? 34 : 36) + li * (bodyPx + s(3)), { size: bodyPx, align: 'left', color: '#d8c9a8' });
+      }
+    });
   }
 
   /** Arm a hit-stop freeze, taking the longer of any overlapping request and
@@ -3497,6 +3617,9 @@ export class Game {
         break;
       case 'reward':
         this.drawReward();
+        break;
+      case 'levelup':
+        this.drawLevelup();
         break;
       case 'rest':
         this.drawRest();
