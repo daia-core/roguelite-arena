@@ -103,6 +103,67 @@ const result = await page.evaluate(() => {
   fresh(); g.wavesSurvived = 8; g.killStackCount = 15; g.player.gold = 9999; step();
   out.noItemIdentity = near(dMult(), 1.0) && near(frMult(), 1.0);
 
+  // === 7. EXECUTE — catalog + aggregation (highest threshold wins, never sums) ===
+  out.executeItemsExist = ['executioners_axe_t3','guillotine_t3','reapers_scythe_t3']
+    .every(id => !!DB.getItemById(id));
+  fresh(); giveItem('executioners_axe_t3');            // 0.15
+  out.execThreshold15 = near(g.playerStats.getExecuteThreshold(), 0.15);
+  giveItem('reapers_scythe_t3');                        // +0.33 → max(0.15,0.33)=0.33, NOT summed
+  out.execThresholdMax = near(g.playerStats.getExecuteThreshold(), 0.33);
+  fresh(); step();
+  out.execNoneZero = near(g.playerStats.getExecuteThreshold(), 0);
+
+  // Helper: get a live non-boss enemy sitting on the player, with huge maxHealth so a
+  // raw weapon hit CANNOT kill it — only an execute can. Isolates the execute effect.
+  const rigEnemyOnPlayer = (frac, asBoss) => {
+    fresh();
+    // ensure the wave is spawning; step until an enemy exists
+    let e = null;
+    for (let i = 0; i < 240 && !e; i++) { step(); e = (g.enemies || []).find(x => !x.dead); }
+    if (!e) return null;
+    e.typeData.isBoss = !!asBoss;
+    e.isMiniboss = false;
+    e.maxHealth = 100000;
+    e.health = Math.round(100000 * frac);
+    e.x = g.player.x; e.y = g.player.y;        // sit on the player so auto-fire connects
+    return e;
+  };
+  const runHits = (e) => {
+    // keep the enemy glued to the player and alive-input for a bunch of frames so the
+    // auto-fire lands at least one projectile hit
+    for (let i = 0; i < 120 && e && !e.dead; i++) {
+      e.x = g.player.x; e.y = g.player.y;
+      g.player.health = g.player.maxHealth;    // don't let contact damage end the run
+      step();
+    }
+  };
+
+  // === 8. EXECUTE fires below threshold and routes through the kill path ===
+  // (rig first — it resets the run — THEN grant the item, so fresh() can't wipe it.)
+  {
+    const e = rigEnemyOnPlayer(0.20, false);     // 20% < 25% → should be executed
+    giveItem('guillotine_t3');                   // threshold 0.25
+    const k0 = g.kills, s0 = g.killStackCount;
+    runHits(e);
+    out.execKillsBelow = !!e && e.dead === true;
+    out.execFeedsKillPath = g.kills > k0 && g.killStackCount > s0;  // XP/gold + Killing Spree
+  }
+
+  // === 9. Control: WITHOUT execute, the same weak hits do NOT kill (proves it's execute) ===
+  {
+    const e = rigEnemyOnPlayer(0.20, false);     // no execute item granted
+    runHits(e);
+    out.execControlSurvives = !!e && e.dead === false;
+  }
+
+  // === 10. Bosses are immune to execute ===
+  {
+    const e = rigEnemyOnPlayer(0.10, true);      // 10% HP but flagged boss
+    giveItem('reapers_scythe_t3');               // threshold 0.33 (highest)
+    runHits(e);
+    out.execBossImmune = !!e && e.dead === false;
+  }
+
   return out;
 });
 
@@ -115,7 +176,9 @@ console.log('Console/page errors:', errors.length);
 errors.forEach(e => console.log('  ', e));
 
 const checks = ['itemsExist','grindWave1','grindWave6','lastStandFullHp','lastStandLowDmg','lastStandLowFr',
-  'spree10','spreeDrains','juggFull','juggHurt','miser500','miserCap','noItemIdentity'];
+  'spree10','spreeDrains','juggFull','juggHurt','miser500','miserCap','noItemIdentity',
+  'executeItemsExist','execThreshold15','execThresholdMax','execNoneZero',
+  'execKillsBelow','execFeedsKillPath','execControlSurvives','execBossImmune'];
 const pass = result && !result.fatal && checks.every(k => result[k] === true) && errors.length === 0;
 console.log(`\n${checks.filter(k => result && result[k] === true).length}/${checks.length} checks passed`);
 console.log('RESULT:', pass ? 'PASS ✅' : 'FAIL ❌');

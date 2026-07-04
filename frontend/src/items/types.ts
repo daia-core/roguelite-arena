@@ -162,6 +162,13 @@ export interface Item {
   killStackDamage?: number;  // Killing Spree: each kill adds a decaying +dmg stack
   highHpPower?: number;      // Juggernaut: while HP is high (unhurt), +dmg
   goldScaleDamage?: number;  // Miser's Hoard: +dmg scaling with unspent gold on hand
+
+  // ---- EXECUTE (on-hit conditional, resolved in Game's projectile-hit path) ----
+  // Instantly kill a NON-boss enemy the moment a hit leaves it at or below this
+  // fraction of max HP. Stacked copies take the HIGHEST threshold (Math.max), not
+  // a sum — cheap copies can't compound into "execute at full HP". The kill routes
+  // through the normal kill path, so it still grants XP/gold and feeds Killing Spree.
+  executeThreshold?: number; // e.g. 0.15 = execute enemies at/under 15% HP
 }
 
 export interface Weapon {

@@ -1111,6 +1111,18 @@ export class Game {
             // GAME FEEL: impact flash on every hit
             this.renderer.addImpactFlash(enemy.x, enemy.y);
 
+            // EXECUTE: if the hit left a non-boss enemy at/under the execute
+            // threshold, finish it instantly. Routes through the normal kill path
+            // so it still grants XP/gold and feeds Killing Spree. Bosses/minibosses
+            // are immune — instakilling a boss would trivialise the run's checks.
+            if (!enemy.dead && !enemy.typeData.isBoss && !enemy.isMiniboss) {
+              const execFrac = this.playerStats.getExecuteThreshold();
+              if (execFrac > 0 && enemy.health <= enemy.maxHealth * execFrac) {
+                enemy.dead = true;
+                this.spawnExecuteBurst(enemy.x, enemy.y);
+              }
+            }
+
             if (enemy.dead) {
               this.handleEnemyKill(enemy);
             } else {
@@ -1689,6 +1701,25 @@ export class Game {
   private triggerHitPause(seconds: number): void {
     if (seconds > this.hitPauseTimer) this.hitPauseTimer = seconds;
     if (this.hitPauseTimer > Game.HIT_PAUSE_MAX) this.hitPauseTimer = Game.HIT_PAUSE_MAX;
+  }
+
+  /** Distinct crimson burst + impact flash so an execute reads as more than a normal kill. */
+  private spawnExecuteBurst(x: number, y: number): void {
+    const count = this.getParticleCount(14);
+    for (let i = 0; i < count; i++) {
+      const angle = (Math.PI * 2 * i) / Math.max(1, count);
+      const speed = 220 + Math.random() * 160;
+      this.particles.push(this.createParticle({
+        x, y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        color: i % 2 === 0 ? '#ff2d55' : '#ffffff',
+        size: 5 + Math.random() * 4,
+        lifetime: 350 + Math.random() * 250,
+        gravity: 120,
+      }));
+    }
+    this.renderer.addImpactFlash(x, y);
   }
 
   private handleEnemyKill(enemy: Enemy): void {

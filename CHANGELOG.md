@@ -8,6 +8,33 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-04 (afternoon) — feature: execute items (instakill low-HP enemies), the second triggered layer
+
+- **3 new "execute" items** — the first *on-hit conditional* effects (the earlier triggered layer was
+  all per-frame stat payouts). When your hit leaves a **non-boss** enemy at or below a threshold of
+  its max HP, it dies instantly:
+  - **Executioner's Axe** 🪓 (epic, 50g) — execute at ≤15% HP.
+  - **Guillotine** ⚔️ (legendary, 68g) — execute at ≤25% HP.
+  - **Reaper's Scythe** ☠️ (legendary, 84g) — execute at ≤33% HP.
+- **Why it matters:** high-HP mid-late enemies (just made ~2.9× tankier) currently need to be chipped
+  all the way down; execute rewards *bursting them into the red* and lets a build carve the swarm
+  instead of grinding each straggler's last sliver. It pairs naturally with the tankier curve shipped
+  earlier today.
+- **Design guards:** stacked execute items take the **highest** threshold (`Math.max`, never summed —
+  cheap copies can't compound into "execute at full HP"). **Bosses and minibosses are immune** —
+  instakilling a boss would gut the run's checks. Every execute routes through the **normal kill path**,
+  so it still grants XP + gold and feeds **Killing Spree** (no silent HP-zero that skips rewards). A
+  distinct crimson burst + impact flash marks an execute so it reads as more than a normal kill.
+- **Verification:** `tsc` clean; production build green. Extended `qa-triggered-items.mjs` to **21/21**
+  (was 13/13) — new checks drive the *real* game loop: execute fires below threshold, a
+  no-execute control proves raw damage alone can't kill the rigged high-maxHP enemy, the kill feeds
+  `kills`/`killStackCount`, bosses stay immune, and stacked thresholds take the max. Regression green
+  (roguelite smoke, verify-mechanics) with 0 console/page errors. Live bundle `index-DN_qNzCC.js`
+  matches the local QA'd build; HTTP 200.
+- Deployed via Vercel CLI (daiacore). Live: https://roguelite-game-blush.vercel.app
+
+---
+
 ## 2026-07-04 (morning) — balance: enemies tank far longer mid-late + enemy ranged actually stings
 
 - **Regular enemies are much tankier from mid-game on (Felix: "scale enemy health even more").**

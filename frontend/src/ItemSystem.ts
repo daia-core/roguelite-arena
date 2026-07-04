@@ -228,6 +228,8 @@ interface ItemAgg {
   // conditional/triggered (additive rates; paid out at runtime by Game when the condition holds)
   waveRampDamage: number; lowHpPower: number; killStackDamage: number;
   highHpPower: number; goldScaleDamage: number;
+  // execute: highest threshold wins (max, not sum)
+  executeThreshold: number;
   // boolean
   explosionOnHit: boolean; shield: boolean; homing: boolean; poison: boolean; poisonSpread: boolean;
   auxMelee: boolean; bombDrop: boolean; novaPulse: boolean;
@@ -248,6 +250,7 @@ function freshAgg(): ItemAgg {
     swingArcBonus: 0, swingAoe: 0,
     waveRampDamage: 0, lowHpPower: 0, killStackDamage: 0,
     highHpPower: 0, goldScaleDamage: 0,
+    executeThreshold: 0,
     explosionOnHit: false, shield: false, homing: false, poison: false, poisonSpread: false,
     auxMelee: false, bombDrop: false, novaPulse: false,
   };
@@ -372,6 +375,8 @@ export class PlayerStats {
       if (item.killStackDamage) a.killStackDamage += item.killStackDamage;
       if (item.highHpPower) a.highHpPower += item.highHpPower;
       if (item.goldScaleDamage) a.goldScaleDamage += item.goldScaleDamage;
+      // Execute: take the strongest threshold, never sum (no compounding to full-HP kills)
+      if (item.executeThreshold) a.executeThreshold = Math.max(a.executeThreshold, item.executeThreshold);
       // Boolean (any item carries it)
       if (item.explosionOnHit) a.explosionOnHit = true;
       if (item.shield) a.shield = true;
@@ -683,6 +688,7 @@ export class PlayerStats {
   getKillStackDamage(): number { return this.ensureAgg().killStackDamage; }
   getHighHpPower(): number { return this.ensureAgg().highHpPower; }
   getGoldScaleDamage(): number { return this.ensureAgg().goldScaleDamage; }
+  getExecuteThreshold(): number { return this.ensureAgg().executeThreshold; }
 
   hasPiercing(): boolean {
     return this.getPiercing() > 0;

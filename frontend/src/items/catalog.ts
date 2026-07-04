@@ -2954,5 +2954,41 @@ export const ITEM_CATALOG: Item[] = [
       unlocked: true,
       tags: ['economic'],
       goldScaleDamage: 0.08
+    },
+    {
+      id: 'executioners_axe_t3',
+      name: "Executioner's Axe",
+      description: 'Instantly kill any non-boss enemy left at or below 15% HP by your hit',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 50,
+      icon: '🪓',
+      unlocked: true,
+      tags: ['melee'],
+      executeThreshold: 0.15
+    },
+    {
+      id: 'guillotine_t3',
+      name: 'Guillotine',
+      description: 'Execute non-boss enemies at or below 25% HP — the swarm never gets to limp away',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 68,
+      icon: '⚔️',
+      unlocked: true,
+      tags: ['melee'],
+      executeThreshold: 0.25
+    },
+    {
+      id: 'reapers_scythe_t3',
+      name: "Reaper's Scythe",
+      description: 'Execute non-boss enemies at or below 33% HP, and each execute still feeds Killing Spree',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 84,
+      icon: '☠️',
+      unlocked: true,
+      tags: ['melee'],
+      executeThreshold: 0.33
     }
 ];
