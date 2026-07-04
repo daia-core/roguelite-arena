@@ -21,6 +21,21 @@ Grade: **B+**. It would be an A- with `Game.ts` broken into scenes and a combat 
 
 ---
 
+## Progress
+
+- **2026-07-04 — Step 1 STARTED & first slice shipped.** `Scene` interface keystone created
+  (`scenes/Scene.ts`) and the **Menu** screen extracted to `scenes/MenuScene.ts` (verbatim move;
+  scene reads shared context off `Game`). `Game.update()`/`draw()` delegate to a registered scene
+  and fall through to the switch for the rest. Menu was picked as the pilot on a mechanical coupling
+  measurement — lowest of all 10 screens (3 fields, 0 method calls) and the boot screen, so most
+  verifiable. Shipped with zero behavior change: tsc + build + 8-harness regression suite green (0
+  console errors), live bundle md5-identical to the QA'd build. `Game.ts` now down one screen; the
+  scene registry pattern is proven and ready to absorb the remaining screens.
+  - **Remaining screens in coupling order (lowest→highest risk):** map (6), gameover (7), village (8),
+    reward (11), event/rest/paused (12 each), **shop (30 — do last)**.
+
+---
+
 ## What's already right (keep doing this)
 
 - **Content is data-driven.** The full item roster lives in `items/catalog.ts` as pure data;

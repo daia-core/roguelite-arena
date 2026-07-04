@@ -8,6 +8,29 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-04 (night) — architecture: Scene split, step 1 — Menu extracted from the Game god-class (no player-visible change)
+
+- **First slice of the `Game.ts` → Scene refactor** (ARCHITECTURE-REVIEW.md step 1). Introduced a
+  `Scene` interface keystone (`scenes/Scene.ts`) and moved the title screen into its own
+  `scenes/MenuScene.ts` — logic lifted **verbatim** from the old `Game.updateMenu`/`drawMenu`, the
+  only change being that the scene reads the shared context (`canvas`, `renderer`, `metaProgression`)
+  off the `Game` instance. `Game.update()`/`draw()` now delegate to a registered scene when one
+  exists for the active state and otherwise fall through to the existing switch. The old
+  `updateMenu`/`drawMenu` methods are deleted. Menu is the pilot: lowest coupling of all 10 screens
+  (3 fields, 0 method calls) and the boot screen, so it's the most verifiable.
+- **Zero behavior change — this is a pure structural move**, chosen deliberately as the safe first
+  step (no big-bang rewrite) since Felix is on vacation and can't play-test.
+- **Verification:** `tsc` clean; production build green; full regression suite green with **0
+  console/page errors** — smoke (menu render + menu→playing transition), village, synergy, stat-caps,
+  triggered-items, status-engines, evolution, item-redesign. Menu screenshot confirmed at mobile
+  portrait. Live bundle **md5 byte-identical** to the local QA'd build (JS `45dd299a…`,
+  CSS `bc36c365…`), no auth wall.
+- Deployed via Vercel CLI (daiacore). Live: https://roguelite-game-blush.vercel.app
+- Next steps (unchanged from the plan): extract the remaining low-coupling screens (map, gameover,
+  village…), then the CombatSystem, then the shop last (coupling 30, the beast).
+
+---
+
 ## 2026-07-04 (night) — batch-8 enemy sprites hand-crafted: the beasts/critters family (9) — FULL COVERAGE 🎉
 
 - **Every enemy in the game is now a bespoke hand-drawn sprite.** This final batch redraws the last

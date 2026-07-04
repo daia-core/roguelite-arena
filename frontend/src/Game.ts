@@ -32,6 +32,8 @@ import { ArtifactSystem, ARTIFACTS, getArtifactById, type Artifact } from './Art
 import { randomEvent, type GameEvent, type EventEffect } from './EventSystem';
 import { EvolutionSystem, type Evolution } from './EvolutionSystem';
 import { VillageScene } from './VillageScene';
+import type { Scene } from './scenes/Scene';
+import { MenuScene } from './scenes/MenuScene';
 
 // The map/node meta-layer adds three between-wave screens on top of the core loop:
 //   'map'    — the Slay-the-Spire-style branching node picker (route your run)
@@ -43,9 +45,16 @@ export type GameState =
   | 'map' | 'event' | 'reward' | 'rest';
 
 export class Game {
-  private canvas: HTMLCanvasElement;
-  private renderer: Renderer;
+  // Shared context read by extracted Scenes (see scenes/Scene.ts). `readonly` because
+  // both are assigned exactly once in the constructor.
+  readonly canvas: HTMLCanvasElement;
+  readonly renderer: Renderer;
   private input: Input;
+
+  // Per-screen scenes extracted out of Game (incremental de-god-classing). A state with
+  // a registered scene is dispatched to it; the rest still live in the update/draw switch
+  // until they're extracted in turn. See ARCHITECTURE-REVIEW.md.
+  private scenes: Partial<Record<GameState, Scene>> = {};
   private audio: AudioManager;
 
   // Hidden probe that reads the device safe-area insets (notch / status bar) so the
@@ -300,6 +309,9 @@ export class Game {
         }
       }
     });
+
+    // Register extracted per-screen scenes (menu is the pilot; more to follow).
+    this.scenes.menu = new MenuScene(this);
 
     this.setupUI();
   }
@@ -563,10 +575,14 @@ export class Game {
       this.lastUpdateState = this.state;
     }
 
+    // Extracted scenes handle their own update; the rest stay in the switch below.
+    const activeScene = this.scenes[this.state];
+    if (activeScene) {
+      activeScene.update(dt);
+      return;
+    }
+
     switch (this.state) {
-      case 'menu':
-        this.updateMenu();
-        break;
       case 'playing': {
         // Hit-stop: while the freeze window is active, drain it with REAL time but
         // advance the gameplay sim by 0 this frame. draw() still runs (main loop),
@@ -603,14 +619,6 @@ export class Game {
       case 'rest':
         this.updateRest();
         break;
-    }
-  }
-
-  private updateMenu(): void {
-    // Update continue button visibility
-    const continueBtn = document.getElementById('continueBtn');
-    if (continueBtn) {
-      continueBtn.style.display = SaveManager.hasSavedRun() ? 'block' : 'none';
     }
   }
 
@@ -3428,10 +3436,13 @@ export class Game {
     this.renderer.clear();
     this.renderer.beginFrame();
 
+    // Extracted scenes draw themselves; the rest stay in the switch below. The
+    // evolution banner + layer composite after this still run for every state.
+    const activeScene = this.scenes[this.state];
+    if (activeScene) {
+      activeScene.draw();
+    } else {
     switch (this.state) {
-      case 'menu':
-        this.drawMenu();
-        break;
       case 'playing':
         this.drawPlaying();
         break;
@@ -3459,6 +3470,7 @@ export class Game {
       case 'rest':
         this.drawRest();
         break;
+    }
     }
 
     // Weapon-evolution banner: a top-level overlay so it reads over BOTH the playing
@@ -3493,39 +3505,6 @@ export class Game {
       maxWidth: this.canvas.width - 40
     });
     ctx.restore();
-  }
-
-  private drawMenu(): void {
-    const zoom = this.canvas.clientWidth ? this.canvas.width / this.canvas.clientWidth : 1;
-    const s = (v: number) => Math.round(v * zoom);
-    const cx = this.canvas.width / 2;
-
-    // Title with a hard drop shadow for a chunky pixel look
-    this.renderer.drawText('ROGUELITE', cx + s(4), s(64) + s(4), {
-      size: s(42), align: 'center', color: '#241407', stroke: false
-    });
-    this.renderer.drawText('ROGUELITE', cx, s(64), {
-      size: s(42), align: 'center', color: '#f2d94e', strokeWidth: s(4)
-    });
-
-    // Auto-fit long lines to the viewport so they never clip off narrow portrait.
-    const textMax = this.canvas.width - s(24);
-    this.renderer.drawText('WASD OR TOUCH JOYSTICK', cx, s(140), {
-      size: s(10), align: 'center', color: '#dfe6ee', maxWidth: textMax
-    });
-    this.renderer.drawText('BUILD A BROKEN BUILD IN THE SHOP. SURVIVE.', cx, s(162), {
-      size: s(10), align: 'center', color: '#dfe6ee', maxWidth: textMax
-    });
-
-    this.renderer.drawText(`SOULS ${this.metaProgression.souls}`, cx, s(196), {
-      size: s(14), align: 'center', color: '#b197fc', maxWidth: textMax
-    });
-
-    const stats = SaveManager.getStats();
-    this.renderer.drawText(
-      `BEST WAVE ${stats.highestWave}   RUNS ${stats.totalRuns}   KILLS ${stats.totalKills}`,
-      cx, s(226), { size: s(9), align: 'center', color: '#aab6c3', maxWidth: textMax }
-    );
   }
 
   private drawPlaying(): void {
