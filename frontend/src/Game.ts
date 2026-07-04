@@ -182,6 +182,12 @@ export class Game {
   private static readonly HIGH_HP_THRESHOLD = 0.90; // "high HP" = at/over 90% max
   private static readonly GOLD_SCALE_PER = 100;     // gold per +1 unit of goldScaleDamage
   private static readonly GOLD_SCALE_CAP = 2.0;     // cap the gold-scaling factor at +200% dmg
+  // Soul Tithe: a run-long on-kill milestone counter (only ticks while the item is held).
+  private soulTitheKills: number = 0;               // kills banked since owning Soul Tithe
+  private soulTitheStacks: number = 0;              // permanent +dmg stacks earned this run
+  private static readonly SOUL_TITHE_ORB_EVERY = 10;   // drop a health orb every Nth kill
+  private static readonly SOUL_TITHE_DMG_EVERY = 50;    // bank a permanent stack every Nth kill
+  private static readonly SOUL_TITHE_DMG_PER = 0.01;    // +1% damage per banked stack (uncapped)
 
   // Stats
   kills: number = 0;
@@ -472,6 +478,8 @@ export class Game {
     this.wavesSurvived = 0;
     this.killStackCount = 0;
     this.killStackTimer = 0;
+    this.soulTitheKills = 0;
+    this.soulTitheStacks = 0;
 
     this.waveManager.reset();
     // The map layer drives wave numbers now: the first battle node starts wave
@@ -1859,6 +1867,19 @@ export class Game {
     this.killStackCount = Math.min(Game.KILL_STACK_MAX, this.killStackCount + 1);
     this.killStackTimer = 0;
 
+    // Soul Tithe: a run-long on-kill milestone. Only counts while the item is held, so
+    // it's "every Nth kill SINCE you bought it" — every 10th drops a health orb, every
+    // 50th banks a permanent +1% damage stack (folded in updateRuntimeModifiers).
+    if (this.playerStats.hasSoulTithe()) {
+      this.soulTitheKills++;
+      if (this.soulTitheKills % Game.SOUL_TITHE_ORB_EVERY === 0) {
+        this.healthOrbs.push(new HealthOrb(enemy.x, enemy.y));
+      }
+      if (this.soulTitheKills % Game.SOUL_TITHE_DMG_EVERY === 0) {
+        this.soulTitheStacks++;
+      }
+    }
+
     // Track boss kills
     if (enemy.type === 'demon') {
       this.bossKills++;
@@ -2995,6 +3016,12 @@ export class Game {
     if (goldScale > 0) {
       const factor = Math.min(Game.GOLD_SCALE_CAP, goldScale * (this.player.gold / Game.GOLD_SCALE_PER));
       dmg *= 1 + factor;
+    }
+    // Soul Tithe: permanent +dmg per stack banked from kill milestones this run (uncapped
+    // by design — it's the slow "clear speed = a stat" payoff, and stays finite via getDamage's
+    // sanity cap). The stacks persist across frames; we just re-fold them each recompute.
+    if (this.soulTitheStacks > 0) {
+      dmg *= 1 + Game.SOUL_TITHE_DMG_PER * this.soulTitheStacks;
     }
 
     this.playerStats.runtimeDamageMult = dmg;

@@ -3002,5 +3002,17 @@ export const ITEM_CATALOG: Item[] = [
       unlocked: true,
       tags: ['elemental'],
       fourleafCharm: true
+    },
+    {
+      id: 'soul_tithe_t3',
+      name: 'Soul Tithe',
+      description: 'Every 10th kill drops a health orb, and every 50th kill grants a PERMANENT +1% damage for the rest of the run',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 72,
+      icon: '👻',
+      unlocked: true,
+      tags: ['economic'],
+      soulTithe: true
     }
 ];

@@ -8,6 +8,29 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-04 (evening) — feature: SOUL TITHE — on-kill milestone item
+
+- **New legendary item: Soul Tithe 👻** — a run-long on-kill counter that starts ticking the
+  moment you buy it. **Every 10th kill drops a health orb**, and **every 50th kill banks a
+  PERMANENT +1% damage stack** for the rest of the run (no cap). Clear speed itself becomes a
+  scaling stat — a turn-1 pickup snowballs across the whole run.
+- **Counter is scoped to ownership** — it only counts kills *since you bought it* ("every Nth
+  kill while held"), so buying it late still starts you at zero. Killing without the item never
+  ticks it.
+- **Cadence is exact:** the 10th kill (not the 9th) drops the first orb; by the 50th kill you've
+  banked 5 orbs and 1 permanent damage stack; at 100 kills, 2 stacks; and so on. The permanent
+  stacks fold straight into the per-frame runtime damage multiplier (same path as the momentum/
+  berserk artifacts), so `damage = base × (1 + 0.01 × stacks)`.
+- **New game clears it** — both the kill counter and the banked stacks reset to zero on a fresh
+  run.
+
+**Commit `__SHA__`** · live-verified `index-BTjArzVe.js` (HTTP 200, mobile 390×844). QA:
+new `qa-soultithe.mjs` **13/13** (cadence, permanent-stack, damage-fold, control-without-item,
+and reset), plus regressions green (triggered-items 21/21, status-engines, item-icons, roguelite,
+synergy).
+
+---
+
 ## 2026-07-04 (evening) — feature: FOURLEAF CHARM — proc-luck keystone
 
 - **New legendary item: Fourleaf Charm 🍀** — while held, every on-hit **status proc**

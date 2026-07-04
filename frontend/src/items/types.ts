@@ -163,6 +163,12 @@ export interface Item {
   highHpPower?: number;      // Juggernaut: while HP is high (unhurt), +dmg
   goldScaleDamage?: number;  // Miser's Hoard: +dmg scaling with unspent gold on hand
 
+  // ---- ON-KILL MILESTONE (Soul Tithe) ----
+  // A run-long on-kill counter: every 10th kill while held drops a health orb, and
+  // every 50th kill banks a PERMANENT +1% damage stack (no cap) — so clear speed
+  // itself becomes a scaling stat and a turn-1 pickup snowballs across the whole run.
+  soulTithe?: boolean;
+
   // ---- EXECUTE (on-hit conditional, resolved in Game's projectile-hit path) ----
   // Instantly kill a NON-boss enemy the moment a hit leaves it at or below this
   // fraction of max HP. Stacked copies take the HIGHEST threshold (Math.max), not

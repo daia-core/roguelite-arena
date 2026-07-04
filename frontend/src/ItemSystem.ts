@@ -233,6 +233,7 @@ interface ItemAgg {
   // boolean
   explosionOnHit: boolean; shield: boolean; homing: boolean; poison: boolean; poisonSpread: boolean;
   auxMelee: boolean; bombDrop: boolean; novaPulse: boolean; fourleafCharm: boolean;
+  soulTithe: boolean;
 }
 
 function freshAgg(): ItemAgg {
@@ -253,6 +254,7 @@ function freshAgg(): ItemAgg {
     executeThreshold: 0,
     explosionOnHit: false, shield: false, homing: false, poison: false, poisonSpread: false,
     auxMelee: false, bombDrop: false, novaPulse: false, fourleafCharm: false,
+    soulTithe: false,
   };
 }
 
@@ -387,6 +389,7 @@ export class PlayerStats {
       if (item.bombDrop) a.bombDrop = true;
       if (item.novaPulse) a.novaPulse = true;
       if (item.fourleafCharm) a.fourleafCharm = true;
+      if (item.soulTithe) a.soulTithe = true;
     }
     this._agg = a;
     this._aggDirty = false;
@@ -654,6 +657,11 @@ export class PlayerStats {
   // ---- PROC LUCK (Fourleaf Charm) ----
   hasFourleafCharm(): boolean {
     return this.ensureAgg().fourleafCharm;
+  }
+
+  // ---- ON-KILL MILESTONE (Soul Tithe) ----
+  hasSoulTithe(): boolean {
+    return this.ensureAgg().soulTithe;
   }
 
   /**
