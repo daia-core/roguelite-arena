@@ -188,6 +188,11 @@ export class Game {
   private static readonly SOUL_TITHE_ORB_EVERY = 10;   // drop a health orb every Nth kill
   private static readonly SOUL_TITHE_DMG_EVERY = 50;    // bank a permanent stack every Nth kill
   private static readonly SOUL_TITHE_DMG_PER = 0.01;    // +1% damage per banked stack (uncapped)
+  // Ceremonial Daggers: on-kill homing spectral daggers. Bounded to one generation per
+  // primary kill (a dagger's own kill never spawns more) so dense packs can't cascade.
+  private static readonly DAGGER_DMG_MULT = 0.5;   // each dagger does 50% of current shot damage
+  private static readonly DAGGER_SPEED = 320;      // px/s (fast, so daggers connect quickly)
+  private static readonly DAGGER_TURN = 4.0;       // homing turn rate (rad/s) — tight seek
 
   // Stats
   kills: number = 0;
@@ -1148,7 +1153,7 @@ export class Game {
             }
 
             if (enemy.dead) {
-              this.handleEnemyKill(enemy);
+              this.handleEnemyKill(enemy, proj.isDagger);
             } else {
               this.applyOnHitEffects(enemy, damage);
             }
@@ -1856,7 +1861,30 @@ export class Game {
     this.renderer.addImpactFlash(x, y);
   }
 
-  private handleEnemyKill(enemy: Enemy): void {
+  /**
+   * Ceremonial Daggers: throw `count` homing spectral daggers from a dead enemy's
+   * position. They fan out in an even spread, then home onto the nearest enemies via
+   * the standard player-projectile homing path. Each is flagged `isDagger` so its own
+   * kill can't spawn more daggers (handleEnemyKill's re-entrancy guard), bounding the
+   * chain to one generation per primary kill. Damage scales with the current build.
+   */
+  private spawnCeremonialDaggers(enemy: Enemy, count: number): void {
+    const dmg = this.playerStats.getDamage() * Game.DAGGER_DMG_MULT;
+    const base = Math.random() * Math.PI * 2; // random offset so fans don't always align
+    for (let i = 0; i < count; i++) {
+      const angle = base + (Math.PI * 2 * i) / count;
+      const proj = this.projectilePool.acquire();
+      proj.init(enemy.x, enemy.y, angle, dmg, Game.DAGGER_SPEED, true);
+      proj.homing = true;
+      proj.turnSpeed = Game.DAGGER_TURN;
+      proj.isDagger = true;
+      proj.color = '#d0bfff'; // spectral pale-violet trail
+      proj.radius = 7;
+      this.projectiles.push(proj);
+    }
+  }
+
+  private handleEnemyKill(enemy: Enemy, fromDagger: boolean = false): void {
     if (!this.player) return;
 
     this.kills++;
@@ -1878,6 +1906,15 @@ export class Game {
       if (this.soulTitheKills % Game.SOUL_TITHE_DMG_EVERY === 0) {
         this.soulTitheStacks++;
       }
+    }
+
+    // Ceremonial Daggers: on kill, throw homing spectral daggers at nearby enemies.
+    // RE-ENTRANCY GUARD: a dagger's OWN kill (fromDagger) never spawns more daggers, so
+    // the chain is bounded to a single generation per primary kill — a dense pack can't
+    // cascade into an exponential dagger storm.
+    if (!fromDagger) {
+      const daggerCount = this.playerStats.getDaggerCount();
+      if (daggerCount > 0) this.spawnCeremonialDaggers(enemy, daggerCount);
     }
 
     // Track boss kills

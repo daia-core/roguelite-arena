@@ -3014,5 +3014,17 @@ export const ITEM_CATALOG: Item[] = [
       unlocked: true,
       tags: ['economic'],
       soulTithe: true
+    },
+    {
+      id: 'ceremonial_daggers_t3',
+      name: 'Ceremonial Daggers',
+      description: 'On every kill, throw 3 homing spectral daggers that seek nearby enemies — turns kills into a self-sustaining chain',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 82,
+      icon: '🗡️',
+      unlocked: true,
+      tags: ['ranged'],
+      ceremonialDaggers: 3
     }
 ];

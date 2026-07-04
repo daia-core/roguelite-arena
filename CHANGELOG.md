@@ -8,6 +8,28 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-04 (evening) — feature: CEREMONIAL DAGGERS — on-kill homing daggers
+
+- **New legendary item: Ceremonial Daggers 🗡️** — on **every kill**, throw **3 homing
+  spectral daggers** that seek the nearest enemies. Kills become a self-sustaining chain that
+  mows through trash and snowballs hard in dense waves — and it *reads* as the build working
+  (a fan of violet daggers flies out of every corpse). Each dagger does 50% of your current
+  shot damage, so it scales with the whole build.
+- **Stacks** — a second copy makes it **6 daggers per kill** (additive), and so on.
+- **Bounded against runaway chains (the design risk):** a dagger's *own* kill never spawns more
+  daggers — the on-kill spawn is gated to one generation per *primary* kill. So a huge dense
+  pack can't cascade into an exponential dagger storm that melts the frame rate or the whole
+  wave; the effect is strong but stays controlled. (Under the hood: daggers are flagged
+  `isDagger`, and `handleEnemyKill` skips the spawn when the kill came from a dagger.)
+
+**Commit `__SHA__`** · live-verified `index-DKF42lUI.js` (HTTP 200, mobile 390×844). QA:
+new `qa-daggers.mjs` **11/11** (spawn count, homing-player shape, damage-scaling, stacking to 6,
+control-without-item, and the **recursion-guard** proving a dagger's kill spawns zero daggers),
+plus regressions green (triggered-items 21/21, status-engines, item-icons, roguelite, synergy,
+stacking-weapons).
+
+---
+
 ## 2026-07-04 (evening) — feature: SOUL TITHE — on-kill milestone item
 
 - **New legendary item: Soul Tithe 👻** — a run-long on-kill counter that starts ticking the

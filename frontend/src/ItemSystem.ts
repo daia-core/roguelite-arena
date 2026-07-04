@@ -230,6 +230,8 @@ interface ItemAgg {
   highHpPower: number; goldScaleDamage: number;
   // execute: highest threshold wins (max, not sum)
   executeThreshold: number;
+  // on-kill proc: daggers spawned per kill (additive across copies)
+  daggerCount: number;
   // boolean
   explosionOnHit: boolean; shield: boolean; homing: boolean; poison: boolean; poisonSpread: boolean;
   auxMelee: boolean; bombDrop: boolean; novaPulse: boolean; fourleafCharm: boolean;
@@ -252,6 +254,7 @@ function freshAgg(): ItemAgg {
     waveRampDamage: 0, lowHpPower: 0, killStackDamage: 0,
     highHpPower: 0, goldScaleDamage: 0,
     executeThreshold: 0,
+    daggerCount: 0,
     explosionOnHit: false, shield: false, homing: false, poison: false, poisonSpread: false,
     auxMelee: false, bombDrop: false, novaPulse: false, fourleafCharm: false,
     soulTithe: false,
@@ -379,6 +382,8 @@ export class PlayerStats {
       if (item.goldScaleDamage) a.goldScaleDamage += item.goldScaleDamage;
       // Execute: take the strongest threshold, never sum (no compounding to full-HP kills)
       if (item.executeThreshold) a.executeThreshold = Math.max(a.executeThreshold, item.executeThreshold);
+      // On-kill daggers: additive count across copies
+      if (item.ceremonialDaggers) a.daggerCount += item.ceremonialDaggers;
       // Boolean (any item carries it)
       if (item.explosionOnHit) a.explosionOnHit = true;
       if (item.shield) a.shield = true;
@@ -662,6 +667,11 @@ export class PlayerStats {
   // ---- ON-KILL MILESTONE (Soul Tithe) ----
   hasSoulTithe(): boolean {
     return this.ensureAgg().soulTithe;
+  }
+
+  // ---- ON-KILL PROC (Ceremonial Daggers) ----
+  getDaggerCount(): number {
+    return this.ensureAgg().daggerCount;
   }
 
   /**

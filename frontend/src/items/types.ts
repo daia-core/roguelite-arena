@@ -169,6 +169,14 @@ export interface Item {
   // itself becomes a scaling stat and a turn-1 pickup snowballs across the whole run.
   soulTithe?: boolean;
 
+  // ---- ON-KILL PROC (Ceremonial Daggers) ----
+  // On every kill, spawn this many homing spectral daggers that seek nearby enemies,
+  // turning kills into a self-sustaining chain that clears trash and snowballs dense
+  // waves. Additive across copies (more daggers per kill). Bounded against runaway
+  // recursion in Game: a dagger's OWN kill never spawns more daggers (one generation
+  // per primary kill), so a dense pack can't cascade into an exponential dagger storm.
+  ceremonialDaggers?: number;
+
   // ---- EXECUTE (on-hit conditional, resolved in Game's projectile-hit path) ----
   // Instantly kill a NON-boss enemy the moment a hit leaves it at or below this
   // fraction of max HP. Stacked copies take the HIGHEST threshold (Math.max), not

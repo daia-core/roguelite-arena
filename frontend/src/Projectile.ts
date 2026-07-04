@@ -42,6 +42,9 @@ export class Projectile {
   // by Game, which knows the player position)
   homing: boolean = false;
   turnSpeed: number = 0;
+  // Ceremonial Daggers: a spectral dagger spawned ON KILL. Flagged so its own kill
+  // never re-triggers the on-kill dagger spawn (bounds the chain to one generation).
+  isDagger: boolean = false;
   // Elemental identity (player shots only; enemy bullets stay 'physical').
   damageType: DamageType = 'physical';
 
@@ -99,6 +102,7 @@ export class Projectile {
     this.pierceCount = 0;
     this.homing = false;
     this.turnSpeed = 0;
+    this.isDagger = false;
     this.damageType = 'physical';
   }
 
