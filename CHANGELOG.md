@@ -28,7 +28,7 @@ Live: https://roguelite-game-blush.vercel.app
   real game loop: state pauses to `levelup` with 3 item choices, the sim freezes (enemies don't
   advance), a synthetic tap on a card grants exactly that item and returns to `playing`, the
   back-to-back queue works, and a miss-tap grants nothing. Regression: `qa-roguelite` (0 errors),
-  `qa-xp-coin-shop` (all OK), `qa-triggered-items` (21/21) all still green. Commit `__SHA__`.
+  `qa-xp-coin-shop` (all OK), `qa-triggered-items` (21/21) all still green. Commit `e1db256`.
   **Live-verified:** `index-BRsT97A5.js` serving at the production URL (HTTP 200), hash matches the
   shipped build.
 
