@@ -10,6 +10,7 @@ export type EventEffect =
   | { kind: 'hurt'; frac: number }       // lose frac * maxHP (event damage never kills)
   | { kind: 'maxHp'; amount: number }    // +/- max HP
   | { kind: 'item' }                     // grant a random shop-tier item
+  | { kind: 'curse'; id: string }        // devil-deal price: grant a SPECIFIC curse artifact by id
   | { kind: 'nothing' };
 
 export interface EventOption {
@@ -136,6 +137,35 @@ export const EVENTS: GameEvent[] = [
         result: 'The scrap fetches a decent price.' },
       { label: 'Rest among the ruins', effects: [{ kind: 'heal', frac: 0.35 }],
         result: 'A quiet moment mends you a little.' },
+    ],
+  },
+  // ---- DEVIL DEALS — a hard risk axis. Each pact hands a strong, run-long boon
+  // welded to a permanent CURSE (excluded from the normal artifact pool, so it only
+  // ever arrives here). "Walk away" is always free — the deal is a real choice. ----
+  {
+    id: 'devil_bargain',
+    title: "The Devil's Bargain",
+    text: 'A horned silhouette offers power for a permanent price. Its grin does not waver.',
+    options: [
+      { label: 'Trade your skin for strength', effects: [{ kind: 'artifact' }, { kind: 'curse', id: 'curse_frailty' }],
+        result: 'Power floods your veins — and your flesh turns paper-thin. (+artifact, take +50% damage forever)' },
+      { label: 'Trade your speed for gold', effects: [{ kind: 'gold', amount: 120 }, { kind: 'curse', id: 'curse_sloth' }],
+        result: 'Your purse grows heavy; your legs grow heavier still. (+120 gold, -30% move speed forever)' },
+      { label: 'Refuse the pact', effects: [{ kind: 'nothing' }],
+        result: 'You turn your back on the horned figure. It only laughs.' },
+    ],
+  },
+  {
+    id: 'devil_altar',
+    title: 'The Bleeding Altar',
+    text: 'Chains of old iron cradle a pulsing heart of stone. Take it — but it takes from you.',
+    options: [
+      { label: "Seize the stone heart", effects: [{ kind: 'maxHp', amount: 60 }, { kind: 'artifact' }, { kind: 'curse', id: 'curse_dullness' }],
+        result: 'Vitality and power surge in — your trigger finger goes cold and slow. (+60 max HP, +artifact, -25% fire rate forever)' },
+      { label: 'Bleed onto the altar', effects: [{ kind: 'hurt', frac: 0.25 }, { kind: 'artifact' }],
+        result: 'You pay in blood, not chains — the altar accepts. (lose 25% HP, +artifact, no curse)' },
+      { label: 'Leave the altar cold', effects: [{ kind: 'nothing' }],
+        result: 'Some hearts are best left unbeaten. You walk on.' },
     ],
   },
 ];

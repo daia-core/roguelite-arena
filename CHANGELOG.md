@@ -8,6 +8,33 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-04 (afternoon) — feature: DEVIL DEALS — a permanent-price risk axis
+
+- **The `?` events can now offer a devil's bargain** — a strong, run-long **boon welded to a
+  permanent CURSE**. This is the game's first *negative* choice: every prior reward was pure upside
+  or a one-off cost; a pact marks you for the whole run. "Walk away" is always free, so the deal is a
+  real decision, not a trap.
+- **Two devil events:**
+  - **The Devil's Bargain** — *trade your skin for strength* (a random artifact + **Curse of Frailty:
+    +50% damage taken forever**), or *trade your speed for gold* (+120 gold + **Curse of Sloth: -30%
+    move speed forever**).
+  - **The Bleeding Altar** — *seize the stone heart* (+60 max HP + a random artifact + **Curse of
+    Dullness: -25% fire rate forever**), or the no-curse path *bleed onto the altar* (lose 25% HP +
+    a random artifact).
+- **Three curse artifacts** (Frailty 💔, Sloth 🐢, Dullness 🌫️) — each folds its malus through the
+  exact same static-stat path as any artifact, but is **excluded from the random artifact pool**, so
+  a curse can *only* ever arrive as the price of a pact (verified: 60 random draws, never a curse).
+- **Hand-crafted pixel icons** for all three curses (12×12 glyphs in the game's art style — a cracked
+  heart, a turtle shell, a grey fog), so they render as real sprites, not the flat rune fallback.
+- **Verification:** `tsc` clean; production build green. New **`qa-devildeal.mjs` → 18/18** drives the
+  real effect path: curses exist + flagged + carry a malus, both devil events exist with a free
+  walk-away, curses never appear in the random pool, taking a pact grants **both** boon and curse and
+  the curse's malus folds into `playerStats` (speed / fire-rate / incoming-damage), walk-away grants
+  nothing, and a repeat curse-grant is idempotent. Regression: `qa-artifact-icons` (all 23 glyphs
+  incl. 3 curses PASS), `qa-triggered-items` (21/21), `qa-roguelite` (0 errors), `qa-node-map` (all
+  node types + persistence) — all green. Devil-event screen eyeballed at **390×844 mobile** + desktop.
+- **Commit `__SHA__`** · live-verified `index-5ln61MYJ.js` at https://roguelite-game-blush.vercel.app (HTTP 200, bundle hash matches local build).
+
 ## 2026-07-04 (afternoon) — feature: LEVEL-UP pick-1-of-3 upgrade screen
 
 - **Levelling up is now a real choice, not a silent stat bump.** Every level-up **pauses the fight**

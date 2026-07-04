@@ -33,6 +33,11 @@ export interface Artifact {
   desc: string;       // player-facing, one line
   icon: string;       // short glyph drawn on the node/card
   rarity: ArtifactRarity;
+  // A CURSE — a devil-deal downside artifact. Curses fold their (negative) stats
+  // through the exact same static path as any artifact; the only difference is they
+  // are excluded from the RANDOM artifact pools, so they arrive ONLY as the price of
+  // a devil deal (paired with a strong boon in the same event option).
+  curse?: boolean;
   // ---- static stat contributions (folded into PlayerStats on grant) ----
   damageMult?: number;
   fireRateMult?: number;
@@ -157,11 +162,30 @@ export const ARTIFACTS: Artifact[] = [
     desc: '+25% damage, +15% crit chance and +80% crit damage.',
     damageMult: 1.25, critChanceBonus: 0.15, critMultMult: 1.8,
   },
+  // ---- CURSES (devil-deal downsides — never in the random pool) ----
+  {
+    id: 'curse_frailty', name: 'Curse of Frailty', icon: '💔', rarity: 'legendary',
+    desc: 'Take +50% damage from everything, permanently.',
+    curse: true, flags: ['glassCannon'], glassTakenMult: 1.5,
+  },
+  {
+    id: 'curse_sloth', name: 'Curse of Sloth', icon: '🐢', rarity: 'legendary',
+    desc: '-30% move speed, permanently.',
+    curse: true, speedMult: 0.7,
+  },
+  {
+    id: 'curse_dullness', name: 'Curse of Dullness', icon: '🌫️', rarity: 'legendary',
+    desc: '-25% fire rate, permanently.',
+    curse: true, fireRateMult: 0.75,
+  },
 ];
 
 export function getArtifactById(id: string): Artifact | undefined {
   return ARTIFACTS.find(a => a.id === id);
 }
+
+/** Artifacts eligible for the RANDOM reward pools — excludes devil-deal curses. */
+export const ROLLABLE_ARTIFACTS: Artifact[] = ARTIFACTS.filter(a => !a.curse);
 
 export class ArtifactSystem {
   held: Artifact[] = [];

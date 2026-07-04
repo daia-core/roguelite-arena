@@ -28,8 +28,8 @@ import { drawPanel, DARK_WOOD_THEME } from './pixel/panel';
 import { DUO_COMBOS } from './DuoSystem';
 import { UISprites } from './UISprites';
 import { MapSystem, nodeIcon, nodeLabel, serializeMap, deserializeMap, type NodeType } from './MapSystem';
-import { ArtifactSystem, ARTIFACTS, getArtifactById, type Artifact } from './ArtifactSystem';
-import { randomEvent, type GameEvent, type EventEffect } from './EventSystem';
+import { ArtifactSystem, ARTIFACTS, ROLLABLE_ARTIFACTS, getArtifactById, type Artifact } from './ArtifactSystem';
+import { randomEvent, EVENTS, type GameEvent, type EventEffect } from './EventSystem';
 import { EvolutionSystem, type Evolution } from './EvolutionSystem';
 import { VillageScene } from './VillageScene';
 import type { Scene } from './scenes/Scene';
@@ -233,6 +233,8 @@ export class Game {
     // inspect and force game state. Not a public API.
     (window as unknown as { __game: Game }).__game = this;
     (window as unknown as { __ItemDatabase: typeof ItemDatabase }).__ItemDatabase = ItemDatabase;
+    (window as unknown as { __EVENTS: typeof EVENTS }).__EVENTS = EVENTS;
+    (window as unknown as { __ARTIFACTS: typeof ARTIFACTS }).__ARTIFACTS = ARTIFACTS;
     this.canvas = canvas;
     this.renderer = new Renderer(canvas);
     this.input = new Input(canvas);
@@ -2897,7 +2899,7 @@ export class Game {
 
   /** Build a 1-of-3 artifact offer and show the reward screen. */
   private offerArtifactReward(title: string, then: () => void): void {
-    const pool = ARTIFACTS.filter(a => !this.artifacts.has(a.id));
+    const pool = ROLLABLE_ARTIFACTS.filter(a => !this.artifacts.has(a.id));
     if (pool.length === 0) {
       // Nothing left to grant — skip straight to the continuation.
       then();
@@ -3285,12 +3287,19 @@ export class Game {
         this.refreshMaxHealth();
         break;
       case 'artifact': {
-        const pool = ARTIFACTS.filter(a => !this.artifacts.has(a.id));
+        const pool = ROLLABLE_ARTIFACTS.filter(a => !this.artifacts.has(a.id));
         if (pool.length) {
           const picked = pool[Math.floor(Math.random() * pool.length)];
           this.grantArtifact(picked);
           this.eventReward = { name: picked.name, rarity: picked.rarity, desc: picked.desc, icon: picked.icon, artifactId: picked.id };
         }
+        break;
+      }
+      case 'curse': {
+        // Devil-deal price: grant a SPECIFIC named curse artifact. Idempotent — if the
+        // player already carries it, grantArtifact's dedupe simply no-ops.
+        const curse = getArtifactById(effect.id);
+        if (curse) this.grantArtifact(curse);
         break;
       }
       case 'item': {
