@@ -22,7 +22,7 @@ Live: https://roguelite-game-blush.vercel.app
   wave; the effect is strong but stays controlled. (Under the hood: daggers are flagged
   `isDagger`, and `handleEnemyKill` skips the spawn when the kill came from a dagger.)
 
-**Commit `__SHA__`** · live-verified `index-DKF42lUI.js` (HTTP 200, mobile 390×844). QA:
+**Commit `0002fbf`** · live-verified `index-DKF42lUI.js` (HTTP 200, mobile 390×844). QA:
 new `qa-daggers.mjs` **11/11** (spawn count, homing-player shape, damage-scaling, stacking to 6,
 control-without-item, and the **recursion-guard** proving a dagger's kill spawns zero daggers),
 plus regressions green (triggered-items 21/21, status-engines, item-icons, roguelite, synergy,
