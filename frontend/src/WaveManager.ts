@@ -53,13 +53,29 @@ export class WaveManager {
   static readonly BOSS_GRACE_SEC = 45;
 
   /**
-   * Flat HP-only survivability multiplier applied to every regular spawned enemy
+   * Base HP-only survivability multiplier applied to every regular spawned enemy
    * (on top of the wave-scale HP). This makes fodder actually TANK a few hits so
    * the flood reads as a swarm you carve through, not a field of one-frame pops —
    * even against a broken build. It scales enemy HEALTH only, never damage, so a
    * denser tankier arena doesn't also start one-shotting the player.
    */
   static readonly FLOOD_HP_MULT = 2.2;
+
+  /**
+   * Wave-ramped survivability multiplier (the live HP lever, used by makeEnemy).
+   * BALANCE 2026-07-04 (Felix): mid-late trash melted — with an uncapped
+   * multiplicative build the player one-shots fodder well before the boss, so a
+   * wave reads as paper, not a swarm. We ramp the flat FLOOD_HP_MULT with the
+   * wave, but PROTECT the early game (≤ wave 4, where a fresh run has no items
+   * and the kite-bot dies at wave 3-4) by holding it flat there, then adding +12%
+   * of the base per wave beyond 4. So: w4 = 2.2×, w10 = 3.78×, w15 = 5.10×,
+   * w20 = 6.42× (~2.9× the old flat value). Trash gets genuinely tanky mid-late
+   * yet stays a fraction of the boss (w20 slime ≈ 12.7k HP vs flamefiend ≈ 116k),
+   * so the boss stays king. HP only — never touches enemy damage.
+   */
+  static survivabilityMult(wave: number): number {
+    return WaveManager.FLOOD_HP_MULT * (1 + Math.max(0, wave - 4) * 0.12);
+  }
 
   constructor() {}
 
@@ -530,8 +546,9 @@ export class WaveManager {
     const enemy = new Enemy(x, y, type, waveMultiplier);
 
     // Flood survivability: bump HP only (not damage) so enemies survive a few
-    // hits even against a snowballed build. maxHealth/health are re-synced.
-    enemy.typeData.health *= WaveManager.FLOOD_HP_MULT;
+    // hits even against a snowballed build, ramping mid-late while the early game
+    // stays fragile. maxHealth/health are re-synced.
+    enemy.typeData.health *= WaveManager.survivabilityMult(this.currentWave);
     enemy.maxHealth = enemy.typeData.health;
     enemy.health = enemy.maxHealth;
 

@@ -8,6 +8,34 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-04 (morning) — balance: enemies tank far longer mid-late + enemy ranged actually stings
+
+- **Regular enemies are much tankier from mid-game on (Felix: "scale enemy health even more").**
+  The flat +120% flood-HP multiplier is now **wave-ramped**: unchanged through wave 4 (fresh runs
+  stay fragile — the kite-bot still dies ~wave 3-4 without it), then +12% of the base per wave
+  beyond 4. Net regular-enemy HP: **w10 ~1.7×, w15 ~2.3×, w20 ~2.9×** the old value (a wave-20 slime
+  goes ~4,370 → **~12,760 HP**). Trash still lands at only 5–12% of the wave's boss HP, so the boss
+  stays the real check — a flamefiend at wave 20 is ~116k HP, still ~9× the toughest fodder.
+- **Enemy projectiles no longer plink for ~1 HP (Felix: "projectiles barely damage, does like 1 hp").**
+  Root cause: the eight *shooter* enemies had the game's LOWEST base damage, yet ranged is the hardest
+  attack to dodge — so armor + the min-1 floor crushed their hits to nothing in the early-mid game.
+  Raised shooter base damage ~40–50%: goblin 6→9, skeleton 10→14, necromancer 8→12, wizard 12→16,
+  construct 11→16, spiraler 10→15, spinner 9→13, demon 20→24. Scales naturally with the wave curve
+  (e.g. a wave-10 goblin shot behind +40 armor now lands ~12 instead of ~8, wizard ~21). **HP and
+  damage were tuned independently** — a tankier arena does NOT start one-shotting the player.
+- **Untouched on purpose:** the armor-mitigation curve (recently tuned) and the wave-scale exponential
+  shape. NOTE / follow-up: that 1.18/wave compound still blows up very late (a wave-30 boss ≈ 1M HP,
+  regular ≈ 130k) — future "rocket-tag" concern, but out of scope for this pass since it's deep past
+  Felix's flamefiend context.
+- **Verification:** `tsc` clean; production build green; regression suite green with **0 console/page
+  errors** — flood (wave-1 slime HP correctly unchanged at 132), armor-damage, roguelite smoke,
+  triggered-items (13/13), verify-mechanics (all pass). Curve modelled analytically (the balance sim's
+  kite-bot can't reach mid-late). Live bundle hash `index-EoJ336Ni.js` matches the local QA'd build;
+  HTTP 200, `<title>Roguelite Arena</title>`, no auth wall.
+- Deployed via Vercel CLI (daiacore). Live: https://roguelite-game-blush.vercel.app
+
+---
+
 ## 2026-07-04 (night) — architecture: Scene split, step 1 — Menu extracted from the Game god-class (no player-visible change)
 
 - **First slice of the `Game.ts` → Scene refactor** (ARCHITECTURE-REVIEW.md step 1). Introduced a

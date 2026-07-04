@@ -72,7 +72,7 @@ export const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
   goblin: {
     health: 60,
     speed: 100, // BALANCE: Reduced from 120 to be less punishing in Wave 1
-    damage: 6,
+    damage: 9, // BALANCE 2026-07-04: shooter base +50% so ranged stings (was floored to ~1 mid-game)
     radius: 12,
     color: '#7cb342',
     xpValue: 10, // BALANCE: Reduced to slow early leveling
@@ -83,7 +83,7 @@ export const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
   skeleton: {
     health: 80,
     speed: 70,
-    damage: 10,
+    damage: 14, // BALANCE 2026-07-04: shooter base +40% so ranged stings
     radius: 12,
     color: '#e0e0e0',
     xpValue: 12, // BALANCE: Reduced for progression
@@ -124,7 +124,7 @@ export const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
   necromancer: {
     health: 100,
     speed: 60,
-    damage: 8,
+    damage: 12, // BALANCE 2026-07-04: shooter base +50% so ranged stings
     radius: 12,
     color: '#2c2c54',
     xpValue: 23, // +50% XP
@@ -155,7 +155,7 @@ export const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
   demon: {
     health: 500,
     speed: 90,
-    damage: 20,
+    damage: 24, // BALANCE 2026-07-04: burst shooter base +20%
     radius: 20,
     color: '#8b0000',
     xpValue: 75, // +50% XP
@@ -177,7 +177,7 @@ export const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
   wizard: {
     health: 90,
     speed: 50,
-    damage: 12,
+    damage: 16, // BALANCE 2026-07-04: homing shooter base +33% so ranged stings
     radius: 12,
     color: '#1f618d',
     xpValue: 15,
@@ -299,7 +299,7 @@ export const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
   construct: {
     health: 130,
     speed: 55,
-    damage: 11,
+    damage: 16, // BALANCE 2026-07-04: ring shooter base +45% so ranged stings
     radius: 15,
     color: '#95a5a6',
     xpValue: 13,
@@ -351,7 +351,7 @@ export const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
   spiraler: {
     health: 88,
     speed: 105,
-    damage: 10,
+    damage: 15, // BALANCE 2026-07-04: spiral shooter base +50% so ranged stings
     radius: 12,
     color: '#1abc9c',
     xpValue: 14,
@@ -364,7 +364,7 @@ export const ENEMY_TYPES: Record<EnemyType, EnemyTypeData> = {
   spinner: {
     health: 110,
     speed: 18,
-    damage: 9,
+    damage: 13, // BALANCE 2026-07-04: ring-turret shooter base +44% so ranged stings
     radius: 14,
     color: '#ffa94d',
     xpValue: 16,
