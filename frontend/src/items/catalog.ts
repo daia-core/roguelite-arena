@@ -2990,5 +2990,17 @@ export const ITEM_CATALOG: Item[] = [
       unlocked: true,
       tags: ['melee'],
       executeThreshold: 0.33
+    },
+    {
+      id: 'fourleaf_charm_t3',
+      name: 'Fourleaf Charm',
+      description: 'Lucky: every on-hit status effect (burn, bleed, freeze, chain, doom, wound, multicast) rolls twice and keeps the better result',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 80,
+      icon: '🍀',
+      unlocked: true,
+      tags: ['elemental'],
+      fourleafCharm: true
     }
 ];

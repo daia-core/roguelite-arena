@@ -232,7 +232,7 @@ interface ItemAgg {
   executeThreshold: number;
   // boolean
   explosionOnHit: boolean; shield: boolean; homing: boolean; poison: boolean; poisonSpread: boolean;
-  auxMelee: boolean; bombDrop: boolean; novaPulse: boolean;
+  auxMelee: boolean; bombDrop: boolean; novaPulse: boolean; fourleafCharm: boolean;
 }
 
 function freshAgg(): ItemAgg {
@@ -252,7 +252,7 @@ function freshAgg(): ItemAgg {
     highHpPower: 0, goldScaleDamage: 0,
     executeThreshold: 0,
     explosionOnHit: false, shield: false, homing: false, poison: false, poisonSpread: false,
-    auxMelee: false, bombDrop: false, novaPulse: false,
+    auxMelee: false, bombDrop: false, novaPulse: false, fourleafCharm: false,
   };
 }
 
@@ -386,6 +386,7 @@ export class PlayerStats {
       if (item.auxMelee) a.auxMelee = true;
       if (item.bombDrop) a.bombDrop = true;
       if (item.novaPulse) a.novaPulse = true;
+      if (item.fourleafCharm) a.fourleafCharm = true;
     }
     this._agg = a;
     this._aggDirty = false;
@@ -648,6 +649,25 @@ export class PlayerStats {
 
   getMulticastChance(): number {
     return Math.min(0.9, this.ensureAgg().multicast); // cap so it never becomes an infinite volley
+  }
+
+  // ---- PROC LUCK (Fourleaf Charm) ----
+  hasFourleafCharm(): boolean {
+    return this.ensureAgg().fourleafCharm;
+  }
+
+  /**
+   * Roll a random on-hit STATUS proc. Single source of truth for burn/bleed/freeze/
+   * chain/doom/wound/multicast rolls, so the Fourleaf Charm keystone can lift them all
+   * at once: when held, we roll twice and keep the better result (P(hit) rises from p
+   * to 1-(1-p)^2). Without the charm this is exactly `Math.random() < chance`, so
+   * behaviour is identical for every build that doesn't own it. Independent of crit/dodge.
+   */
+  rollProc(chance: number): boolean {
+    if (chance <= 0) return false;
+    if (Math.random() < chance) return true;
+    // "roll twice, keep higher" = a second independent roll only when the first missed
+    return this.hasFourleafCharm() && Math.random() < chance;
   }
 
   // Brotato-inspired: Economic modifiers

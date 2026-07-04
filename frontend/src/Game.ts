@@ -703,9 +703,13 @@ export class Game {
       spawnVolley(newProjectiles);
       // Multicast: a chance to instantly fire a bonus volley (re-aimed at live enemies).
       // Rolls repeatedly so stacked multicast can chain more than one extra volley.
+      // Only the FIRST roll gets Fourleaf's roll-twice luck (rollProc); the subsequent
+      // decaying rolls stay plain so the charm can't compound into an infinite volley.
       let mc = this.playerStats.getMulticastChance();
       let guard = 0;
-      while (mc > 0 && Math.random() < mc && guard++ < 4) {
+      let firstRoll = true;
+      while (mc > 0 && (firstRoll ? this.playerStats.rollProc(mc) : Math.random() < mc) && guard++ < 4) {
+        firstRoll = false;
         spawnVolley(this.player.tryShoot(this.enemies, true));
         mc -= 0.15; // each extra volley is a little less likely, keeps it bounded
       }
@@ -2263,7 +2267,7 @@ export class Game {
     // build (chain/explosion) is mechanically distinct from raw melee/ranged.
     const elem = this.playerStats.getElementalDamageMult();
     // Chain lightning: arc to the nearest other enemy for 60% damage
-    if (Math.random() < this.playerStats.getChainLightningChance()) {
+    if (this.playerStats.rollProc(this.playerStats.getChainLightningChance())) {
       let nearest: Enemy | null = null;
       let bd = 200 * 200;
       for (const other of this.enemies) {
@@ -2283,7 +2287,7 @@ export class Game {
     }
 
     // Freeze: halt movement for 1s
-    if (Math.random() < this.playerStats.getFreezeChance()) {
+    if (this.playerStats.rollProc(this.playerStats.getFreezeChance())) {
       enemy.frozenTimer = 1.0;
     }
 
@@ -2294,22 +2298,22 @@ export class Game {
     }
 
     // Burn (Ignite): short, fast fire DoT.
-    if (Math.random() < this.playerStats.getBurnChance()) {
+    if (this.playerStats.rollProc(this.playerStats.getBurnChance())) {
       enemy.burnTimer = Math.max(enemy.burnTimer, 2.0);
     }
 
     // Bleed: DoT that scales with the enemy's movement (punishes rushers).
-    if (Math.random() < this.playerStats.getBleedChance()) {
+    if (this.playerStats.rollProc(this.playerStats.getBleedChance())) {
       enemy.bleedTimer = Math.max(enemy.bleedTimer, 4.0);
     }
 
     // Wound: amplifies EVERY DoT already on the enemy (universal DoT multiplier, capped).
-    if (Math.random() < this.playerStats.getWoundChance()) {
+    if (this.playerStats.rollProc(this.playerStats.getWoundChance())) {
       enemy.woundMult = Math.min(3, enemy.woundMult + 0.5);
     }
 
     // Doom: mark that stores a share of the hit, then detonates — executes if it stored enough.
-    if (Math.random() < this.playerStats.getDoomChance()) {
+    if (this.playerStats.rollProc(this.playerStats.getDoomChance())) {
       enemy.doomStored += damage * 1.5 * elem;
       if (enemy.doomTimer <= 0) enemy.doomTimer = 2.5; // fresh 2.5s fuse on first mark
     }

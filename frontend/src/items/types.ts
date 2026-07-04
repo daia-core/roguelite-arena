@@ -169,6 +169,14 @@ export interface Item {
   // a sum — cheap copies can't compound into "execute at full HP". The kill routes
   // through the normal kill path, so it still grants XP/gold and feeds Killing Spree.
   executeThreshold?: number; // e.g. 0.15 = execute enemies at/under 15% HP
+
+  // ---- PROC LUCK (roll-twice-keep-better) ----
+  // When held, every random on-hit STATUS proc (burn/bleed/freeze/chain/doom/wound/
+  // multicast) rolls twice and takes the better result — a keystone that lifts the
+  // whole status/proc ecosystem without touching any individual chance. Boolean
+  // (OR'd across copies): a second copy can't roll three times. Does NOT touch crit
+  // or dodge (core stats), only the status ecosystem this item is built around.
+  fourleafCharm?: boolean;
 }
 
 export interface Weapon {

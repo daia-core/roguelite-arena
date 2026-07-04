@@ -8,6 +8,29 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-04 (evening) — feature: FOURLEAF CHARM — proc-luck keystone
+
+- **New legendary item: Fourleaf Charm 🍀** — while held, every on-hit **status proc**
+  (burn, bleed, freeze, chain lightning, doom, wound, multicast) **rolls twice and keeps the
+  better result**. One item lifts the entire status/proc ecosystem instead of buffing a single
+  chance — the keystone a DoT/status build wants to fish for.
+- **What it does to the odds:** a proc at chance *p* now lands at *1−(1−p)²* — e.g. a 30% burn
+  becomes ~51%, a 50% freeze becomes 75%. Verified statistically (40k rolls: baseline 0.30 → luck
+  0.51). Deterministic edges unchanged: a 0% proc still never fires, a 100% proc always does.
+- **Deliberately scoped to the status ecosystem** — it does **not** touch crit or dodge (core
+  stats), so it's a build-defining status enabler, not a stealth all-round power spike. Multicast's
+  decaying bonus-volley chain only gets the luck on its *first* roll, so the charm can't compound
+  into an infinite volley.
+- **Under the hood:** all seven status rolls now route through one shared `PlayerStats.rollProc()`
+  helper (single source of truth), so future proc tuning lives in one place. Builds without the
+  charm are byte-for-byte identical in behaviour (`rollProc` collapses to `Math.random() < chance`).
+
+**Commit `__SHA__`** · live-verified `index-Cn6fbQOE.js` (HTTP 200, mobile 390×844). QA:
+new `qa-fourleaf.mjs` **13/13** (incl. statistical roll-twice proof + source-scan wiring), plus
+regressions green (status-engines, triggered-items 21/21, item-icons, roguelite, synergy).
+
+---
+
 ## 2026-07-04 (afternoon) — feature: DEVIL DEALS — a permanent-price risk axis
 
 - **The `?` events can now offer a devil's bargain** — a strong, run-long **boon welded to a
