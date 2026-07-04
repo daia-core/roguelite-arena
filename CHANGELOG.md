@@ -25,7 +25,7 @@ Live: https://roguelite-game-blush.vercel.app
   helper (single source of truth), so future proc tuning lives in one place. Builds without the
   charm are byte-for-byte identical in behaviour (`rollProc` collapses to `Math.random() < chance`).
 
-**Commit `__SHA__`** · live-verified `index-Cn6fbQOE.js` (HTTP 200, mobile 390×844). QA:
+**Commit `818cb82`** · live-verified `index-Cn6fbQOE.js` (HTTP 200, mobile 390×844). QA:
 new `qa-fourleaf.mjs` **13/13** (incl. statistical roll-twice proof + source-scan wiring), plus
 regressions green (status-engines, triggered-items 21/21, item-icons, roguelite, synergy).
 
