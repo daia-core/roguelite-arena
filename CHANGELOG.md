@@ -33,7 +33,7 @@ Live: https://roguelite-game-blush.vercel.app
   nothing, and a repeat curse-grant is idempotent. Regression: `qa-artifact-icons` (all 23 glyphs
   incl. 3 curses PASS), `qa-triggered-items` (21/21), `qa-roguelite` (0 errors), `qa-node-map` (all
   node types + persistence) — all green. Devil-event screen eyeballed at **390×844 mobile** + desktop.
-- **Commit `__SHA__`** · live-verified `index-5ln61MYJ.js` at https://roguelite-game-blush.vercel.app (HTTP 200, bundle hash matches local build).
+- **Commit `73f047a`** · live-verified `index-5ln61MYJ.js` at https://roguelite-game-blush.vercel.app (HTTP 200, bundle hash matches local build).
 
 ## 2026-07-04 (afternoon) — feature: LEVEL-UP pick-1-of-3 upgrade screen
 
