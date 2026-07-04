@@ -8,6 +8,29 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-04 (evening) — feature: PEN NIB — every 10th shot is a loaded shot
+
+- **New item: Pen Nib 🎯** (epic, 55 gold) — while held, **every 10th primary shot is a
+  "loaded shot": triple damage and pierces every enemy in its path.** A big fat golden round
+  that punches a line clean through a packed lane. It's a *rhythm* item — the payoff is
+  predictable and telegraphed (you can feel the 10th coming), so it rewards lining up the lane
+  rather than random luck.
+- **Fire-rate synergy** — the faster you shoot, the more often the loaded round comes around,
+  so it scales naturally with fire-rate builds without needing its own stacking rule.
+- **Kept predictable on purpose (the design guard):** only your **primary** shot advances the
+  counter — bonus **multicast** volleys don't — so stacking multicast can't secretly desync or
+  shorten the cadence. A second copy doesn't shorten the interval either (the flag is OR'd, not
+  additive), so it stays a clean, readable "every 10th" beat rather than an opaque proc.
+
+**Commit `PENDING`** · live-verified `PENDING` (HTTP 200, mobile 390×844). QA:
+new `verify-pennib.mjs` **8/8** on the shipped `dist` — present+unlocked+flag, **reachable via
+the real weighted-shop roll** (not just catalog-present), `hasLoadedShot()` true when held, and
+the loaded projectile observed firing on the 10th shot with the exact designed signature (fat
+golden round radius 13, pierces-all `maxPierceCount 999`, damage **exactly 3× the base at that
+same instant**), zero console/page errors.
+
+---
+
 ## 2026-07-04 (evening) — feature: CEREMONIAL DAGGERS — on-kill homing daggers
 
 - **New legendary item: Ceremonial Daggers 🗡️** — on **every kill**, throw **3 homing

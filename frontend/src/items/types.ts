@@ -177,6 +177,12 @@ export interface Item {
   // per primary kill), so a dense pack can't cascade into an exponential dagger storm.
   ceremonialDaggers?: number;
 
+  // ---- EVERY-Nth-SHOT (Pen Nib / Loaded Shot) ----
+  // While held, every 10th primary shot is "loaded": triple damage and pierces every
+  // enemy. A predictable rhythm burst that rewards fire-rate builds. Boolean (OR'd
+  // across copies) — a second copy can't shorten the cadence.
+  loadedShot?: boolean;
+
   // ---- EXECUTE (on-hit conditional, resolved in Game's projectile-hit path) ----
   // Instantly kill a NON-boss enemy the moment a hit leaves it at or below this
   // fraction of max HP. Stacked copies take the HIGHEST threshold (Math.max), not

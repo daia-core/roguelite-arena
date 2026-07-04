@@ -193,6 +193,12 @@ export class Game {
   private static readonly DAGGER_DMG_MULT = 0.5;   // each dagger does 50% of current shot damage
   private static readonly DAGGER_SPEED = 320;      // px/s (fast, so daggers connect quickly)
   private static readonly DAGGER_TURN = 4.0;       // homing turn rate (rad/s) — tight seek
+  // Pen Nib (Loaded Shot): every Nth primary volley is a "loaded shot" — triple damage and
+  // pierces all. Only the primary shot counts (multicast bonus volleys don't), so the rhythm
+  // stays predictable and telegraphed.
+  private shotsFired: number = 0;                  // primary volleys fired while Pen Nib held
+  private static readonly LOADED_SHOT_EVERY = 10;  // every Nth shot is loaded
+  private static readonly LOADED_SHOT_MULT = 3;    // loaded shot damage multiplier
 
   // Stats
   kills: number = 0;
@@ -485,6 +491,7 @@ export class Game {
     this.killStackTimer = 0;
     this.soulTitheKills = 0;
     this.soulTitheStacks = 0;
+    this.shotsFired = 0;
 
     this.waveManager.reset();
     // The map layer drives wave numbers now: the first battle node starts wave
@@ -702,18 +709,30 @@ export class Game {
     // still shoots a weak gun instead of losing projectiles entirely.
     const newProjectiles = this.player.tryShoot(this.enemies);
     if (newProjectiles.length > 0) {
-      const spawnVolley = (volley: typeof newProjectiles) => {
+      // Pen Nib (Loaded Shot): count primary volleys and make every Nth a loaded shot —
+      // triple damage + pierces every enemy. Bonus multicast volleys pass loaded=false.
+      let loaded = false;
+      if (this.playerStats.hasLoadedShot()) {
+        this.shotsFired++;
+        if (this.shotsFired % Game.LOADED_SHOT_EVERY === 0) loaded = true;
+      }
+      const spawnVolley = (volley: typeof newProjectiles, isLoaded: boolean = false) => {
         // PERFORMANCE: Use pooled projectiles instead of new ones
         for (const proj of volley) {
           const pooled = this.projectilePool.acquire();
-          pooled.init(proj.x, proj.y, Math.atan2(proj.vy, proj.vx), proj.damage, proj.speed, proj.fromPlayer, proj.piercing);
-          pooled.maxPierceCount = proj.maxPierceCount;
+          pooled.init(
+            proj.x, proj.y, Math.atan2(proj.vy, proj.vx),
+            isLoaded ? proj.damage * Game.LOADED_SHOT_MULT : proj.damage,
+            proj.speed, proj.fromPlayer, isLoaded ? true : proj.piercing
+          );
+          pooled.maxPierceCount = isLoaded ? 999 : proj.maxPierceCount;
           pooled.homing = proj.homing;
           pooled.turnSpeed = proj.turnSpeed;
+          if (isLoaded) { pooled.color = '#ffd43b'; pooled.radius = 13; } // fat golden loaded round
           this.projectiles.push(pooled);
         }
       };
-      spawnVolley(newProjectiles);
+      spawnVolley(newProjectiles, loaded);
       // Multicast: a chance to instantly fire a bonus volley (re-aimed at live enemies).
       // Rolls repeatedly so stacked multicast can chain more than one extra volley.
       // Only the FIRST roll gets Fourleaf's roll-twice luck (rollProc); the subsequent

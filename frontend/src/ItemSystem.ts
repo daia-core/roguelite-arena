@@ -235,7 +235,7 @@ interface ItemAgg {
   // boolean
   explosionOnHit: boolean; shield: boolean; homing: boolean; poison: boolean; poisonSpread: boolean;
   auxMelee: boolean; bombDrop: boolean; novaPulse: boolean; fourleafCharm: boolean;
-  soulTithe: boolean;
+  soulTithe: boolean; loadedShot: boolean;
 }
 
 function freshAgg(): ItemAgg {
@@ -257,7 +257,7 @@ function freshAgg(): ItemAgg {
     daggerCount: 0,
     explosionOnHit: false, shield: false, homing: false, poison: false, poisonSpread: false,
     auxMelee: false, bombDrop: false, novaPulse: false, fourleafCharm: false,
-    soulTithe: false,
+    soulTithe: false, loadedShot: false,
   };
 }
 
@@ -395,6 +395,7 @@ export class PlayerStats {
       if (item.novaPulse) a.novaPulse = true;
       if (item.fourleafCharm) a.fourleafCharm = true;
       if (item.soulTithe) a.soulTithe = true;
+      if (item.loadedShot) a.loadedShot = true;
     }
     this._agg = a;
     this._aggDirty = false;
@@ -672,6 +673,11 @@ export class PlayerStats {
   // ---- ON-KILL PROC (Ceremonial Daggers) ----
   getDaggerCount(): number {
     return this.ensureAgg().daggerCount;
+  }
+
+  // ---- EVERY-Nth-SHOT (Pen Nib / Loaded Shot) ----
+  hasLoadedShot(): boolean {
+    return this.ensureAgg().loadedShot;
   }
 
   /**

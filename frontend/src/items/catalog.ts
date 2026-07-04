@@ -3026,5 +3026,17 @@ export const ITEM_CATALOG: Item[] = [
       unlocked: true,
       tags: ['ranged'],
       ceremonialDaggers: 3
+    },
+    {
+      id: 'pen_nib_t3',
+      name: 'Pen Nib',
+      description: 'Every 10th shot is a loaded shot: triple damage and pierces every enemy in its path',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 55,
+      icon: '🎯',
+      unlocked: true,
+      tags: ['ranged'],
+      loadedShot: true
     }
 ];
