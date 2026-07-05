@@ -183,6 +183,13 @@ export interface Item {
   // across copies) — a second copy can't shorten the cadence.
   loadedShot?: boolean;
 
+  // ---- ON-WAVE-END ECONOMY (War Chest) ----
+  // At the end of each wave, bank gold equal to this multiplier × the wave number — a
+  // compounding income engine that scales the SHOP (greed builds) instead of combat, and
+  // pays out ever bigger the longer you survive. Additive across copies. Folded in at the
+  // wave-end shop transition, alongside banking interest.
+  warChest?: number;
+
   // ---- EXECUTE (on-hit conditional, resolved in Game's projectile-hit path) ----
   // Instantly kill a NON-boss enemy the moment a hit leaves it at or below this
   // fraction of max HP. Stacked copies take the HIGHEST threshold (Math.max), not

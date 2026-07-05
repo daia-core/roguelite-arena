@@ -3038,5 +3038,17 @@ export const ITEM_CATALOG: Item[] = [
       unlocked: true,
       tags: ['ranged'],
       loadedShot: true
+    },
+    {
+      id: 'war_chest_t3',
+      name: 'War Chest',
+      description: 'At the end of each wave, bank gold equal to 3× the wave number — an income engine that compounds the longer you survive',
+      rarity: 'rare',
+      tier: ItemTier.Rare,
+      cost: 60,
+      icon: '💰',
+      unlocked: true,
+      tags: ['economic'],
+      warChest: 3
     }
 ];

@@ -232,6 +232,8 @@ interface ItemAgg {
   executeThreshold: number;
   // on-kill proc: daggers spawned per kill (additive across copies)
   daggerCount: number;
+  // wave-end economy: gold-per-wave multiplier (additive across copies)
+  warChest: number;
   // boolean
   explosionOnHit: boolean; shield: boolean; homing: boolean; poison: boolean; poisonSpread: boolean;
   auxMelee: boolean; bombDrop: boolean; novaPulse: boolean; fourleafCharm: boolean;
@@ -255,6 +257,7 @@ function freshAgg(): ItemAgg {
     highHpPower: 0, goldScaleDamage: 0,
     executeThreshold: 0,
     daggerCount: 0,
+    warChest: 0,
     explosionOnHit: false, shield: false, homing: false, poison: false, poisonSpread: false,
     auxMelee: false, bombDrop: false, novaPulse: false, fourleafCharm: false,
     soulTithe: false, loadedShot: false,
@@ -384,6 +387,7 @@ export class PlayerStats {
       if (item.executeThreshold) a.executeThreshold = Math.max(a.executeThreshold, item.executeThreshold);
       // On-kill daggers: additive count across copies
       if (item.ceremonialDaggers) a.daggerCount += item.ceremonialDaggers;
+      if (item.warChest) a.warChest += item.warChest;
       // Boolean (any item carries it)
       if (item.explosionOnHit) a.explosionOnHit = true;
       if (item.shield) a.shield = true;
@@ -678,6 +682,11 @@ export class PlayerStats {
   // ---- EVERY-Nth-SHOT (Pen Nib / Loaded Shot) ----
   hasLoadedShot(): boolean {
     return this.ensureAgg().loadedShot;
+  }
+
+  // ---- ON-WAVE-END ECONOMY (War Chest) ----
+  getWarChest(): number {
+    return this.ensureAgg().warChest;
   }
 
   /**

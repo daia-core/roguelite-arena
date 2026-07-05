@@ -2251,6 +2251,14 @@ export class Game {
       const interest = Math.min(cap, Math.floor(this.player.gold * rate));
       this.lastInterestGained = interest;
       if (interest > 0) this.player.addGold(interest);
+
+      // WAR CHEST: a wave-end income engine — bank gold scaling with the wave number, so
+      // late waves pay out big and greed/economy builds compound. Additive across copies.
+      const warChest = this.playerStats.getWarChest();
+      if (warChest > 0) {
+        const payout = Math.floor(warChest * wave);
+        if (payout > 0) this.player.addGold(payout);
+      }
     }
 
     // BROTATO-INSPIRED: Preserve locked items from previous shop (FREE locking)

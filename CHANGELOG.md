@@ -8,6 +8,29 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-05 (evening) — feature: WAR CHEST — a wave-end gold engine
+
+- **New item: War Chest 💰** (rare, 60 gold) — **at the end of every wave, bank gold equal to
+  3× the current wave number.** Clear wave 5 and pocket 15; clear wave 12 and pocket 36. It's
+  the roster's first pure *economy engine* — it scales the **shop** instead of combat, so it
+  rewards surviving deep and enables greedy, buy-everything builds.
+- **Compounds with survival** — the payout rises every single wave, so buying it early is a
+  long-run investment (the further you get, the fatter each wave-end deposit), and it stacks on
+  top of the existing banking-interest system rather than replacing it.
+- **Stacks additively** — a second copy deepens the payout to 6× the wave number (each copy
+  adds its 3× multiplier), so it's a real scaling axis for an income build, not a one-and-done.
+- **Folded in at the wave-end shop transition**, right after interest is banked — a natural,
+  predictable "end-of-wave paycheck" moment.
+
+**Commit `__SHA__`** · live-verified `index-Ds-j3PC5.js` (HTTP 200, mobile 390×844). QA:
+new `qa-warchest.mjs` **8/8** on the shipped `dist` — catalog entry (`war_chest_t3`, rare, 💰,
+economic, `warChest: 3`), fresh-run default (`getWarChest()` 0), held (`getWarChest()` 3), and
+the **payout proven** by driving the real `enterShop()` wave-end path with gold zeroed (so
+interest is 0): the player is left holding exactly **3× the wave number** (wave 3 → 9, wave 7 →
+21), a second copy pays **6×** (wave 5 → 30), no item pays **nothing**, and `startNewGame()`
+clears it. Zero console/page errors. Full regression suite (triggered-items, status-engines,
+item-icons, synergy, stacking-weapons, pennib, daggers) green.
+
 ## 2026-07-05 — fix: Ceremonial Daggers can no longer cascade into a dagger storm
 
 - **Closed a re-entrancy hole in the Ceremonial Daggers legendary.** The item throws homing
