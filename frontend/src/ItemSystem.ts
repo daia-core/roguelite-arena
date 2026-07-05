@@ -5,7 +5,7 @@
 import { TransformationTracker } from './TransformationSystem';
 import { DuoTracker, DUO_COMBOS, type DuoCombo } from './DuoSystem';
 import type { DamageType } from './Projectile';
-import { ItemTier, getItemKinds, classifyItemSlot, type Item, type ItemTag, type ItemKind, type WeaponType, type MeleeStyle, type Weapon, type EquipSlot } from './items/types';
+import { ItemTier, getItemKinds, classifyItemSlot, slotHolder, type Item, type ItemTag, type ItemKind, type WeaponType, type MeleeStyle, type Weapon, type EquipSlot } from './items/types';
 import { ITEM_CATALOG } from './items/catalog';
 
 // Re-export the item types from their new home so every existing importer
@@ -262,15 +262,23 @@ function freshAgg(): ItemAgg {
   };
 }
 
-// The four equipment slots. weaponA/weaponB hold one-hand weapons (or a two-hand
-// weapon fills weaponA while weaponB is null and blocked); offhand is a shield;
-// amulet is a single keystone. `null` = empty slot.
+// The eight equipment slots (2026-07-05 v2). `weapon` holds a 1h OR 2h weapon; a 2h
+// weapon disables the offhand. The other six are gear/keystone slots, one item each.
+// `null` = empty slot.
 export type EquipSlots = {
-  weaponA: Item | null;
-  weaponB: Item | null;
+  weapon: Item | null;
   offhand: Item | null;
+  head: Item | null;
   amulet: Item | null;
+  torso: Item | null;
+  legs: Item | null;
+  feet: Item | null;
+  ring: Item | null;
 };
+
+// The holder keys in a stable display order (used by UI + rebuild + iteration).
+export const EQUIP_HOLDER_KEYS = ['weapon', 'offhand', 'head', 'amulet', 'torso', 'legs', 'feet', 'ring'] as const;
+export type EquipHolderKey = typeof EQUIP_HOLDER_KEYS[number];
 
 // Player stats calculated from items with affinity system
 export class PlayerStats {
@@ -281,8 +289,11 @@ export class PlayerStats {
   // so all the existing getters/aggregation keep working unchanged.
   items: Item[] = [];
 
-  // ---- EQUIPMENT LAYER (2026-07-05 slot rework) ----
-  equipment: EquipSlots = { weaponA: null, weaponB: null, offhand: null, amulet: null };
+  // ---- EQUIPMENT LAYER (2026-07-05 v2 8-slot rework) ----
+  equipment: EquipSlots = {
+    weapon: null, offhand: null, head: null, amulet: null,
+    torso: null, legs: null, feet: null, ring: null,
+  };
   // Run-only inventory for displaced / speculative equipment. Capped so decisions
   // stay tight and the mobile inventory strip doesn't bloat. Trinkets never go here.
   stash: Item[] = [];
@@ -353,64 +364,68 @@ export class PlayerStats {
     if (!this._aggDirty) return this._agg;
     const a = freshAgg();
     for (const item of this.items) {
-      // Multiplicative (product of item multipliers)
-      if (item.damageMultiplier) a.damageMult *= item.damageMultiplier;
-      if (item.meleeDamageMult) a.meleeDamageMult *= item.meleeDamageMult;
-      if (item.rangedDamageMult) a.rangedDamageMult *= item.rangedDamageMult;
-      if (item.elementalDamageMult) a.elementalDamageMult *= item.elementalDamageMult;
-      if (item.fireRateMultiplier) a.fireRateMult *= item.fireRateMultiplier;
-      if (item.speedMultiplier) a.speedMult *= item.speedMultiplier;
-      if (item.critDamageMultiplier) a.critDamageMult *= item.critDamageMultiplier;
-      if (item.projectileSpeed) a.projectileSpeedMult *= item.projectileSpeed;
-      if (item.xpMagnet) a.xpMagnetMult *= item.xpMagnet;
-      if (item.goldBonus) a.goldMult *= item.goldBonus;
-      if (item.orbitDamageMult) a.orbitDamageMult *= item.orbitDamageMult;
-      if (item.auxMeleeDamageMult) a.auxMeleeDamageMult *= item.auxMeleeDamageMult;
-      if (item.bombDamageMult) a.bombDamageMult *= item.bombDamageMult;
-      if (item.bombCooldownMult) a.bombCooldownMult *= item.bombCooldownMult;
-      if (item.novaDamageMult) a.novaDamageMult *= item.novaDamageMult;
-      if (item.novaCooldownMult) a.novaCooldownMult *= item.novaCooldownMult;
-      if (item.swingDamageMult) a.swingDamageMult *= item.swingDamageMult;
-      if (item.swingCooldownMult) a.swingCooldownMult *= item.swingCooldownMult;
-      if (item.aoeRadiusMult) a.aoeRadiusMult *= item.aoeRadiusMult;
-      // Additive (sum of item bonuses)
-      if (item.critChance) a.critChance += item.critChance;
-      if (item.maxHealthBonus) a.maxHealthBonus += item.maxHealthBonus;
-      if (item.healthRegen) a.healthRegen += item.healthRegen;
-      if (item.armor) a.armor += item.armor;
-      if (item.lifesteal) a.lifesteal += item.lifesteal;
-      if (item.thorns) a.thorns += item.thorns;
-      if (item.knockback) a.knockback += item.knockback;
-      if (item.piercing) a.piercing += item.piercing;
-      if (item.multishot) a.multishot += item.multishot;
-      if (item.dodge) a.dodge += item.dodge;
-      if (item.chainLightning) a.chainLightning += item.chainLightning;
-      if (item.freeze) a.freeze += item.freeze;
-      if (item.burn) a.burn += item.burn;
-      if (item.bleed) a.bleed += item.bleed;
-      if (item.doom) a.doom += item.doom;
-      if (item.wound) a.wound += item.wound;
-      if (item.multicast) a.multicast += item.multicast;
-      if (item.rerollDiscount) a.rerollDiscount += item.rerollDiscount;
-      if (item.shopDiscount) a.shopDiscount += item.shopDiscount;
-      if (item.recycleBonus) a.recycleBonus += item.recycleBonus;
-      if (item.interestBonus) a.interestBonus += item.interestBonus;
-      if (item.luck) a.luck += item.luck;
-      if (item.orbitOrbs) a.orbitOrbs += item.orbitOrbs;
-      if (item.swingRangeBonus) a.swingRangeBonus += item.swingRangeBonus;
-      if (item.swingArcBonus) a.swingArcBonus += item.swingArcBonus;
-      if (item.swingAoe) a.swingAoe += item.swingAoe;
+      // UPGRADE LEVEL (v2): an item at level N contributes exactly as if bought N times.
+      //   additive:       value × N   multiplicative: value ^ N   boolean/max: unchanged.
+      const lv = item.upgradeLevel && item.upgradeLevel > 1 ? item.upgradeLevel : 1;
+      const mul = (v: number) => (lv === 1 ? v : Math.pow(v, lv));
+      // Multiplicative (product of item multipliers, each applied `lv` times)
+      if (item.damageMultiplier) a.damageMult *= mul(item.damageMultiplier);
+      if (item.meleeDamageMult) a.meleeDamageMult *= mul(item.meleeDamageMult);
+      if (item.rangedDamageMult) a.rangedDamageMult *= mul(item.rangedDamageMult);
+      if (item.elementalDamageMult) a.elementalDamageMult *= mul(item.elementalDamageMult);
+      if (item.fireRateMultiplier) a.fireRateMult *= mul(item.fireRateMultiplier);
+      if (item.speedMultiplier) a.speedMult *= mul(item.speedMultiplier);
+      if (item.critDamageMultiplier) a.critDamageMult *= mul(item.critDamageMultiplier);
+      if (item.projectileSpeed) a.projectileSpeedMult *= mul(item.projectileSpeed);
+      if (item.xpMagnet) a.xpMagnetMult *= mul(item.xpMagnet);
+      if (item.goldBonus) a.goldMult *= mul(item.goldBonus);
+      if (item.orbitDamageMult) a.orbitDamageMult *= mul(item.orbitDamageMult);
+      if (item.auxMeleeDamageMult) a.auxMeleeDamageMult *= mul(item.auxMeleeDamageMult);
+      if (item.bombDamageMult) a.bombDamageMult *= mul(item.bombDamageMult);
+      if (item.bombCooldownMult) a.bombCooldownMult *= mul(item.bombCooldownMult);
+      if (item.novaDamageMult) a.novaDamageMult *= mul(item.novaDamageMult);
+      if (item.novaCooldownMult) a.novaCooldownMult *= mul(item.novaCooldownMult);
+      if (item.swingDamageMult) a.swingDamageMult *= mul(item.swingDamageMult);
+      if (item.swingCooldownMult) a.swingCooldownMult *= mul(item.swingCooldownMult);
+      if (item.aoeRadiusMult) a.aoeRadiusMult *= mul(item.aoeRadiusMult);
+      // Additive (sum of item bonuses, each scaled by `lv`)
+      if (item.critChance) a.critChance += item.critChance * lv;
+      if (item.maxHealthBonus) a.maxHealthBonus += item.maxHealthBonus * lv;
+      if (item.healthRegen) a.healthRegen += item.healthRegen * lv;
+      if (item.armor) a.armor += item.armor * lv;
+      if (item.lifesteal) a.lifesteal += item.lifesteal * lv;
+      if (item.thorns) a.thorns += item.thorns * lv;
+      if (item.knockback) a.knockback += item.knockback * lv;
+      if (item.piercing) a.piercing += item.piercing * lv;
+      if (item.multishot) a.multishot += item.multishot * lv;
+      if (item.dodge) a.dodge += item.dodge * lv;
+      if (item.chainLightning) a.chainLightning += item.chainLightning * lv;
+      if (item.freeze) a.freeze += item.freeze * lv;
+      if (item.burn) a.burn += item.burn * lv;
+      if (item.bleed) a.bleed += item.bleed * lv;
+      if (item.doom) a.doom += item.doom * lv;
+      if (item.wound) a.wound += item.wound * lv;
+      if (item.multicast) a.multicast += item.multicast * lv;
+      if (item.rerollDiscount) a.rerollDiscount += item.rerollDiscount * lv;
+      if (item.shopDiscount) a.shopDiscount += item.shopDiscount * lv;
+      if (item.recycleBonus) a.recycleBonus += item.recycleBonus * lv;
+      if (item.interestBonus) a.interestBonus += item.interestBonus * lv;
+      if (item.luck) a.luck += item.luck * lv;
+      if (item.orbitOrbs) a.orbitOrbs += item.orbitOrbs * lv;
+      if (item.swingRangeBonus) a.swingRangeBonus += item.swingRangeBonus * lv;
+      if (item.swingArcBonus) a.swingArcBonus += item.swingArcBonus * lv;
+      if (item.swingAoe) a.swingAoe += item.swingAoe * lv;
       // Conditional/triggered (additive rates; Game pays them out per-frame)
-      if (item.waveRampDamage) a.waveRampDamage += item.waveRampDamage;
-      if (item.lowHpPower) a.lowHpPower += item.lowHpPower;
-      if (item.killStackDamage) a.killStackDamage += item.killStackDamage;
-      if (item.highHpPower) a.highHpPower += item.highHpPower;
-      if (item.goldScaleDamage) a.goldScaleDamage += item.goldScaleDamage;
+      if (item.waveRampDamage) a.waveRampDamage += item.waveRampDamage * lv;
+      if (item.lowHpPower) a.lowHpPower += item.lowHpPower * lv;
+      if (item.killStackDamage) a.killStackDamage += item.killStackDamage * lv;
+      if (item.highHpPower) a.highHpPower += item.highHpPower * lv;
+      if (item.goldScaleDamage) a.goldScaleDamage += item.goldScaleDamage * lv;
       // Execute: take the strongest threshold, never sum (no compounding to full-HP kills)
       if (item.executeThreshold) a.executeThreshold = Math.max(a.executeThreshold, item.executeThreshold);
-      // On-kill daggers: additive count across copies
-      if (item.ceremonialDaggers) a.daggerCount += item.ceremonialDaggers;
-      if (item.warChest) a.warChest += item.warChest;
+      // On-kill daggers: additive count across copies (× level)
+      if (item.ceremonialDaggers) a.daggerCount += item.ceremonialDaggers * lv;
+      if (item.warChest) a.warChest += item.warChest * lv;
       // Boolean (any item carries it)
       if (item.explosionOnHit) a.explosionOnHit = true;
       if (item.shield) a.shield = true;
@@ -448,7 +463,7 @@ export class PlayerStats {
   // invariant impossible to break.
   private rebuildActiveItems(): DuoCombo[] {
     const eq = this.equipment;
-    this.items = [eq.weaponA, eq.weaponB, eq.offhand, eq.amulet]
+    this.items = EQUIP_HOLDER_KEYS.map(k => eq[k])
       .filter((i): i is Item => i !== null)
       .concat(this.trinkets);
     this.invalidateAgg();
@@ -460,11 +475,19 @@ export class PlayerStats {
   }
 
   /**
-   * Buy/acquire an item — the single routing entry point. Classifies the item's slot
-   * and either stacks it as a trinket or equips it (auto-swapping a full slot's
-   * occupant into the stash; if the stash is full, the displaced item is returned as
-   * `overflow` for the caller to sell/refund). Two-hand weapons fill both weapon slots.
-   * Returns duo/transformation unlocks (unchanged shape) plus what it did.
+   * Buy/acquire an item — the single routing entry point.
+   *
+   * UPGRADE-ON-DUPLICATE (2026-07-05 v2): if the player already OWNS this item (same
+   * base id, whether equipped in a slot or in the trinket pile), a buy UPGRADES that
+   * instance (+1 upgradeLevel) instead of adding a second copy or swapping — "buy the
+   * same amulet again → Amulet +2". Aggregation scales each contribution by the level,
+   * so level N is exactly "bought N times". A stash copy is treated as owned too (its
+   * level bumps), so re-buying while a copy sits benched deepens the benched piece.
+   *
+   * Otherwise it classifies the item's slot and either adds it as a new trinket or
+   * equips it into its 8-slot holder (auto-swapping a full slot's occupant into the
+   * stash; if the stash is full, the displaced item is returned as `overflow` for the
+   * caller to sell/refund). A two-hand weapon disables the offhand.
    */
   addItem(item: Item): {
     newDuos: any[];
@@ -472,15 +495,31 @@ export class PlayerStats {
     slot: EquipSlot;
     displaced: Item[];   // items pushed to the stash to make room
     overflow: Item | null; // an item that couldn't fit the stash (caller should sell it)
+    upgraded: boolean;   // true if this buy upgraded an owned instance instead of adding one
+    upgradeLevel: number; // the resulting level of the owned/added instance
   } {
     const slot = classifyItemSlot(item);
     const displaced: Item[] = [];
     let overflow: Item | null = null;
 
+    // ---- UPGRADE PATH: already own this id anywhere → bump its level, done. ----
+    const owned = this.findOwnedInstance(item.id);
+    if (owned) {
+      owned.upgradeLevel = (owned.upgradeLevel ?? 1) + 1;
+      const newDuos = this.rebuildActiveItems(); // level change alters aggregation
+      return {
+        newDuos, newTransformations: [], slot,
+        displaced, overflow, upgraded: true, upgradeLevel: owned.upgradeLevel,
+      };
+    }
+
+    // Ensure a fresh instance starts at level 1 (defensive — callers usually clone).
+    if (item.upgradeLevel === undefined) item.upgradeLevel = 1;
+
     if (slot === 'trinket') {
       this.trinkets.push(item);
     } else {
-      // Determine which concrete slots this item occupies, and free them into the stash.
+      // Free an occupied holder into the stash (or overflow if the stash is full).
       const toStash = (occupant: Item | null) => {
         if (!occupant) return;
         if (this.stash.length < PlayerStats.STASH_CAP) {
@@ -491,26 +530,26 @@ export class PlayerStats {
         }
       };
       const eq = this.equipment;
-      if (slot === 'weapon-2h') {
-        toStash(eq.weaponA);
-        toStash(eq.weaponB);
-        eq.weaponA = item;
-        eq.weaponB = null; // two-hand blocks the second weapon slot
-      } else if (slot === 'weapon-1h') {
-        // A two-hand weapon currently occupies weaponA and blocks weaponB — displace it.
-        if (eq.weaponA && classifyItemSlot(eq.weaponA) === 'weapon-2h') {
-          toStash(eq.weaponA);
-          eq.weaponA = null;
-        }
-        if (!eq.weaponA) eq.weaponA = item;
-        else if (!eq.weaponB) eq.weaponB = item;
-        else { toStash(eq.weaponA); eq.weaponA = item; } // both full → swap the A slot
+      if (slot === 'weapon-1h' || slot === 'weapon-2h') {
+        toStash(eq.weapon);
+        eq.weapon = item;
+        // A two-hand weapon disables the offhand: bench any current offhand.
+        if (slot === 'weapon-2h') toStash(eq.offhand), (eq.offhand = null);
       } else if (slot === 'offhand') {
+        // Can't equip an offhand while a two-hand weapon is up — bench the 2h first.
+        if (eq.weapon && classifyItemSlot(eq.weapon) === 'weapon-2h') {
+          toStash(eq.weapon);
+          eq.weapon = null;
+        }
         toStash(eq.offhand);
         eq.offhand = item;
-      } else if (slot === 'amulet') {
-        toStash(eq.amulet);
-        eq.amulet = item;
+      } else {
+        // head / amulet / torso / legs / feet / ring — one item each, like-named holder.
+        const holder = slotHolder(slot) as EquipHolderKey | null;
+        if (holder && holder !== 'weapon') {
+          toStash(eq[holder]);
+          eq[holder] = item;
+        }
       }
     }
 
@@ -518,7 +557,26 @@ export class PlayerStats {
     // Track for transformations (only for the newly acquired item)
     const transformationId = this.transformations.trackItemPickup(item.tags);
     const newTransformations = transformationId ? [transformationId] : [];
-    return { newDuos, newTransformations, slot, displaced, overflow };
+    return {
+      newDuos, newTransformations, slot, displaced, overflow,
+      upgraded: false, upgradeLevel: item.upgradeLevel ?? 1,
+    };
+  }
+
+  /** Find an owned instance of an item id in any active holder, the trinket pile, or
+   *  the stash (in that priority). Returns the mutable instance or null. Used by the
+   *  upgrade-on-duplicate buy path. */
+  private findOwnedInstance(itemId: string): Item | null {
+    const eq = this.equipment;
+    for (const key of EQUIP_HOLDER_KEYS) {
+      const occ = eq[key];
+      if (occ && occ.id === itemId) return occ;
+    }
+    const tri = this.trinkets.find(i => i.id === itemId);
+    if (tri) return tri;
+    const st = this.stash.find(i => i.id === itemId);
+    if (st) return st;
+    return null;
   }
 
   /**
@@ -529,7 +587,7 @@ export class PlayerStats {
   removeItem(itemId: string): Item | null {
     // Equipped slots (identity by id — one per slot).
     const eq = this.equipment;
-    for (const key of ['weaponA', 'weaponB', 'offhand', 'amulet'] as const) {
+    for (const key of EQUIP_HOLDER_KEYS) {
       const occ = eq[key];
       if (occ && occ.id === itemId) {
         eq[key] = null;
@@ -580,13 +638,18 @@ export class PlayerStats {
   /** All owned equipment currently sitting in the stash (for the UI). */
   getStash(): Item[] { return this.stash; }
 
-  /** Snapshot of the four equipment slots (for the UI). */
+  /** Snapshot of the eight equipment slots (for the UI). */
   getEquipment(): EquipSlots { return this.equipment; }
 
-  /** Whether a two-hand weapon is occupying the weapon slots (blocks weaponB). */
+  /** Whether a two-hand weapon is occupying the weapon slot (disables the offhand). */
   hasTwoHandEquipped(): boolean {
-    return this.equipment.weaponA !== null
-      && classifyItemSlot(this.equipment.weaponA) === 'weapon-2h';
+    return this.equipment.weapon !== null
+      && classifyItemSlot(this.equipment.weapon) === 'weapon-2h';
+  }
+
+  /** The offhand slot is disabled while a two-hand weapon is equipped. */
+  isOffhandDisabled(): boolean {
+    return this.hasTwoHandEquipped();
   }
 
   getDamage(): number {
@@ -1120,9 +1183,11 @@ export class PlayerStats {
     return Math.max(1, Math.floor(finalPrice));
   }
 
-  // Calculate recycle value (25% base + recycle bonus)
+  // Calculate recycle value (25% base + recycle bonus). Scales with upgrade level —
+  // an item at +N cost N buys' worth, so selling it refunds proportionally more.
   getRecycleValue(item: Item): number {
-    const baseValue = item.cost * 0.25;
+    const lv = item.upgradeLevel && item.upgradeLevel > 1 ? item.upgradeLevel : 1;
+    const baseValue = item.cost * 0.25 * lv;
     const bonus = this.getRecycleBonus();
     return Math.floor(baseValue * (1 + bonus));
   }

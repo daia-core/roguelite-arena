@@ -169,6 +169,7 @@ export class Player {
       proj.maxPierceCount = 999; // Laser pierces everything
       proj.radius = 6; // Thinner
       proj.color = '#00ffff';
+      proj.noTrail = true; // beam = clean cores, no dithered trail clot (see Projectile.noTrail)
       projectiles.push(proj);
     } else {
       // Default: Auto-aim bullets

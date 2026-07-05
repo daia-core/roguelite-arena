@@ -45,6 +45,11 @@ export class Projectile {
   // Ceremonial Daggers: a spectral dagger spawned ON KILL. Flagged so its own kill
   // never re-triggers the on-kill dagger spawn (bounds the chain to one generation).
   isDagger: boolean = false;
+  // Beam/laser shots suppress the dithered motion trail: at their high fire rate the
+  // overlapping trail blocks pile into a dark clot near the muzzle (the "huge sprite"
+  // Felix saw once the runaway speed was fixed). A clean row of bullet cores reads far
+  // better as a beam. Default off — every other shot keeps its trail.
+  noTrail: boolean = false;
   // Elemental identity (player shots only; enemy bullets stay 'physical').
   damageType: DamageType = 'physical';
 
@@ -103,6 +108,7 @@ export class Projectile {
     this.homing = false;
     this.turnSpeed = 0;
     this.isDagger = false;
+    this.noTrail = false;
     this.damageType = 'physical';
   }
 
@@ -117,20 +123,22 @@ export class Projectile {
   }
 
   update(dt: number, canvasWidth: number, canvasHeight: number): void {
-    // PERFORMANCE: Only add trail points every 2nd frame to reduce rendering load
-    if (Math.random() > 0.5) {
-      this.trail.push({ x: this.x, y: this.y, age: 0 });
-    }
+    if (!this.noTrail) {
+      // PERFORMANCE: Only add trail points every 2nd frame to reduce rendering load
+      if (Math.random() > 0.5) {
+        this.trail.push({ x: this.x, y: this.y, age: 0 });
+      }
 
-    // Update trail ages and remove old ones
-    this.trail = this.trail.filter(point => {
-      point.age += dt;
-      return point.age < 0.12; // Shorter trail (150ms → 120ms) for performance
-    });
+      // Update trail ages and remove old ones
+      this.trail = this.trail.filter(point => {
+        point.age += dt;
+        return point.age < 0.12; // Shorter trail (150ms → 120ms) for performance
+      });
 
-    // PERFORMANCE: Limit trail to 4 points instead of 8
-    if (this.trail.length > 4) {
-      this.trail.shift();
+      // PERFORMANCE: Limit trail to 4 points instead of 8
+      if (this.trail.length > 4) {
+        this.trail.shift();
+      }
     }
 
     this.x += this.vx * dt;

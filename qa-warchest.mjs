@@ -68,6 +68,9 @@ const result = await page.evaluate(() => {
   };
 
   // === 1. Catalog entry. ===
+  // Clone on every acquire: items now carry instance state (upgradeLevel) and the
+  // catalog returns a SHARED ref, so re-adding one raw object upgrades it across blocks.
+  const clone = () => JSON.parse(JSON.stringify(DB.getItemById('war_chest_t3')));
   const item = DB.getItemById('war_chest_t3');
   out.itemExists = !!item && item.warChest === 3;
   out.itemRarity = !!item && item.rarity === 'rare' && item.icon === '💰' &&
@@ -79,7 +82,7 @@ const result = await page.evaluate(() => {
 
   // === 3. Held. ===
   g.startNewGame();
-  if (item) g.playerStats.addItem(item);
+  if (item) g.playerStats.addItem(clone());
   out.warChestHeld = g.playerStats.getWarChest() === 3;
 
   // === 4. Payout scales with the wave number. ===
@@ -87,7 +90,7 @@ const result = await page.evaluate(() => {
 
   // === 5. Additive across copies (second copy deepens the payout). ===
   g.startNewGame();
-  if (item) { g.playerStats.addItem(item); g.playerStats.addItem(item); }
+  if (item) { g.playerStats.addItem(clone()); g.playerStats.addItem(clone()); }
   out.additiveStack = g.playerStats.getWarChest() === 6 && payoutAtWave(5) === 30;
 
   // === 6. Control: no item -> no payout. ===
@@ -96,7 +99,7 @@ const result = await page.evaluate(() => {
 
   // === 7. Reset. ===
   g.startNewGame();
-  if (item) g.playerStats.addItem(item);
+  if (item) g.playerStats.addItem(clone());
   const midHeld = g.playerStats.getWarChest();
   g.startNewGame();
   out.resetClears = midHeld === 3 && g.playerStats.getWarChest() === 0;

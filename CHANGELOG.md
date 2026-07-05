@@ -8,6 +8,37 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-05 (night) — 8-slot loadout, 3-item shop & upgrade-on-duplicate
+
+Shopping is now a full **build sim**. Three big changes land together:
+
+- **8 equipment slots.** WEAPON / OFF-HAND / HEAD / AMULET / TORSO / LEGS / FEET / RING — each a
+  single holder shown in a 2×4 strip under the stats panel. A **two-hand weapon fills WEAPON and
+  disables OFF-HAND** (the off-hand box dims and shows `2H`, any equipped shield benches to the stash).
+- **Buying a duplicate UPGRADES it.** Buy an item you already own and it becomes `+N` instead of a
+  second copy — `Amulet +7` = that amulet bought 7 times. **Additive** stats scale ×N, **multiplicative**
+  stats scale ^N, and **recycle value** scales ×N. Trinkets upgrade the same way (Ceremonial Daggers
+  `+3` = 3× the daggers), so the "buy more, get more" identity is preserved with zero list clutter.
+  The strip shows a **`+N` badge** on any upgraded slot.
+- **Shop offers exactly 3 items** (was 6). Fewer, more considered picks — every card is a real
+  decision. The card layout is verified non-overlapping across 11 phone/tablet/desktop viewports.
+- **35 new gear pieces** seed the five new slots (7 each: head/torso/legs/feet/ring) for early build
+  variety — head defensive/utility, torso tank/regen, legs speed/phase, feet dodge/magnet, ring
+  damage/econ. (Target is 20+ per slot; this is the vertical slice — more land next.)
+
+Also live: **beam/laser shots drop their motion trail** — at high fire rate the overlapping trail was
+clotting into a dark blob near the muzzle; clean bullet cores read far better as a beam.
+
+Under the hood: `items[]` stays the single aggregation source of truth (8 holders + trinkets); each
+contribution is now scaled by the instance's `upgradeLevel`. Items are **deep-cloned on acquire** since
+they carry instance state now. Supersedes the Phase-1 dual-weapon (A/B) model. Design doc:
+`DESIGN-SHOP-8SLOT-REWORK.md`. QA: `qa-shop-8slot.mjs` (29/29) + full regression sweep green.
+
+- **Commit:** _pending_
+- **Live-build verified:** _pending_
+
+---
+
 ## 2026-07-05 (night) — Equipment slots & trinket box (Phase 1: model + UI)
 
 Shopping is becoming a **build decision**, not a stat-pile. Items now split into a **limited

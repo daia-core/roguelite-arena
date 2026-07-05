@@ -722,7 +722,7 @@ export const ITEM_CATALOG: Item[] = [
       piercing: 999, // Laser pierces everything
       damageMultiplier: 0.6, // Lower base damage
       fireRateMultiplier: 3.0, // Much faster ticks
-      projectileSpeed: 1200 // Very fast
+      projectileSpeed: 1.8 // Fast (MULTIPLIER on the 400 base — see ItemSystem.getProjectileSpeed)
     },
     {
       id: 'hammer_weapon_t3',
@@ -776,7 +776,7 @@ export const ITEM_CATALOG: Item[] = [
       piercing: 999,
       damageMultiplier: 1.1,
       fireRateMultiplier: 3.5,
-      projectileSpeed: 1400,
+      projectileSpeed: 2.0, // Fast (MULTIPLIER on the 400 base — see ItemSystem.getProjectileSpeed)
       chainLightning: 0.6
     },
     {
@@ -3120,5 +3120,55 @@ export const ITEM_CATALOG: Item[] = [
       unlocked: true,
       tags: ['economic'],
       warChest: 3
-    }
+    },
+
+    // ==================== GEAR SLOTS (2026-07-05 v2 rework) ====================
+    // Dedicated equippable pieces for the 8-slot loadout. Each is hand-tagged with an
+    // explicit `slot` so it routes to its holder (one at a time; buying a duplicate
+    // UPGRADES it — "Helm +N"). Vertical slice: ~7 per slot, filled to 20+ in follow-ups.
+
+    // ---- HEAD (helmets/hats): crit, luck, vision, utility ----
+    { id: 'head_leather_cap', name: 'Leather Cap', description: '+15 max health', rarity: 'common', tier: ItemTier.Common, cost: 10, icon: '🧢', unlocked: true, tags: ['defensive'], slot: 'head', maxHealthBonus: 15 },
+    { id: 'head_focus_hood', name: 'Focus Hood', description: '+5% crit chance', rarity: 'common', tier: ItemTier.Common, cost: 12, icon: '🎓', unlocked: true, tags: ['ranged'], slot: 'head', critChance: 0.05 },
+    { id: 'head_scholar_hat', name: "Scholar's Hat", description: '+30% pickup range', rarity: 'rare', tier: ItemTier.Uncommon, cost: 18, icon: '🎩', unlocked: true, tags: ['utility'], slot: 'head', xpMagnet: 1.3 },
+    { id: 'head_iron_helm', name: 'Iron Helm', description: '+4 armor', rarity: 'rare', tier: ItemTier.Uncommon, cost: 22, icon: '⛑️', unlocked: true, tags: ['defensive'], slot: 'head', armor: 4 },
+    { id: 'head_lucky_crown', name: 'Lucky Crown', description: '+15% luck (better shop rarity & drops)', rarity: 'epic', tier: ItemTier.Rare, cost: 40, icon: '👑', unlocked: true, tags: ['economic'], slot: 'head', luck: 0.15 },
+    { id: 'head_visor_of_wrath', name: 'Visor of Wrath', description: '+8% crit chance and +25% crit damage', rarity: 'epic', tier: ItemTier.Rare, cost: 48, icon: '🥽', unlocked: true, tags: ['ranged'], slot: 'head', critChance: 0.08, critDamageMultiplier: 1.25 },
+    { id: 'head_mind_diadem', name: 'Mind Diadem', description: '+12% doom chance — marks enemies to detonate', rarity: 'legendary', tier: ItemTier.Legendary, cost: 70, icon: '💠', unlocked: true, tags: ['elemental'], slot: 'head', doom: 0.12 },
+
+    // ---- TORSO (body armor): armor, health, thorns, lifesteal ----
+    { id: 'torso_padded_vest', name: 'Padded Vest', description: '+20 max health', rarity: 'common', tier: ItemTier.Common, cost: 12, icon: '🦺', unlocked: true, tags: ['defensive'], slot: 'torso', maxHealthBonus: 20 },
+    { id: 'torso_chainmail', name: 'Chainmail', description: '+6 armor', rarity: 'rare', tier: ItemTier.Uncommon, cost: 24, icon: '🥋', unlocked: true, tags: ['defensive'], slot: 'torso', armor: 6 },
+    { id: 'torso_spiked_cuirass', name: 'Spiked Cuirass', description: '+25% thorns reflect', rarity: 'rare', tier: ItemTier.Uncommon, cost: 26, icon: '🛡️', unlocked: true, tags: ['defensive'], slot: 'torso', thorns: 0.25 },
+    { id: 'torso_vampiric_plate', name: 'Vampiric Plate', description: '+8% lifesteal', rarity: 'epic', tier: ItemTier.Rare, cost: 44, icon: '🩸', unlocked: true, tags: ['defensive'], slot: 'torso', lifesteal: 0.08 },
+    { id: 'torso_juggernaut_shell', name: 'Juggernaut Shell', description: '+40 max health and +5 armor', rarity: 'epic', tier: ItemTier.Rare, cost: 55, icon: '🐢', unlocked: true, tags: ['defensive'], slot: 'torso', maxHealthBonus: 40, armor: 5 },
+    { id: 'torso_regen_weave', name: 'Regen Weave', description: '+1.5 HP/sec', rarity: 'rare', tier: ItemTier.Uncommon, cost: 28, icon: '🧵', unlocked: true, tags: ['defensive'], slot: 'torso', healthRegen: 1.5 },
+    { id: 'torso_aegis_mantle', name: 'Aegis Mantle', description: '+8 armor and +20% thorns', rarity: 'legendary', tier: ItemTier.Legendary, cost: 72, icon: '🪬', unlocked: true, tags: ['defensive'], slot: 'torso', armor: 8, thorns: 0.2 },
+
+    // ---- LEGS (leg armor): move speed, dodge, health ----
+    { id: 'legs_travel_pants', name: 'Travel Pants', description: '+10% move speed', rarity: 'common', tier: ItemTier.Common, cost: 10, icon: '👖', unlocked: true, tags: ['utility'], slot: 'legs', speedMultiplier: 1.1 },
+    { id: 'legs_greaves', name: 'Steel Greaves', description: '+3 armor and +15 max health', rarity: 'rare', tier: ItemTier.Uncommon, cost: 22, icon: '🦿', unlocked: true, tags: ['defensive'], slot: 'legs', armor: 3, maxHealthBonus: 15 },
+    { id: 'legs_dancer_leggings', name: "Dancer's Leggings", description: '+12% dodge chance', rarity: 'rare', tier: ItemTier.Uncommon, cost: 26, icon: '🩰', unlocked: true, tags: ['utility'], slot: 'legs', dodge: 0.12 },
+    { id: 'legs_windrunner', name: 'Windrunner Leggings', description: '+18% move speed', rarity: 'epic', tier: ItemTier.Rare, cost: 40, icon: '💨', unlocked: true, tags: ['utility'], slot: 'legs', speedMultiplier: 1.18 },
+    { id: 'legs_phase_trousers', name: 'Phase Trousers', description: '+18% dodge and +8% move speed', rarity: 'epic', tier: ItemTier.Rare, cost: 50, icon: '👻', unlocked: true, tags: ['utility'], slot: 'legs', dodge: 0.18, speedMultiplier: 1.08 },
+    { id: 'legs_titan_legplates', name: 'Titan Legplates', description: '+35 max health and +4 armor', rarity: 'rare', tier: ItemTier.Rare, cost: 46, icon: '🦵', unlocked: true, tags: ['defensive'], slot: 'legs', maxHealthBonus: 35, armor: 4 },
+    { id: 'legs_stormstride', name: 'Stormstride', description: '+22% move speed and +10% dodge', rarity: 'legendary', tier: ItemTier.Legendary, cost: 68, icon: '⚡', unlocked: true, tags: ['utility'], slot: 'legs', speedMultiplier: 1.22, dodge: 0.1 },
+
+    // ---- FEET (boots): move speed, dodge, pickup range ----
+    { id: 'feet_sturdy_boots', name: 'Sturdy Boots', description: '+8% move speed', rarity: 'common', tier: ItemTier.Common, cost: 9, icon: '🥾', unlocked: true, tags: ['utility'], slot: 'feet', speedMultiplier: 1.08 },
+    { id: 'feet_swift_sandals', name: 'Swift Sandals', description: '+14% move speed', rarity: 'rare', tier: ItemTier.Uncommon, cost: 20, icon: '🩴', unlocked: true, tags: ['utility'], slot: 'feet', speedMultiplier: 1.14 },
+    { id: 'feet_magnet_boots', name: 'Magnet Boots', description: '+40% pickup range', rarity: 'rare', tier: ItemTier.Uncommon, cost: 22, icon: '🧲', unlocked: true, tags: ['utility'], slot: 'feet', xpMagnet: 1.4 },
+    { id: 'feet_dodge_kicks', name: 'Dodge Kicks', description: '+10% dodge chance', rarity: 'rare', tier: ItemTier.Uncommon, cost: 24, icon: '👟', unlocked: true, tags: ['utility'], slot: 'feet', dodge: 0.1 },
+    { id: 'feet_hermes_treads', name: 'Hermes Treads', description: '+20% move speed and +25% pickup range', rarity: 'epic', tier: ItemTier.Rare, cost: 46, icon: '🪽', unlocked: true, tags: ['utility'], slot: 'feet', speedMultiplier: 1.2, xpMagnet: 1.25 },
+    { id: 'feet_ironshod', name: 'Ironshod Boots', description: '+3 armor and +6% move speed', rarity: 'rare', tier: ItemTier.Rare, cost: 30, icon: '🥿', unlocked: true, tags: ['defensive'], slot: 'feet', armor: 3, speedMultiplier: 1.06 },
+    { id: 'feet_blinkstep', name: 'Blinkstep Boots', description: '+16% dodge and +12% move speed', rarity: 'legendary', tier: ItemTier.Legendary, cost: 66, icon: '✨', unlocked: true, tags: ['utility'], slot: 'feet', dodge: 0.16, speedMultiplier: 1.12 },
+
+    // ---- RING (rings): offense — damage, fire rate, crit ----
+    { id: 'ring_copper_band', name: 'Copper Band', description: '+12% damage', rarity: 'common', tier: ItemTier.Common, cost: 10, icon: '💍', unlocked: true, tags: ['melee'], slot: 'ring', damageMultiplier: 1.12 },
+    { id: 'ring_swift_signet', name: 'Swift Signet', description: '+12% fire rate', rarity: 'rare', tier: ItemTier.Uncommon, cost: 20, icon: '💫', unlocked: true, tags: ['ranged'], slot: 'ring', fireRateMultiplier: 1.12 },
+    { id: 'ring_keen_loop', name: 'Keen Loop', description: '+6% crit chance', rarity: 'rare', tier: ItemTier.Uncommon, cost: 24, icon: '🔆', unlocked: true, tags: ['ranged'], slot: 'ring', critChance: 0.06 },
+    { id: 'ring_bloodstone', name: 'Bloodstone Ring', description: '+18% damage', rarity: 'epic', tier: ItemTier.Rare, cost: 40, icon: '❤️‍🔥', unlocked: true, tags: ['melee'], slot: 'ring', damageMultiplier: 1.18 },
+    { id: 'ring_gilded_band', name: 'Gilded Band', description: '+20% gold earned', rarity: 'rare', tier: ItemTier.Uncommon, cost: 26, icon: '💛', unlocked: true, tags: ['economic'], slot: 'ring', goldBonus: 1.2 },
+    { id: 'ring_serpent_coil', name: 'Serpent Coil', description: '+10% bleed chance', rarity: 'epic', tier: ItemTier.Rare, cost: 44, icon: '🐍', unlocked: true, tags: ['elemental'], slot: 'ring', bleed: 0.1 },
+    { id: 'ring_conquerors_seal', name: "Conqueror's Seal", description: '+20% damage and +10% fire rate', rarity: 'legendary', tier: ItemTier.Legendary, cost: 74, icon: '🏵️', unlocked: true, tags: ['melee'], slot: 'ring', damageMultiplier: 1.2, fireRateMultiplier: 1.1 }
 ];

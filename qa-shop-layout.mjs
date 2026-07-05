@@ -83,10 +83,10 @@ for (const size of SIZES) {
     }
     // Force the shop open with a full stock, regardless of run progress.
     g.enterShop();
-    // If for any reason enterShop under-filled, top up from the DB.
-    if (g.shopItems.filter(Boolean).length < 6 && window.__ItemDatabase) {
-      const items = window.__ItemDatabase.getWeightedShopItems(6, 1, [], 1);
-      g.shopItems = items.slice(0, 6);
+    // Shop now offers exactly 3 items (8-slot rework). Top up to 3 if under-filled.
+    if (g.shopItems.filter(Boolean).length < 3 && window.__ItemDatabase) {
+      const items = window.__ItemDatabase.getWeightedShopItems(3, 1, [], 1);
+      g.shopItems = items.slice(0, 3);
     }
     g.state = 'shop';
     const L = g.getShopLayout();

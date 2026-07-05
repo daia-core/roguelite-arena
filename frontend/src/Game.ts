@@ -6,7 +6,7 @@ import { Projectile } from './Projectile';
 import { MeleeAttack } from './MeleeAttack';
 import { Particle, DamageNumber } from './Particle';
 import { WaveManager } from './WaveManager';
-import { PlayerStats, ItemDatabase, getItemKinds, classifyItemSlot, type Item } from './ItemSystem';
+import { PlayerStats, ItemDatabase, getItemKinds, classifyItemSlot, type Item, type EquipHolderKey } from './ItemSystem';
 import { STARTING_CLASSES, type StartingClass } from './Classes';
 import { SaveManager } from './SaveManager';
 import { Input } from './Input';
@@ -246,6 +246,12 @@ export class Game {
   private evolutionSystem = new EvolutionSystem();
   evolutionBannerTimer: number = 0;
   evolutionBannerText: string = '';
+
+  // Shop toast — transient one-line feedback for equipment-strip actions (equip/bench/
+  // sell). Wall-clock timestamped so it fades without threading dt into updateShop.
+  private shopToastText: string = '';
+  private shopToastAt: number = 0;
+  private static readonly SHOP_TOAST_MS = 1800;
 
   // GAME FEEL: hit-stop (freeze-frame "punch"). Set only on genuinely impactful
   // kills — bosses and elites/minibosses — NEVER on fodder: the arena clears
@@ -796,6 +802,7 @@ export class Game {
           pooled.maxPierceCount = isLoaded ? 999 : proj.maxPierceCount;
           pooled.homing = proj.homing;
           pooled.turnSpeed = proj.turnSpeed;
+          pooled.noTrail = proj.noTrail; // carry the laser's trail-suppression through the pool
           if (isLoaded) { pooled.color = '#ffd43b'; pooled.radius = 13; } // fat golden loaded round
           this.projectiles.push(pooled);
         }
@@ -2402,8 +2409,9 @@ export class Game {
       }
     }
 
-    // ADVANCED: 6 shop slots (was 4)
-    const shopSlotCount = 6;
+    // v2 rework: 3 shop slots (was 6) — fewer, deeper choices. Must match the visual
+    // grid SLOTS in getShopLayout() so every generated item has a card.
+    const shopSlotCount = 3;
 
     // Generate new items for unlocked slots - BROTATO-WEIGHTED for synergy promotion
     const currentWave = this.waveManager.currentWave;
@@ -2648,10 +2656,9 @@ export class Game {
     const isMobile = cssW < 800;
     const s = (v: number) => Math.round(v * zoom);
 
-    const SLOTS = 6;
+    const SLOTS = 3; // v2 rework: offer just 3 items at a time (tighter, deeper choices).
     // Column count is driven by width, NOT the mobile flag: a wide LANDSCAPE phone
-    // uses the 3-wide grid (a 6-tall single column can't fit its short height), only
-    // a narrow PORTRAIT screen stacks in one column.
+    // uses the 3-wide grid, only a narrow PORTRAIT screen stacks in one column.
     const cols = isPortrait ? 1 : 3;
     const rows = Math.ceil(SLOTS / cols);
 
@@ -2693,10 +2700,10 @@ export class Game {
       buttonHeightCss * 2 + buttonSpacingCss + bottomMarginCss + gridToButtonGapCss;
 
     // Top of the card grid, below the title/gold/stats header. On mobile the equipment
-    // strip (4 slot boxes) sits under the stats panel (which ends at CSS ~102), so the grid
-    // must start below it — otherwise the strip overlaps the first card. Desktop has the
-    // strip in the left rail, so its grid top is unaffected.
-    const gridTopCss = isMobile ? 144 : 120;
+    // strip is now 8 slots in TWO rows (taller than the old 4-box single row), so the grid
+    // must start further down — otherwise the strip overlaps the first card. Desktop has
+    // the strip in the left rail, so its grid top is unaffected.
+    const gridTopCss = isMobile ? 176 : 120;
 
     const preferredItemHeightCss = isPortrait ? 92 : isMobile ? 100 : 150;
     const minItemHeightCss = isMobile ? 34 : 70;
@@ -2801,6 +2808,13 @@ export class Game {
     }
     if (pointInRect(mouseX, mouseY, this.statsPanelRect) && this.input.mouseDown) {
       this.showStatsPopup = true;
+      this.input.mouseDown = false;
+      return;
+    }
+
+    // EQUIPMENT STRIP (Phase 2 tap-to-manage). Checked before the shop cards because the
+    // strip sits above them; a handled tap consumes the input and returns.
+    if (this.input.mouseDown && this.handleEquipmentStripTap(mouseX, mouseY)) {
       this.input.mouseDown = false;
       return;
     }
@@ -2933,8 +2947,17 @@ export class Game {
     if (this.player.gold < finalPrice) return false;
 
     this.player.gold -= finalPrice;
-    const { newDuos, newTransformations, overflow } = this.playerStats.addItem(item);
+    // UPGRADE SYSTEM (v2): items carry instance state (upgradeLevel) once owned, so a
+    // purchased item MUST be a fresh clone — never the shared catalog object — or an
+    // upgrade would mutate every future shop offering of the same id.
+    const bought: Item = JSON.parse(JSON.stringify(item));
+    const { newDuos, newTransformations, overflow, upgraded, upgradeLevel } = this.playerStats.addItem(bought);
     this.itemsPurchasedThisWave++;
+
+    // Duplicate buy → upgraded an owned instance. Tell the player (e.g. "Amulet +2").
+    if (upgraded) {
+      this.showShopToast(`${item.name} +${upgradeLevel - 1}`);
+    }
 
     // SLOT REWORK: if equipping displaced an item but the stash was full, the old
     // piece can't be kept — refund its recycle value so the buy is never a silent loss.
@@ -2991,8 +3014,8 @@ export class Game {
 
     this.player.gold -= effectiveRerollCost;
 
-    // Rebuild shop to full 6 slots, keeping locked items in their positions.
-    const shopSlotCount = 6;
+    // Rebuild shop to full 3 slots, keeping locked items in their positions.
+    const shopSlotCount = 3;
     const newShopItems: Item[] = [];
     const lockedItems: Map<number, Item> = new Map();
     for (const index of this.lockedShopItems) {
@@ -4285,10 +4308,16 @@ export class Game {
   /**
    * Draw the equipment strip — the four gear slots (Weapon A, Weapon B, Offhand,
    * Amulet) as a row of labelled boxes showing each equipped item's icon (or an empty
-   * marker). A two-hand weapon spans both weapon boxes. Read-only in Phase 1; the
-   * bounds are stored on this.equipSlotRects for the Phase 2 tap-to-manage handlers.
+   * marker). A two-hand weapon spans both weapon boxes.
+   *
+   * Phase 2 tap-to-manage: tap an occupied slot to bench it (unequip → stash); tap a
+   * stashed item to equip it (swapping the current occupant back); tap a stash item's
+   * ✕ badge to sell it for gold. Bounds are stored on equipSlotRects / stashItemRects /
+   * stashSellRects so updateShop can hit-test them.
    */
-  private equipSlotRects: Array<{ key: 'weaponA' | 'weaponB' | 'offhand' | 'amulet'; x: number; y: number; width: number; height: number }> = [];
+  private equipSlotRects: Array<{ key: EquipHolderKey; x: number; y: number; width: number; height: number }> = [];
+  private stashItemRects: Array<{ index: number; x: number; y: number; width: number; height: number }> = [];
+  private stashSellRects: Array<{ index: number; x: number; y: number; width: number; height: number }> = [];
   private drawEquipmentStrip(
     ctx: CanvasRenderingContext2D,
     s: (n: number) => number,
@@ -4298,64 +4327,92 @@ export class Game {
     width: number
   ): void {
     const eq = this.playerStats.getEquipment();
-    const twoHand = this.playerStats.hasTwoHandEquipped();
+    const offhandDisabled = this.playerStats.isOffhandDisabled();
     this.equipSlotRects = [];
+    this.stashItemRects = [];
+    this.stashSellRects = [];
 
-    const boxH = isMobile ? s(24) : s(30);
+    // 8 slots laid out as two rows of four (mobile-friendly). Upgraded items show +N.
+    const boxH = isMobile ? s(22) : s(28);
     const gap = s(4);
-    const boxW = (width - gap * 3) / 4;
-    const labels: Record<string, string> = { weaponA: 'WPN A', weaponB: 'WPN B', offhand: 'OFF', amulet: 'AMULET' };
-    const keys: Array<'weaponA' | 'weaponB' | 'offhand' | 'amulet'> = ['weaponA', 'weaponB', 'offhand', 'amulet'];
+    const cols = 4;
+    const boxW = (width - gap * (cols - 1)) / cols;
+    const rowGap = s(3);
+    const labels: Record<EquipHolderKey, string> = {
+      weapon: 'WEAPON', offhand: 'OFF', head: 'HEAD', amulet: 'AMULET',
+      torso: 'TORSO', legs: 'LEGS', feet: 'FEET', ring: 'RING',
+    };
+    const keys: EquipHolderKey[] = ['weapon', 'offhand', 'head', 'amulet', 'torso', 'legs', 'feet', 'ring'];
 
     keys.forEach((key, idx) => {
-      const bx = x + idx * (boxW + gap);
-      const rect = { key, x: bx, y, width: boxW, height: boxH };
-      this.equipSlotRects.push(rect);
+      const col = idx % cols;
+      const row = Math.floor(idx / cols);
+      const bx = x + col * (boxW + gap);
+      const by = y + row * (boxH + rowGap);
+      this.equipSlotRects.push({ key, x: bx, y: by, width: boxW, height: boxH });
 
-      // A two-hand weapon in A visually spans into the B box (drawn as one wide slot).
-      const spannedByTwoHand = twoHand && key === 'weaponB';
+      const disabled = key === 'offhand' && offhandDisabled;
       const occupant = eq[key];
+      const level = occupant?.upgradeLevel ?? 1;
 
       ctx.save();
-      // Slot box — filled when occupied, dim/dashed when empty.
-      ctx.fillStyle = occupant ? '#3a2c12' : '#241a0c';
-      ctx.fillRect(bx, y, boxW, boxH);
-      ctx.strokeStyle = spannedByTwoHand ? '#6b5a2e' : (occupant ? '#c8a15a' : '#5c4a28');
+      ctx.fillStyle = disabled ? '#1a1408' : (occupant ? '#3a2c12' : '#241a0c');
+      ctx.fillRect(bx, by, boxW, boxH);
+      ctx.strokeStyle = disabled ? '#3a3018' : (occupant ? '#c8a15a' : '#5c4a28');
       ctx.lineWidth = 1;
-      ctx.strokeRect(bx, y, boxW, boxH);
+      ctx.strokeRect(bx, by, boxW, boxH);
       ctx.restore();
 
       // Slot label (tiny, top-left).
-      this.renderer.drawText(labels[key], bx + s(3), y + s(2), {
-        size: s(5), color: '#a5915f', align: 'left'
+      this.renderer.drawText(labels[key], bx + s(3), by + s(2), {
+        size: s(4.5), color: disabled ? '#4a3f22' : '#a5915f', align: 'left'
       });
 
-      if (spannedByTwoHand) {
-        this.renderer.drawText('◀ 2-H', bx + boxW / 2, y + boxH / 2, {
-          size: s(6), color: '#6b5a2e', align: 'center'
+      if (disabled) {
+        this.renderer.drawText('2H', bx + boxW / 2, by + boxH / 2 - s(2), {
+          size: s(6), color: '#5a4a28', align: 'center'
         });
       } else if (occupant) {
-        this.renderer.drawItemIcon(occupant.icon, bx + boxW / 2, y + s(isMobile ? 9 : 12), s(isMobile ? 13 : 16));
+        this.renderer.drawItemIcon(occupant.icon, bx + boxW / 2, by + s(isMobile ? 9 : 11), s(isMobile ? 12 : 15));
+        // Upgrade badge: show +N for an upgraded piece (bottom-right).
+        if (level > 1) {
+          this.renderer.drawText(`+${level - 1}`, bx + boxW - s(2), by + boxH - s(7), {
+            size: s(isMobile ? 6 : 7), color: '#ffe08a', align: 'right'
+          });
+        }
       } else {
-        this.renderer.drawText('—', bx + boxW / 2, y + boxH / 2 - s(3), {
-          size: s(9), color: '#5c4a28', align: 'center'
+        this.renderer.drawText('—', bx + boxW / 2, by + boxH / 2 - s(3), {
+          size: s(8), color: '#5c4a28', align: 'center'
         });
       }
     });
 
+    const stripRows = Math.ceil(keys.length / cols);
+    const stripBottom = y + stripRows * boxH + (stripRows - 1) * rowGap;
+
+    // Discoverability hint — tiny line telling the player the strip is interactive.
+    const anyEquipped = keys.some(k => eq[k]);
+    if (anyEquipped) {
+      this.renderer.drawText('tap gear ▸ bench it', x + width - s(2), stripBottom + s(2), {
+        size: s(5), color: '#7a6a44', align: 'right'
+      });
+    }
+
     // STASH ROW — displaced/speculative equipment. Only shown when non-empty so the
     // auto-swap never looks like an item vanished: your old gear visibly lands here.
-    // Read-only in Phase 1 (tap-to-equip/sell lands in Phase 2).
+    // Each stash icon is tap-to-equip; its ✕ badge sells it for gold.
     const stash = this.playerStats.getStash();
     if (stash.length > 0) {
-      const rowY = y + boxH + s(4);
-      const iconBox = isMobile ? s(16) : s(20);
-      this.renderer.drawText(`STASH ${stash.length}/${PlayerStats.STASH_CAP}`, x + s(2), rowY, {
+      const rowY = stripBottom + s(4);
+      const iconBox = isMobile ? s(18) : s(22);
+      this.renderer.drawText(`STASH ${stash.length}/${PlayerStats.STASH_CAP} · tap ▸ equip`, x + s(2), rowY, {
         size: s(5.5), color: '#9c8a5c', align: 'left'
       });
       const iconsY = rowY + s(8);
+      const sellBadge = s(isMobile ? 8 : 9);
       for (let i = 0; i < stash.length; i++) {
-        const ix = x + i * (iconBox + s(3));
+        const ix = x + i * (iconBox + s(5));
+        // Icon box (tap → equip).
         ctx.save();
         ctx.fillStyle = '#241a0c';
         ctx.fillRect(ix, iconsY, iconBox, iconBox);
@@ -4363,8 +4420,109 @@ export class Game {
         ctx.lineWidth = 1;
         ctx.strokeRect(ix, iconsY, iconBox, iconBox);
         ctx.restore();
-        this.renderer.drawItemIcon(stash[i].icon, ix + iconBox / 2, iconsY + iconBox / 2 - s(4), s(isMobile ? 10 : 12));
+        this.renderer.drawItemIcon(stash[i].icon, ix + iconBox / 2, iconsY + iconBox / 2 - s(4), s(isMobile ? 11 : 13));
+        this.stashItemRects.push({ index: i, x: ix, y: iconsY, width: iconBox, height: iconBox });
+
+        // Sell ✕ badge (top-right of the icon box; tap → sell for gold).
+        const sbx = ix + iconBox - sellBadge + s(1);
+        const sby = iconsY - s(1);
+        ctx.save();
+        ctx.fillStyle = '#5a1e14';
+        ctx.fillRect(sbx, sby, sellBadge, sellBadge);
+        ctx.strokeStyle = '#c85a3c';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(sbx, sby, sellBadge, sellBadge);
+        ctx.restore();
+        this.renderer.drawText('✕', sbx + sellBadge / 2, sby + sellBadge / 2 - s(3), {
+          size: s(isMobile ? 6 : 7), color: '#ffd0c0', align: 'center'
+        });
+        // Slightly enlarge the sell hit-target beyond the drawn badge for fat fingers.
+        const pad = s(2);
+        this.stashSellRects.push({ index: i, x: sbx - pad, y: sby - pad, width: sellBadge + pad * 2, height: sellBadge + pad * 2 });
       }
+    }
+  }
+
+  /**
+   * Phase 2 tap-to-manage handler for the equipment strip. Returns true if the tap hit
+   * an interactive region (so the caller consumes the input). Priority order matches the
+   * draw z-order: stash sell ✕ badges (smallest, on top) → stash icons → equipped slots.
+   *   • sell badge  → sell the stashed item for its recycle value (gold in, item gone)
+   *   • stash icon  → equip it (swaps any current occupant back to the stash)
+   *   • equipped slot → bench it to the stash; if the stash is full, sell it instead so
+   *     the tap is never a dead no-op (with a toast telling the player which happened)
+   */
+  private handleEquipmentStripTap(mx: number, my: number): boolean {
+    if (!this.player) return false;
+    const stash = this.playerStats.getStash();
+
+    // 1. Stash sell ✕ badges (drawn on top → tested first).
+    for (const r of this.stashSellRects) {
+      if (pointInRect(mx, my, r)) {
+        const item = stash[r.index];
+        if (item) {
+          const refund = this.playerStats.getRecycleValue(item);
+          this.playerStats.removeItem(item.id);
+          this.player.gold += refund;
+          this.syncMaxHealthAfterItemChange();
+          this.audio.playPurchase();
+          this.showShopToast(`Sold ${item.name} · +${refund}g`);
+        }
+        return true;
+      }
+    }
+
+    // 2. Stash icons → equip.
+    for (const r of this.stashItemRects) {
+      if (pointInRect(mx, my, r)) {
+        const item = stash[r.index];
+        if (item && this.playerStats.equipFromStash(r.index)) {
+          this.syncMaxHealthAfterItemChange();
+          this.audio.playPurchase();
+          this.showShopToast(`Equipped ${item.name}`);
+        }
+        return true;
+      }
+    }
+
+    // 3. Equipped slots → bench to stash (or sell if the stash is full).
+    for (const r of this.equipSlotRects) {
+      if (pointInRect(mx, my, r)) {
+        const occupant = this.playerStats.getEquipment()[r.key];
+        if (!occupant) return false; // empty slot — let the tap fall through (nothing to do)
+        if (this.playerStats.unequipToStash(r.key)) {
+          this.syncMaxHealthAfterItemChange();
+          this.audio.playPurchase();
+          this.showShopToast(`Benched ${occupant.name}`);
+        } else {
+          // Stash full → sell it instead so the tap still does something useful.
+          const refund = this.playerStats.getRecycleValue(occupant);
+          this.playerStats.removeItem(occupant.id);
+          this.player.gold += refund;
+          this.syncMaxHealthAfterItemChange();
+          this.audio.playPurchase();
+          this.showShopToast(`Stash full — sold ${occupant.name} · +${refund}g`);
+        }
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /** Flash a one-line toast in the shop (equip/bench/sell feedback). */
+  private showShopToast(text: string): void {
+    this.shopToastText = text;
+    this.shopToastAt = Date.now();
+  }
+
+  /** Recompute maxHealth after an item leaves/enters the active set, clamping current HP.
+   *  Mirrors the recycle path so a +maxHP item removed can't leave HP above the cap. */
+  private syncMaxHealthAfterItemChange(): void {
+    if (!this.player) return;
+    this.player.maxHealth = this.playerStats.getMaxHealth();
+    if (this.player.health > this.player.maxHealth) {
+      this.player.health = this.player.maxHealth;
     }
   }
 
@@ -4486,8 +4644,25 @@ export class Game {
 
     // EQUIPMENT STRIP — the 4 slots (Wpn A / Wpn B / Off / Amulet) as labelled boxes,
     // so gear reads as a limited loadout, not a stat-pile. Sits just under the stats
-    // panel on both layouts. Read-only in Phase 1 (tap-to-manage lands in Phase 2).
+    // panel on both layouts. Tap-to-manage (equip/bench/sell) wired in Phase 2.
     this.drawEquipmentStrip(ctx, s, isMobile, statPanelX, statPanelY + statPanelHeight + s(6), statPanelWidth);
+
+    // SHOP TOAST — transient equip/bench/sell feedback, centred under the gold total.
+    if (this.shopToastText) {
+      const age = Date.now() - this.shopToastAt;
+      if (age < Game.SHOP_TOAST_MS) {
+        const fade = Math.min(1, (Game.SHOP_TOAST_MS - age) / 400); // fade over last 0.4s
+        ctx.save();
+        ctx.globalAlpha = fade;
+        const ty = s(isMobile ? 44 : 66);
+        this.renderer.drawText(this.shopToastText, this.canvas.width / 2, ty, {
+          size: s(isMobile ? 7 : 9), color: '#ffe08a', align: 'center'
+        });
+        ctx.restore();
+      } else {
+        this.shopToastText = '';
+      }
+    }
 
     // INVENTORY PANEL - show current items as tiny icons on the right side (desktop) or below stats (mobile)
     const invPanelPadding = s(6);

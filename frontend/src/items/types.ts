@@ -50,8 +50,8 @@ export function getItemKinds(item: Item): ItemKind[] {
   return kinds;
 }
 
-// Resolve an item's equipment slot. Uses the explicit `slot` field when the item
-// declares one (the amulet keystones do); otherwise infers from mechanics:
+// Resolve an item's equipment slot CATEGORY. Uses the explicit `slot` field when the
+// item declares one (gear pieces + amulet keystones do); otherwise infers from mechanics:
 //   • a melee or laser weaponType is a committed, "big" weapon → two-hand
 //   • any other weaponType (shotgun, orbital, one-hand blade) → one-hand
 //   • a pure shield item → offhand
@@ -67,6 +67,26 @@ export function classifyItemSlot(item: Item): EquipSlot {
   // A shield with no other build-defining weapon role is an off-hand.
   if (item.shield) return 'offhand';
   return 'trinket';
+}
+
+// The live-loadout holder an EquipSlot category maps to. Both weapon categories share
+// the single `weapon` holder; every other gear category has a like-named holder.
+// `trinket` has no holder (it lives in the unlimited trinket pile).
+export type EquipHolder = 'weapon' | 'offhand' | 'head' | 'amulet' | 'torso' | 'legs' | 'feet' | 'ring';
+
+export function slotHolder(slot: EquipSlot): EquipHolder | null {
+  switch (slot) {
+    case 'weapon-1h':
+    case 'weapon-2h': return 'weapon';
+    case 'offhand': return 'offhand';
+    case 'head': return 'head';
+    case 'amulet': return 'amulet';
+    case 'torso': return 'torso';
+    case 'legs': return 'legs';
+    case 'feet': return 'feet';
+    case 'ring': return 'ring';
+    default: return null; // trinket
+  }
 }
 
 // Weapon attack patterns (Brotato-inspired)
@@ -87,17 +107,25 @@ export type WeaponType =
 //   slam   — an overhead smash onto a circular zone out front (hammers/mauls).
 export type MeleeStyle = 'arc' | 'thrust' | 'spin' | 'slam';
 
-// EQUIPMENT SLOTS (2026-07-05 rework). Gear is now a limited build decision, not a
-// passive stat-pile. Every item resolves to exactly one EquipSlot:
-//   weapon-1h — a one-hand weapon; fills Weapon A OR B (you can run two).
-//   weapon-2h — a two-hand weapon; fills BOTH weapon slots at once.
-//   offhand   — a shield / off-hand (does not block a two-hand weapon).
-//   amulet    — a single build-defining keystone (one at a time).
+// EQUIPMENT SLOTS (2026-07-05 v2 rework). Gear is a limited build decision with 8
+// distinct slots. Every item resolves to exactly one EquipSlot category:
+//   weapon-1h — a one-hand weapon; leaves the off-hand free.
+//   weapon-2h — a two-hand weapon; fills the weapon slot AND disables the off-hand.
+//   offhand   — a shield / off-hand focus (disabled while a 2h weapon is equipped).
+//   head      — helmets / hats.
+//   amulet    — a single build-defining keystone / necklace.
+//   torso     — body armor.
+//   legs      — leg armor.
+//   feet      — boots.
+//   ring      — rings.
 //   trinket   — everything else: unlimited stacking, never equipped, no slot.
 // The field is optional on the data so the catalog doesn't need every entry hand-
 // tagged; classifyItemSlot() infers a sensible slot from the item's mechanics when
-// `slot` is absent. Only the amulet keystones are hand-promoted via `slot: 'amulet'`.
-export type EquipSlot = 'weapon-1h' | 'weapon-2h' | 'offhand' | 'amulet' | 'trinket';
+// `slot` is absent. Gear pieces + amulet keystones are hand-tagged via `slot`.
+export type EquipSlot =
+  | 'weapon-1h' | 'weapon-2h' | 'offhand'
+  | 'head' | 'amulet' | 'torso' | 'legs' | 'feet' | 'ring'
+  | 'trinket';
 
 export interface Item {
   id: string;
@@ -111,8 +139,16 @@ export interface Item {
   tags: ItemTag[]; // For synergy detection and affinity system
 
   // EQUIPMENT SLOT (optional; classifyItemSlot infers it when absent). Set explicitly
-  // only to override the inferred slot — e.g. promoting a keystone to 'amulet'.
+  // only to override the inferred slot — e.g. promoting a keystone to 'amulet' or
+  // tagging a gear piece as head/torso/legs/feet/ring.
   slot?: EquipSlot;
+
+  // UPGRADE LEVEL (2026-07-05 v2). Instance-only state on the copy the player OWNS
+  // (never on the shared catalog object — clone before mutating). Default 1. Buying an
+  // item you already have increments this instead of adding a copy; aggregation scales
+  // each contribution by the level ("Amulet +7" = the item's effect applied 7×, exactly
+  // as if bought 7 times). Absent/undefined is treated as level 1.
+  upgradeLevel?: number;
 
   // Weapon system (Brotato-inspired)
   weaponType?: WeaponType; // Changes attack behavior

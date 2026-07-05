@@ -54,40 +54,42 @@ for (const size of SIZES) {
     const DB = window.__ItemDatabase;
     if (!DB) return { fatal: 'no __ItemDatabase' };
     g.startNewGame();
-    const by = (id) => DB.getItemById(id);
-    // Two one-hand weapons (shotgun + orbital) → weaponA + weaponB.
-    const shotgun = DB.getUnlockedItems().find(i => i.weaponType === 'shotgun');
-    const orbital = DB.getUnlockedItems().find(i => i.weaponType === 'orbital');
-    const laser   = DB.getUnlockedItems().find(i => i.weaponType === 'laser'); // 2h, used to force a swap later? no—keep 1h build
-    const shieldItem = DB.getUnlockedItems().find(i => i.shield);
-    const amuletItem = DB.getUnlockedItems().find(i => i.slot === 'amulet');
+    const clone = (it) => it ? JSON.parse(JSON.stringify(it)) : null;
+    // Fill an 8-slot loadout: 1 weapon, offhand, head, amulet, torso, legs, feet, ring.
+    const pick = (fn) => DB.getUnlockedItems().find(fn);
+    const weapon = pick(i => i.weaponType === 'shotgun');
+    const shieldItem = pick(i => i.shield);
+    const head   = pick(i => i.slot === 'head');
+    const amulet = pick(i => i.slot === 'amulet');
+    const torso  = pick(i => i.slot === 'torso');
+    const legs   = pick(i => i.slot === 'legs');
+    const feet   = pick(i => i.slot === 'feet');
+    const ring   = pick(i => i.slot === 'ring');
+    [weapon, shieldItem, head, amulet, torso, legs, feet, ring].forEach(it => {
+      if (it) g.playerStats.addItem(clone(it));
+    });
+    // Upgrade the ring twice so an upgrade badge (+2) is visible in the strip.
+    if (ring) { g.playerStats.addItem(clone(ring)); g.playerStats.addItem(clone(ring)); }
+    // A couple of trinkets for the stash/trinket row.
     const trinketItems = DB.getUnlockedItems().filter(i =>
-      !i.weaponType && !i.shield && i.slot !== 'amulet').slice(0, 5);
-
-    if (shotgun) g.playerStats.addItem(shotgun);
-    if (orbital) g.playerStats.addItem(orbital);
-    if (shieldItem) g.playerStats.addItem(shieldItem);
-    if (amuletItem) g.playerStats.addItem(amuletItem);
-    trinketItems.forEach(t => { g.playerStats.addItem(t); g.playerStats.addItem(t); }); // stack some
-    // Force a weapon SWAP so the stash gets an item: buy a third 1h weapon.
-    const thirdWeapon = DB.getUnlockedItems().filter(i => i.weaponType && i.weaponType !== 'melee' && i.weaponType !== 'laser')[2]
-      || DB.getUnlockedItems().find(i => i.weaponType === 'shotgun');
-    let swapRes = null;
-    if (thirdWeapon) swapRes = g.playerStats.addItem(thirdWeapon);
+      !i.weaponType && !i.shield && !i.slot).slice(0, 2);
+    trinketItems.forEach(t => g.playerStats.addItem(clone(t)));
 
     g.enterShop();
-    if (g.shopItems.filter(Boolean).length < 6) {
-      g.shopItems = DB.getWeightedShopItems(6, 5, g.playerStats.items, 1).slice(0, 6);
-    }
     g.state = 'shop';
     const eq = g.playerStats.getEquipment();
     return {
-      weaponA: eq.weaponA?.name ?? null,
-      weaponB: eq.weaponB?.name ?? null,
+      weapon: eq.weapon?.name ?? null,
       offhand: eq.offhand?.name ?? null,
+      head: eq.head?.name ?? null,
       amulet: eq.amulet?.name ?? null,
+      torso: eq.torso?.name ?? null,
+      legs: eq.legs?.name ?? null,
+      feet: eq.feet?.name ?? null,
+      ring: eq.ring?.name ?? null,
+      ringLevel: eq.ring?.upgradeLevel ?? null,
       trinketCount: g.playerStats.trinkets.length,
-      stashCount: g.playerStats.getStash().length,
+      shopCount: (g.shopItems || []).filter(Boolean).length,
       twoHand: g.playerStats.hasTwoHandEquipped(),
       activeCount: g.playerStats.items.length,
     };
@@ -97,10 +99,13 @@ for (const size of SIZES) {
   await new Promise(r => setTimeout(r, 200));
   const shot = path.join(SHOTS, `${size.name}.png`);
   await page.screenshot({ path: shot });
-  const okStash = state.stashCount >= 1;
-  const okSlots = state.weaponA && state.offhand;
-  if (!okStash || !okSlots) failures++;
-  console.log(`${(okStash && okSlots) ? 'PASS' : 'FAIL'}  ${size.name}: A=${state.weaponA} B=${state.weaponB} off=${state.offhand} amu=${state.amulet} trinkets=${state.trinketCount} stash=${state.stashCount} active=${state.activeCount} → ${shot}`);
+  const okSlots = state.weapon && state.offhand && state.head && state.amulet
+    && state.torso && state.legs && state.feet && state.ring;
+  const okShop = state.shopCount === 3;
+  const okBadge = state.ringLevel === 3;
+  const ok = okSlots && okShop && okBadge;
+  if (!ok) failures++;
+  console.log(`${ok ? 'PASS' : 'FAIL'}  ${size.name}: wpn=${state.weapon} off=${state.offhand} head=${state.head} amu=${state.amulet} torso=${state.torso} legs=${state.legs} feet=${state.feet} ring=${state.ring}(L${state.ringLevel}) trinkets=${state.trinketCount} shop=${state.shopCount} active=${state.activeCount} → ${shot}`);
 }
 
 if (errors.length) { console.log('\nConsole/page errors:'); errors.slice(0,10).forEach(e => console.log('  ' + e)); }
