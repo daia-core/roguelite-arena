@@ -575,6 +575,14 @@ export class Enemy {
   bleedTimer: number = 0;
   /** Poison on this enemy spreads to a neighbor on death (set when a poison-spread build applies poison). */
   poisonSpreads: boolean = false;
+  /**
+   * True when the DoT/doom currently on this enemy was applied by a Ceremonial Dagger. Read by
+   * killByDot so a dagger's delayed (DoT/doom) kill does NOT spawn a fresh generation of daggers —
+   * the same re-entrancy guard the synchronous kill paths get, extended to the async DoT path.
+   * Set to the applying source on every DoT application (last applier wins), so a later non-dagger
+   * DoT correctly re-arms the on-kill spawn. Enemies aren't pooled, so the `false` default needs no reset.
+   */
+  daggerDot: boolean = false;
   /** Wound: multiplies all DoT ticks on this enemy while > 1 (set on-hit by a Wound build). */
   woundMult: number = 1;
   /** Doom mark: stored damage that detonates when the timer elapses; executes if stored >= current HP. */

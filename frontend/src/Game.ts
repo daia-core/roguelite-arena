@@ -1174,7 +1174,7 @@ export class Game {
             if (enemy.dead) {
               this.handleEnemyKill(enemy, proj.isDagger);
             } else {
-              this.applyOnHitEffects(enemy, damage);
+              this.applyOnHitEffects(enemy, damage, proj.isDagger);
             }
           }
         }
@@ -2329,17 +2329,20 @@ export class Game {
       if (nearest) {
         nearest.poisonTimer = 3.0;
         nearest.poisonSpreads = true; // keep the chain going
+        nearest.daggerDot = enemy.daggerDot; // carry the origin so a dagger's plague stays bounded
         this.renderer.addImpactFlash(nearest.x, nearest.y);
       }
     }
-    this.handleEnemyKill(enemy);
+    // Re-entrancy guard for the async path: if the killing DoT/doom was a dagger's, don't
+    // spawn a fresh generation of daggers — mirrors the synchronous proc-kill guard.
+    this.handleEnemyKill(enemy, enemy.daggerDot);
   }
 
   /**
    * On-hit item mechanics (chain lightning, freeze, poison, explosion) —
    * these items existed and were purchasable but had no implementation.
    */
-  private applyOnHitEffects(enemy: Enemy, damage: number): void {
+  private applyOnHitEffects(enemy: Enemy, damage: number, fromDagger: boolean = false): void {
     // Elemental damage scales with the elemental-damage stat, so an "elemental mage"
     // build (chain/explosion) is mechanically distinct from raw melee/ranged.
     const elem = this.playerStats.getElementalDamageMult();
@@ -2359,7 +2362,9 @@ export class Game {
         this.damageNumbers.push(
           this.createDamageNumber(nearest.x, nearest.y - 20, chainDmg, false, '#ffd43b')
         );
-        if (nearest.dead) this.handleEnemyKill(nearest);
+        // Re-entrancy guard: propagate the dagger origin so a dagger's chain-kill
+        // can't spawn a fresh generation of daggers (bounded to one generation).
+        if (nearest.dead) this.handleEnemyKill(nearest, fromDagger);
       }
     }
 
@@ -2372,16 +2377,19 @@ export class Game {
     if (this.playerStats.hasPoison()) {
       enemy.poisonTimer = 3.0;
       if (this.playerStats.hasPoisonSpread()) enemy.poisonSpreads = true;
+      enemy.daggerDot = fromDagger;
     }
 
     // Burn (Ignite): short, fast fire DoT.
     if (this.playerStats.rollProc(this.playerStats.getBurnChance())) {
       enemy.burnTimer = Math.max(enemy.burnTimer, 2.0);
+      enemy.daggerDot = fromDagger;
     }
 
     // Bleed: DoT that scales with the enemy's movement (punishes rushers).
     if (this.playerStats.rollProc(this.playerStats.getBleedChance())) {
       enemy.bleedTimer = Math.max(enemy.bleedTimer, 4.0);
+      enemy.daggerDot = fromDagger;
     }
 
     // Wound: amplifies EVERY DoT already on the enemy (universal DoT multiplier, capped).
@@ -2393,6 +2401,7 @@ export class Game {
     if (this.playerStats.rollProc(this.playerStats.getDoomChance())) {
       enemy.doomStored += damage * 1.5 * elem;
       if (enemy.doomTimer <= 0) enemy.doomTimer = 2.5; // fresh 2.5s fuse on first mark
+      enemy.daggerDot = fromDagger;
     }
 
     // Explosion on hit: AoE for 50% damage around the target
@@ -2402,7 +2411,8 @@ export class Game {
         if ((other.x - enemy.x) ** 2 + (other.y - enemy.y) ** 2 < 80 * 80) {
           const splits = other.takeDamage(damage * 0.5 * elem);
           if (splits && splits.length > 0) this.enemies.push(...splits);
-          if (other.dead) this.handleEnemyKill(other);
+          // Re-entrancy guard: a dagger's explosion-kill can't spawn more daggers.
+          if (other.dead) this.handleEnemyKill(other, fromDagger);
         }
       }
       this.renderer.addImpactFlash(enemy.x, enemy.y);

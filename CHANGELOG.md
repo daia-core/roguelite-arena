@@ -8,6 +8,34 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-05 — fix: Ceremonial Daggers can no longer cascade into a dagger storm
+
+- **Closed a re-entrancy hole in the Ceremonial Daggers legendary.** The item throws homing
+  daggers on every kill, and its stated guarantee is that a *dagger's own* kill never throws
+  more daggers — so the effect is bounded to **one generation per real kill** and a dense pack
+  can't chain into an exponential projectile storm. That guard was only wired to the **direct**
+  hit: a dagger that *hit but didn't kill* still ran the on-hit effects, and any enemy those
+  effects finished off — a **chain-lightning** arc, an **explosion-on-hit**, or a **DoT** it
+  applied (poison / burn / bleed / doom, resolved a few seconds later) — was counted as a fresh
+  primary kill and threw a **new** generation of daggers. With explosion-on-hit (which fires on
+  *every* dagger hit) or a Fourleaf-boosted proc build, that's the exact runaway cascade the
+  guard was supposed to prevent — a wall of daggers and a frame-rate cliff on a dense wave.
+- **The fix:** the dagger origin is now threaded through **every** kill path, not just the direct
+  one. On-hit proc-kills (chain, explosion) inherit the origin; DoTs applied by a dagger tag the
+  enemy so the delayed DoT/doom kill inherits it too (and the tag rides along when a poison-spread
+  build hops the plague to a neighbour). A dagger-originated kill — however it lands — throws **no**
+  daggers; a genuine primary kill (shot, melee, or a non-dagger proc/DoT) still throws its full fan.
+  Pure correctness fix — **zero new content** (content budget untouched).
+
+**QA:** new `qa-dagger-cascade.mjs` — a red→green interaction harness that drives the real
+`applyOnHitEffects` / `killByDot` paths. It reproduced the cascade on the unfixed build (dagger
+explosion / chain / DoT kills each spawned a fresh generation) and now passes **10/10**: every
+dagger-origin kill spawns 0 daggers while every non-dagger control still spawns its full fan, and
+the original direct-hit guard is unregressed. Full `tsc` typecheck clean; `qa-daggers` 11/11,
+`qa-soultithe` 13/13, `qa-status-engines` and the main regression all green, 0 console errors.
+
+---
+
 ## 2026-07-05 — fix: devil deals can no longer be farmed for free boons
 
 - **Closed a devil-deal exploit.** Each pact welds a strong boon to a **permanent curse**.
@@ -29,6 +57,20 @@ first pact pays the boon, a second identical pact pays nothing, and the refusal 
 **21/21** devil-deal checks pass; full `tsc` typecheck + main regression clean, 0 console errors.
 
 **Commit `910f7ee`** · live-verified `index-BGez9swL.js` (HTTP 200, roguelite-game-blush.vercel.app, no auth wall).
+
+**Live-build integration smoke (no deploy — verifies the shipped `index-BGez9swL.js` end-to-end).**
+New `qa-live-smoke.mjs` drives headless Chromium against the **deployed** URL (not a local `dist`),
+playing the real user path — boot → Slay-the-Spire node map → route to a battle node → fight → clear
+a wave. This closes the cp-b7 gap ("verified-to-work ≠ reachable-via-user-path"): the Jul-5 devil
+fix was unit-QA'd and the Jul-4 balance pass read source, but neither actually *played* the live
+artifact. Result **PASS, all 10 checks, 0 console/page errors**: map→combat routing works, 45–54
+kills/run (collisions land), 2–3 level-ups fire with a real **pick-1-of-3** offer, a full wave clears
+into the shop, **no dead-enemy cull leak** (the Jul-2 dead-flag/grid bug class stays fixed), the loop
+never wedges. The **devil-deal fix is re-proven on the live build itself**: re-taking `devil_bargain`
+while already bearing `curse_frailty` is a genuine no-op — held-list `["executioner","curse_frailty"]`
+identical across both takes, curse never stacked, boon never duplicated. Mobile (390×844) + desktop
+(1440×900) shop screenshots reviewed with a designer's eye — clean, nothing clipped or overlapping.
+Shots in `shots/live-smoke/`.
 
 ## 2026-07-04 (evening) — feature: PEN NIB — every 10th shot is a loaded shot
 
