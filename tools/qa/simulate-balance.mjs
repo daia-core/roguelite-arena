@@ -40,6 +40,18 @@ async function simulateRun(page, maxWave) {
   await page.click('#startBtn');
   await new Promise((r) => setTimeout(r, 300));
 
+  // Class-select screen (added 2026-07-05): the start button now lands in
+  // 'classselect', not 'map'/'playing', and no player exists until a class is
+  // picked. Pick the first starting class (gunner) so a run — and g.player —
+  // actually exists before the kite-bot wires itself in.
+  await page.evaluate(() => {
+    const g = window.__game;
+    if (g.state === 'classselect' && window.__STARTING_CLASSES) {
+      g.beginRun(window.__STARTING_CLASSES[0]);
+    }
+  });
+  await new Promise((r) => setTimeout(r, 100));
+
   await page.evaluate(() => {
     const g = window.__game;
     // Kiting bot: flee weighted enemy threat + dodge enemy shots + avoid walls
@@ -116,6 +128,23 @@ async function simulateRun(page, maxWave) {
         // back to any reachable node if only non-combat ones are offered. When the
         // pick lands us in combat, (re)set the per-wave bookkeeping here — this is
         // the single point where a new fight actually begins.
+        // Safety: if a run ever lands back on class-select, re-pick immediately.
+        if (g.state === 'classselect') {
+          if (window.__STARTING_CLASSES) g.beginRun(window.__STARTING_CLASSES[0]);
+          continue;
+        }
+        // Level-up choice screen (reworked 2026-07-05 to a queued 1-of-3 offer):
+        // the bot has no strategy, so just take the first offered card and keep
+        // fighting. grantLevelupItem is compile-time-private but callable at
+        // runtime; it fires the same duo/transform/HP side effects a real pick does.
+        if (g.state === 'levelup') {
+          if (Array.isArray(g.levelupChoices) && g.levelupChoices.length > 0) {
+            g.grantLevelupItem(g.levelupChoices[0]);
+          } else if (g.state === 'levelup') {
+            g.state = 'playing';
+          }
+          continue;
+        }
         if (g.state === 'map') {
           const ids = g.mapSystem.reachable();
           if (!ids || ids.length === 0) { g.startNextWave(); continue; }

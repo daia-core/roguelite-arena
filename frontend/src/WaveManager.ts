@@ -538,7 +538,15 @@ export class WaveManager {
   static waveScale(wave: number): number {
     const linear = 1 + (wave - 1) * 0.15;
     const compound = Math.pow(1.18, Math.max(0, wave - 7));
-    return linear * compound;
+    // BALANCE 2026-07-05 (v3): owner still one-shot everything at wave 13
+    // (2.3M dmg/projectile). Fodder HP can NEVER catch a fully-stacked
+    // multiplicative build (see BALANCE-enemy-scaling-review.md "ceiling" — the
+    // real lever is bounding player offense, an opt-in fork), but the MID-LATE
+    // curve was still too flat for a *normal* build to feel a fight. Add a
+    // second exponential from wave 10 only, so waves <=10 stay IDENTICAL (the
+    // v2 sim-driven early-swarm fix stands): wave 13 ~1.5x, wave 20 ~4x tankier.
+    const lateSurge = Math.pow(1.15, Math.max(0, wave - 10));
+    return linear * compound * lateSurge;
   }
 
   /** Construct an enemy at a position with all wave-modifier scaling applied. */
