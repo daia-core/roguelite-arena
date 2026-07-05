@@ -34,8 +34,9 @@ contribution is now scaled by the instance's `upgradeLevel`. Items are **deep-cl
 they carry instance state now. Supersedes the Phase-1 dual-weapon (A/B) model. Design doc:
 `DESIGN-SHOP-8SLOT-REWORK.md`. QA: `qa-shop-8slot.mjs` (29/29) + full regression sweep green.
 
-- **Commit:** _pending_
-- **Live-build verified:** _pending_
+- **Commit:** `c99a40c`
+- **Live-build verified:** `index-vqzLFWGL.js` served at https://roguelite-game-blush.vercel.app
+  (HTTP 200, bundle hash matches local build; deployment `dpl_7No9…KV41W`, Ready).
 
 ---
 
