@@ -8,6 +8,19 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-05 (night) — your attack zones read white, danger stays red
+
+**Your melee/AoE swing highlights are now white, not yellow/orange.** Response to "I don't like the
+yellow dot marking for aoe/melee swing — mark it with a transparent white texture (my AoE attacks);
+boss attacks should still be red or purple." All four player swing-zone highlights (arc, thrust,
+spin, slam) draw as a translucent dithered **white** texture, so *your* reach reads instantly as
+yours — the warm/red palette is now reserved exclusively for enemy and boss telegraphs (which are
+unchanged). Commit `5483b7b`; live-verified on the prod alias (HTTP 200, no auth wall) — the live
+bundle's melee highlights use `#ffffff` and the only remaining warm marker is the unrelated village
+vault glow.
+
+---
+
 ## 2026-07-05 (night) — level-ups no longer interrupt the wave
 
 **Levelling up no longer stops the fight.** Response to "I don't like the level-up system — it
