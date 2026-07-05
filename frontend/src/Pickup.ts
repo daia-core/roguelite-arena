@@ -77,7 +77,7 @@ export class XPOrb {
 
   private vx: number;
   private vy: number;
-  private homing: boolean = false;
+  homing: boolean = false;
   private homeSpeed: number = 260; // ramps up once homing so it always catches the player
   pulseOffset: number = 0;
 
@@ -86,12 +86,28 @@ export class XPOrb {
     this.x = x;
     this.y = y;
     this.xpAmount = xpAmount;
+    this.radius = XPOrb.radiusFor(xpAmount);
     // Small random outward pop so a cluster of orbs scatters instead of stacking.
     const a = Math.random() * Math.PI * 2;
     const pop = 40 + Math.random() * 60;
     this.vx = Math.cos(a) * pop;
     this.vy = Math.sin(a) * pop;
     this.pulseOffset = Math.random() * Math.PI * 2;
+  }
+
+  // Pickup radius grows (gently) with value so a merged, higher-value gem reads as
+  // a chunkier crystal and is easier to vacuum up. Log scale keeps a big merge from
+  // ballooning off-screen.
+  static radiusFor(xpAmount: number): number {
+    return 6 + Math.min(10, Math.log2(Math.max(1, xpAmount)) * 2.2);
+  }
+
+  // Fold another gem's value into this one and regrow. Used by the density-merge
+  // pass so a littered floor collapses into fewer, bigger, cheaper-to-draw orbs.
+  absorb(other: XPOrb): void {
+    this.xpAmount += other.xpAmount;
+    this.radius = XPOrb.radiusFor(this.xpAmount);
+    other.dead = true;
   }
 
   // Returns true when it has reached the player and should be collected.
@@ -152,7 +168,7 @@ export class CoinPickup {
 
   private vx: number;
   private vy: number;
-  private homing: boolean = false;
+  homing: boolean = false;
   private homeSpeed: number = 260;
   pulseOffset: number = 0;
 
@@ -161,11 +177,24 @@ export class CoinPickup {
     this.x = x;
     this.y = y;
     this.goldAmount = goldAmount;
+    this.radius = CoinPickup.radiusFor(goldAmount);
     const a = Math.random() * Math.PI * 2;
     const pop = 40 + Math.random() * 60;
     this.vx = Math.cos(a) * pop;
     this.vy = Math.sin(a) * pop;
     this.pulseOffset = Math.random() * Math.PI * 2;
+  }
+
+  // Bigger coin for a bigger pile — same gentle log growth as XP gems.
+  static radiusFor(goldAmount: number): number {
+    return 6 + Math.min(10, Math.log2(Math.max(1, goldAmount)) * 2.2);
+  }
+
+  // Merge another coin's value into this one (density-merge pass).
+  absorb(other: CoinPickup): void {
+    this.goldAmount += other.goldAmount;
+    this.radius = CoinPickup.radiusFor(this.goldAmount);
+    other.dead = true;
   }
 
   // Returns true when it has reached the player and should be collected.
@@ -205,4 +234,72 @@ export class CoinPickup {
     );
     ctx.restore();
   }
+}
+
+// Density merge for loose drops (XP gems / coins). When the floor is littered,
+// nearby not-yet-homing pickups collapse into a single higher-value orb — fewer
+// entities to update/draw (perf) and one bigger orb to grab (QoL). Homing orbs
+// (already flying to the player) are left alone so a merge never yanks a pickup
+// off its collection path.
+//
+// O(n) via a coarse spatial hash: bucket by cell, then only compare within a
+// cell and its already-processed neighbours. The `dead` flag is set on absorbed
+// orbs; the caller's existing removeDeadEntities sweep reclaims them the same
+// frame, so no orb is ever both dead and live-processed.
+interface MergeableOrb {
+  x: number;
+  y: number;
+  radius: number;
+  dead: boolean;
+  homing: boolean;
+  absorb(other: any): void;
+}
+
+export function mergeOrbs<T extends MergeableOrb>(
+  orbs: T[],
+  opts: { minCount: number; mergeDist: number; cellSize: number }
+): number {
+  // Only kick in once the floor is genuinely littered — a handful of orbs should
+  // stay as separate satisfying pops.
+  if (orbs.length < opts.minCount) return 0;
+
+  const { mergeDist, cellSize } = opts;
+  const mergeDistSq = mergeDist * mergeDist;
+  // Map cell key -> index of the surviving "anchor" orb in that cell.
+  const anchors = new Map<number, number>();
+  const cellCols = 100000; // large stride to combine (cx, cy) into one integer key
+  let merged = 0;
+
+  for (let i = 0; i < orbs.length; i++) {
+    const orb = orbs[i];
+    if (orb.dead || orb.homing) continue;
+
+    const cx = Math.floor(orb.x / cellSize);
+    const cy = Math.floor(orb.y / cellSize);
+
+    // Look for an anchor in this cell or the 8 neighbours to merge into.
+    let target: T | null = null;
+    for (let ox = -1; ox <= 1 && !target; ox++) {
+      for (let oy = -1; oy <= 1 && !target; oy++) {
+        const key = (cx + ox) * cellCols + (cy + oy);
+        const ai = anchors.get(key);
+        if (ai === undefined) continue;
+        const anchor = orbs[ai];
+        if (anchor.dead || anchor === orb) continue;
+        const dx = anchor.x - orb.x;
+        const dy = anchor.y - orb.y;
+        if (dx * dx + dy * dy <= mergeDistSq) target = anchor;
+      }
+    }
+
+    if (target) {
+      target.absorb(orb); // sets orb.dead = true
+      merged++;
+    } else {
+      // No anchor nearby — this orb becomes its cell's anchor.
+      anchors.set(cx * cellCols + cy, i);
+    }
+  }
+
+  return merged;
 }

@@ -6,14 +6,14 @@ import { Projectile } from './Projectile';
 import { MeleeAttack } from './MeleeAttack';
 import { Particle, DamageNumber } from './Particle';
 import { WaveManager } from './WaveManager';
-import { PlayerStats, ItemDatabase, getItemKinds, type Item } from './ItemSystem';
+import { PlayerStats, ItemDatabase, getItemKinds, classifyItemSlot, type Item } from './ItemSystem';
 import { STARTING_CLASSES, type StartingClass } from './Classes';
 import { SaveManager } from './SaveManager';
 import { Input } from './Input';
 import { Renderer } from './Renderer';
 import { AudioManager } from './AudioManager';
 import { pointInRect, formatShort, segmentCircleHit } from './utils';
-import { HealthOrb, XPOrb, CoinPickup } from './Pickup';
+import { HealthOrb, XPOrb, CoinPickup, mergeOrbs } from './Pickup';
 import { OrbitingOrb, Bomb, Shockwave } from './Weapons';
 import { AoeZone } from './AoeZone';
 import { MetaProgression } from './MetaProgression';
@@ -260,6 +260,7 @@ export class Game {
     // inspect and force game state. Not a public API.
     (window as unknown as { __game: Game }).__game = this;
     (window as unknown as { __ItemDatabase: typeof ItemDatabase }).__ItemDatabase = ItemDatabase;
+    (window as unknown as { __classifyItemSlot: typeof classifyItemSlot }).__classifyItemSlot = classifyItemSlot;
     (window as unknown as { __EVENTS: typeof EVENTS }).__EVENTS = EVENTS;
     (window as unknown as { __ARTIFACTS: typeof ARTIFACTS }).__ARTIFACTS = ARTIFACTS;
     this.canvas = canvas;
@@ -1468,6 +1469,13 @@ export class Game {
     }
     this.damageNumbers.length = writeIndex;
     this.damageNumberPool.releaseMany(deadDamageNumbers);
+
+    // QoL/perf: once the floor is littered, collapse nearby loose (not-yet-homing)
+    // XP gems and coins into fewer, bigger, higher-value orbs — easier to grab and
+    // cheaper to update/draw. Absorbed orbs are flagged dead and reclaimed by the
+    // swap-and-pop sweep just below, in the same frame.
+    mergeOrbs(this.xpOrbs, { minCount: 25, mergeDist: 26, cellSize: 26 });
+    mergeOrbs(this.coins, { minCount: 25, mergeDist: 26, cellSize: 26 });
 
     // Enemies, melee attacks, health orbs: simple swap-and-pop (no pool)
     this.removeDeadEntities(this.enemies);
@@ -2922,8 +2930,14 @@ export class Game {
     if (this.player.gold < finalPrice) return false;
 
     this.player.gold -= finalPrice;
-    const { newDuos, newTransformations } = this.playerStats.addItem(item);
+    const { newDuos, newTransformations, overflow } = this.playerStats.addItem(item);
     this.itemsPurchasedThisWave++;
+
+    // SLOT REWORK: if equipping displaced an item but the stash was full, the old
+    // piece can't be kept — refund its recycle value so the buy is never a silent loss.
+    if (overflow) {
+      this.player.gold += this.playerStats.getRecycleValue(overflow);
+    }
 
     // GAME FEEL: Duo unlock effects
     if (newDuos.length > 0) {
@@ -4265,6 +4279,92 @@ export class Game {
     return discovery;
   }
 
+  /**
+   * Draw the equipment strip — the four gear slots (Weapon A, Weapon B, Offhand,
+   * Amulet) as a row of labelled boxes showing each equipped item's icon (or an empty
+   * marker). A two-hand weapon spans both weapon boxes. Read-only in Phase 1; the
+   * bounds are stored on this.equipSlotRects for the Phase 2 tap-to-manage handlers.
+   */
+  private equipSlotRects: Array<{ key: 'weaponA' | 'weaponB' | 'offhand' | 'amulet'; x: number; y: number; width: number; height: number }> = [];
+  private drawEquipmentStrip(
+    ctx: CanvasRenderingContext2D,
+    s: (n: number) => number,
+    isMobile: boolean,
+    x: number,
+    y: number,
+    width: number
+  ): void {
+    const eq = this.playerStats.getEquipment();
+    const twoHand = this.playerStats.hasTwoHandEquipped();
+    this.equipSlotRects = [];
+
+    const boxH = isMobile ? s(24) : s(30);
+    const gap = s(4);
+    const boxW = (width - gap * 3) / 4;
+    const labels: Record<string, string> = { weaponA: 'WPN A', weaponB: 'WPN B', offhand: 'OFF', amulet: 'AMULET' };
+    const keys: Array<'weaponA' | 'weaponB' | 'offhand' | 'amulet'> = ['weaponA', 'weaponB', 'offhand', 'amulet'];
+
+    keys.forEach((key, idx) => {
+      const bx = x + idx * (boxW + gap);
+      const rect = { key, x: bx, y, width: boxW, height: boxH };
+      this.equipSlotRects.push(rect);
+
+      // A two-hand weapon in A visually spans into the B box (drawn as one wide slot).
+      const spannedByTwoHand = twoHand && key === 'weaponB';
+      const occupant = eq[key];
+
+      ctx.save();
+      // Slot box — filled when occupied, dim/dashed when empty.
+      ctx.fillStyle = occupant ? '#3a2c12' : '#241a0c';
+      ctx.fillRect(bx, y, boxW, boxH);
+      ctx.strokeStyle = spannedByTwoHand ? '#6b5a2e' : (occupant ? '#c8a15a' : '#5c4a28');
+      ctx.lineWidth = 1;
+      ctx.strokeRect(bx, y, boxW, boxH);
+      ctx.restore();
+
+      // Slot label (tiny, top-left).
+      this.renderer.drawText(labels[key], bx + s(3), y + s(2), {
+        size: s(5), color: '#a5915f', align: 'left'
+      });
+
+      if (spannedByTwoHand) {
+        this.renderer.drawText('◀ 2-H', bx + boxW / 2, y + boxH / 2, {
+          size: s(6), color: '#6b5a2e', align: 'center'
+        });
+      } else if (occupant) {
+        this.renderer.drawItemIcon(occupant.icon, bx + boxW / 2, y + s(isMobile ? 9 : 12), s(isMobile ? 13 : 16));
+      } else {
+        this.renderer.drawText('—', bx + boxW / 2, y + boxH / 2 - s(3), {
+          size: s(9), color: '#5c4a28', align: 'center'
+        });
+      }
+    });
+
+    // STASH ROW — displaced/speculative equipment. Only shown when non-empty so the
+    // auto-swap never looks like an item vanished: your old gear visibly lands here.
+    // Read-only in Phase 1 (tap-to-equip/sell lands in Phase 2).
+    const stash = this.playerStats.getStash();
+    if (stash.length > 0) {
+      const rowY = y + boxH + s(4);
+      const iconBox = isMobile ? s(16) : s(20);
+      this.renderer.drawText(`STASH ${stash.length}/${PlayerStats.STASH_CAP}`, x + s(2), rowY, {
+        size: s(5.5), color: '#9c8a5c', align: 'left'
+      });
+      const iconsY = rowY + s(8);
+      for (let i = 0; i < stash.length; i++) {
+        const ix = x + i * (iconBox + s(3));
+        ctx.save();
+        ctx.fillStyle = '#241a0c';
+        ctx.fillRect(ix, iconsY, iconBox, iconBox);
+        ctx.strokeStyle = '#5c4a28';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(ix, iconsY, iconBox, iconBox);
+        ctx.restore();
+        this.renderer.drawItemIcon(stash[i].icon, ix + iconBox / 2, iconsY + iconBox / 2 - s(4), s(isMobile ? 10 : 12));
+      }
+    }
+  }
+
   private drawShop(): void {
     const { s, isMobile, cols, itemWidth, itemHeight, gap, startX, startY, lockButtonSize,
       buttonWidth, buttonHeight, continueY, rerollY,
@@ -4381,6 +4481,11 @@ export class Game {
       });
     }
 
+    // EQUIPMENT STRIP — the 4 slots (Wpn A / Wpn B / Off / Amulet) as labelled boxes,
+    // so gear reads as a limited loadout, not a stat-pile. Sits just under the stats
+    // panel on both layouts. Read-only in Phase 1 (tap-to-manage lands in Phase 2).
+    this.drawEquipmentStrip(ctx, s, isMobile, statPanelX, statPanelY + statPanelHeight + s(6), statPanelWidth);
+
     // INVENTORY PANEL - show current items as tiny icons on the right side (desktop) or below stats (mobile)
     const invPanelPadding = s(6);
     const invPanelWidth = s(220);
@@ -4388,11 +4493,12 @@ export class Game {
     const invPanelX = this.canvas.width - s(230);
     const invPanelY = s(56);
 
-    // Inventory panel is desktop-only; portrait screens have no room for it
-    if (!isMobile && this.playerStats.items.length > 0) {
-      // Group items by ID and count duplicates
+    // Inventory panel is desktop-only; portrait screens have no room for it. It now
+    // lists TRINKETS (the unlimited-stacking pile) — equipped gear shows in the strip.
+    if (!isMobile && this.playerStats.trinkets.length > 0) {
+      // Group trinkets by ID and count duplicates
       const itemCounts = new Map<string, { item: Item; count: number }>();
-      for (const item of this.playerStats.items) {
+      for (const item of this.playerStats.trinkets) {
         const existing = itemCounts.get(item.id);
         if (existing) {
           existing.count++;
@@ -4413,7 +4519,7 @@ export class Game {
       drawPanel(ctx, invPanelX, invPanelY, invPanelWidth, invPanelHeight, DARK_WOOD_THEME, 4, 23);
 
       // Title
-      this.renderer.drawText('INVENTORY', invPanelX + invPanelWidth / 2, invPanelY + s(8), {
+      this.renderer.drawText('TRINKETS', invPanelX + invPanelWidth / 2, invPanelY + s(8), {
         size: s(8),
         align: 'center',
         color: '#d0bfff'

@@ -76,7 +76,9 @@ async function run(label, viewport, shotPrefix) {
       xpOrbRadius: g.xpOrbs.length ? g.xpOrbs[0].radius : null,
     };
   });
-  check('XP orbs are the chunkier radius (6)', kill.xpOrbRadius === 6, `radius=${kill.xpOrbRadius}`);
+  // Radius now scales (gently, log) with the gem's value so merged/high-value orbs
+  // read as chunkier and are easier to grab — base >= 6, capped at 16.
+  check('XP orbs use value-scaled radius (>=6, <=16)', kill.xpOrbRadius >= 6 && kill.xpOrbRadius <= 16, `radius=${kill.xpOrbRadius}`);
   check('kill drops coins (not instant gold)', kill.coinsSpawned > 0, `${kill.coinsSpawned} coins worth ${kill.coinGold}g`);
   check('gold NOT banked at moment of kill', kill.goldRightAfter === kill.goldBefore, `${kill.goldBefore} -> ${kill.goldRightAfter}`);
 
