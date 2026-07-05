@@ -28,7 +28,7 @@ Live: https://roguelite-game-blush.vercel.app
 first pact pays the boon, a second identical pact pays nothing, and the refusal message fires.
 **21/21** devil-deal checks pass; full `tsc` typecheck + main regression clean, 0 console errors.
 
-**Commit `PENDING`** · live-verified `PENDING`.
+**Commit `910f7ee`** · live-verified `index-BGez9swL.js` (HTTP 200, roguelite-game-blush.vercel.app, no auth wall).
 
 ## 2026-07-04 (evening) — feature: PEN NIB — every 10th shot is a loaded shot
 
