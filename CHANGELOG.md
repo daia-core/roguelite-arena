@@ -38,7 +38,8 @@ Also fixed two latent bugs found during QA: the **purchased "starting health" me
 no-op** (a direct `maxHealth` write was overwritten by the stats recompute — now routed correctly),
 and the class health tilt would have hit the same trap.
 
-**Commit `PENDING`** · live-verified `PENDING` (HTTP 200, mobile 390×844). QA: new
+**Commit `311c574`** · live-verified `index-D8E-rgLq.js` (HTTP 200, mobile 390×844, new-build
+markers "CHOOSE YOUR CLASS"/"Brawler" present, no SSO wall). QA: new
 `qa-classselect.mjs` **21/21** on the shipped `dist` (each class grants the right weapon + stat
 tilt and lands in the map; Brawler's gun is suppressed while Gunner fires; Brawler 140 HP / Gunner
 100 / Arcanist 80; item cross-bleed proven: a ranged-damage item lifts melee damage and vice-versa)
