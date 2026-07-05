@@ -8,6 +8,28 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-05 (night) — QoL/perf: dense drops merge into fewer, bigger orbs
+
+When a wave dies in a heap, the floor used to litter with dozens of tiny XP gems and coins — fiddly
+to vacuum up and a needless per-frame update/draw cost. Now they **cluster together**.
+
+- **Nearby loose drops merge.** Once the floor is genuinely littered (25+ of a type), nearby
+  **not-yet-homing** XP gems (and coins separately) collapse into a **single higher-value orb** each
+  frame. Fewer entities to update and draw (smoother when a big pack pops), one bigger pickup to grab.
+- **Bigger value = bigger orb.** A gem/coin's size now scales (gently, log-capped) with its value, so
+  a merged orb reads as a **chunkier crystal / fatter coin** and is easier to see and collect.
+- **Never yanks a pickup off its path.** Orbs already homing to the player are left untouched, so a
+  merge can't snatch a gem out of your magnet. Total value is always conserved — nothing is lost or
+  duplicated on merge.
+- Implemented as an O(n) spatial-hash pass in `Pickup.ts` (`mergeOrbs`); absorbed orbs are flagged
+  `dead` and reclaimed by the existing swap-and-pop sweep the same frame (no dead-in-grid leak).
+
+Commit `11a9ca2` · live build `index-CZXVScLF.js` (HTTP 200 verified). QA: **qa-orb-merge** — 40→2
+orbs, value conserved (120→120), radius grows to 16, homing + sub-threshold clusters untouched, coins
+collapse too, 0 console errors. Regressions green: magnet, zoom-xporbs, xp-coin-shop, live-smoke.
+
+---
+
 ## 2026-07-05 (night) — feature: melee weapons SWING a real weapon + show their hit zone
 
 Melee used to be one generic yellow pixel-fan for every weapon. Now each melee weapon **swings an
