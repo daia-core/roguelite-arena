@@ -165,6 +165,7 @@ export class Game {
   // back-to-back, so a big XP orb never eats a choice.
   levelupChoices: Item[] = [];               // the 1-of-3 item offer
   private pendingLevelups: number = 0;        // level-ups still owed a choice screen
+  private levelupReturnsToShop: boolean = false; // draining owed picks at the shop break → land on the shop, not back in the fight
   private pendingWaveArtifact: boolean = false;   // elite/boss wave grants spoils on clear
   restResolved: boolean = false;             // rest node: an option has been taken
   restResultText: string = '';               // rest node outcome line
@@ -544,6 +545,10 @@ export class Game {
 
     this.refreshMaxHealth();
     this.pendingWaveArtifact = false;
+    // Level-up picks are now drained at the shop, so a run that ends mid-wave with owed
+    // picks must not leak them into the next run's first shop — clear the queue on start.
+    this.pendingLevelups = 0;
+    this.levelupReturnsToShop = false;
 
     this.state = 'map';
   }
@@ -1809,10 +1814,11 @@ export class Game {
     const leveledUp = this.player.addXP(amount);
     if (!leveledUp) return;
     this.spawnLevelupBurst();
-    // Each level-up owes the player a pick-1-of-3. Queue it; open the screen now if
-    // one isn't already up (extra levels earned mid-screen open back-to-back).
+    // Each level-up owes the player a pick-1-of-3, but we DON'T interrupt the fight for
+    // it (Felix, 2026-07-05: the mid-wave modal "keeps interrupting gameplay"). Just bank
+    // the owed pick — the juice (sound/flash/confetti) still fires now — and drain the
+    // whole queue at the next natural break, the between-waves shop (see enterShop()).
     this.pendingLevelups++;
-    if (this.state !== 'levelup') this.openNextLevelup();
   }
 
   /** Vampire-Survivors level-up juice — sound, flash, and a burst of confetti. */
@@ -1855,7 +1861,7 @@ export class Game {
       // Nothing eligible to offer (e.g. weapon locked + all non-stackables owned) —
       // don't trap the player on an empty screen; drain any remaining owed levels too.
       if (this.pendingLevelups > 0) { this.openNextLevelup(); return; }
-      if (this.state === 'levelup') this.state = 'playing';
+      if (this.state === 'levelup') this.finishLevelupQueue();
       return;
     }
     this.levelupChoices = choices;
@@ -1882,9 +1888,20 @@ export class Game {
     if (item.shield) this.player.shield = true;
 
     this.levelupChoices = [];
-    // Chain to the next owed level-up, or return to the fight.
+    // Chain to the next owed level-up, or leave the level-up flow.
     if (this.pendingLevelups > 0) this.openNextLevelup();
-    else this.state = 'playing';
+    else this.finishLevelupQueue();
+  }
+
+  /** Leave the level-up chain: land on the shop when we were draining owed picks at the
+   *  between-waves break, otherwise return to the fight. */
+  private finishLevelupQueue(): void {
+    if (this.levelupReturnsToShop) {
+      this.levelupReturnsToShop = false;
+      this.state = 'shop';
+    } else {
+      this.state = 'playing';
+    }
   }
 
   private updateLevelup(): void {
@@ -2454,6 +2471,14 @@ export class Game {
 
     // GAME FEEL: Wave complete effects
     this.screenEffects.flash('#00ff00', 0.2); // Green flash for wave complete
+
+    // Drain any level-up picks earned during the wave HERE, at the natural break, rather
+    // than interrupting the fight for each one. The shop is already staged underneath, so
+    // when the last owed pick is chosen finishLevelupQueue() lands the player on the shop.
+    if (this.pendingLevelups > 0) {
+      this.levelupReturnsToShop = true;
+      this.openNextLevelup();
+    }
 
     // Save progress
     this.autoSave();
