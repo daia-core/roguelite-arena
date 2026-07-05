@@ -1,16 +1,16 @@
 #!/usr/bin/env node
-// Verifies the DEFERRED level-up flow on the SHIPPED frontend/dist.
+// Verifies the SKILL TREE level-up flow on the SHIPPED frontend/dist.
 //
-// Felix (2026-07-05): the mid-wave pick-1-of-3 modal "keeps interrupting gameplay".
+// Felix (2026-07-05): "rework the level-up system so it uses a skill tree instead."
 // New contract: a level-up during a wave fires its juice but does NOT pause the fight —
-// it banks an owed pick (g.pendingLevelups). Owed picks are drained at the natural break,
-// entering the between-waves shop: the level-up screen opens ON TOP of the staged shop,
-// chains back-to-back for multiple owed levels, and lands the player on the SHOP (not back
-// in the fight) once the last pick is chosen. A run that ends mid-wave must not leak owed
-// picks into the next run.
+// it banks 1 skill point (g.skillTree.availablePoints). Points are spent on the
+// between-waves skill-tree screen: enterShop opens 'skilltree' ON TOP of the staged shop
+// when points are banked; spending a point applies its bonus to the live stats and
+// Continue (finishSkillTree) lands the player on the SHOP. The SKILLS shop button reopens
+// the tree. A new run resets the tree (no leak between runs).
 //
-// TS `private` is compile-time only, so g.grantXP / g.enterShop / g.levelupChoices /
-// g.state are all reachable at runtime. Boots a real wave and drives g.update + taps.
+// TS `private` is compile-time only, so g.grantXP / g.enterShop / g.skillTree / g.state /
+// g.openSkillTree / g.finishSkillTree are reachable at runtime. Boots a real wave.
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -19,7 +19,7 @@ import puppeteer from 'puppeteer-core';
 
 const FRONTEND = '/workspace/work/roguelite-game/frontend';
 const ROOT = path.join(FRONTEND, 'dist');
-const OUT = '/workspace/work/roguelite-game/shots/levelup';
+const OUT = '/workspace/work/roguelite-game/shots/skilltree';
 fs.mkdirSync(OUT, { recursive: true });
 
 console.log('Building frontend (npm run build)...');
@@ -52,95 +52,96 @@ const result = await page.evaluate(() => {
   const out = {};
   const step = (n = 1) => { for (let i = 0; i < n; i++) g.update(1/60); };
 
-  // Pick card 0. updateLevelup's hitbox geometry is shared verbatim with drawLevelup and
-  // is exercised by the visual screenshots; here we drive the SELECTION so the assertions
-  // test the deferred state-machine (queue drain + shop return), not pixel scaling in a
-  // headless viewport. Mirrors exactly what a real tap on card 0 triggers.
-  const pickCard0 = () => { if (g.levelupChoices.length) g.grantLevelupItem(g.levelupChoices[0]); };
-
   // Boot a real wave.
   g.startNewGame(); g.waveManager.reset(); g.waveManager.startWave(1); g.state = 'playing';
-
   const forceLevelUp = () => { g.player.xp = g.player.xpToNextLevel - 1; g.grantXP(2); };
 
-  // --- 1) A level-up mid-wave must NOT interrupt: no modal, fight keeps running. ---
+  // --- 1) A level-up mid-wave must NOT interrupt: no screen, banks a skill point. ---
   const lvlBefore = g.player.level;
   const anyEnemy = (g.enemies || []).find(e => !e.dead);
   const ex = anyEnemy ? anyEnemy.x : null;
   forceLevelUp();
   out.leveledOnce = g.player.level === lvlBefore + 1;
-  out.noModalMidWave = g.state === 'playing';               // fight is NOT paused
-  out.pickBanked = g.pendingLevelups === 1;                  // one owed pick queued
+  out.noScreenMidWave = g.state === 'playing';                 // fight is NOT paused
+  out.pointBanked = g.skillTree.availablePoints === 1;         // one SP banked
   step(10);
   out.fightKeptRunning = anyEnemy ? Math.abs(anyEnemy.x - ex) > 1e-9 || g.state === 'playing' : g.state === 'playing';
 
-  // --- 2) Bank a SECOND owed level, then enter the shop: the level-up chain opens. ---
+  // --- 2) Bank a SECOND point, then enter the shop: the skill-tree screen opens. ---
   forceLevelUp();
-  out.twoBanked = g.pendingLevelups === 2;
+  out.twoBanked = g.skillTree.availablePoints === 2;
   g.enterShop();
-  out.shopOpensLevelup = g.state === 'levelup';              // drained at the break, on top of shop
-  out.threeChoices = Array.isArray(g.levelupChoices) && g.levelupChoices.length === 3;
+  out.shopOpensSkillTree = g.state === 'skilltree';            // opened on top of staged shop
 
-  // --- 3) Pick the first owed level → the SECOND owed level opens back-to-back. ---
-  // items[] is a COMPUTED projection over 8 holders + trinkets and a duplicate UPGRADES
-  // in place, so item COUNT isn't a reliable "granted" signal. The robust contract is the
-  // owed-queue draining by one and a fresh 3-choice screen appearing.
-  // enterShop opened screen 1 of the 2 owed (openNextLevelup decrements at OPEN time), so
-  // one pick is still queued behind the visible screen.
-  const owedBehindScreen = g.pendingLevelups; // 1
-  pickCard0();
-  out.firstPickChains = g.pendingLevelups === owedBehindScreen - 1; // owed drained to 0
-  out.secondOpensBackToBack = g.state === 'levelup' && g.levelupChoices.length === 3;
+  // --- 3) Spending a point on the first offense node applies its damage bonus live. ---
+  const dmgBefore = g.playerStats.getDamage();
+  const spent = g.skillTree.spend('sharpened');               // +8% damage / rank
+  g.skillTree.recomputeInto(g.playerStats);
+  out.spendSucceeded = spent === true;
+  out.pointConsumed = g.skillTree.availablePoints === 1;       // 2 → 1
+  out.rankRecorded = g.skillTree.rankOf('sharpened') === 1;
+  const dmgAfter = g.playerStats.getDamage();
+  out.damageBonusApplied = dmgAfter > dmgBefore * 1.05;        // ~+8%
 
-  // --- 4) Pick the last owed level → land on the SHOP, not back in the fight. ---
-  pickCard0();
-  out.landsOnShop = g.state === 'shop';
-  out.queueDrained = g.pendingLevelups === 0;
-  out.choicesCleared = g.levelupChoices.length === 0;
+  // --- 4) A locked node cannot be bought until its prerequisite has a rank. ---
+  // 'deadeye' requires 'rapidfire' >= 1, which we haven't bought.
+  out.lockedNodeUnbuyable = g.skillTree.canSpend('deadeye') === false;
+  g.skillTree.spend('rapidfire');                              // unlock its child chain a step
+  out.childUnlocksAfterParent = g.skillTree.isUnlocked('deadeye') === true;
 
-  // --- 5) Miss-tap safety: a real tap on an empty corner must NOT grant / crash. ---
-  g.state = 'playing';
-  forceLevelUp(); g.enterShop();
-  const owedAtMiss = g.pendingLevelups;
-  g.input.mouseX = 2; g.input.mouseY = 2; g.input.mouseDown = true; step(); // corner, no card
-  out.missTapNoGrant = g.pendingLevelups === owedAtMiss && g.state === 'levelup';
-  pickCard0(); // clean up: leave the screen
+  // --- 5) Continue (finishSkillTree) with points still banked lands on the SHOP. ---
+  g.finishSkillTree();
+  out.continueLandsOnShop = g.state === 'shop';
 
-  // --- 6) A new run must clear any owed picks (no leak between runs). ---
-  g.state = 'playing'; forceLevelUp(); // owed pick left dangling
+  // --- 6) The SKILLS shop button reopens the tree to spend leftover points. ---
+  g.openSkillTree(true);
+  out.reopensFromShop = g.state === 'skilltree';
+  g.finishSkillTree();
+
+  // --- 7) maxRank cap: spending past a node's max is rejected. ---
+  // sharpened maxRank 5, currently rank 1. Give plenty of points and over-spend.
+  g.skillTree.availablePoints = 20;
+  for (let i = 0; i < 10; i++) g.skillTree.spend('sharpened');
+  out.respectsMaxRank = g.skillTree.rankOf('sharpened') === 5;
+
+  // --- 8) A new run resets the tree (no leak between runs). ---
   g.startNewGame();
-  out.newRunClearsQueue = g.pendingLevelups === 0;
+  out.newRunResetsTree = g.skillTree.availablePoints === 0 && g.skillTree.rankOf('sharpened') === 0;
+  // And the reset pushed identity bonuses back into stats.
+  out.bonusesResetToIdentity = g.playerStats.skillDamageMult === 1;
 
   return out;
 });
 
-// Screenshot the deferred level-up screen (opened via the shop break) on mobile + desktop.
+// Screenshot the skill-tree screen (opened via the shop break) on mobile + desktop.
 async function shot(vp, name) {
   await page.setViewport(vp);
   await page.evaluate(() => {
     const g = window.__game;
     g.startNewGame(); g.waveManager.reset(); g.waveManager.startWave(1); g.state = 'playing';
-    g.player.xp = g.player.xpToNextLevel - 1; g.grantXP(2);
-    g.enterShop(); // drains the owed pick → level-up screen over the staged shop
+    // Bank a few points so the screen shows spendable nodes.
+    for (let i = 0; i < 4; i++) { g.player.xp = g.player.xpToNextLevel - 1; g.grantXP(2); }
+    g.enterShop(); // opens the skill-tree screen over the staged shop
   });
-  await new Promise(r => setTimeout(r, 250));
+  await new Promise(r => setTimeout(r, 300));
   await page.screenshot({ path: path.join(OUT, name) });
 }
-await shot({ width: 390, height: 844 }, 'levelup-mobile.png');
-await shot({ width: 1280, height: 800 }, 'levelup-desktop.png');
+await shot({ width: 390, height: 844 }, 'skilltree-mobile.png');
+await shot({ width: 1280, height: 800 }, 'skilltree-desktop.png');
 
 await browser.close();
 server.close();
 
-console.log('\n=== Deferred level-up flow (shipped frontend/dist) ===');
+console.log('\n=== Skill-tree flow (shipped frontend/dist) ===');
 console.log(JSON.stringify(result, null, 2));
 console.log('Console/page errors:', errors.length);
 errors.forEach(e => console.log('  ', e));
 console.log('Screenshots →', OUT);
 
-const checks = ['leveledOnce','noModalMidWave','pickBanked','fightKeptRunning','twoBanked',
-  'shopOpensLevelup','threeChoices','firstPickChains','secondOpensBackToBack',
-  'landsOnShop','queueDrained','choicesCleared','missTapNoGrant','newRunClearsQueue'];
+const checks = ['leveledOnce','noScreenMidWave','pointBanked','fightKeptRunning','twoBanked',
+  'shopOpensSkillTree','spendSucceeded','pointConsumed','rankRecorded','damageBonusApplied',
+  'lockedNodeUnbuyable','childUnlocksAfterParent','continueLandsOnShop','reopensFromShop',
+  'respectsMaxRank','newRunResetsTree','bonusesResetToIdentity'];
 const pass = result && !result.fatal && checks.every(k => result[k] === true) && errors.length === 0;
 console.log(`\n${checks.filter(k => result && result[k] === true).length}/${checks.length} checks passed`);
 console.log('RESULT:', pass ? 'PASS ✅' : 'FAIL ❌');

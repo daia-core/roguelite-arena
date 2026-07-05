@@ -10,6 +10,7 @@ export interface SaveData {
   items: string[]; // Item IDs
   artifactIds: string[]; // Held artifact IDs (map-granted run modifiers)
   actMap: any; // Serialized node-map (branching act graph + current position)
+  skillTree?: { availablePoints: number; totalEarned: number; ranks: Record<string, number> }; // per-run skill-tree state
 
   // Meta progression
   unlockedItems: string[];

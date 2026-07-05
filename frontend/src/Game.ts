@@ -33,6 +33,7 @@ import { ArtifactSystem, ARTIFACTS, ROLLABLE_ARTIFACTS, getArtifactById, type Ar
 import { randomEvent, EVENTS, type GameEvent, type EventEffect, type EventOption } from './EventSystem';
 import { EvolutionSystem, type Evolution } from './EvolutionSystem';
 import { VillageScene } from './VillageScene';
+import { SkillTree, SKILL_NODES, SKILL_BRANCHES, BRANCH_LABEL, BRANCH_COLOR } from './SkillTree';
 import type { Scene } from './scenes/Scene';
 import { MenuScene } from './scenes/MenuScene';
 
@@ -41,9 +42,10 @@ import { MenuScene } from './scenes/MenuScene';
 //   'event'  — a `?` node's text choice screen
 //   'reward' — a "pick 1 of 3 artifacts" screen (treasure / elite / boss spoils)
 //   'rest'   — a campfire node: heal or upgrade
+//   'skilltree' — spend banked skill points (replaces the old level-up item pick)
 export type GameState =
   | 'menu' | 'classselect' | 'playing' | 'shop' | 'paused' | 'gameover' | 'village'
-  | 'map' | 'event' | 'reward' | 'rest' | 'levelup';
+  | 'map' | 'event' | 'reward' | 'rest' | 'skilltree';
 
 export class Game {
   // Shared context read by extracted Scenes (see scenes/Scene.ts). `readonly` because
@@ -158,14 +160,13 @@ export class Game {
   rewardTitle: string = '';                  // header for the reward screen
   rewardSkippable: boolean = false;          // show a Skip button (elite/treasure/boss)
   private rewardThen: (() => void) | null = null; // what to do once an artifact is picked
-  // ---- LEVEL-UP pick-1-of-3 state (mirrors the reward screen) ----
-  // On level-up the sim pauses and the player picks ONE of three rolled items,
-  // making each level a real build decision instead of a silent stat bump. Extra
-  // level-ups earned while the screen is open queue up (pendingLevelups) and open
-  // back-to-back, so a big XP orb never eats a choice.
-  levelupChoices: Item[] = [];               // the 1-of-3 item offer
-  private pendingLevelups: number = 0;        // level-ups still owed a choice screen
-  private levelupReturnsToShop: boolean = false; // draining owed picks at the shop break → land on the shop, not back in the fight
+  // ---- SKILL TREE state (replaces the old level-up item pick, Felix 2026-07-05) ----
+  // Each level-up grants 1 skill point banked on the tree; points are spent on the
+  // between-waves skill-tree screen (never mid-wave). skillTreeReturnsToShop drains
+  // banked points at the shop break and lands on the shop, mirroring the old flow.
+  skillTree: SkillTree = new SkillTree();
+  private skillTreeReturnsToShop: boolean = false; // opened at the shop break → land on the shop on Continue
+  private skillTreeScroll: number = 0;         // vertical scroll offset for the tree screen
   private pendingWaveArtifact: boolean = false;   // elite/boss wave grants spoils on clear
   restResolved: boolean = false;             // rest node: an option has been taken
   restResultText: string = '';               // rest node outcome line
@@ -543,12 +544,15 @@ export class Game {
     // in max health below.
     this.applyClass(cls);
 
+    // Fresh skill tree for the new run (points + ranks reset), then push identity
+    // bonuses into PlayerStats so no stale skill bonus leaks across runs.
+    this.skillTree.reset();
+    this.skillTree.recomputeInto(this.playerStats);
+    this.skillTreeReturnsToShop = false;
+    this.skillTreeScroll = 0;
+
     this.refreshMaxHealth();
     this.pendingWaveArtifact = false;
-    // Level-up picks are now drained at the shop, so a run that ends mid-wave with owed
-    // picks must not leak them into the next run's first shop — clear the queue on start.
-    this.pendingLevelups = 0;
-    this.levelupReturnsToShop = false;
 
     this.state = 'map';
   }
@@ -616,6 +620,14 @@ export class Game {
       }
     }
     this.artifacts.applyStatic(this.playerStats);
+
+    // Restore the skill tree (points + ranks) and fold its bonuses into stats BEFORE the
+    // Player is built so its maxHealth reflects skill investment on resume.
+    this.skillTree.reset();
+    this.skillTree.load(save.skillTree);
+    this.skillTree.recomputeInto(this.playerStats);
+    this.skillTreeReturnsToShop = false;
+    this.skillTreeScroll = 0;
 
     this.player = new Player(this.worldWidth / 2, this.worldHeight / 2, this.playerStats);
     this.syncArtifactStatic();
@@ -721,8 +733,8 @@ export class Game {
       case 'reward':
         this.updateReward();
         break;
-      case 'levelup':
-        this.updateLevelup();
+      case 'skilltree':
+        this.updateSkillTree();
         break;
       case 'rest':
         this.updateRest();
@@ -1814,11 +1826,12 @@ export class Game {
     const leveledUp = this.player.addXP(amount);
     if (!leveledUp) return;
     this.spawnLevelupBurst();
-    // Each level-up owes the player a pick-1-of-3, but we DON'T interrupt the fight for
-    // it (Felix, 2026-07-05: the mid-wave modal "keeps interrupting gameplay"). Just bank
-    // the owed pick — the juice (sound/flash/confetti) still fires now — and drain the
-    // whole queue at the next natural break, the between-waves shop (see enterShop()).
-    this.pendingLevelups++;
+    // Each level-up grants 1 skill point (Felix, 2026-07-05: the level-up system is now a
+    // skill tree). We DON'T interrupt the fight — the point banks and the juice
+    // (sound/flash/confetti) still fires now; the player spends banked points on the
+    // skill-tree screen at the next natural break, the between-waves shop (see enterShop()).
+    // A per-level baseline stat bump already happens in Player.levelUp().
+    this.skillTree.grantPoints(1);
   }
 
   /** Vampire-Survivors level-up juice — sound, flash, and a burst of confetti. */
@@ -1845,116 +1858,159 @@ export class Game {
     }
   }
 
-  /** Roll 3 items and open the level-up choice screen for one owed level-up.
-   *  If the pool is exhausted (nothing left to offer) the level-up passes silently. */
-  private openNextLevelup(): void {
-    if (this.pendingLevelups <= 0) return;
-    this.pendingLevelups--;
-    const choices = ItemDatabase.getWeightedShopItems(
-      3,
-      this.waveManager.currentWave,
-      this.playerStats.items,
-      this.playerStats.getLuck(),
-      this.playerStats
-    ).filter(Boolean);
-    if (choices.length === 0) {
-      // Nothing eligible to offer (e.g. weapon locked + all non-stackables owned) —
-      // don't trap the player on an empty screen; drain any remaining owed levels too.
-      if (this.pendingLevelups > 0) { this.openNextLevelup(); return; }
-      if (this.state === 'levelup') this.finishLevelupQueue();
-      return;
-    }
-    this.levelupChoices = choices;
-    this.state = 'levelup';
+  // ==================== SKILL TREE ====================
+  // Replaces the old level-up 1-of-3 item pick. Level-ups bank skill points on
+  // this.skillTree; the player spends them here. Opened at the between-waves shop break
+  // (fromShop = true → "Continue" lands on the shop) or from the shop's "Skills" button.
+
+  /** Open the skill-tree screen. `fromShop` = drained at the shop break / reopened from
+   *  the shop, so Continue returns to the shop rather than back into the fight. */
+  private openSkillTree(fromShop: boolean): void {
+    this.skillTreeReturnsToShop = fromShop;
+    this.skillTreeScroll = 0;
+    this.state = 'skilltree';
     this.input.mouseDown = false;
   }
 
-  /** Grant the chosen level-up item, firing the same duo/transformation/HP/shield
-   *  side effects the shop does (minus gold/pricing), then advance the queue. */
-  private grantLevelupItem(item: Item): void {
-    if (!this.player) return;
-    const { newDuos, newTransformations } = this.playerStats.addItem(item);
-    if (newDuos.length > 0) {
-      this.audio.playDuoUnlock();
-      for (const duo of newDuos) this.screenEffects.flash(duo.glowColor || '#ff00ff', 0.3);
-    }
-    if (newTransformations.length > 0) this.audio.playTransformation();
-    if (item.maxHealthBonus) {
-      const oldMax = this.player.maxHealth;
-      this.player.maxHealth = this.playerStats.getMaxHealth();
-      const healthPercent = this.player.health / oldMax;
-      this.player.health = this.player.maxHealth * healthPercent;
-    }
-    if (item.shield) this.player.shield = true;
-
-    this.levelupChoices = [];
-    // Chain to the next owed level-up, or leave the level-up flow.
-    if (this.pendingLevelups > 0) this.openNextLevelup();
-    else this.finishLevelupQueue();
-  }
-
-  /** Leave the level-up chain: land on the shop when we were draining owed picks at the
-   *  between-waves break, otherwise return to the fight. */
-  private finishLevelupQueue(): void {
-    if (this.levelupReturnsToShop) {
-      this.levelupReturnsToShop = false;
+  /** Leave the tree: land on the shop when opened at the break, otherwise resume play. */
+  private finishSkillTree(): void {
+    if (this.skillTreeReturnsToShop) {
+      this.skillTreeReturnsToShop = false;
       this.state = 'shop';
     } else {
       this.state = 'playing';
     }
   }
 
-  private updateLevelup(): void {
-    if (!this.input.mouseDown) return;
-    const { s, W, isMobile } = this.screenScale();
-    const cardW = Math.min(W - s(32), s(isMobile ? 340 : 460));
-    const cardH = s(isMobile ? 74 : 68);
-    const gap = s(12);
-    const x0 = (W - cardW) / 2;
-    const topY = s(isMobile ? 72 : 92);
-    const mx = this.input.mouseX;
-    const my = this.input.mouseY;
+  /** Shared node grid + Continue-button geometry so draw() and update() never drift. */
+  private skillTreeLayout() {
+    const { s, W, H, isMobile } = this.screenScale();
+    const cols = SKILL_BRANCHES.length; // 3
+    const rows = 4;                     // nodes per branch
+    const outer = s(10);
+    const colGap = s(isMobile ? 6 : 12);
+    const rowGap = s(isMobile ? 8 : 10);
+    const gridW = W - outer * 2;
+    const cardW = (gridW - colGap * (cols - 1)) / cols;
+    const cardH = s(isMobile ? 62 : 66);
+    const topY = s(isMobile ? 66 : 82); // headroom for the unclipped branch labels above row 0
+    const btnH = s(isMobile ? 46 : 44);
+    const btnY = H - btnH - s(10);
+    const btnW = Math.min(W - s(40), s(isMobile ? 300 : 420));
+    const btnX = (W - btnW) / 2;
+    return { s, W, H, isMobile, cols, rows, outer, colGap, rowGap, cardW, cardH, topY, btnX, btnY, btnW, btnH };
+  }
 
-    for (let i = 0; i < this.levelupChoices.length; i++) {
-      const y = topY + i * (cardH + gap);
-      if (pointInRect(mx, my, { x: x0, y, width: cardW, height: cardH })) {
-        this.input.mouseDown = false;
-        this.grantLevelupItem(this.levelupChoices[i]);
-        return;
+  /** Rect for the node at (branchIndex, tier), accounting for scroll. */
+  private skillNodeRect(bi: number, tier: number) {
+    const L = this.skillTreeLayout();
+    const x = L.outer + bi * (L.cardW + L.colGap);
+    const y = L.topY + tier * (L.cardH + L.rowGap) - this.skillTreeScroll;
+    return { x, y, width: L.cardW, height: L.cardH };
+  }
+
+  private updateSkillTree(): void {
+    if (!this.input.mouseDown) return;
+    const L = this.skillTreeLayout();
+    const mx = this.input.mouseX, my = this.input.mouseY;
+
+    // Continue button
+    if (pointInRect(mx, my, { x: L.btnX, y: L.btnY, width: L.btnW, height: L.btnH })) {
+      this.input.mouseDown = false;
+      this.finishSkillTree();
+      return;
+    }
+
+    // Nodes: tap an unlocked, affordable, non-maxed node to invest a point.
+    for (let bi = 0; bi < SKILL_BRANCHES.length; bi++) {
+      const branch = SKILL_BRANCHES[bi];
+      const nodes = SKILL_NODES.filter(n => n.branch === branch).sort((a, b) => a.tier - b.tier);
+      for (let ti = 0; ti < nodes.length; ti++) {
+        const node = nodes[ti];
+        const r = this.skillNodeRect(bi, ti);
+        if (r.y + r.height < L.topY || r.y > L.btnY) continue; // off the visible band
+        if (pointInRect(mx, my, r)) {
+          this.input.mouseDown = false;
+          if (this.skillTree.spend(node.id)) {
+            this.skillTree.recomputeInto(this.playerStats);
+            this.refreshMaxHealth();
+            this.audio.playLevelUp();
+            this.screenEffects.flash(BRANCH_COLOR[branch], 0.18);
+          }
+          return;
+        }
       }
     }
   }
 
-  private drawLevelup(): void {
+  private drawSkillTree(): void {
     const ctx = this.renderer.getContext();
-    const { s, W, isMobile } = this.screenScale();
+    const L = this.skillTreeLayout();
+    const { s, W, isMobile } = L;
     this.paintBackdrop();
 
-    const lvl = this.player ? this.player.level : 1;
-    this.renderer.drawText(`LEVEL ${lvl} — CHOOSE AN UPGRADE`, W / 2, s(isMobile ? 26 : 34), { size: s(isMobile ? 13 : 20), align: 'center', color: '#ffd700' });
-    this.renderer.drawText('Pick one to keep for the run', W / 2, s(isMobile ? 26 : 34) + s(isMobile ? 16 : 20), { size: s(isMobile ? 8 : 9), align: 'center', color: '#c8b998' });
+    const pts = this.skillTree.availablePoints;
+    this.renderer.drawText('SKILL TREE', W / 2, s(isMobile ? 18 : 24), { size: s(isMobile ? 14 : 20), align: 'center', color: '#ffd700' });
+    this.renderer.drawText(
+      pts > 0 ? `${pts} skill point${pts === 1 ? '' : 's'} to spend` : 'No points to spend — bank levels & return',
+      W / 2, s(isMobile ? 18 : 24) + s(isMobile ? 14 : 18),
+      { size: s(isMobile ? 8 : 9), align: 'center', color: pts > 0 ? '#a8e063' : '#c8b998' }
+    );
 
-    const rarityColor: Record<string, string> = { common: '#c8c8c8', rare: '#74c0fc', epic: '#b06bd9', legendary: '#f2b04e' };
-    const cardW = Math.min(W - s(32), s(isMobile ? 340 : 460));
-    const cardH = s(isMobile ? 74 : 68);
-    const gap = s(12);
-    const x0 = (W - cardW) / 2;
-    const topY = s(isMobile ? 72 : 92);
-    const bodyPx = s(isMobile ? 8 : 9);
+    // Branch headers draw UNCLIPPED, above the node band (so they're never cut off).
+    for (let bi = 0; bi < SKILL_BRANCHES.length; bi++) {
+      const branch = SKILL_BRANCHES[bi];
+      const head = this.skillNodeRect(bi, 0);
+      this.renderer.drawText(BRANCH_LABEL[branch], head.x + head.width / 2, L.topY - s(isMobile ? 10 : 12), { size: s(isMobile ? 8 : 10), align: 'center', color: BRANCH_COLOR[branch] });
+    }
 
-    const iconBox = s(isMobile ? 28 : 30);
-    const textX = x0 + s(12) + iconBox + s(8);
-    const textW = cardW - (textX - x0) - s(12);
-    this.levelupChoices.forEach((item, i) => {
-      const y = topY + i * (cardH + gap);
-      drawPanel(ctx, x0, y, cardW, cardH, DARK_WOOD_THEME, 11 + i, 53);
-      this.renderer.drawItemIcon(item.icon, x0 + s(12) + iconBox / 2, y + (cardH - iconBox) / 2, iconBox, 'center');
-      this.renderer.drawText(item.name, textX, y + s(isMobile ? 16 : 18), { size: s(isMobile ? 11 : 13), align: 'left', color: rarityColor[item.rarity] || '#ffffff' });
-      this.renderer.drawText(item.rarity.toUpperCase(), x0 + cardW - s(12), y + s(isMobile ? 16 : 18), { size: s(7), align: 'right', color: rarityColor[item.rarity] || '#ffffff' });
-      for (const [li, line] of this.wrapText(item.description, textW, bodyPx).entries()) {
-        this.renderer.drawText(line, textX, y + s(isMobile ? 34 : 36) + li * (bodyPx + s(3)), { size: bodyPx, align: 'left', color: '#d8c9a8' });
+    // Clip the scrollable node band so nothing bleeds over the header / Continue button.
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, L.topY - s(1), W, L.btnY - (L.topY - s(1)) - s(6));
+    ctx.clip();
+
+    const titlePx = s(isMobile ? 8 : 9);
+    const descPx = s(isMobile ? 7 : 8);
+    for (let bi = 0; bi < SKILL_BRANCHES.length; bi++) {
+      const branch = SKILL_BRANCHES[bi];
+      const branchColor = BRANCH_COLOR[branch];
+      const nodes = SKILL_NODES.filter(n => n.branch === branch).sort((a, b) => a.tier - b.tier);
+
+      for (let ti = 0; ti < nodes.length; ti++) {
+        const node = nodes[ti];
+        const r = this.skillNodeRect(bi, ti);
+        const rank = this.skillTree.rankOf(node.id);
+        const unlocked = this.skillTree.isUnlocked(node.id);
+        const maxed = rank >= node.maxRank;
+        const affordable = this.skillTree.canSpend(node.id);
+
+        // Panel tint: locked = dim, affordable = branch-lit, owned/maxed = normal.
+        const seed = 11 + bi * 4 + ti;
+        drawPanel(ctx, r.x, r.y, r.width, r.height, DARK_WOOD_THEME, seed, unlocked ? 53 : 30);
+        if (affordable) {
+          ctx.save();
+          ctx.strokeStyle = branchColor;
+          ctx.lineWidth = Math.max(1, s(1.5));
+          ctx.strokeRect(r.x + s(1), r.y + s(1), r.width - s(2), r.height - s(2));
+          ctx.restore();
+        }
+
+        const cx = r.x + r.width / 2;
+        const nameColor = !unlocked ? '#6b5d47' : maxed ? '#f2b04e' : '#ffffff';
+        this.renderer.drawText(node.icon, cx, r.y + s(isMobile ? 15 : 16), { size: s(isMobile ? 13 : 15), align: 'center', color: '#ffffff' });
+        this.renderer.drawText(node.name, cx, r.y + s(isMobile ? 28 : 30), { size: titlePx, align: 'center', color: nameColor });
+        this.renderer.drawText(node.desc, cx, r.y + s(isMobile ? 39 : 42), { size: descPx, align: 'center', color: unlocked ? '#d8c9a8' : '#6b5d47' });
+        // Rank pips e.g. "3/5", or LOCKED.
+        const rankLabel = unlocked ? `${rank}/${node.maxRank}` : 'LOCKED';
+        this.renderer.drawText(rankLabel, cx, r.y + r.height - s(isMobile ? 8 : 9), { size: descPx, align: 'center', color: maxed ? '#a8e063' : unlocked ? branchColor : '#6b5d47' });
       }
-    });
+    }
+    ctx.restore();
+
+    // Continue button
+    drawPanel(ctx, L.btnX, L.btnY, L.btnW, L.btnH, DARK_WOOD_THEME, 91, 60);
+    this.renderer.drawText(pts > 0 ? 'CONTINUE (points banked)' : 'CONTINUE', W / 2, L.btnY + L.btnH / 2 + s(4), { size: s(isMobile ? 11 : 13), align: 'center', color: '#ffd700' });
   }
 
   // ==================== CLASS SELECT ====================
@@ -2146,7 +2202,7 @@ export class Game {
     const goldMultiplier = this.metaProgression.getGoldGainMultiplier();
 
     // Apply modifiers from wave type
-    let finalXP = enemy.typeData.xpValue * xpMultiplier * this.playerStats.artifactXpMult;
+    let finalXP = enemy.typeData.xpValue * xpMultiplier * this.playerStats.artifactXpMult * this.playerStats.skillXpMult;
     let finalGold = enemy.typeData.goldValue * goldMultiplier;
     // Item-based gold bonuses (Coin Purse, Midas Touch, Merchant) — were
     // sold but never applied
@@ -2472,12 +2528,11 @@ export class Game {
     // GAME FEEL: Wave complete effects
     this.screenEffects.flash('#00ff00', 0.2); // Green flash for wave complete
 
-    // Drain any level-up picks earned during the wave HERE, at the natural break, rather
-    // than interrupting the fight for each one. The shop is already staged underneath, so
-    // when the last owed pick is chosen finishLevelupQueue() lands the player on the shop.
-    if (this.pendingLevelups > 0) {
-      this.levelupReturnsToShop = true;
-      this.openNextLevelup();
+    // Spend banked skill points HERE, at the natural break, rather than interrupting the
+    // fight. The shop is staged underneath; Continue on the tree lands on the shop. Points
+    // are optional to spend — a player can bank them and use the shop's Skills button later.
+    if (this.skillTree.availablePoints > 0) {
+      this.openSkillTree(true);
     }
 
     // Save progress
@@ -2793,6 +2848,18 @@ export class Game {
     return { x: s(8), y: s(6), width, height };
   }
 
+  // "SKILLS" button — top-CENTER of the shop header, so banked skill points can be spent
+  // from the shop at any time (not only the auto-open at the wave break). Sits between the
+  // top-left COMBOS button and the top-right COMBOS/gear cluster.
+  private getSkillsButtonRect() {
+    const zoom = this.canvas.clientWidth ? this.canvas.width / this.canvas.clientWidth : 1;
+    const s = (v: number) => Math.round(v * zoom);
+    const isMobile = this.canvas.width / zoom < 800;
+    const width = s(isMobile ? 96 : 108);
+    const height = s(isMobile ? 30 : 30);
+    return { x: Math.round((this.canvas.width - width) / 2), y: s(6), width, height };
+  }
+
   private updateShop(): void {
     if (!this.player) return;
 
@@ -2820,6 +2887,13 @@ export class Game {
     if (pointInRect(mouseX, mouseY, combosBtn) && this.input.mouseDown) {
       this.showCombosOverlay = true;
       this.input.mouseDown = false;
+      return;
+    }
+
+    // SKILLS button — open the skill tree from the shop to spend banked points.
+    if (pointInRect(mouseX, mouseY, this.getSkillsButtonRect()) && this.input.mouseDown) {
+      this.input.mouseDown = false;
+      this.openSkillTree(true); // Continue returns to the shop
       return;
     }
 
@@ -3897,7 +3971,8 @@ export class Game {
       health: this.player.health,
       items: this.playerStats.items.map(item => item.id),
       artifactIds: this.artifacts.held.map(a => a.id),
-      actMap: serializeMap(this.mapSystem.map)
+      actMap: serializeMap(this.mapSystem.map),
+      skillTree: this.skillTree.serialize()
     });
   }
 
@@ -3936,8 +4011,8 @@ export class Game {
       case 'reward':
         this.drawReward();
         break;
-      case 'levelup':
-        this.drawLevelup();
+      case 'skilltree':
+        this.drawSkillTree();
         break;
       case 'rest':
         this.drawRest();
@@ -4595,6 +4670,25 @@ export class Game {
         size: s(8),
         align: 'center',
         color: activeCount > 0 ? '#ffe066' : '#e5d9c3'
+      });
+    }
+
+    // SKILLS button (top-center) — spend banked skill points. Lights up when points wait.
+    {
+      const btn = this.getSkillsButtonRect();
+      const pts = this.skillTree.availablePoints;
+      ctx.save();
+      ctx.fillStyle = pts > 0 ? '#153d20' : '#2e1c0e';
+      ctx.fillRect(btn.x, btn.y, btn.width, btn.height);
+      ctx.strokeStyle = pts > 0 ? '#69db7c' : '#c8a15a';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(btn.x, btn.y, btn.width, btn.height);
+      ctx.restore();
+      const label = pts > 0 ? `SKILLS +${pts}` : 'SKILLS';
+      this.renderer.drawText(label, btn.x + btn.width / 2, btn.y + Math.round(btn.height * 0.28), {
+        size: s(8),
+        align: 'center',
+        color: pts > 0 ? '#a8e063' : '#e5d9c3'
       });
     }
 

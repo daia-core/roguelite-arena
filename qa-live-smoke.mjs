@@ -10,8 +10,8 @@
 // Verifies the core combat loop actually works on the live build:
 //   1. Boot: __game + __ItemDatabase present, zero console/page errors.
 //   2. Combat: enemies spawn, player fire registers hits, enemies DIE (collision works).
-//   3. Progression: kills accrue (g.kills), at least one level-up fires and its
-//      pick-1-of-3 offer (g.levelupChoices) is a real 3-item choice we can resolve.
+//   3. Progression: kills accrue (g.kills), at least one level-up fires and banks a
+//      skill point (g.skillTree.totalEarned) — the between-waves skill tree we can spend into.
 //   4. Entity hygiene: no `dead` enemy lingers in g.enemies across frames (the Jul-2
 //      dead-flag/grid bug class the game-dev skill warns about).
 //   5. Loop integrity: the run never wedges (state always advances) and never errors.
@@ -73,7 +73,7 @@ const result = await page.evaluate(async () => {
 
   const dt = 1/60;
   let frames = 0, levelups = 0, deadLeak = 0, maxDeadInArray = 0;
-  let clearedWave = false, wedged = false, choiceSizes = [], combatEntered = false, mapPicks = 0;
+  let clearedWave = false, wedged = false, combatEntered = false, mapPicks = 0;
 
   // Route the node map until we actually land in combat (a non-combat node —
   // event/rest/treasure — resolves and bounces us back to the map). Capped so a
@@ -103,11 +103,14 @@ const result = await page.evaluate(async () => {
         const deadNow = (g.enemies || []).filter(e => e.dead).length;
         if (deadNow > maxDeadInArray) maxDeadInArray = deadNow;
         if (deadNow > 0) deadLeak = Math.max(deadLeak, deadNow);
-      } else if (g.state === 'levelup') {
-        const choices = g.levelupChoices || [];
-        choiceSizes.push(choices.length);
-        if (choices.length) { g.grantLevelupItem(choices[0]); levelups++; }
-        else { g.state = 'playing'; }
+      } else if (g.state === 'skilltree') {
+        // Skill-tree screen (opened at the shop break): spend a banked point on the
+        // first offense node if we can, then leave. Points banked mid-wave don't
+        // interrupt — they surface here.
+        if (g.skillTree && g.skillTree.spend && g.skillTree.spend('sharpened')) {
+          g.skillTree.recomputeInto(g.playerStats);
+        }
+        g.finishSkillTree();
       } else if (g.state === 'shop' || g.state === 'reward') {
         clearedWave = true; break; // wave cleared → post-wave screen reached
       } else if (g.state === 'gameover') {
@@ -119,6 +122,8 @@ const result = await page.evaluate(async () => {
   }
 
   const kills = g.kills ?? 0;
+  // Level-ups now bank skill points; totalEarned counts every point ever granted this run.
+  levelups = g.skillTree?.totalEarned ?? 0;
   const endWave = g.waveManager?.currentWave ?? 0;
   const aliveEnemies = (g.enemies || []).filter(e => !e.dead).length;
 
@@ -155,7 +160,7 @@ const result = await page.evaluate(async () => {
     }
   } catch (e) { devil = { checked: false, error: String(e) }; }
 
-  return { startState, granted, frames, kills, levelups, choiceSizes: [...new Set(choiceSizes)],
+  return { startState, granted, frames, kills, levelups,
            endWave, aliveEnemies, maxDeadInArray, deadLeak, combatEntered, clearedWave, mapPicks, wedged, devil };
 });
 
@@ -181,8 +186,7 @@ chk(errors.length === 0, 'zero console/page errors on the live build', `${errors
 chk(result.granted.length === 4, 'loadout items resolved (no id drift)', `only ${result.granted.length}/4 items resolved — id drift`);
 chk(result.combatEntered, 'map → combat routing works (reached a battle node)', 'never reached combat from the node map');
 chk(result.kills > 0, `combat works — ${result.kills} kills registered (collisions land)`, 'NO kills registered — collision/hit path broken');
-chk(result.levelups > 0, `progression works — ${result.levelups} level-up(s) fired`, 'no level-up fired in the run');
-chk(result.choiceSizes.length === 0 || result.choiceSizes.every(n => n === 3), `level-up offer is pick-1-of-3 (sizes ${JSON.stringify(result.choiceSizes)})`, `level-up offer NOT 3 items (${JSON.stringify(result.choiceSizes)})`);
+chk(result.levelups > 0, `progression works — ${result.levelups} skill point(s) banked (level-ups fired)`, 'no level-up fired in the run');
 chk(!result.wedged, 'loop never wedged (state always advanced)', 'loop WEDGED (state frozen off-combat)');
 chk(result.clearedWave, 'cleared a full wave → reached the post-wave shop/reward', 'never cleared a wave in 180s (combat too slow / stuck)');
 chk(result.deadLeak === 0 || result.maxDeadInArray <= 2, `no dead-enemy cull leak (maxDead=${result.maxDeadInArray})`, `dead enemies lingering in array (maxDead=${result.maxDeadInArray}) — cull/grid regression`);

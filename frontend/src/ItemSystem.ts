@@ -335,6 +335,27 @@ export class PlayerStats {
   // strong (still one-shots everything forever) yet keeps every product finite.
   static readonly SANITY_MULT_CAP = 1e15;
 
+  // ---- DAMAGE DIMINISHING RETURNS (balance, 2026-07-05) ----
+  // Felix, wave 13: "2.3M dmg per projectile, enemies insta-die." Root cause: the
+  // item damage multiplier is a pure PRODUCT of stacked/upgraded multiplicative items
+  // (worsened by upgrade-on-duplicate's ^N), so a heavy hoard reached ~1.2M× — 20,000×
+  // a medium build — and no enemy HP curve can serve both. Enemies were fine vs a
+  // medium build; the runaway is entirely on the player-multiplier side.
+  //
+  // Fix: a soft KNEE on the aggregated item damage multiplier. Below the knee it's
+  // linear (light/medium builds untouched); above it the excess is compressed by an
+  // exponent, so a maxed hoard is strong-but-finite instead of trivializing deep waves.
+  //   M <= KNEE:  M
+  //   M >  KNEE:  KNEE * (M / KNEE) ^ DR_EXP
+  // Measured (qa-balance-probe): medium ~62× stays ~61×; heavy ~1.2M× → ~5.2k× (heavy
+  // still one-shots fodder to ~wave 15, but a wave-20 boss becomes a real fight).
+  static readonly DMG_DR_KNEE = 60;
+  static readonly DMG_DR_EXP = 0.45;
+  static softKneeDamageMult(m: number): number {
+    if (!(m > PlayerStats.DMG_DR_KNEE)) return m; // NaN-safe; below/at knee = linear
+    return PlayerStats.DMG_DR_KNEE * Math.pow(m / PlayerStats.DMG_DR_KNEE, PlayerStats.DMG_DR_EXP);
+  }
+
   // ---- ARTIFACT contributions (ArtifactSystem folds its static roster into these) ----
   // Defaults are identity (×1 / +0) so a run with no artifacts behaves exactly as before.
   artifactDamageMult: number = 1;
@@ -348,6 +369,22 @@ export class PlayerStats {
   // Game.ts recomputes these each frame; identity when the artifact isn't held.
   runtimeDamageMult: number = 1;
   runtimeFireRateMult: number = 1;
+
+  // ---- SKILL TREE contributions (SkillTree.recomputeInto folds node ranks into these) ----
+  // Same pattern as the artifact fields above: identity defaults (×1 / +0) so a run that
+  // spends no skill points behaves exactly as before. The SkillTree lives in Game.ts and
+  // writes these on every point spend + on run start; the getters read them at read-time.
+  skillDamageMult: number = 1;
+  skillFireRateMult: number = 1;
+  skillCritChanceBonus: number = 0;
+  skillCritMultMult: number = 1;
+  skillMaxHealthBonus: number = 0;
+  skillArmorBonus: number = 0;
+  skillSpeedMult: number = 1;
+  skillRegenBonus: number = 0;
+  skillXpMult: number = 1;
+  skillPickupMult: number = 1;
+  skillGoldMult: number = 1;
 
   // ---- MEMOIZED ITEM AGGREGATION ----
   // Every getter used to re-loop the whole item list on EVERY call, every frame
@@ -654,7 +691,9 @@ export class PlayerStats {
 
   getDamage(): number {
     let damage = this.baseDamage;
-    damage *= this.ensureAgg().damageMult;
+    // Item damage multiplier passes through a soft diminishing-returns knee so a
+    // heavily-stacked/upgraded hoard stays finite instead of running to millions×.
+    damage *= PlayerStats.softKneeDamageMult(this.ensureAgg().damageMult);
     damage *= this.getSpecializationBonus();
     // TRANSFORMATION BONUS
     damage *= this.transformations.getTotalBonuses().damageMultiplier;
@@ -662,6 +701,8 @@ export class PlayerStats {
     damage *= this.duos.getTotalBonuses().damageMultiplier;
     // ARTIFACT (static) + runtime (momentum ramp) contributions
     damage *= this.artifactDamageMult * this.runtimeDamageMult;
+    // SKILL TREE contribution
+    damage *= this.skillDamageMult;
     // Numerical-safety only (not a balance cap) — keep runaway builds finite.
     return Math.min(PlayerStats.SANITY_MULT_CAP, damage);
   }
@@ -678,14 +719,16 @@ export class PlayerStats {
     const a = this.ensureAgg();
     // full melee bonus + half of the ranged bonus above baseline
     const mult = a.meleeDamageMult * (1 + (a.rangedDamageMult - 1) * PlayerStats.CROSS_TYPE_BLEED);
-    return Math.min(PlayerStats.SANITY_MULT_CAP, mult);
+    // Same soft knee as the global damage mult: a stacked type multiplier compounds
+    // on top of getDamage(), so it needs the same diminishing returns to stay finite.
+    return Math.min(PlayerStats.SANITY_MULT_CAP, PlayerStats.softKneeDamageMult(mult));
   }
 
   getRangedDamageMult(): number {
     const a = this.ensureAgg();
     // full ranged bonus + half of the melee bonus above baseline
     const mult = a.rangedDamageMult * (1 + (a.meleeDamageMult - 1) * PlayerStats.CROSS_TYPE_BLEED);
-    return Math.min(PlayerStats.SANITY_MULT_CAP, mult);
+    return Math.min(PlayerStats.SANITY_MULT_CAP, PlayerStats.softKneeDamageMult(mult));
   }
 
   getElementalDamageMult(): number {
@@ -718,6 +761,8 @@ export class PlayerStats {
     rate *= this.duos.getTotalBonuses().fireRateMultiplier;
     // ARTIFACT (static) + runtime (berserk ramp) contributions
     rate *= this.artifactFireRateMult * this.runtimeFireRateMult;
+    // SKILL TREE contribution
+    rate *= this.skillFireRateMult;
     // Numerical-safety only (not a balance cap) — keep runaway builds finite.
     return Math.min(PlayerStats.SANITY_MULT_CAP, rate);
   }
@@ -731,6 +776,8 @@ export class PlayerStats {
     speed *= this.duos.getTotalBonuses().speedMultiplier;
     // ARTIFACT contribution
     speed *= this.artifactSpeedMult;
+    // SKILL TREE contribution
+    speed *= this.skillSpeedMult;
     return Math.min(speed, this.maxSpeed); // clamp so broken builds can't zoom off-screen
   }
 
@@ -741,6 +788,8 @@ export class PlayerStats {
     health += this.transformations.getTotalBonuses().maxHealthBonus;
     // ARTIFACT contribution
     health += this.artifactMaxHealthBonus;
+    // SKILL TREE contribution
+    health += this.skillMaxHealthBonus;
     return Math.max(1, health);
   }
 
@@ -753,6 +802,8 @@ export class PlayerStats {
     chance += this.duos.getTotalBonuses().critChance;
     // ARTIFACT contribution
     chance += this.artifactCritChanceBonus;
+    // SKILL TREE contribution
+    chance += this.skillCritChanceBonus;
     return Math.min(1, chance);
   }
 
@@ -763,12 +814,14 @@ export class PlayerStats {
     mult *= this.transformations.getTotalBonuses().critDamageMultiplier;
     // ARTIFACT contribution
     mult *= this.artifactCritMultMult;
+    // SKILL TREE contribution
+    mult *= this.skillCritMultMult;
     // Numerical-safety only (not a balance cap) — keep runaway builds finite.
     return Math.min(PlayerStats.SANITY_MULT_CAP, mult);
   }
 
   getHealthRegen(): number {
-    return this.ensureAgg().healthRegen;
+    return this.ensureAgg().healthRegen + this.skillRegenBonus;
   }
 
   /** Flat armor from meta progression (set by Game at run start). */
@@ -781,6 +834,8 @@ export class PlayerStats {
     armor += this.ensureAgg().armor;
     // TRANSFORMATION BONUS
     armor += this.transformations.getTotalBonuses().armor;
+    // SKILL TREE contribution
+    armor += this.skillArmorBonus;
     return armor;
   }
 
@@ -817,6 +872,8 @@ export class PlayerStats {
     let magnet = this.ensureAgg().xpMagnetMult;
     // TRANSFORMATION BONUS
     magnet *= this.transformations.getTotalBonuses().xpMagnet;
+    // SKILL TREE contribution (Magnet node)
+    magnet *= this.skillPickupMult;
     // Pure pickup-convenience — enemies don't scale against it, so cap it.
     return Math.min(PlayerStats.XP_MAGNET_CAP, magnet);
   }
@@ -825,6 +882,8 @@ export class PlayerStats {
     let bonus = this.ensureAgg().goldMult;
     // TRANSFORMATION BONUS
     bonus *= this.transformations.getTotalBonuses().goldBonus;
+    // SKILL TREE contribution (Greed node)
+    bonus *= this.skillGoldMult;
     // Economy stat with no monster counter-scaling — cap it (Felix's example).
     return Math.min(PlayerStats.GOLD_MULT_CAP, bonus);
   }
