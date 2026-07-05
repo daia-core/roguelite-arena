@@ -59,7 +59,7 @@ export class WaveManager {
    * even against a broken build. It scales enemy HEALTH only, never damage, so a
    * denser tankier arena doesn't also start one-shotting the player.
    */
-  static readonly FLOOD_HP_MULT = 2.2;
+  static readonly FLOOD_HP_MULT = 2.6;
 
   /**
    * Wave-ramped survivability multiplier (the live HP lever, used by makeEnemy).
@@ -67,14 +67,21 @@ export class WaveManager {
    * multiplicative build the player one-shots fodder well before the boss, so a
    * wave reads as paper, not a swarm. We ramp the flat FLOOD_HP_MULT with the
    * wave, but PROTECT the early game (≤ wave 4, where a fresh run has no items
-   * and the kite-bot dies at wave 3-4) by holding it flat there, then adding +12%
-   * of the base per wave beyond 4. So: w4 = 2.2×, w10 = 3.78×, w15 = 5.10×,
-   * w20 = 6.42× (~2.9× the old flat value). Trash gets genuinely tanky mid-late
-   * yet stays a fraction of the boss (w20 slime ≈ 12.7k HP vs flamefiend ≈ 116k),
-   * so the boss stays king. HP only — never touches enemy damage.
+   * and the kite-bot dies at wave 3-4) by holding it flat there, then adding a
+   * fraction of the base per wave beyond 4.
+   *
+   * BALANCE 2026-07-05 (Felix): "scale enemy health even more — every enemy
+   * should have as much health as the flame fiend boss when I encounter it."
+   * Bumped the base 2.2→2.6 and the per-wave slope 0.12→0.22 so trash reads
+   * genuinely boss-tanky mid-late. New curve: w4 = 2.6×, w10 = 6.03×,
+   * w15 = 9.00×, w20 = 11.75× (~1.8× the previous value). A w20 slime is now
+   * ≈ 23.3k HP — about a FIFTH of the flamefiend's ≈ 116k (was ~a tenth) — so
+   * fodder feels like a wall you carve through while the boss stays king.
+   * HP only — never touches enemy damage (that's scaled separately + given
+   * armor-pen so ranged still stings; see Player.takeDamage).
    */
   static survivabilityMult(wave: number): number {
-    return WaveManager.FLOOD_HP_MULT * (1 + Math.max(0, wave - 4) * 0.12);
+    return WaveManager.FLOOD_HP_MULT * (1 + Math.max(0, wave - 4) * 0.22);
   }
 
   constructor() {}

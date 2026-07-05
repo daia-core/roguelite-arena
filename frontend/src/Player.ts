@@ -115,6 +115,14 @@ export class Player {
     if (!nearest) return [];
 
     const weaponType = this.stats.getWeaponType();
+
+    // MELEE weapon type: this is a pure-melee loadout (the "start with only a melee
+    // weapon" class). The always-on swing IS the attack — the gun is suppressed so a
+    // melee build genuinely fights in melee rather than quietly plinking a gun too.
+    // (Melee ITEMS that only buff the swing keep weaponType 'auto-aim', so they still
+    // shoot a weak gun; only an explicit melee WEAPON silences it.)
+    if (weaponType === 'melee') return [];
+
     const angle = Math.atan2(nearest.y - this.y, nearest.x - this.x);
     const damage = this.stats.getRangedDamage();
     const speed = this.stats.getProjectileSpeed();
@@ -140,19 +148,23 @@ export class Player {
         projectiles.push(proj);
       }
     } else if (weaponType === 'orbital') {
-      // Orbital: Rotating projectiles (handled differently - no projectiles, orbitals are persistent)
-      // For now, create fast-moving circular projectiles
-      const orbitCount = 1 + this.stats.getMultishot();
+      // Orbital: a RADIAL BURST — slow, heavy, piercing shots fanned out in every
+      // direction so the player is ringed by a rotating wheel of damage. Distinct
+      // feel from the aimed gun: it doesn't target, it sweeps everything around you.
+      // Each shot pierces by default (a wheel that mows through a pack), and the ring
+      // slowly rotates frame-to-frame so it reads as spinning. multishot = denser ring.
+      const orbitCount = 3 + this.stats.getMultishot() * 2;
       const angleStep = (Math.PI * 2) / orbitCount;
-
+      const spin = Date.now() * 0.0015; // gentle rotation of the whole ring
       for (let i = 0; i < orbitCount; i++) {
-        const orbitAngle = i * angleStep + Date.now() * 0.003; // Rotate over time
-        const proj = new Projectile(this.x, this.y, orbitAngle, damage, speed * 0.5, true, piercingCount > 0);
-        proj.maxPierceCount = piercingCount;
+        const orbitAngle = i * angleStep + spin;
+        const proj = new Projectile(this.x, this.y, orbitAngle, damage, speed * 0.55, true, true);
+        proj.maxPierceCount = Math.max(2, piercingCount); // always mows through at least 2
+        proj.radius = 11; // chunky orbs
         projectiles.push(proj);
       }
     } else if (weaponType === 'laser') {
-      // Laser: Fast, piercing beam
+      // Laser: Fast, piercing beam — thin, bright, and unstoppable.
       const proj = new Projectile(this.x, this.y, angle, damage, speed, true, true);
       proj.maxPierceCount = 999; // Laser pierces everything
       proj.radius = 6; // Thinner
@@ -213,7 +225,14 @@ export class Player {
     };
   }
 
-  takeDamage(amount: number): boolean {
+  /**
+   * @param armorPen 0..1 fraction of the player's armor this hit ignores.
+   *   Enemy RANGED shots and telegraphed AoE pass a high pen so a heavy
+   *   armor-stack build can't trivialise ranged pressure to ~1 HP chip
+   *   (Felix, 2026-07-05: "projectiles barely damage, does like 1 hp").
+   *   Contact hits pass a smaller pen; player-neutral callers pass 0.
+   */
+  takeDamage(amount: number, armorPen: number = 0): boolean {
     // GAME FEEL: Invincibility frames prevent damage
     if (this.invincibilityTimer > 0) {
       return false; // No damage taken during i-frames
@@ -248,7 +267,9 @@ export class Player {
     // so a heavy stack (armor 200 = 91%, 380 = 95%) trended toward immortality — the
     // same counter-pressure-less runaway the economy caps fixed. Floor the multiplier
     // at 0.10 → armor caps at 90% mitigation; each point still matters up to the cap.
-    const armor = this.stats.getArmor();
+    // Armor-pen (ranged/AoE) shaves the effective armor before the mitigation
+    // curve, so a stacked build still feels ranged/telegraph pressure.
+    const armor = this.stats.getArmor() * (1 - Math.min(1, Math.max(0, armorPen)));
     if (armor > 0) {
       amount *= Math.max(0.10, 20 / (20 + armor));
     }

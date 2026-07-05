@@ -613,6 +613,28 @@ export const ITEM_CATALOG: Item[] = [
       fireRateMultiplier: 0.7 // Slower fire rate
     },
     {
+      // BRAWLER class starter. Unlike the swing-buff swords below, this sets
+      // weaponType: 'melee', which SILENCES the auto-aim gun (Player.tryShoot) — a
+      // true melee loadout. It hard-buffs the swing to carry the run on its own.
+      // unlocked:false → class-granted only, never sold (buying it would mute a gun
+      // build's gun, a trap pick).
+      id: 'brawler_blade_t1',
+      name: 'Brawler\'s Cleaver',
+      description: 'Melee only: no gun, but a big, fast, wide swing carries the fight',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 0,
+      icon: '🗡️',
+      unlocked: false,
+      tags: ['melee'],
+      weaponType: 'melee',    // suppresses the gun; the swing IS the attack
+      meleeDamageMult: 2.4,   // strong swing to stand alone without the gun
+      swingRangeBonus: 30,
+      swingArcBonus: Math.PI * 0.2,
+      swingCooldownMult: 0.7, // fast swings
+      knockback: 120
+    },
+    {
       id: 'melee_sword_t2',
       name: 'Crescent Blade',
       description: 'Wider, faster, harder-hitting swing',

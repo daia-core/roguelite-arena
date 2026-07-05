@@ -7,6 +7,7 @@ import { MeleeAttack } from './MeleeAttack';
 import { Particle, DamageNumber } from './Particle';
 import { WaveManager } from './WaveManager';
 import { PlayerStats, ItemDatabase, getItemKinds, type Item } from './ItemSystem';
+import { STARTING_CLASSES, type StartingClass } from './Classes';
 import { SaveManager } from './SaveManager';
 import { Input } from './Input';
 import { Renderer } from './Renderer';
@@ -41,7 +42,7 @@ import { MenuScene } from './scenes/MenuScene';
 //   'reward' — a "pick 1 of 3 artifacts" screen (treasure / elite / boss spoils)
 //   'rest'   — a campfire node: heal or upgrade
 export type GameState =
-  | 'menu' | 'playing' | 'shop' | 'paused' | 'gameover' | 'village'
+  | 'menu' | 'classselect' | 'playing' | 'shop' | 'paused' | 'gameover' | 'village'
   | 'map' | 'event' | 'reward' | 'rest' | 'levelup';
 
 export class Game {
@@ -62,6 +63,9 @@ export class Game {
   private safeAreaProbe: HTMLElement | null = null;
 
   state: GameState = 'menu';
+  // The starting class picked for the current run (class-select screen). Purely for
+  // reference/telemetry; the class's effects are baked into stats/items at run start.
+  private selectedClassId: string = 'gunner';
   // Tracks the state seen on the previous update tick, to detect screen changes
   // (used to disarm a held press so it can't carry a click into the new screen).
   private lastUpdateState: GameState = 'menu';
@@ -199,6 +203,12 @@ export class Game {
   private shotsFired: number = 0;                  // primary volleys fired while Pen Nib held
   private static readonly LOADED_SHOT_EVERY = 10;  // every Nth shot is loaded
   private static readonly LOADED_SHOT_MULT = 3;    // loaded shot damage multiplier
+
+  // Enemy armor penetration (see Player.takeDamage). Dodgeable ranged/AoE threats
+  // pierce half the player's armor so an armor-stack build can't chip them to ~1 HP;
+  // unavoidable contact hits pierce less. (Felix, 2026-07-05: ranged felt like 1 HP.)
+  private static readonly RANGED_ARMOR_PEN = 0.5;
+  private static readonly CONTACT_ARMOR_PEN = 0.25;
 
   // Stats
   kills: number = 0;
@@ -395,7 +405,7 @@ export class Game {
     const startBtn = document.getElementById('startBtn');
     if (startBtn) {
       startBtn.addEventListener('click', () => {
-        this.startNewGame();
+        this.openClassSelect();
       });
     }
 
@@ -419,7 +429,23 @@ export class Game {
     }
   }
 
+  /** Open the class-select screen (user-facing entry: menu button, retry, embark). */
+  openClassSelect(): void {
+    this.state = 'classselect';
+  }
+
+  /**
+   * Start a run directly with the default (Gunner) class. Kept as the stable entry
+   * point for headless QA and any caller that just wants a run — the class-select UI
+   * routes through openClassSelect() → beginRun() instead. Gunner has no start item
+   * and a neutral tilt, so this is identical to the pre-class default run.
+   */
   startNewGame(): void {
+    this.beginRun(STARTING_CLASSES[0]);
+  }
+
+  /** Build a fresh run and apply the chosen starting class, then open the map. */
+  beginRun(cls: StartingClass): void {
     SaveManager.clearRun();
 
     this.playerStats = new PlayerStats();
@@ -449,8 +475,10 @@ export class Game {
 
     const healthBonus = this.metaProgression.getStartingHealthBonus();
     if (healthBonus > 0) {
-      this.player.maxHealth += healthBonus;
-      this.player.health = this.player.maxHealth;
+      // Route into baseMaxHealth (what getMaxHealth reads) — refreshMaxHealth() below
+      // recomputes player.maxHealth from stats, so a direct player.maxHealth write here
+      // was silently discarded, making the purchased health upgrade a no-op.
+      this.playerStats.baseMaxHealth += healthBonus;
     }
 
     // Starting gold: 20g (can buy 1 cheap item immediately)
@@ -501,10 +529,46 @@ export class Game {
     this.artifacts.applyStatic(this.playerStats);
     this.mapSystem.reset();
     this.mapSystem.generateAct(1);
+
+    // Apply the chosen starting class LAST (after meta bonuses/artifacts), so the
+    // class's stat tilt layers on top and its start item is present before we lock
+    // in max health below.
+    this.applyClass(cls);
+
     this.refreshMaxHealth();
     this.pendingWaveArtifact = false;
 
     this.state = 'map';
+  }
+
+  /** Fold a starting class's weapon + stat tilt into the freshly-built run. */
+  private applyClass(cls: StartingClass): void {
+    if (!this.player) return;
+    this.selectedClassId = cls.id;
+    // Grant the class's starting weapon item (its weaponType sets the attack feel).
+    if (cls.startItemId) {
+      const item = ItemDatabase.getItemById(cls.startItemId);
+      if (item) this.playerStats.addItem(item);
+    }
+    // Stat tilt — multiplicative on the base stats, additive on health/armor/crit/gold.
+    if (cls.damageMult) this.player.stats.baseDamage *= cls.damageMult;
+    if (cls.fireRateMult) this.player.stats.baseFireRate *= cls.fireRateMult;
+    if (cls.speedMult) this.player.stats.baseSpeed *= cls.speedMult;
+    if (cls.critChanceBonus) this.player.stats.baseCritChance += cls.critChanceBonus;
+    if (cls.armorBonus) this.playerStats.metaArmor += cls.armorBonus;
+    if (cls.startGoldBonus) this.player.gold += cls.startGoldBonus;
+    // Health goes on baseMaxHealth (the source getMaxHealth reads) — refreshMaxHealth()
+    // runs right after applyClass and recomputes player.maxHealth from stats, so writing
+    // player.maxHealth directly here would be immediately overwritten. Floor at 1 so a
+    // negative glass-cannon tilt can never zero out the pool.
+    if (cls.maxHealthBonus) {
+      this.playerStats.baseMaxHealth = Math.max(1, this.playerStats.baseMaxHealth + cls.maxHealthBonus);
+    }
+  }
+
+  /** The class id chosen for the current run (QA/telemetry). */
+  getSelectedClassId(): string {
+    return this.selectedClassId;
   }
 
   /** Recompute the player's max health after an artifact changes it, granting the delta. */
@@ -650,6 +714,9 @@ export class Game {
         break;
       case 'rest':
         this.updateRest();
+        break;
+      case 'classselect':
+        this.updateClassSelect();
         break;
     }
   }
@@ -839,7 +906,7 @@ export class Game {
         // OPTIMIZATION: Use squared distance to avoid sqrt
         const distSq = (this.player.x - enemy.x) ** 2 + (this.player.y - enemy.y) ** 2;
         if (distSq < stompRadius * stompRadius) {
-          const damaged = this.player.takeDamage(enemy.typeData.damage * 1.5);
+          const damaged = this.player.takeDamage(enemy.typeData.damage * 1.5, Game.RANGED_ARMOR_PEN);
           if (damaged) {
             this.renderer.addHitFlash(0.6);
             // PERFORMANCE: Use pooled particles (quality-adjusted)
@@ -914,7 +981,7 @@ export class Game {
         // OPTIMIZATION: Use squared distance to avoid sqrt
         const distSq = (this.player.x - result.sporeCloud.x) ** 2 + (this.player.y - result.sporeCloud.y) ** 2;
         if (distSq < 80 * 80) {
-          const damaged = this.player.takeDamage(enemy.typeData.damage * 0.5);
+          const damaged = this.player.takeDamage(enemy.typeData.damage * 0.5, Game.RANGED_ARMOR_PEN);
           if (damaged) {
             this.renderer.addHitFlash(0.3);
           }
@@ -1010,7 +1077,7 @@ export class Game {
       enemy.contactCooldown -= dt;
       if (enemy.contactCooldown <= 0 && enemy.collidesWith(this.player.x, this.player.y, this.player.radius)) {
         enemy.contactCooldown = 0.8;
-        const damaged = this.player.takeDamage(enemy.typeData.damage);
+        const damaged = this.player.takeDamage(enemy.typeData.damage, Game.CONTACT_ARMOR_PEN);
         if (damaged) {
           this.applyThorns(enemy.typeData.damage, enemy);
           this.renderer.addHitFlash(0.5);
@@ -1181,7 +1248,7 @@ export class Game {
       } else {
         // Enemy projectile hits player
         if (segmentCircleHit(px0, py0, proj.x, proj.y, this.player.x, this.player.y, this.player.radius + proj.radius)) {
-          const damaged = this.player.takeDamage(proj.damage);
+          const damaged = this.player.takeDamage(proj.damage, Game.RANGED_ARMOR_PEN);
           if (damaged) {
             this.applyThorns(proj.damage);
             this.renderer.addHitFlash(0.4);
@@ -1679,7 +1746,7 @@ export class Game {
       }
       const dmg = zone.damageToPlayer(this.player.x, this.player.y, this.player.radius);
       if (dmg > 0) {
-        const damaged = this.player.takeDamage(dmg);
+        const damaged = this.player.takeDamage(dmg, Game.RANGED_ARMOR_PEN);
         if (damaged) {
           this.applyThorns(dmg);
           this.renderer.addHitFlash(0.5);
@@ -1850,6 +1917,60 @@ export class Game {
       this.renderer.drawText(item.rarity.toUpperCase(), x0 + cardW - s(12), y + s(isMobile ? 16 : 18), { size: s(7), align: 'right', color: rarityColor[item.rarity] || '#ffffff' });
       for (const [li, line] of this.wrapText(item.description, textW, bodyPx).entries()) {
         this.renderer.drawText(line, textX, y + s(isMobile ? 34 : 36) + li * (bodyPx + s(3)), { size: bodyPx, align: 'left', color: '#d8c9a8' });
+      }
+    });
+  }
+
+  // ==================== CLASS SELECT ====================
+  // Shown at the start of every run (startNewGame → 'classselect'). Picking a card
+  // calls beginRun(cls), which builds the run with that class's weapon + stat tilt.
+
+  /** Shared card layout so draw() visuals and update() hitboxes never drift apart. */
+  private classCardLayout() {
+    const { s, W } = this.screenScale();
+    const isMobile = this.screenScale().isMobile;
+    const cardW = Math.min(W - s(32), s(isMobile ? 340 : 460));
+    const cardH = s(isMobile ? 70 : 66);
+    const gap = s(12);
+    const x0 = (W - cardW) / 2;
+    const topY = s(isMobile ? 64 : 88);
+    return { s, W, isMobile, cardW, cardH, gap, x0, topY };
+  }
+
+  private updateClassSelect(): void {
+    if (!this.input.mouseDown) return;
+    const { cardW, cardH, gap, x0, topY } = this.classCardLayout();
+    const mx = this.input.mouseX, my = this.input.mouseY;
+    for (let i = 0; i < STARTING_CLASSES.length; i++) {
+      const y = topY + i * (cardH + gap);
+      if (pointInRect(mx, my, { x: x0, y, width: cardW, height: cardH })) {
+        this.input.mouseDown = false;
+        this.beginRun(STARTING_CLASSES[i]);
+        return;
+      }
+    }
+  }
+
+  private drawClassSelect(): void {
+    const ctx = this.renderer.getContext();
+    const { s, W, isMobile, cardW, cardH, gap, x0, topY } = this.classCardLayout();
+    this.paintBackdrop();
+
+    this.renderer.drawText('CHOOSE YOUR CLASS', W / 2, s(isMobile ? 26 : 34), { size: s(isMobile ? 14 : 20), align: 'center', color: '#ffd700' });
+    this.renderer.drawText('Your starting weapon & stat tilt for the run', W / 2, s(isMobile ? 26 : 34) + s(isMobile ? 16 : 20), { size: s(isMobile ? 8 : 9), align: 'center', color: '#c8b998' });
+
+    const bodyPx = s(isMobile ? 8 : 9);
+    const iconBox = s(isMobile ? 30 : 32);
+    const textX = x0 + s(12) + iconBox + s(8);
+    const textW = cardW - (textX - x0) - s(12);
+
+    STARTING_CLASSES.forEach((cls, i) => {
+      const y = topY + i * (cardH + gap);
+      drawPanel(ctx, x0, y, cardW, cardH, DARK_WOOD_THEME, 11 + i, 53);
+      this.renderer.drawText(cls.icon, x0 + s(12) + iconBox / 2, y + cardH / 2 + s(4), { size: iconBox, align: 'center', color: '#ffffff' });
+      this.renderer.drawText(cls.name, textX, y + s(isMobile ? 16 : 18), { size: s(isMobile ? 12 : 14), align: 'left', color: '#ffd700' });
+      for (const [li, line] of this.wrapText(cls.blurb, textW, bodyPx).entries()) {
+        this.renderer.drawText(line, textX, y + s(isMobile ? 32 : 34) + li * (bodyPx + s(3)), { size: bodyPx, align: 'left', color: '#d8c9a8' });
       }
     });
   }
@@ -2064,7 +2185,7 @@ export class Game {
       // OPTIMIZATION: Use squared distance to avoid sqrt
       const distSq = (this.player.x - enemy.x) ** 2 + (this.player.y - enemy.y) ** 2;
       if (distSq < 120 * 120) {
-        const damaged = this.player.takeDamage(enemy.typeData.damage * 0.8);
+        const damaged = this.player.takeDamage(enemy.typeData.damage * 0.8, Game.RANGED_ARMOR_PEN);
         if (damaged) {
           this.renderer.addHitFlash(0.4);
         }
@@ -2096,7 +2217,7 @@ export class Game {
       const distSqToPlayer = (this.player.x - enemy.x) ** 2 + (this.player.y - enemy.y) ** 2;
       const explodeRadiusSq = enemy.exploderExplodeRadius * enemy.exploderExplodeRadius;
       if (distSqToPlayer < explodeRadiusSq) {
-        const damaged = this.player.takeDamage(enemy.typeData.damage * 1.5);
+        const damaged = this.player.takeDamage(enemy.typeData.damage * 1.5, Game.RANGED_ARMOR_PEN);
         if (damaged) {
           this.renderer.addHitFlash(0.6);
         }
@@ -3610,7 +3731,7 @@ export class Game {
       this.gameOver();
     } else if (pointInRect(mx, my, rects[3])) {   // Restart Run
       this.input.mouseDown = false;
-      this.startNewGame();
+      this.openClassSelect();
     } else if (pointInRect(mx, my, rects[4])) {   // Main Menu (abandons the run)
       this.input.mouseDown = false;
       this.state = 'menu';
@@ -3627,7 +3748,7 @@ export class Game {
         input: this.input,
         audio: this.audio,
         meta: this.metaProgression,
-        onEmbark: () => this.startNewGame(),
+        onEmbark: () => this.openClassSelect(),
         onBack: () => { this.state = 'menu'; },
       });
     }
@@ -3656,7 +3777,7 @@ export class Game {
     const menuBtn = { x: this.canvas.width / 2 - buttonWidth / 2, y: startY + (buttonHeight + spacing) * 2, width: buttonWidth, height: buttonHeight };
 
     if (pointInRect(mouseX, mouseY, retryBtn) && this.input.mouseDown) {
-      this.startNewGame();
+      this.openClassSelect();
       this.input.mouseDown = false;
     }
 
@@ -3751,6 +3872,9 @@ export class Game {
         break;
       case 'rest':
         this.drawRest();
+        break;
+      case 'classselect':
+        this.drawClassSelect();
         break;
     }
     }

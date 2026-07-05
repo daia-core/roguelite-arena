@@ -65,9 +65,21 @@ const result = await page.evaluate(() => {
 
     const damage = s.baseDamage * prod('damageMultiplier') * specBonus
       * tf.damageMultiplier * du.damageMultiplier * s.artifactDamageMult * s.runtimeDamageMult;
-    const meleeDamageMult = prod('meleeDamageMult');
-    const rangedDamageMult = prod('rangedDamageMult');
+    // UNIVERSALITY (2026-07-05): each damage-type mult keeps its own bonus and bleeds
+    // CROSS_TYPE_BLEED of the OTHER type's bonus above baseline. Mirror the getters.
+    const BLEED = s.constructor.CROSS_TYPE_BLEED;
+    const rawMelee = prod('meleeDamageMult');
+    const rawRanged = prod('rangedDamageMult');
+    const meleeDamageMult = rawMelee * (1 + (rawRanged - 1) * BLEED);
+    const rangedDamageMult = rawRanged * (1 + (rawMelee - 1) * BLEED);
     const meleeDamage = damage * meleeDamageMult;
+    // getFireRate now also bleeds in swing-cooldown items (melee attack-speed helps the gun).
+    const swingCd = prod('swingCooldownMult');
+    let fireRate = s.baseFireRate * prod('fireRateMultiplier');
+    if (swingCd !== 1) fireRate /= 1 + (swingCd - 1) * BLEED;
+    fireRate *= tf.fireRateMultiplier * du.fireRateMultiplier * s.artifactFireRateMult * s.runtimeFireRateMult;
+    const piercing = sum('piercing') + du.piercing;
+    const multishot = sum('multishot');
 
     return {
       getDamage: damage,
@@ -76,7 +88,7 @@ const result = await page.evaluate(() => {
       getElementalDamageMult: prod('elementalDamageMult'),
       getMeleeDamage: meleeDamage,
       getRangedDamage: damage * rangedDamageMult,
-      getFireRate: s.baseFireRate * prod('fireRateMultiplier') * tf.fireRateMultiplier * du.fireRateMultiplier * s.artifactFireRateMult * s.runtimeFireRateMult,
+      getFireRate: fireRate,
       getSpeed: Math.min(s.baseSpeed * prod('speedMultiplier') * tf.speedMultiplier * du.speedMultiplier * s.artifactSpeedMult, s.maxSpeed),
       getMaxHealth: Math.max(1, s.baseMaxHealth + sum('maxHealthBonus') + tf.maxHealthBonus + s.artifactMaxHealthBonus),
       getCritChance: Math.min(1, s.baseCritChance + sum('critChance') + tf.critChance + du.critChance + s.artifactCritChanceBonus),
@@ -100,10 +112,10 @@ const result = await page.evaluate(() => {
       getWoundChance: Math.min(1, sum('wound')),
       getMulticastChance: Math.min(0.9, sum('multicast')),
       getRerollDiscount: Math.min(0.9, sum('rerollDiscount')),
-      getShopDiscount: Math.min(0.5, sum('shopDiscount') + tf.shopDiscount),
+      getShopDiscount: Math.min(0.3, sum('shopDiscount') + tf.shopDiscount),
       getRecycleBonus: Math.min(s.constructor.RECYCLE_CAP, sum('recycleBonus')),
       getInterestBonus: Math.min(0.4, sum('interestBonus')),
-      getLuck: Math.min(2.0, sum('luck')),
+      getLuck: Math.min(1.0, sum('luck')),
       hasExplosionOnHit: any('explosionOnHit'),
       hasShield: any('shield'),
       hasHoming: any('homing'),
@@ -114,8 +126,8 @@ const result = await page.evaluate(() => {
       hasAuxMelee: any('auxMelee'),
       getAuxMeleeDamage: meleeDamage * 1.1 * prod('auxMeleeDamageMult'),
       getSwingDamage: meleeDamage * (0.6 * prod('swingDamageMult') * prod('auxMeleeDamageMult')),
-      getSwingRange: 70 + sum('swingRangeBonus'),
-      getSwingArc: Math.min(Math.PI*0.7 + sum('swingArcBonus'), Math.PI*2),
+      getSwingRange: 70 + sum('swingRangeBonus') + piercing * 12,
+      getSwingArc: Math.min(Math.PI*0.7 + sum('swingArcBonus') + multishot * (Math.PI*0.06), Math.PI*2),
       getSwingInterval: 0.85 * prod('swingCooldownMult'),
       getAoeRadiusMult: prod('aoeRadiusMult'),
       getSwingAoe: sum('swingAoe') * prod('aoeRadiusMult'),

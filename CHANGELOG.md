@@ -8,6 +8,46 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-05 (night) — BIG COMBAT UPDATE: classes, tougher enemies, weapon feel, universal items
+
+The largest gameplay pass in a while — four connected changes to how a run starts, how enemies
+pressure you, how each weapon type feels, and how items reward every build.
+
+- **Pick a class when a run begins.** Every new run now opens a **CHOOSE YOUR CLASS** screen with
+  four starting loadouts, Brotato-style — a starting weapon feel plus a stat tilt, not a cage (the
+  run's items still define you). **Gunner** 🔫 (balanced auto-aim, no start weapon — identical to
+  the old default run), **Ranger** 🎯 (Scatter Gun start, faster & more mobile), **Brawler** 🗡️
+  (**pure melee — no gun**, heavy swing, +40 HP & +12 armor, closes distance), **Arcanist** ⚡
+  (piercing Beam Rifle, +15% damage glass cannon at 80 HP). Picking a class is one tap; the run
+  builds with that loadout.
+- **Enemies hit far harder.** Enemy **health scaled up substantially** (deep-wave trash now reads
+  as a real threat instead of confetti) and — the big fix — **enemy projectiles and contact no
+  longer chip for 1 HP.** Root cause: your armor is percentage mitigation, and a stacked armor
+  build floored every incoming hit to the 1-HP minimum. Enemy ranged/AoE now **pierce 50% of your
+  armor** and contact **25%**, so a swarm actually drains you — armor still matters, it's no longer
+  an on/off immunity switch.
+- **Every weapon type has its own feel.** The **melee** weapon type now genuinely **suppresses the
+  gun** (a Brawler fights in melee, doesn't quietly plink a pistol too). **Orbital** was rebuilt
+  from a placeholder into a real spinning radial burst that scales with multishot and pierces.
+- **No more dead item picks.** Damage, reach and attack-speed items now **cross-map between melee
+  and ranged**: a "+50% ranged damage" item still lifts your melee swing (at half value), a melee
+  "attack speed" item still quickens your gun, ranged **piercing lengthens your swing** and
+  **multishot widens** it. Every stat item now helps every build.
+
+Also fixed two latent bugs found during QA: the **purchased "starting health" meta-upgrade was a
+no-op** (a direct `maxHealth` write was overwritten by the stats recompute — now routed correctly),
+and the class health tilt would have hit the same trap.
+
+**Commit `PENDING`** · live-verified `PENDING` (HTTP 200, mobile 390×844). QA: new
+`qa-classselect.mjs` **21/21** on the shipped `dist` (each class grants the right weapon + stat
+tilt and lands in the map; Brawler's gun is suppressed while Gunner fires; Brawler 140 HP / Gunner
+100 / Arcanist 80; item cross-bleed proven: a ranged-damage item lifts melee damage and vice-versa)
+plus `qa-armor-damage.mjs` (67 HP lost over 10s at +15 armor = real ranged pressure restored) and
+the full regression suite green (roguelite, flood, new-enemies, melee-stack, stacking-weapons,
+**stats-parity 257/257** after mirroring the new universality math + two stale caps, synergy,
+triggered-items, status-engines, warchest, levelup, village). Mobile class-select screenshot
+reviewed. Zero console/page errors.
+
 ## 2026-07-05 (evening) — feature: WAR CHEST — a wave-end gold engine
 
 - **New item: War Chest 💰** (rare, 60 gold) — **at the end of every wave, bank gold equal to

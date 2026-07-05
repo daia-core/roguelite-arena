@@ -53,7 +53,7 @@ const res = await page.evaluate(async () => {
   g.player.stats.baseDamage = 0;
   let contacts = 0, rawAmounts = [];
   const origTake = g.player.takeDamage.bind(g.player);
-  g.player.takeDamage = (amt) => { rawAmounts.push(amt); const d = origTake(amt); if (d) contacts++; return d; };
+  g.player.takeDamage = (amt, ...rest) => { rawAmounts.push(amt); const d = origTake(amt, ...rest); if (d) contacts++; return d; };
 
   // Let one wave spawn a swarm.
   for (let i = 0; i < 3 * 60; i++) { if (g.projectiles) g.projectiles.length = 0; g.update(dt); }

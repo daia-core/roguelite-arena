@@ -455,14 +455,25 @@ export class PlayerStats {
   }
 
   // ---- Per-damage-type multipliers (layer on top of getDamage) ----
-  // Each is the product of the matching item field, defaulting to 1 when no item
-  // carries it — so builds without type items behave exactly as before.
+  // UNIVERSALITY (Felix, 2026-07-05: "no items should be useless for some weapons").
+  // A "+50% melee dmg" item shouldn't be a dead pick on a gun build, and vice-versa.
+  // So each type multiplier keeps its FULL value for its own weapon and BLEEDS a
+  // fraction of the OTHER type's bonus into itself. The specialisation still matters
+  // (own-type is stronger), but every damage item helps every build.
+  static readonly CROSS_TYPE_BLEED = 0.5; // an off-type dmg item pays out at half
+
   getMeleeDamageMult(): number {
-    return Math.min(PlayerStats.SANITY_MULT_CAP, this.ensureAgg().meleeDamageMult);
+    const a = this.ensureAgg();
+    // full melee bonus + half of the ranged bonus above baseline
+    const mult = a.meleeDamageMult * (1 + (a.rangedDamageMult - 1) * PlayerStats.CROSS_TYPE_BLEED);
+    return Math.min(PlayerStats.SANITY_MULT_CAP, mult);
   }
 
   getRangedDamageMult(): number {
-    return Math.min(PlayerStats.SANITY_MULT_CAP, this.ensureAgg().rangedDamageMult);
+    const a = this.ensureAgg();
+    // full ranged bonus + half of the melee bonus above baseline
+    const mult = a.rangedDamageMult * (1 + (a.meleeDamageMult - 1) * PlayerStats.CROSS_TYPE_BLEED);
+    return Math.min(PlayerStats.SANITY_MULT_CAP, mult);
   }
 
   getElementalDamageMult(): number {
@@ -480,8 +491,15 @@ export class PlayerStats {
   }
 
   getFireRate(): number {
+    const a = this.ensureAgg();
     let rate = this.baseFireRate;
-    rate *= this.ensureAgg().fireRateMult;
+    rate *= a.fireRateMult;
+    // UNIVERSALITY: swing-speed items (swingCooldownMult < 1 = faster swings) also
+    // quicken the gun by half their effect — a melee "attack speed" item isn't a dead
+    // pick on a gun build. (>1, a heavy/slow weapon, gently slows the gun the same way.)
+    if (a.swingCooldownMult !== 1) {
+      rate /= 1 + (a.swingCooldownMult - 1) * PlayerStats.CROSS_TYPE_BLEED;
+    }
     // TRANSFORMATION BONUS
     rate *= this.transformations.getTotalBonuses().fireRateMultiplier;
     // DUO COMBO BONUS
@@ -1011,19 +1029,28 @@ export class PlayerStats {
   /** Swing damage — 60% of melee damage baseline, ramped by swing/aux-melee items. */
   getSwingDamage(): number {
     const a = this.ensureAgg();
-    // baseline 0.6 (the free swing is a light default) × swing items × legacy aux-melee items
+    // baseline 0.6 (the free swing is a light default) × swing items × legacy aux-melee items.
+    // getMeleeDamage() already bleeds in ranged-damage items (CROSS_TYPE_BLEED), so a pure
+    // gun build still feels its damage items on the always-on swing — no dead picks.
     const mult = 0.6 * a.swingDamageMult * a.auxMeleeDamageMult;
     return this.getMeleeDamage() * mult;
   }
 
-  /** Swing reach in px (base 70 + item bonuses). */
+  /** Swing reach in px (base 70 + swing items + a slice of ranged reach items). */
   getSwingRange(): number {
-    return 70 + this.ensureAgg().swingRangeBonus;
+    const a = this.ensureAgg();
+    // UNIVERSALITY: piercing (a ranged stat) also lengthens the swing — a ranged-reach
+    // build gets a longer melee arc too, so piercing items aren't dead on a swing build.
+    return 70 + a.swingRangeBonus + this.getPiercing() * 12;
   }
 
   /** Swing arc width in radians (base ~126°, widened by items, capped at full circle). */
   getSwingArc(): number {
-    return Math.min(Math.PI * 0.7 + this.ensureAgg().swingArcBonus, Math.PI * 2);
+    const a = this.ensureAgg();
+    // UNIVERSALITY: multishot (a ranged stat) also widens the swing — a multishot/spread
+    // build sweeps a bigger arc, so those items help a melee build too.
+    const multishotArc = a.multishot * (Math.PI * 0.06);
+    return Math.min(Math.PI * 0.7 + a.swingArcBonus + multishotArc, Math.PI * 2);
   }
 
   /** Seconds between swings (base 0.85s, scaled by cooldown items). */
