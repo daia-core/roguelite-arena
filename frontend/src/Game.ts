@@ -29,7 +29,7 @@ import { DUO_COMBOS } from './DuoSystem';
 import { UISprites } from './UISprites';
 import { MapSystem, nodeIcon, nodeLabel, serializeMap, deserializeMap, type NodeType } from './MapSystem';
 import { ArtifactSystem, ARTIFACTS, ROLLABLE_ARTIFACTS, getArtifactById, type Artifact } from './ArtifactSystem';
-import { randomEvent, EVENTS, type GameEvent, type EventEffect } from './EventSystem';
+import { randomEvent, EVENTS, type GameEvent, type EventEffect, type EventOption } from './EventSystem';
 import { EvolutionSystem, type Evolution } from './EvolutionSystem';
 import { VillageScene } from './VillageScene';
 import type { Scene } from './scenes/Scene';
@@ -3332,9 +3332,7 @@ export class Game {
       for (let i = 0; i < ev.options.length; i++) {
         if (pointInRect(mx, my, rects[i])) {
           this.input.mouseDown = false;
-          const opt = ev.options[i];
-          for (const eff of opt.effects) this.applyEventEffect(eff);
-          this.eventResultText = opt.result;
+          this.applyEventOption(ev.options[i]);
           return;
         }
       }
@@ -3353,6 +3351,22 @@ export class Game {
       }
     }
     void H;
+  }
+
+  /** Apply a chosen event option's effects and set the result text.
+   *  Devil-deal integrity: a pact's boon is PRICED by a permanent curse. If the player
+   *  already bears that curse (a recurring devil event drawn again), the price is already
+   *  paid — handing out the boon a second time for free would let a run farm boons and gut
+   *  the "permanent price" risk axis. So an already-held-curse pact grants nothing. */
+  private applyEventOption(opt: EventOption): void {
+    const curseEff = opt.effects.find(e => e.kind === 'curse');
+    if (curseEff && curseEff.kind === 'curse' && this.artifacts.has(curseEff.id)) {
+      this.eventReward = null;
+      this.eventResultText = 'You already bear this mark. The devil has nothing left to sell you.';
+      return;
+    }
+    for (const eff of opt.effects) this.applyEventEffect(eff);
+    this.eventResultText = opt.result;
   }
 
   private applyEventEffect(effect: EventEffect): void {

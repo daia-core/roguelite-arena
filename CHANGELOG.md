@@ -8,6 +8,28 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-05 — fix: devil deals can no longer be farmed for free boons
+
+- **Closed a devil-deal exploit.** Each pact welds a strong boon to a **permanent curse**.
+  Curses dedupe (you can only carry one copy), so if a recurring `?` event drew the **same**
+  pact again, taking it re-granted the **boon for free** — the curse no-op'd but the artifact /
+  gold / max-HP still landed. Over a long run you could farm boons off a price you'd already
+  paid once, which quietly defeated the whole "permanent price" risk axis.
+- **The fix:** a pact whose curse you **already bear** now grants **nothing** — it shows
+  *"You already bear this mark. The devil has nothing left to sell you."* instead of paying out.
+  Taking a pact the **first** time is unchanged (full boon + curse), and a **different** pact
+  (a curse you don't yet hold) still works — so a genuinely new price still buys a genuinely new
+  boon. Non-devil events are untouched (they carry no curse).
+- **Under the hood:** extracted option-application into `applyEventOption()` (the click handler
+  now calls it), so the integrity guard lives in one testable place instead of inline in the UI
+  loop. Pure fix — **zero new content** (content budget untouched).
+
+**QA:** `qa-devildeal.mjs` extended with 3 checks that drive the real `applyEventOption` path —
+first pact pays the boon, a second identical pact pays nothing, and the refusal message fires.
+**21/21** devil-deal checks pass; full `tsc` typecheck + main regression clean, 0 console errors.
+
+**Commit `PENDING`** · live-verified `PENDING`.
+
 ## 2026-07-04 (evening) — feature: PEN NIB — every 10th shot is a loaded shot
 
 - **New item: Pen Nib 🎯** (epic, 55 gold) — while held, **every 10th primary shot is a

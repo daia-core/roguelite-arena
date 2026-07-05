@@ -135,6 +135,21 @@ const result = await page.evaluate(() => {
   const afterSecond = g.artifacts.held.filter(a => a.id === 'curse_sloth').length;
   out.curseIdempotent = afterFirst === 1 && afterSecond === 1;
 
+  // === 7. No free-boon double-dip: re-taking a pact whose curse is already held
+  //        (a recurring devil event) grants NOTHING — the price is already paid. This
+  //        drives the real applyEventOption() path the click handler uses, not just
+  //        applyEventEffect, so it exercises the actual integrity guard. ===
+  fresh();
+  const slothOpt = devilBargain.options.find(o => o.effects.some(f => f.kind === 'curse' && f.id === 'curse_sloth'));
+  const dd0 = g.player.gold;
+  g.applyEventOption(slothOpt);                 // first pact: +120 gold, take curse_sloth
+  const ddGold1 = g.player.gold, ddHeld1 = g.artifacts.has('curse_sloth');
+  g.applyEventOption(slothOpt);                 // recurrence: curse already held → refused
+  const ddGold2 = g.player.gold;
+  out.pactFirstPaysBoon = ddGold1 === dd0 + 120 && ddHeld1 === true;
+  out.pactNoDoubleDip = ddGold2 === ddGold1;    // no second +120
+  out.pactRefusalMessaged = typeof g.eventResultText === 'string' && /already bear this mark/i.test(g.eventResultText);
+
   return out;
 });
 
@@ -167,7 +182,7 @@ console.log('Screenshots →', OUT);
 const checks = ['cursesExist','cursesFlagged','cursesHaveMalus','devilEventsExist','devilHasWalkAway',
   'devilHasCurseOption','cursesNotInRandomPool','frailtyHeld','frailtyBoonAlso','frailtyIncomingMalus',
   'slothGold','slothHeld','slothSpeedMalus','dullnessMaxHp','dullnessHeld','dullnessFireMalus',
-  'walkAwayNoGrant','curseIdempotent'];
+  'walkAwayNoGrant','curseIdempotent','pactFirstPaysBoon','pactNoDoubleDip','pactRefusalMessaged'];
 const pass = result && !result.fatal && checks.every(k => result[k] === true) && errors.length === 0;
 console.log(`\n${checks.filter(k => result && result[k] === true).length}/${checks.length} checks passed`);
 console.log('RESULT:', pass ? 'PASS ✅' : 'FAIL ❌');
