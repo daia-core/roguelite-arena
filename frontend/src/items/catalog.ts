@@ -3068,6 +3068,7 @@ export const ITEM_CATALOG: Item[] = [
       icon: '🍀',
       unlocked: true,
       tags: ['elemental'],
+      slot: 'amulet', // build-defining proc-luck keystone — one at a time
       fourleafCharm: true
     },
     {
@@ -3080,6 +3081,7 @@ export const ITEM_CATALOG: Item[] = [
       icon: '👻',
       unlocked: true,
       tags: ['economic'],
+      slot: 'amulet', // run-long on-kill snowball keystone — one at a time
       soulTithe: true
     },
     {
@@ -3092,6 +3094,7 @@ export const ITEM_CATALOG: Item[] = [
       icon: '🗡️',
       unlocked: true,
       tags: ['ranged'],
+      // trinket (stacks): daggerCount accumulates per copy — buying more = more daggers, so it must remain unlimited-stack
       ceremonialDaggers: 3
     },
     {

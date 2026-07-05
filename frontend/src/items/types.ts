@@ -50,6 +50,25 @@ export function getItemKinds(item: Item): ItemKind[] {
   return kinds;
 }
 
+// Resolve an item's equipment slot. Uses the explicit `slot` field when the item
+// declares one (the amulet keystones do); otherwise infers from mechanics:
+//   • a melee or laser weaponType is a committed, "big" weapon → two-hand
+//   • any other weaponType (shotgun, orbital, one-hand blade) → one-hand
+//   • a pure shield item → offhand
+//   • everything else → trinket (unlimited stacking, no equip)
+// Kept pure + dependency-free so both the runtime and QA can call it.
+export function classifyItemSlot(item: Item): EquipSlot {
+  if (item.slot) return item.slot;
+  if (item.weaponType) {
+    // melee and laser are the heavy, defining weapons → two-hand.
+    if (item.weaponType === 'melee' || item.weaponType === 'laser') return 'weapon-2h';
+    return 'weapon-1h';
+  }
+  // A shield with no other build-defining weapon role is an off-hand.
+  if (item.shield) return 'offhand';
+  return 'trinket';
+}
+
 // Weapon attack patterns (Brotato-inspired)
 export type WeaponType =
   | 'auto-aim' // Default: auto-aim bullets
@@ -68,6 +87,18 @@ export type WeaponType =
 //   slam   — an overhead smash onto a circular zone out front (hammers/mauls).
 export type MeleeStyle = 'arc' | 'thrust' | 'spin' | 'slam';
 
+// EQUIPMENT SLOTS (2026-07-05 rework). Gear is now a limited build decision, not a
+// passive stat-pile. Every item resolves to exactly one EquipSlot:
+//   weapon-1h — a one-hand weapon; fills Weapon A OR B (you can run two).
+//   weapon-2h — a two-hand weapon; fills BOTH weapon slots at once.
+//   offhand   — a shield / off-hand (does not block a two-hand weapon).
+//   amulet    — a single build-defining keystone (one at a time).
+//   trinket   — everything else: unlimited stacking, never equipped, no slot.
+// The field is optional on the data so the catalog doesn't need every entry hand-
+// tagged; classifyItemSlot() infers a sensible slot from the item's mechanics when
+// `slot` is absent. Only the amulet keystones are hand-promoted via `slot: 'amulet'`.
+export type EquipSlot = 'weapon-1h' | 'weapon-2h' | 'offhand' | 'amulet' | 'trinket';
+
 export interface Item {
   id: string;
   name: string;
@@ -78,6 +109,10 @@ export interface Item {
   icon: string;
   unlocked: boolean;
   tags: ItemTag[]; // For synergy detection and affinity system
+
+  // EQUIPMENT SLOT (optional; classifyItemSlot infers it when absent). Set explicitly
+  // only to override the inferred slot — e.g. promoting a keystone to 'amulet'.
+  slot?: EquipSlot;
 
   // Weapon system (Brotato-inspired)
   weaponType?: WeaponType; // Changes attack behavior

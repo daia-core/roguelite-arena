@@ -5,13 +5,13 @@
 import { TransformationTracker } from './TransformationSystem';
 import { DuoTracker, DUO_COMBOS, type DuoCombo } from './DuoSystem';
 import type { DamageType } from './Projectile';
-import { ItemTier, getItemKinds, type Item, type ItemTag, type ItemKind, type WeaponType, type MeleeStyle, type Weapon } from './items/types';
+import { ItemTier, getItemKinds, classifyItemSlot, type Item, type ItemTag, type ItemKind, type WeaponType, type MeleeStyle, type Weapon, type EquipSlot } from './items/types';
 import { ITEM_CATALOG } from './items/catalog';
 
 // Re-export the item types from their new home so every existing importer
 // (Game.ts, Player.ts, ArtifactSystem.ts, …) keeps working unchanged.
-export { ItemTier, getItemKinds };
-export type { Item, ItemTag, ItemKind, WeaponType, Weapon };
+export { ItemTier, getItemKinds, classifyItemSlot };
+export type { Item, ItemTag, ItemKind, WeaponType, Weapon, EquipSlot };
 
 export class ItemDatabase {
   // The full roster now lives in ./items/catalog.ts (pure data). ItemDatabase operates on it.
@@ -76,21 +76,19 @@ export class ItemDatabase {
       playerItems.filter(i => !this.itemStacks(i)).map(i => i.id)
     );
 
-    // WEAPON LOCK: a weaponType item REPLACES the active firing style (getWeaponType
-    // picks the first weapon), so offering one to a player who's already committed to a
-    // build silently destroys their weapon when they buy what looks like an upgrade.
-    // Once the player owns a weapon, OR has invested in the default auto-aim gun
-    // (multishot / piercing / homing), never offer another weaponType item again — you
-    // pick your weapon once, and no purchase can take it from you.
-    const weaponCommitted =
-      playerItems.some(i => i.weaponType) ||
-      playerItems.some(i => i.multishot || i.piercing || i.homing);
+    // SLOT REWORK (2026-07-05): weapons are now equipment that lives in weapon slots.
+    // Buying a weapon when the slots are full AUTO-SWAPS the old one into the stash
+    // (never destroys it), so — unlike the old model — it's safe and intended to keep
+    // offering DIFFERENT weapons: that's the buy-to-swap build decision Felix asked for.
+    // `nonStackOwned` already stops us re-offering a weapon you already hold (weapons
+    // don't stack), so we only ever surface a genuinely different weapon to swap toward.
+    // (Phase 3 will add slot-frequency awareness so we don't over-offer weapons once
+    // both slots are committed; for now the tier/weighting mix keeps them in proportion.)
 
     // Get tier-appropriate items for this wave (owned non-stacking items filtered out)
     const getWaveAppropriteItems = (): Item[] => {
       return this.getUnlockedItems().filter(item => {
         if (nonStackOwned.has(item.id)) return false; // already own it and a dupe is useless
-        if (weaponCommitted && item.weaponType) return false; // never swap a committed weapon
         if (stats && stats.isItemFullyCapped(item)) return false; // every stat it grants is already maxed
 
         if (wave <= 2) return item.tier === ItemTier.Common;
@@ -264,9 +262,34 @@ function freshAgg(): ItemAgg {
   };
 }
 
+// The four equipment slots. weaponA/weaponB hold one-hand weapons (or a two-hand
+// weapon fills weaponA while weaponB is null and blocked); offhand is a shield;
+// amulet is a single keystone. `null` = empty slot.
+export type EquipSlots = {
+  weaponA: Item | null;
+  weaponB: Item | null;
+  offhand: Item | null;
+  amulet: Item | null;
+};
+
 // Player stats calculated from items with affinity system
 export class PlayerStats {
+  // items[] is the AGGREGATION source of truth: every item ACTIVE on the player
+  // (all equipped slots + every trinket). The equipment/stash/trinket structures
+  // below are an admission-control layer over ownership that decides what may be
+  // active at once — they always stay in sync with items[] via the equip helpers,
+  // so all the existing getters/aggregation keep working unchanged.
   items: Item[] = [];
+
+  // ---- EQUIPMENT LAYER (2026-07-05 slot rework) ----
+  equipment: EquipSlots = { weaponA: null, weaponB: null, offhand: null, amulet: null };
+  // Run-only inventory for displaced / speculative equipment. Capped so decisions
+  // stay tight and the mobile inventory strip doesn't bloat. Trinkets never go here.
+  stash: Item[] = [];
+  static readonly STASH_CAP = 8;
+  // Trinkets: unlimited stacking stat/effect items. Mirrored into items[] (active).
+  trinkets: Item[] = [];
+
   affinityTags: ItemTag[] = []; // Character affinity (2 random tags at start)
   transformations: TransformationTracker = new TransformationTracker(); // TRANSFORMATION SYSTEM
   duos: DuoTracker = new DuoTracker(); // DUO COMBO SYSTEM
@@ -418,26 +441,152 @@ export class PlayerStats {
     this.affinityTags = shuffled.slice(0, 2);
   }
 
-  addItem(item: Item): { newDuos: any[]; newTransformations: any[] } {
-    this.items.push(item);
+  // ==================== EQUIPMENT LAYER ====================
+  // items[] must always equal (equipped slots) + trinkets. Rebuild it from those
+  // sources after any structural change, then refresh the memoized aggregation and
+  // the duo/transformation trackers (which read items[]). One choke-point keeps the
+  // invariant impossible to break.
+  private rebuildActiveItems(): DuoCombo[] {
+    const eq = this.equipment;
+    this.items = [eq.weaponA, eq.weaponB, eq.offhand, eq.amulet]
+      .filter((i): i is Item => i !== null)
+      .concat(this.trinkets);
     this.invalidateAgg();
-    // Track for transformations
-    const transformationId = this.transformations.trackItemPickup(item.tags);
-    const newTransformations = transformationId ? [transformationId] : [];
-    // Track for duo combos
-    const newDuos = this.duos.updateDuos(this.items);
-    // Return newly unlocked combos for Game.ts to show effects/UI
-    return { newDuos, newTransformations };
+    // updateDuos is state-marking (returns only NEWLY activated combos and mutates
+    // its active set), so it must run EXACTLY ONCE per structural change. Callers that
+    // need the fanfare list (addItem) use this return; removal paths ignore it but the
+    // call still correctly deactivates duos whose items left.
+    return this.duos.updateDuos(this.items);
   }
 
+  /**
+   * Buy/acquire an item — the single routing entry point. Classifies the item's slot
+   * and either stacks it as a trinket or equips it (auto-swapping a full slot's
+   * occupant into the stash; if the stash is full, the displaced item is returned as
+   * `overflow` for the caller to sell/refund). Two-hand weapons fill both weapon slots.
+   * Returns duo/transformation unlocks (unchanged shape) plus what it did.
+   */
+  addItem(item: Item): {
+    newDuos: any[];
+    newTransformations: any[];
+    slot: EquipSlot;
+    displaced: Item[];   // items pushed to the stash to make room
+    overflow: Item | null; // an item that couldn't fit the stash (caller should sell it)
+  } {
+    const slot = classifyItemSlot(item);
+    const displaced: Item[] = [];
+    let overflow: Item | null = null;
+
+    if (slot === 'trinket') {
+      this.trinkets.push(item);
+    } else {
+      // Determine which concrete slots this item occupies, and free them into the stash.
+      const toStash = (occupant: Item | null) => {
+        if (!occupant) return;
+        if (this.stash.length < PlayerStats.STASH_CAP) {
+          this.stash.push(occupant);
+          displaced.push(occupant);
+        } else {
+          overflow = occupant; // no room — caller refunds it
+        }
+      };
+      const eq = this.equipment;
+      if (slot === 'weapon-2h') {
+        toStash(eq.weaponA);
+        toStash(eq.weaponB);
+        eq.weaponA = item;
+        eq.weaponB = null; // two-hand blocks the second weapon slot
+      } else if (slot === 'weapon-1h') {
+        // A two-hand weapon currently occupies weaponA and blocks weaponB — displace it.
+        if (eq.weaponA && classifyItemSlot(eq.weaponA) === 'weapon-2h') {
+          toStash(eq.weaponA);
+          eq.weaponA = null;
+        }
+        if (!eq.weaponA) eq.weaponA = item;
+        else if (!eq.weaponB) eq.weaponB = item;
+        else { toStash(eq.weaponA); eq.weaponA = item; } // both full → swap the A slot
+      } else if (slot === 'offhand') {
+        toStash(eq.offhand);
+        eq.offhand = item;
+      } else if (slot === 'amulet') {
+        toStash(eq.amulet);
+        eq.amulet = item;
+      }
+    }
+
+    const newDuos = this.rebuildActiveItems();
+    // Track for transformations (only for the newly acquired item)
+    const transformationId = this.transformations.trackItemPickup(item.tags);
+    const newTransformations = transformationId ? [transformationId] : [];
+    return { newDuos, newTransformations, slot, displaced, overflow };
+  }
+
+  /**
+   * Remove an item wherever it lives (an equipped slot, the trinket pile, or the
+   * stash) by object identity first, falling back to id. Returns the removed item.
+   * Used by sell/recycle. When removing an ACTIVE item the active set is rebuilt.
+   */
   removeItem(itemId: string): Item | null {
-    const index = this.items.findIndex(item => item.id === itemId);
-    if (index !== -1) {
-      const [removed] = this.items.splice(index, 1);
-      this.invalidateAgg();
+    // Equipped slots (identity by id — one per slot).
+    const eq = this.equipment;
+    for (const key of ['weaponA', 'weaponB', 'offhand', 'amulet'] as const) {
+      const occ = eq[key];
+      if (occ && occ.id === itemId) {
+        eq[key] = null;
+        this.rebuildActiveItems();
+        return occ;
+      }
+    }
+    // Trinkets (remove one copy).
+    const ti = this.trinkets.findIndex(i => i.id === itemId);
+    if (ti !== -1) {
+      const [removed] = this.trinkets.splice(ti, 1);
+      this.rebuildActiveItems();
+      return removed;
+    }
+    // Stash (inactive — no rebuild needed).
+    const si = this.stash.findIndex(i => i.id === itemId);
+    if (si !== -1) {
+      const [removed] = this.stash.splice(si, 1);
       return removed;
     }
     return null;
+  }
+
+  /** Move an equipped item to the stash, freeing its slot (no gold change). No-op if
+   *  the stash is full. Returns true if it moved. */
+  unequipToStash(slotKey: keyof EquipSlots): boolean {
+    const occ = this.equipment[slotKey];
+    if (!occ) return false;
+    if (this.stash.length >= PlayerStats.STASH_CAP) return false;
+    this.equipment[slotKey] = null;
+    this.stash.push(occ);
+    this.rebuildActiveItems();
+    return true;
+  }
+
+  /** Equip a stashed item into its slot, swapping any current occupant back to the
+   *  stash. Returns true on success. */
+  equipFromStash(stashIndex: number): boolean {
+    const item = this.stash[stashIndex];
+    if (!item) return false;
+    this.stash.splice(stashIndex, 1);
+    // Route it through addItem so slot logic + swap-to-stash is identical to a buy.
+    // (addItem may push the current occupant to stash; that's the intended swap.)
+    this.addItem(item);
+    return true;
+  }
+
+  /** All owned equipment currently sitting in the stash (for the UI). */
+  getStash(): Item[] { return this.stash; }
+
+  /** Snapshot of the four equipment slots (for the UI). */
+  getEquipment(): EquipSlots { return this.equipment; }
+
+  /** Whether a two-hand weapon is occupying the weapon slots (blocks weaponB). */
+  hasTwoHandEquipped(): boolean {
+    return this.equipment.weaponA !== null
+      && classifyItemSlot(this.equipment.weaponA) === 'weapon-2h';
   }
 
   getDamage(): number {

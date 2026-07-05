@@ -2692,8 +2692,11 @@ export class Game {
     const buttonBandCss =
       buttonHeightCss * 2 + buttonSpacingCss + bottomMarginCss + gridToButtonGapCss;
 
-    // Top of the card grid, below the title/gold/stats header.
-    const gridTopCss = isMobile ? 110 : 120;
+    // Top of the card grid, below the title/gold/stats header. On mobile the equipment
+    // strip (4 slot boxes) sits under the stats panel (which ends at CSS ~102), so the grid
+    // must start below it — otherwise the strip overlaps the first card. Desktop has the
+    // strip in the left rail, so its grid top is unaffected.
+    const gridTopCss = isMobile ? 144 : 120;
 
     const preferredItemHeightCss = isPortrait ? 92 : isMobile ? 100 : 150;
     const minItemHeightCss = isMobile ? 34 : 70;

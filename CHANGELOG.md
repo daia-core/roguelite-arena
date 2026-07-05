@@ -8,6 +8,40 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-05 (night) — Equipment slots & trinket box (Phase 1: model + UI)
+
+Shopping is becoming a **build decision**, not a stat-pile. Items now split into a **limited
+equipped loadout** and an **unlimited trinket box**:
+
+- **Weapon slots (A + B).** You carry up to **two one-hand weapons**, OR **one two-hander** that
+  fills both (shown as `WPN A` + a `◀ 2-H` spanned `WPN B`).
+- **Offhand slot.** Shields go here — one at a time.
+- **Amulet slot.** A curated set of build-defining legendary keystones (Fourleaf Charm, Soul Tithe)
+  are amulets — **one at a time**, so your keystone is a real choice.
+- **Trinket box (unlimited).** Every other stat/effect item is a **trinket** — buy as many copies as
+  you like, they **stack**, no equipping. (Ceremonial Daggers stays a trinket precisely because each
+  copy adds daggers — its "buy more, get more" identity is preserved.)
+- **Auto-swap → stash.** Buying a slot item you're full on **swaps the old one into a small run stash**
+  (8 slots) instead of blocking the purchase — your old gear visibly lands there, nothing vanishes. If
+  the stash is also full, the displaced piece is **auto-sold back** (gold refunded at recycle value).
+- **New shop UI.** A **4-slot equipment strip** (WPN A / WPN B / OFF / AMULET) sits under the stats
+  panel with a **STASH** row when non-empty; the desktop side panel now lists **TRINKETS**. Read-only
+  this phase — tap-to-sell / equip-from-stash lands in Phase 2.
+
+Under the hood: `items[]` stays the single aggregation source of truth (equipped slots + trinkets),
+with slots as a thin admission-control layer — so every existing stat/duo/QA path is byte-identical
+for a given active set. Design doc: `DESIGN-EQUIPMENT-REWORK.md`.
+
+Commit `<sha>` · live build `<hash>` (HTTP 200 verified). QA: **qa-equipment** 12/12 (classify,
+two 1-handers fill A→B, third swaps to stash, 2-hand blocks B, 1-hand displaces 2-hand, amulet
+single-slot swap, trinket unlimited stacking, aggregation parity, stash-cap overflow refund,
+unequip/re-equip, sell removes, reset clears). Regressions green: daggers (11/11 after fixing the
+ceremonial-daggers stacking classification), fourleaf, soultithe, warchest, triggered-items,
+stats-parity, synergy, shop-layout, shop-inputguard, stacking-weapons, melee-stack, status-engines,
+roguelite. Mobile shot reviewed: strip clears the card grid (grid top nudged to CSS 144 on mobile).
+
+---
+
 ## 2026-07-05 (night) — QoL/perf: dense drops merge into fewer, bigger orbs
 
 When a wave dies in a heap, the floor used to litter with dozens of tiny XP gems and coins — fiddly
