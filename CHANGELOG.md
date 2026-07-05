@@ -36,7 +36,7 @@ product is bounded, not just one of its seven layers.
 0 console errors). Balance probe confirms the knee leaves light/medium identical and compresses only
 the heavy tail.
 
-Live-verified bundle **`__PENDING__`** on roguelite-game-blush.vercel.app.
+Live-verified bundle **`index-BqUS_oj5.js`** (commit `afc139e`) on roguelite-game-blush.vercel.app.
 
 ---
 
