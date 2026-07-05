@@ -8,6 +8,26 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-05 (night) — level-ups no longer interrupt the wave
+
+**Levelling up no longer stops the fight.** Response to "I don't like the level-up system — it
+keeps interrupting gameplay and asking me to choose and upgrade in the middle of a wave." A
+level-up still fires its juice (sound, flash, confetti) the instant you hit it, but the pick-1-of-3
+screen no longer freezes the wave:
+
+- Owed picks **bank up** during the wave and are presented at the **between-waves shop** — the
+  natural break where you're already choosing items.
+- Multiple levels earned in one wave chain **back-to-back** at the shop, then drop you onto the
+  shop screen.
+- A run that ends mid-wave clears any owed picks, so they never leak into the next run.
+
+Commit `d684c4a`. Live-verified on mobile portrait: `index-uds_Tq48.js`, HTTP 200, no auth wall;
+the live bundle's XP path banks the pick (`spawnLevelupBurst(),this.pendingLevelups++`) with no
+mid-wave screen open. QA: `qa-levelup.mjs` rewritten for the deferred contract 14/14; shop-8slot
+29/29 and warchest 8/8 regression green.
+
+---
+
 ## 2026-07-05 (night) — enemies scale up: steeper mid-late HP curve
 
 **Enemies are meaningfully tankier from wave 11 on.** Response to "I one-shot everything at
