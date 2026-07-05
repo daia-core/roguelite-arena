@@ -22,7 +22,7 @@ Live: https://roguelite-game-blush.vercel.app
 - **Folded in at the wave-end shop transition**, right after interest is banked — a natural,
   predictable "end-of-wave paycheck" moment.
 
-**Commit `__SHA__`** · live-verified `index-Ds-j3PC5.js` (HTTP 200, mobile 390×844). QA:
+**Commit `ab8f597`** · live-verified `index-Ds-j3PC5.js` (HTTP 200, mobile 390×844). QA:
 new `qa-warchest.mjs` **8/8** on the shipped `dist` — catalog entry (`war_chest_t3`, rare, 💰,
 economic, `warChest: 3`), fresh-run default (`getWarChest()` 0), held (`getWarChest()` 3), and
 the **payout proven** by driving the real `enterShop()` wave-end path with gold zeroed (so
