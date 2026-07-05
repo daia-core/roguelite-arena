@@ -173,8 +173,9 @@ export class MeleeAttack {
     const start = this.angle - this.arc / 2;
     const end = this.angle + this.arc / 2;
 
-    // AoE highlight: a dithered wedge fill of the swing zone.
-    this.fillWedge(ctx, start, end, this.range, fade * 0.5, '#ffd24a');
+    // AoE highlight: a dithered wedge fill of the swing zone. White reads as "MY reach"
+    // (Felix, 2026-07-05) — warm/red danger colours are reserved for enemy & boss telegraphs.
+    this.fillWedge(ctx, start, end, this.range, fade * 0.5, '#ffffff');
 
     // The blade sprite sweeps across the arc, with a couple of faded after-images
     // behind the leading edge to read as motion.
@@ -190,8 +191,8 @@ export class MeleeAttack {
   // ---- THRUST: forward lunge. Highlight = narrow capsule; sprite = spear stabbing out. ----
   private drawThrust(ctx: CanvasRenderingContext2D, p: number, fade: number): void {
     const halfArc = Math.min(this.arc, Math.PI * 0.28) / 2;
-    // Highlight the reachable forward lane.
-    this.fillWedge(ctx, this.angle - halfArc, this.angle + halfArc, this.range, fade * 0.5, '#7ad0ff');
+    // Highlight the reachable forward lane (white = my attack zone).
+    this.fillWedge(ctx, this.angle - halfArc, this.angle + halfArc, this.range, fade * 0.5, '#ffffff');
 
     // The spear sprite lunges out to full reach at mid-swing, then recoils.
     const lunge = Math.sin(p * Math.PI);
@@ -209,8 +210,8 @@ export class MeleeAttack {
 
   // ---- SPIN: full 360° whirl. Highlight = ring/disc; sprite = blade orbiting once. ----
   private drawSpin(ctx: CanvasRenderingContext2D, p: number, fade: number): void {
-    // Highlight the whole circle it hits (dithered disc edge).
-    this.fillRing(ctx, this.range, fade * 0.5, '#ff9a5a');
+    // Highlight the whole circle it hits (dithered disc edge; white = my attack zone).
+    this.fillRing(ctx, this.range, fade * 0.5, '#ffffff');
 
     // The axe sprite orbits a full turn over the lifetime, trailing after-images.
     const sprite = STYLE_SPRITE[this.style];
@@ -227,7 +228,8 @@ export class MeleeAttack {
     const cx = this.x + Math.cos(this.angle) * this.range * 0.6;
     const cy = this.y + Math.sin(this.angle) * this.range * 0.6;
     const discR = this.range * 0.55;
-    this.fillDisc(ctx, cx, cy, discR, fade * 0.55, '#ff6a3a');
+    // White = my attack zone (warm/red stays exclusive to enemy & boss telegraphs).
+    this.fillDisc(ctx, cx, cy, discR, fade * 0.55, '#ffffff');
 
     // Hammer falls: the weapon sprite rises then crashes down onto the disc by
     // mid-swing; shockwave pixels ring out after impact. A downward "wind-up angle"
