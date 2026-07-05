@@ -32,7 +32,8 @@ Under the hood: `items[]` stays the single aggregation source of truth (equipped
 with slots as a thin admission-control layer — so every existing stat/duo/QA path is byte-identical
 for a given active set. Design doc: `DESIGN-EQUIPMENT-REWORK.md`.
 
-Commit `<sha>` · live build `<hash>` (HTTP 200 verified). QA: **qa-equipment** 12/12 (classify,
+Commit `e8acd2a` · live build `index-BgeZhQM4.js` (HTTP 200 verified, deployment `jlstng6s9`).
+QA: **qa-equipment** 12/12 (classify,
 two 1-handers fill A→B, third swaps to stash, 2-hand blocks B, 1-hand displaces 2-hand, amulet
 single-slot swap, trinket unlimited stacking, aggregation parity, stash-cap overflow refund,
 unequip/re-equip, sell removes, reset clears). Regressions green: daggers (11/11 after fixing the
