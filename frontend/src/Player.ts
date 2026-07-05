@@ -53,6 +53,9 @@ export class Player {
   velocityX: number = 0;
   velocityY: number = 0;
 
+  // Subtle walk bob: phase advances only while moving, drives a small vertical wobble in draw().
+  private bobPhase: number = 0;
+
   dead: boolean = false;
 
   constructor(x: number, y: number, stats: PlayerStats) {
@@ -87,6 +90,20 @@ export class Player {
     // Keep in bounds
     this.x = Math.max(this.radius, Math.min(canvasWidth - this.radius, this.x));
     this.y = Math.max(this.radius, Math.min(canvasHeight - this.radius, this.y));
+
+    // Advance the walk-bob phase only while actually moving, so a standing player is still.
+    const movingSq = this.velocityX * this.velocityX + this.velocityY * this.velocityY;
+    if (movingSq > 1) {
+      this.bobPhase += dt * 12; // ~2 bobs/sec of stride
+    } else {
+      this.bobPhase = 0; // settle to rest when stopped
+    }
+  }
+
+  // Current vertical bob offset in pixels (0 when standing still). Small, so it reads as a subtle stride.
+  private getBobOffset(): number {
+    if (this.bobPhase === 0) return 0;
+    return Math.sin(this.bobPhase) * 2.2;
   }
 
   // Auto-attack nearest enemy (supports different weapon types)
@@ -336,6 +353,9 @@ export class Player {
 
   draw(ctx: CanvasRenderingContext2D): void {
     ctx.save();
+
+    // Subtle walk bob: shift the whole body up/down a couple px as the stride phase cycles.
+    ctx.translate(0, this.getBobOffset());
 
     const sprite = SpriteSheet.get('player');
 

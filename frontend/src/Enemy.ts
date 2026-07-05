@@ -774,6 +774,14 @@ export class Enemy {
   isMiniboss: boolean = false;
   minibossAoeCooldown: number = 3.5;
 
+  // Subtle walk bob: phase advances with distance actually moved (measured between frames,
+  // so it works no matter which of the many movement branches ran), driving a small
+  // vertical wobble on the sprite. A random start so a pack doesn't bob in lockstep.
+  private bobPhase: number = Math.random() * Math.PI * 2;
+  private bobPrevX: number = 0;
+  private bobPrevY: number = 0;
+  private bobInit: boolean = false;
+
   constructor(x: number, y: number, type: EnemyType, waveMultiplier: number = 1, canSplit: boolean = true) {
     this.id = Enemy.nextId++;
     this.x = x;
@@ -805,6 +813,18 @@ export class Enemy {
   update(dt: number, playerX: number, playerY: number): EnemyUpdateResult {
     // GAME FEEL: Update timers
     this.hitFlashTimer = Math.max(0, this.hitFlashTimer - dt);
+
+    // Walk bob: advance the stride phase by how far we moved since last frame. Measuring the
+    // real position delta (rather than any one velocity field) keeps it correct across every
+    // movement branch below; a still enemy doesn't bob.
+    if (this.bobInit) {
+      const moved = Math.hypot(this.x - this.bobPrevX, this.y - this.bobPrevY);
+      if (moved > 0.01) this.bobPhase += moved * 0.09;
+    } else {
+      this.bobInit = true;
+    }
+    this.bobPrevX = this.x;
+    this.bobPrevY = this.y;
 
     // GAME FEEL: Apply knockback velocity with smooth decay
     if (this.knockbackVelocityX !== 0 || this.knockbackVelocityY !== 0) {
@@ -1645,6 +1665,11 @@ export class Enemy {
     }
   }
 
+  // Current vertical bob offset in px (0 when standing still). Small so it reads as a subtle stride.
+  private getBobOffset(): number {
+    return Math.sin(this.bobPhase) * 1.8;
+  }
+
   draw(ctx: CanvasRenderingContext2D): void {
     ctx.save();
 
@@ -1685,7 +1710,7 @@ export class Enemy {
       const sw = sprite.width * scale;
       const sh = sprite.height * scale;
       const dx = this.x - sw / 2;
-      const dy = this.y - sh / 2;
+      const dy = this.y - sh / 2 + this.getBobOffset();
 
       if (this.invulnerable) {
         // Wraith phasing: mostly-there dithered transparency
