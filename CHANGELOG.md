@@ -27,6 +27,13 @@ equipped loadout** and an **unlimited trinket box**:
 - **New shop UI.** A **4-slot equipment strip** (WPN A / WPN B / OFF / AMULET) sits under the stats
   panel with a **STASH** row when non-empty; the desktop side panel now lists **TRINKETS**. Read-only
   this phase — tap-to-sell / equip-from-stash lands in Phase 2.
+- **Weapons keep being offered.** The old "pick your weapon once, never see another" lock is lifted —
+  since buying a weapon now *swaps* the old one to the stash instead of destroying it, the shop keeps
+  surfacing different weapons so building toward two (or swapping your loadout) is actually reachable.
+  Exact-duplicate weapons still aren't re-offered; per-slot offer-frequency tuning is Phase 3.
+
+Known Phase-3 follow-up: with two weapon slots both weapons' **stats** aggregate, but only `WPN A`'s
+**firing pattern** is active — true dual-wield firing is a combat-system change, deferred by design.
 
 Under the hood: `items[]` stays the single aggregation source of truth (equipped slots + trinkets),
 with slots as a thin admission-control layer — so every existing stat/duo/QA path is byte-identical
