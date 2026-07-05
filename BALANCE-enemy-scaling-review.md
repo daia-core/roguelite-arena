@@ -1,7 +1,7 @@
 # Enemy scaling review — why wave 7 feels trivial
 
 **Date:** 2026-07-03 (evening), **corrected + empirically validated 2026-07-04 (night).** · **Trigger:** Felix's wave-7 stat dump ("they don't seem to scale fast enough").
-**Status:** SHIPPED & VERIFIED LIVE — **the live curve is v2** (commit `650f07d`, bundle `index-CtBoAShq.js` on roguelite-game-blush.vercel.app), NOT the v1 numbers this doc originally listed. See the **"Correction"** box below before trusting any table.
+**Status:** SHIPPED & VERIFIED LIVE — **the live curve is now v3** (commit `77e7603`, bundle `index-C1FxQwHK.js` on roguelite-game-blush.vercel.app), which adds a wave-10+ late-surge on top of v2. **Jump to the [v3 update](#v3-update-2026-07-05-night--felix-23m-dmgprojectile-on-wave-13-enemies-insta-killed-scale-up-enemies) at the bottom for the current state, the hard ceiling math, and the open offense-soft-cap fork.** The historical v1/v2 sections below are kept for lineage — read the "Correction" box before trusting any mid-doc table.
 
 > ### ⚠️ Correction (2026-07-04) — this doc originally documented v1; the live game is v2
 > The evening of 2026-07-03 shipped **two** enemy-curve revisions, ~4h apart:
@@ -103,3 +103,50 @@ The v2 changes make **mid-late** enemies tankier and hit harder, but (a) do **no
 ## Deeper, optional (separate design decision)
 
 The only durable structural fix for the offense side is to reduce how many *independent* multiplicative axes the player stacks (make some bonuses additive within a category, or soft-cap the product per category). That's a real rebalance, not a tuning pass — worth its own decision, not folded into this note.
+
+---
+
+## v3 update (2026-07-05, night) — Felix: "2.3M dmg/projectile on wave 13, enemies insta-killed, scale up enemies"
+
+This is the **same complaint, escalated with a hard number** — and it settles the open fork above. Two things shipped/quantified tonight.
+
+### 1. Shipped: a steeper mid-late enemy curve (commit `77e7603`, live `index-C1FxQwHK.js`)
+
+`waveScale` gained a **second exponential from wave 10**: `lateSurge = 1.15^max(0, wave-10)`, multiplied onto the existing `linear × compound`. Waves ≤10 are **untouched** (the v2 sim-tuned early-swarm fix stands); the late game gets meaningfully tankier.
+
+Effective fodder-HP multiplier `M(w) = waveScale(w) × survivabilityMult(w)`, before vs after (100-HP grunt shown):
+
+| Wave | old M | **new M** | 100-HP grunt | ×tankier |
+|---|---|---|---|---|
+| ≤10 | — | — | identical | 1.00× |
+| 13 | 58.6 | **89.1** | 5,857 → 8,907 | 1.52× |
+| 15 | 103.6 | **208.4** | 10,361 → 20,840 | 2.01× |
+| 20 | 389.1 | **1,574** | 38,908 → 157,404 | 4.05× |
+| 25 | 1,322 | **10,760** | 132,234 → 1,075,997 | 8.14× |
+
+Verified: `tsc` clean, `vite build` clean, `tools/qa/simulate-balance.mjs` runs end-to-end (after I un-broke it against today's new class-select + level-up states) — deepest kite-bot run now dies at **wave 14** (was 10–12), early-death distribution unchanged (no regression). Live bundle contains `1.15**Math.max(0,e-10)`.
+
+### 2. The hard ceiling — why this does NOT fix Felix's 2.3M one-shot (the number that ends the debate)
+
+Felix does **2.3M per projectile**. For even a *single* 100-HP-base grunt to survive **one** such hit at wave 13, its multiplier would have to be **≥ 23,000×** (`2.3M / 100`). The current wave-13 multiplier is 89×; the early game (wave 5) is ~10×. A smooth curve that reaches 23,000× by wave 13 would put wave-5 enemies at thousands of HP while a fresh run does a few hundred DPS → **instant unwinnable wall**. And he doesn't fire *one* projectile — he "spams projectiles all over the screen," so the real requirement is orders of magnitude worse.
+
+**Conclusion, now numerically proven twice:** you cannot scale fodder HP to catch a fully-stacked multiplicative build without destroying the early game. Enemy HP is the symptom; **runaway multiplicative player offense is the disease.** The shipped v3 curve makes a *normal* build fight for waves 11+, which is real and wanted — but it will **not** change the feel of a maxed 2.3M build, by mathematical necessity.
+
+### 3. The one real fix — bounded offense (designed, ready to flip on `getDamage()`, awaiting Felix's yes/no)
+
+`PlayerStats.getDamage()` is a raw product of independent multiplicative axes (`damageMult × specialization × transformation × duo × artifact × runtime`, then per-type/elemental/crit/fireRate/multishot layer on top) with **no balance cap** — only `SANITY_MULT_CAP = 1e15` (an overflow guard). That's where 2.3M/projectile comes from.
+
+**Proposed opt-in (not shipped — it changes his build feel):** a **diminishing-returns soft cap** on the aggregate damage product past a threshold, e.g.
+
+```
+// soft cap: below KNEE, damage is untouched; above it, excess is compressed to an exponent < 1
+const KNEE = 5000;      // ~200× base damage of 25 — a strong-but-not-absurd build is unaffected
+const SOFTNESS = 0.5;   // excess grows as excess^0.5 → sqrt-compression above the knee
+if (damage > KNEE) damage = KNEE + Math.pow(damage - KNEE, SOFTNESS) * Math.sqrt(KNEE);
+```
+
+Effect: a build that would compute 2.3M/projectile lands around **~110k** instead — still a huge, satisfying number and still one-shots trash, but the *gap* stops compounding, so the existing enemy curve (now v3) actually holds into the late game. Tunable via `KNEE` (where compression starts) and `SOFTNESS` (how hard). Fully reversible.
+
+**Why it's Felix's call, not an autonomous ship:** it nerfs the ceiling of his build — and his framing ("scale up *enemies*") reads like he may *enjoy* the big-number fantasy and just wants enemies that can eat it. Bounding offense is the honest fix; whether he *wants* it is a taste call with no safe default. So: shipped the enemy half he asked for, and this soft-cap is written and ready to flip on the moment he says go (or to tune the `KNEE`/`SOFTNESS` to his preference).
+
+**Recommendation:** play-test v3 first. If wave 13+ *still* feels trivial on a stacked build (it will, for a 2.3M build), the lever is (a) the offense soft-cap above, and/or (b) more frequent elite/miniboss damage-checks — **not** more fodder HP, which is now proven to be a dead end against multiplicative offense.

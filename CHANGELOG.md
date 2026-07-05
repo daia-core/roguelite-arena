@@ -8,6 +8,33 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-05 (night) — enemies scale up: steeper mid-late HP curve
+
+**Enemies are meaningfully tankier from wave 11 on.** Response to "I one-shot everything at
+wave 13" — the mid-late enemy HP curve was too flat for a normal build to feel a fight. Added a
+second exponential (`1.15^(wave-10)`) so the early game is untouched (waves ≤10 identical — the
+sim-tuned anti-early-swarm fix stands) while the late game bites:
+
+- **Wave 13** enemies ≈ **1.5× tankier**, **wave 15 ≈ 2×**, **wave 20 ≈ 4×**, wave 25 ≈ 8×.
+- Waves 1–10 are **byte-identical** to the previous build (no fresh-run regression).
+
+**Honest caveat (in the code + `BALANCE-enemy-scaling-review.md`):** fodder HP can *never* catch a
+fully-stacked multiplicative build — a 2.3M-per-projectile build still one-shots trash at any HP
+that keeps the early game playable. This change makes *normal* builds fight for the mid-late game;
+the only lever that stops a maxed build one-shotting is **bounding player offense** (a soft cap on
+the damage product), designed and ready as an opt-in in the balance doc, pending Felix's call.
+
+Also un-broke `tools/qa/simulate-balance.mjs` (it hung on today's new class-select + level-up
+screens); it now runs end-to-end again — deepest kite-bot run reaches wave 14 (was 10–12), early
+death distribution unchanged, confirming no early regression.
+
+- **Commit:** `77e7603`
+- **Live-build verified:** `index-C1FxQwHK.js` served at https://roguelite-game-blush.vercel.app
+  (HTTP 200, bundle hash matches local build, no auth wall; live bundle contains the new
+  `1.15**Math.max(0,e-10)` late-surge term).
+
+---
+
 ## 2026-07-05 (night) — 8-slot loadout, 3-item shop & upgrade-on-duplicate
 
 Shopping is now a full **build sim**. Three big changes land together:
