@@ -63,15 +63,27 @@ const result = await page.evaluate(() => {
     const spec = (melee>0&&ranged===0)?'melee':(ranged>0&&melee===0)?'ranged':(melee>0&&ranged>0)?'mixed':'none';
     const specBonus = (spec==='melee'||spec==='ranged')?1.2:1.0;
 
-    const damage = s.baseDamage * prod('damageMultiplier') * specBonus
-      * tf.damageMultiplier * du.damageMultiplier * s.artifactDamageMult * s.runtimeDamageMult;
+    // DIMINISHING RETURNS (2026-07-05): the item damage multiplier passes through a
+    // soft knee before it multiplies in — mirror softKneeDamageMult from the game.
+    const KNEE = s.constructor.DMG_DR_KNEE, DREXP = s.constructor.DMG_DR_EXP;
+    const knee = (m) => (m > KNEE ? KNEE * Math.pow(m / KNEE, DREXP) : m);
+    // AGGREGATE KNEE (2026-07-06): getDamage() wraps its FINAL product in a second soft
+    // knee so a fully-stacked build stays finite. Mirror it here (applied to the whole
+    // product, incl. skillDamageMult) so every downstream getter inherits the same
+    // compressed base the real getters do.
+    const AKNEE = s.constructor.DMG_AGG_KNEE, AEXP = s.constructor.DMG_AGG_EXP;
+    const aggKnee = (d) => (d > AKNEE ? AKNEE * Math.pow(d / AKNEE, AEXP) : d);
+    const damage = aggKnee(s.baseDamage * knee(prod('damageMultiplier')) * specBonus
+      * tf.damageMultiplier * du.damageMultiplier * s.artifactDamageMult * s.runtimeDamageMult
+      * s.skillDamageMult);
     // UNIVERSALITY (2026-07-05): each damage-type mult keeps its own bonus and bleeds
-    // CROSS_TYPE_BLEED of the OTHER type's bonus above baseline. Mirror the getters.
+    // CROSS_TYPE_BLEED of the OTHER type's bonus above baseline. Mirror the getters
+    // (including the same soft knee applied to the combined type multiplier).
     const BLEED = s.constructor.CROSS_TYPE_BLEED;
     const rawMelee = prod('meleeDamageMult');
     const rawRanged = prod('rangedDamageMult');
-    const meleeDamageMult = rawMelee * (1 + (rawRanged - 1) * BLEED);
-    const rangedDamageMult = rawRanged * (1 + (rawMelee - 1) * BLEED);
+    const meleeDamageMult = knee(rawMelee * (1 + (rawRanged - 1) * BLEED));
+    const rangedDamageMult = knee(rawRanged * (1 + (rawMelee - 1) * BLEED));
     const meleeDamage = damage * meleeDamageMult;
     // getFireRate now also bleeds in swing-cooldown items (melee attack-speed helps the gun).
     const swingCd = prod('swingCooldownMult');

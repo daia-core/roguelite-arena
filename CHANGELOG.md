@@ -8,6 +8,38 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-06 (night) — gear-named items now slot properly + a ceiling on runaway damage
+
+Two changes from Felix's "review every item: trinket or equip? and review the balance" pass — this
+time acted on, not just written up.
+
+**15 items that were *named* like worn gear now actually go in their slot** (instead of stacking as
+unlimited trinkets). A ring goes in a ring slot, a pendant in the amulet slot, boots on your feet,
+vests/armour/plate on your torso — so they compete for a slot and reroll into a *choice* rather than
+"buy ten copies of the same ring". Reclassified: Iron Ring / Steel Band / Vitality Ring / Ring of
+Widening → **ring**; Health Pendant → **amulet**; Worn Boots / Windwalker Boots / Blink Boots →
+**feet**; Leather Vest / Spiked Armor / Armor Plating / Thorny Armor / Vampire Armor / Evasive Armor
+/ Stalwart Plate → **torso**. (Gloves, cloaks, bandolier, etc. have no matching slot yet, so they
+stay trinkets for now — a hands/back slot is a bigger UI change for another pass.)
+
+**Damage now has a soft ceiling so a maxed build stays strong-but-finite.** A fully-stacked hoard was
+reaching ~466k damage (18,600× a fresh run) and one-frame-deleting every enemy on every wave, which
+no enemy HP curve can survive without wrecking the early game. Added an aggregate "soft knee" to the
+final damage number: **light and medium builds are completely unchanged** (base 25 / light 80 /
+medium 1,541 — all below the knee), but the extreme high end is compressed (~466k → ~60k). You still
+one-shot fodder deep into a run; the difference is that late bosses and elites become an actual fight
+instead of vanishing instantly. Complements the existing per-item knee — now the *whole* damage
+product is bounded, not just one of its seven layers.
+
+**Verified:** tsc + vite build green; QA all pass — stat-parity 300/300 (0 mismatches), shop 8-slot
+29/29, equipment-manage 32/32, stat-caps 21/21, live-smoke (47 kills, no collision/entity leaks,
+0 console errors). Balance probe confirms the knee leaves light/medium identical and compresses only
+the heavy tail.
+
+Live-verified bundle **`__PENDING__`** on roguelite-game-blush.vercel.app.
+
+---
+
 ## 2026-07-06 (early hours) — fixed duplicate item names in the shop
 
 **Three pairs of shop items shared the exact same name.** Part of Felix's "review all existing

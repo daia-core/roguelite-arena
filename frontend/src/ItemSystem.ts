@@ -356,6 +356,27 @@ export class PlayerStats {
     return PlayerStats.DMG_DR_KNEE * Math.pow(m / PlayerStats.DMG_DR_KNEE, PlayerStats.DMG_DR_EXP);
   }
 
+  // ---- AGGREGATE DAMAGE KNEE (balance, 2026-07-06) ----
+  // The item-layer knee above only tames ONE of the seven multiplicative layers in
+  // getDamage() (item × specialization × transformation × duo × artifact×runtime ×
+  // skill). A stacked build still multiplies all the others freely, so a late-game
+  // "heavy" hoard reaches ~466k absolute damage (18,600× base) — crit/type then push
+  // it to the millions Felix saw. This second knee wraps the FINAL product so every
+  // layer is compressed together: below the knee (light/medium builds) it is exactly
+  // linear and untouched; above it the excess is compressed by an exponent, so the
+  // ceiling stays finite and the enemy curve actually bites into the late game.
+  //   d <= KNEE:  d
+  //   d >  KNEE:  KNEE * (d / KNEE) ^ EXP
+  // Tuned via qa-balance-probe: base 25, light 80, medium 1541 all stay identical
+  // (below the 2500 knee); heavy 466k → ~40k (still one-shots fodder for ~15 waves,
+  // but late bosses/elites become a real fight instead of a one-frame delete).
+  static readonly DMG_AGG_KNEE = 2500;
+  static readonly DMG_AGG_EXP = 0.42;
+  static aggKneeDamage(d: number): number {
+    if (!(d > PlayerStats.DMG_AGG_KNEE)) return d; // NaN-safe; below/at knee = linear
+    return PlayerStats.DMG_AGG_KNEE * Math.pow(d / PlayerStats.DMG_AGG_KNEE, PlayerStats.DMG_AGG_EXP);
+  }
+
   // ---- ARTIFACT contributions (ArtifactSystem folds its static roster into these) ----
   // Defaults are identity (×1 / +0) so a run with no artifacts behaves exactly as before.
   artifactDamageMult: number = 1;
@@ -703,6 +724,11 @@ export class PlayerStats {
     damage *= this.artifactDamageMult * this.runtimeDamageMult;
     // SKILL TREE contribution
     damage *= this.skillDamageMult;
+    // AGGREGATE KNEE — compress the whole multiplicative product past the knee so a
+    // fully-stacked hoard stays strong-but-finite (light/medium builds are below it
+    // and pass through unchanged). This is the balance ceiling; the cap below is only
+    // numerical safety.
+    damage = PlayerStats.aggKneeDamage(damage);
     // Numerical-safety only (not a balance cap) — keep runaway builds finite.
     return Math.min(PlayerStats.SANITY_MULT_CAP, damage);
   }

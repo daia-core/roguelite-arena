@@ -10,6 +10,7 @@ export const ITEM_CATALOG: Item[] = [
     // Basic stat boosts - cheap and accessible
     {
       id: 'damage_t1',
+      slot: 'ring',
       name: 'Iron Ring',
       description: '+3 damage',
       rarity: 'common',
@@ -34,6 +35,7 @@ export const ITEM_CATALOG: Item[] = [
     },
     {
       id: 'movement_speed_t1',
+      slot: 'feet',
       name: 'Worn Boots',
       description: '+10% move speed',
       rarity: 'common',
@@ -46,6 +48,7 @@ export const ITEM_CATALOG: Item[] = [
     },
     {
       id: 'max_hp_t1',
+      slot: 'amulet',
       name: 'Health Pendant',
       description: '+15 max health',
       rarity: 'common',
@@ -94,6 +97,7 @@ export const ITEM_CATALOG: Item[] = [
     },
     {
       id: 'armor_t1',
+      slot: 'torso',
       name: 'Leather Vest',
       description: '+2 armor',
       rarity: 'common',
@@ -109,6 +113,7 @@ export const ITEM_CATALOG: Item[] = [
     // Moderate stat boosts and simple special effects
     {
       id: 'damage_t2',
+      slot: 'ring',
       name: 'Steel Band',
       description: '+45% melee/swing damage, -8% fire rate',
       rarity: 'rare',
@@ -148,6 +153,7 @@ export const ITEM_CATALOG: Item[] = [
     },
     {
       id: 'max_hp_t2',
+      slot: 'ring',
       name: 'Vitality Ring',
       description: '+30 max health',
       rarity: 'rare',
@@ -209,6 +215,7 @@ export const ITEM_CATALOG: Item[] = [
     },
     {
       id: 'thorns_t2',
+      slot: 'torso',
       name: 'Spiked Armor',
       description: 'Reflect 15% damage',
       rarity: 'rare',
@@ -905,6 +912,7 @@ export const ITEM_CATALOG: Item[] = [
     // so it rewards a player who's leaning into area effects.
     {
       id: 'ring_of_widening_t1',
+      slot: 'ring',
       name: 'Ring of Widening',
       description: '+20% area of all AOE (swing burst, bombs, novas)',
       rarity: 'common',
@@ -1190,6 +1198,7 @@ export const ITEM_CATALOG: Item[] = [
     },
     {
       id: 'armor_plating_t2',
+      slot: 'torso',
       name: 'Armor Plating',
       description: '+8 armor',
       rarity: 'rare',
@@ -1252,6 +1261,7 @@ export const ITEM_CATALOG: Item[] = [
     },
     {
       id: 'thorny_armor_t3',
+      slot: 'torso',
       name: 'Thorny Armor',
       description: '40% reflect damage',
       rarity: 'epic',
@@ -1434,6 +1444,7 @@ export const ITEM_CATALOG: Item[] = [
     },
     {
       id: 'vampire_armor_t3',
+      slot: 'torso',
       name: 'Vampire Armor',
       description: '15% lifesteal, +8 armor',
       rarity: 'epic',
@@ -1460,6 +1471,7 @@ export const ITEM_CATALOG: Item[] = [
     },
     {
       id: 'evasive_armor_t3',
+      slot: 'torso',
       name: 'Evasive Armor',
       description: '15% dodge, +25% speed',
       rarity: 'epic',
@@ -2567,6 +2579,7 @@ export const ITEM_CATALOG: Item[] = [
     },
     {
       id: 'stalwart_t2',
+      slot: 'torso',
       name: 'Stalwart Plate',
       description: '+45 max HP, -5% speed',
       rarity: 'rare',
@@ -2677,6 +2690,7 @@ export const ITEM_CATALOG: Item[] = [
     // ---- SPEED / DODGE / EVASION ----
     {
       id: 'windwalker_t2',
+      slot: 'feet',
       name: 'Windwalker Boots',
       description: '+30% speed, +8% dodge',
       rarity: 'rare',
@@ -2717,6 +2731,7 @@ export const ITEM_CATALOG: Item[] = [
     },
     {
       id: 'blink_boots_t4',
+      slot: 'feet',
       name: 'Blink Boots',
       description: '+25% dodge, +30% speed, -20 HP',
       rarity: 'legendary',

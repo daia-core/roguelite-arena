@@ -144,16 +144,19 @@ const out = await page.evaluate(() => {
   // ---- 6. UPGRADE == buying N copies (equivalence to old stacking) ----
   fresh();
   {
-    // A trinket that stacks: damage_t1 (×1.15). Buying 3 → level 3 → each step ×1.15.
-    g.playerStats.addItem(clone('damage_t1'));
+    // A trinket that stacks: bloodletter_t2 (×1.1 damage; the old damage_t1/Iron Ring
+    // is now a ring slot per the 2026-07-06 classification audit, so it no longer
+    // stacks as a trinket — use a genuinely-still-trinket damage item here). Buying 3
+    // → level 3 → each step ×1.1. (Its lifesteal field doesn't affect getDamage.)
+    g.playerStats.addItem(clone('bloodletter_t2'));
     const b1 = g.playerStats.getDamage();
-    g.playerStats.addItem(clone('damage_t1'));
-    g.playerStats.addItem(clone('damage_t1'));
+    g.playerStats.addItem(clone('bloodletter_t2'));
+    g.playerStats.addItem(clone('bloodletter_t2'));
     const b3 = g.playerStats.getDamage();
     const near = (a, b) => Math.abs(a - b) < 0.01;
     R.trinketUpgrades = g.playerStats.trinkets.length === 1
       && g.playerStats.trinkets[0].upgradeLevel === 3;
-    R.trinketStackMath = near(b3 / b1, Math.pow(1.15, 2)); // level 1→3 = ×1.15²
+    R.trinketStackMath = near(b3 / b1, Math.pow(1.1, 2)); // level 1→3 = ×1.1²
   }
 
   // ---- 7. RECYCLE value scales with level ----
