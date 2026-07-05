@@ -34,6 +34,9 @@ dagger-origin kill spawns 0 daggers while every non-dagger control still spawns 
 the original direct-hit guard is unregressed. Full `tsc` typecheck clean; `qa-daggers` 11/11,
 `qa-soultithe` 13/13, `qa-status-engines` and the main regression all green, 0 console errors.
 
+**Shipped:** `e35abfe` · live-verified at https://roguelite-game-blush.vercel.app (HTTP 200,
+serving the new `index-BlNYCkj1.js` bundle, no auth wall).
+
 ---
 
 ## 2026-07-05 — fix: devil deals can no longer be farmed for free boons
