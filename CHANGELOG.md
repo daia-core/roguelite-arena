@@ -8,6 +8,33 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-05 (night) — level-ups now feed a persistent skill tree
+
+**The random 1-of-3 item pick on level-up is gone — replaced by a skill tree.** Response to "rework
+the level-up system so that it uses a skill tree instead." Each level-up now banks **1 skill point**
+(with the same juice — sound, flash, confetti — and no mid-wave interruption). Points are spent
+between waves on a persistent tree with three branches:
+
+- **OFFENSE** (red): Sharpened → Rapid Fire → Deadeye → Executioner (+damage, +fire rate, +crit
+  chance, +crit damage).
+- **DEFENSE** (blue): Vitality → Ironhide → Regeneration → Bulwark (+max HP, +armor, +regen).
+- **UTILITY** (green): Swift → Greed → Scholar → Magnet (+move speed, +gold, +XP, +pickup range).
+
+A node unlocks once its parent has at least one rank, so you commit to a branch but can splash
+across all three; every node ranks up (most to 5). The tree opens automatically at the shop break
+when you have points banked, and a **SKILLS** button on the shop reopens it to spend leftovers.
+Progression is persistent within the run (saved/restored with your run) and resets cleanly on a new
+run. Bonuses fold into your stats the same way artifacts do, so items, duos, and transformations
+are completely unaffected.
+
+Commit `40d3a26`. Live-verified on mobile portrait: `index-BYOg5yed.js`, HTTP 200, no auth wall.
+QA: `qa-levelup.mjs` rewritten for the skill-tree contract 17/17 (level-up banks a point without
+pausing, shop opens the tree, spend applies bonuses live, locked nodes gated by prereqs, maxRank
+respected, new run resets); live smoke green (49 kills, wave cleared → shop, 0 dead-enemy leak,
+devil-deal fix still holds, 0 console errors).
+
+---
+
 ## 2026-07-05 (night) — your attack zones read white, danger stays red
 
 **Your melee/AoE swing highlights are now white, not yellow/orange.** Response to "I don't like the
