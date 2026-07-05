@@ -8,6 +8,30 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-06 (early hours) — fixed duplicate item names in the shop
+
+**Three pairs of shop items shared the exact same name.** Part of Felix's "review all existing
+items" pass — the shop could roll two visibly-identical cards (e.g. two "Glass Cannon") that, being
+different items under the hood, did *not* upgrade each other. Renamed the lower-tier variant of each
+so every shop item now has a unique, unambiguous name:
+
+- **Storm Essence** (25% chain, the weaker one) → **Static Charge** — the 35%-chain-plus-explosions
+  version keeps the "Storm Essence" name.
+- **Glass Cannon** (the uncommon +80% dmg / −30 HP one) → **Brittle Edge** — the legendary
+  +100% dmg / −40% HP keeps "Glass Cannon".
+- **Berserker Rage** (the uncommon conditional one) → **Battle Fury** — the legendary flat-fury
+  version keeps "Berserker Rage".
+
+No stats changed — names only. (Full item trinket-vs-equip audit + balance review captured
+separately; the bigger slot-reclassification questions are staged for a design call.)
+
+**Verified:** tsc + vite build green; item-icon QA 134/134, shop 8-slot QA 29/29, skill-tree QA
+30/30, all 0 console errors. Catalog now has zero duplicate item names.
+
+Live-verified bundle **`index-BYqxgtja.js`** on roguelite-game-blush.vercel.app.
+
+---
+
 ## 2026-07-06 (early hours) — skill tree rebuilt as a massive Path-of-Exile-style passive web
 
 **The level-up reward is now a huge, interconnected passive tree you navigate by dragging and

@@ -359,7 +359,7 @@ export const ITEM_CATALOG: Item[] = [
     },
     {
       id: 'chain_lightning_t3',
-      name: 'Storm Essence',
+      name: 'Static Charge',
       description: '25% chain to nearby',
       rarity: 'epic',
       tier: ItemTier.Rare,
@@ -1063,7 +1063,7 @@ export const ITEM_CATALOG: Item[] = [
     // Focus on synergies and build diversity
     {
       id: 'glass_cannon_t2',
-      name: 'Glass Cannon',
+      name: 'Brittle Edge',
       description: '+80% dmg, -30 max HP',
       rarity: 'rare',
       tier: ItemTier.Uncommon,
@@ -1076,7 +1076,7 @@ export const ITEM_CATALOG: Item[] = [
     },
     {
       id: 'berserker_rage_t2',
-      name: 'Berserker Rage',
+      name: 'Battle Fury',
       description: '+20% dmg; +35% dmg & fire rate while below 30% HP',
       rarity: 'rare',
       tier: ItemTier.Uncommon,
