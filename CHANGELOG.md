@@ -33,7 +33,7 @@ expressive. Roster→systems gap map written (`DESIGN-BROTATO-WEAPON-MAP.md`): ~
 already replicable; remaining gaps are 5 small self-contained modifiers (lifesteal, bounce,
 explode-on-kill, richer explosives, beam), no architectural blockers.
 
-**Commit `PENDING`** · live-verified `index-fHEerAy2.js` (HTTP 200, no SSO wall, new melee bundle
+**Commit `0b71437`** · live-verified `index-fHEerAy2.js` (HTTP 200, no SSO wall, new melee bundle
 serving). QA: new `qa-melee-styles.mjs` **19/19** on the shipped `dist` (each weapon routes to the
 right style; per-style hit-test proven — thrust rejects a 90° side point while arc/spin accept it,
 spin hits behind, thrust reaches its long lane; weapon_blade/axe/spear sprites registered; live-wave
