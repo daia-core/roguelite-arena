@@ -89,6 +89,97 @@ export function slotHolder(slot: EquipSlot): EquipHolder | null {
   }
 }
 
+// True when the item never equips into a slot (unlimited-stacking trinket pile).
+export function isTrinket(item: Item): boolean {
+  return classifyItemSlot(item) === 'trinket';
+}
+
+// Short human label for an item's equip slot — the "what is this / where does it go"
+// badge on shop cards and the inspect tooltip. A trinket reads as "Trinket" so the
+// unlimited-stacking pile is never confused with limited gear.
+export function slotLabel(item: Item): string {
+  switch (classifyItemSlot(item)) {
+    case 'weapon-1h': return '1H Weapon';
+    case 'weapon-2h': return '2H Weapon';
+    case 'offhand': return 'Off-Hand';
+    case 'head': return 'Head';
+    case 'amulet': return 'Amulet';
+    case 'torso': return 'Torso';
+    case 'legs': return 'Legs';
+    case 'feet': return 'Feet';
+    case 'ring': return 'Ring';
+    default: return 'Trinket';
+  }
+}
+
+// Turn an item's raw numeric fields into short, readable stat lines ("+15% Damage",
+// "+2 Armor", "Shield"). Pure + dependency-free so the shop card, the inspect
+// tooltip, and QA can all render the same at-a-glance breakdown. Storage conventions:
+//   • multiplier fields are stored as 1.15 → shown as "+15%" (v-1)
+//   • fraction fields are stored as 0.12 → shown as "+12%" (v)
+//   • flat fields are stored as 15 → shown as "+15" (may be negative, e.g. -10 Max HP)
+// Booleans render as a bare capability label. Long-tail/exotic fields are left to the
+// hand-written description so this list stays a scannable core, not an exhaustive dump.
+export function itemStatLines(item: Item): string[] {
+  const lines: string[] = [];
+  const mul = (v: number | undefined, label: string) => {
+    if (v === undefined) return;
+    const p = Math.round((v - 1) * 100);
+    if (p !== 0) lines.push(`${p > 0 ? '+' : ''}${p}% ${label}`);
+  };
+  const frac = (v: number | undefined, label: string) => {
+    if (v === undefined) return;
+    const p = Math.round(v * 100);
+    if (p !== 0) lines.push(`${p > 0 ? '+' : ''}${p}% ${label}`);
+  };
+  const flat = (v: number | undefined, label: string) => {
+    if (v === undefined || v === 0) return;
+    lines.push(`${v > 0 ? '+' : ''}${v} ${label}`);
+  };
+  const flag = (v: boolean | undefined, label: string) => { if (v) lines.push(label); };
+
+  // Offense
+  mul(item.damageMultiplier, 'Damage');
+  mul(item.meleeDamageMult, 'Melee Dmg');
+  mul(item.rangedDamageMult, 'Ranged Dmg');
+  mul(item.elementalDamageMult, 'Elemental Dmg');
+  mul(item.fireRateMultiplier, 'Fire Rate');
+  frac(item.critChance, 'Crit');
+  mul(item.critDamageMultiplier, 'Crit Dmg');
+  flat(item.multishot, 'Multishot');
+  flat(item.piercing, 'Pierce');
+  // Defense / survival
+  flat(item.maxHealthBonus, 'Max HP');
+  flat(item.healthRegen, 'HP/s');
+  flat(item.armor, 'Armor');
+  frac(item.lifesteal, 'Lifesteal');
+  frac(item.thorns, 'Thorns');
+  frac(item.dodge, 'Dodge');
+  // Utility / economy
+  mul(item.speedMultiplier, 'Speed');
+  mul(item.xpMagnet, 'XP Range');
+  mul(item.goldBonus, 'Gold');
+  frac(item.luck, 'Luck');
+  // On-hit / status chances
+  frac(item.chainLightning, 'Chain');
+  frac(item.freeze, 'Freeze');
+  frac(item.burn, 'Burn');
+  frac(item.bleed, 'Bleed');
+  frac(item.doom, 'Doom');
+  frac(item.wound, 'Wound');
+  frac(item.multicast, 'Multicast');
+  // Capability flags
+  flag(item.shield, 'Shield');
+  flag(item.homing, 'Homing');
+  flag(item.poison, 'Poison');
+  flag(item.explosionOnHit, 'Explode on Hit');
+  flag(item.bombDrop, 'Bomb Drop');
+  flag(item.novaPulse, 'Nova Pulse');
+  flag(item.auxMelee, 'Orbit Blade');
+  flat(item.orbitOrbs, 'Orbit Orbs');
+  return lines;
+}
+
 // Weapon attack patterns (Brotato-inspired)
 export type WeaponType =
   | 'auto-aim' // Default: auto-aim bullets

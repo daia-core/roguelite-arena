@@ -5,12 +5,12 @@
 import { TransformationTracker } from './TransformationSystem';
 import { DuoTracker, DUO_COMBOS, type DuoCombo } from './DuoSystem';
 import type { DamageType } from './Projectile';
-import { ItemTier, getItemKinds, classifyItemSlot, slotHolder, type Item, type ItemTag, type ItemKind, type WeaponType, type MeleeStyle, type Weapon, type EquipSlot } from './items/types';
+import { ItemTier, getItemKinds, classifyItemSlot, slotHolder, slotLabel, isTrinket, itemStatLines, type Item, type ItemTag, type ItemKind, type WeaponType, type MeleeStyle, type Weapon, type EquipSlot } from './items/types';
 import { ITEM_CATALOG } from './items/catalog';
 
 // Re-export the item types from their new home so every existing importer
 // (Game.ts, Player.ts, ArtifactSystem.ts, …) keeps working unchanged.
-export { ItemTier, getItemKinds, classifyItemSlot };
+export { ItemTier, getItemKinds, classifyItemSlot, slotLabel, isTrinket, itemStatLines };
 export type { Item, ItemTag, ItemKind, WeaponType, Weapon, EquipSlot };
 
 export class ItemDatabase {

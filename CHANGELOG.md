@@ -8,6 +8,65 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-06 (early hours) — tap an equipped item to inspect it (stats + Unequip/Sell); shop cards show numbers
+
+**Tapping a piece of equipped gear now opens an inspect popup instead of silently benching it.**
+Response to "clicking an equipped item should open a tooltip showing its stats, with buttons for
+unequip or sell." Before, a tap on an equipped slot dumped the item straight to the stash with no
+chance to read what it did — now you get a proper modal:
+
+- **What the piece is** — its icon (rarity-framed), name (rarity-coloured), and slot label
+  (`1H Weapon` / `Amulet` / `Trinket` …) with its upgrade level.
+- **What it does** — its concrete stat lines (e.g. `+15% Damage`, `+2 Armor`) plus the full
+  wrapped description.
+- **Two actions** — **UNEQUIP** benches it to the stash (or sells it if the stash is full, so a tap
+  is never a dead no-op), **SELL +Ng** converts it straight to gold. A tap anywhere off the buttons
+  closes the popup, mutating nothing.
+
+**Shop cards now show the numbers, not just the name.** Each card gained a green stat-lines row
+between the slot/trinket badge and the description — so you can weigh a `+20% AoE` ring against a
+`+15% Damage` one at a glance without buying to find out.
+
+**Verified:** tsc + vite build green; the inspect-popup QA passes **32/32** checks (open, unequip,
+sell, equip-from-stash, tap-off close, unequip-when-stash-full sells, empty-slot inert, two-hand);
+shop-layout QA still passes all 11 viewports with the new card row; popup eyeballed at phone
+(390×844) and desktop (1440×900).
+
+Live-verified bundle **`__BUNDLE__`** on roguelite-game-blush.vercel.app.
+
+---
+
+## 2026-07-05 (late night) — shop item cards rebuilt: image-left, structured, slot/trinket badge
+
+**Every shop card is now a clean horizontal layout instead of the old centred stack.** Response to
+"rework the layout of the shop items, they don't look structured nicely — place image to the left,
+description, category and tags organized nicely; also make it clear if an item is a trinket or for a
+specific slot."
+
+Each card now reads left-to-right:
+
+- **Framed icon on the LEFT** — a rarity-bordered square panel filling the card height, so the art
+  anchors the card instead of floating centred.
+- **Text column on the RIGHT**, top to bottom: item **name** (rarity-coloured) → a prominent
+  **SLOT / TRINKET badge** → the **description** (wraps to fit) → a muted **category + tags** footer.
+- **Price** pinned bottom-right; the **combo/synergy tag** rides the top-right of the badge row.
+
+**The badge is the headline fix — you can now tell at a glance what an item IS:** equipment reads its
+slot in **teal** (`WEAPON` / `2H WEAPON` / `OFF-HAND` / `HEAD` / `AMULET` / `TORSO` / `LEGS` / `FEET`
+/ `RING`); an unlimited-stacking trinket reads **`TRINKET`** in **violet**. No more guessing whether a
+pickup competes for a slot or just stacks.
+
+Lock (top-right) and recycle (bottom-left, when owned) buttons are unchanged, so all shop hitboxes
+still line up with the visuals.
+
+**Verified:** tsc + vite build green; shop-layout QA passes all 11 viewports (portrait phones,
+landscape phones, tablet, desktop, cramped windows) — no card/button overlap, no console errors; both
+the trinket (violet) and equipment-slot (teal) badge paths eyeballed at portrait + desktop.
+
+Live-verified bundle **`index-B4WZObcz.js`** on roguelite-game-blush.vercel.app.
+
+---
+
 ## 2026-07-05 (night) — level-ups now feed a persistent skill tree
 
 **The random 1-of-3 item pick on level-up is gone — replaced by a skill tree.** Response to "rework

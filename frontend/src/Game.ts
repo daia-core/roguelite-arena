@@ -6,7 +6,7 @@ import { Projectile } from './Projectile';
 import { MeleeAttack } from './MeleeAttack';
 import { Particle, DamageNumber } from './Particle';
 import { WaveManager } from './WaveManager';
-import { PlayerStats, ItemDatabase, getItemKinds, classifyItemSlot, type Item, type EquipHolderKey } from './ItemSystem';
+import { PlayerStats, ItemDatabase, getItemKinds, classifyItemSlot, slotLabel, itemStatLines, type Item, type EquipHolderKey } from './ItemSystem';
 import { STARTING_CLASSES, type StartingClass } from './Classes';
 import { SaveManager } from './SaveManager';
 import { Input } from './Input';
@@ -254,6 +254,14 @@ export class Game {
   private shopToastText: string = '';
   private shopToastAt: number = 0;
   private static readonly SHOP_TOAST_MS = 1800;
+
+  // EQUIPPED-ITEM INSPECT POPUP — tapping an occupied equip slot opens a small card
+  // showing the piece's stats, with Unequip (→ stash) and Sell (→ gold) buttons. Modal
+  // like the combos/stats overlays: while open it owns all shop input. Anchored near the
+  // tapped slot; button hit-rects are captured at draw time (screen-space, same zoom).
+  private inspectedEquipKey: EquipHolderKey | null = null;
+  private inspectUnequipRect: { x: number; y: number; width: number; height: number } | null = null;
+  private inspectSellRect: { x: number; y: number; width: number; height: number } | null = null;
 
   // GAME FEEL: hit-stop (freeze-frame "punch"). Set only on genuinely impactful
   // kills — bosses and elites/minibosses — NEVER on fodder: the arena clears
@@ -2873,6 +2881,16 @@ export class Game {
 
     this.selectedShopItem = -1;
 
+    // EQUIPPED-ITEM INSPECT POPUP — modal: while open it owns all shop input (buttons
+    // act, a tap elsewhere closes). Checked first so nothing beneath it is interactable.
+    if (this.inspectedEquipKey !== null) {
+      if (this.input.mouseDown) {
+        this.handleInspectPopupTap(mouseX, mouseY);
+        this.input.mouseDown = false;
+      }
+      return;
+    }
+
     // COMBOS guide button (top-right of shop header) — explains synergies/duos.
     const combosBtn = this.getCombosButtonRect();
     // When the overlay is open it owns ALL input: a tap on the button toggles it
@@ -4493,7 +4511,7 @@ export class Game {
     // Discoverability hint — tiny line telling the player the strip is interactive.
     const anyEquipped = keys.some(k => eq[k]);
     if (anyEquipped) {
-      this.renderer.drawText('tap gear ▸ bench it', x + width - s(2), stripBottom + s(2), {
+      this.renderer.drawText('tap gear ▸ inspect', x + width - s(2), stripBottom + s(2), {
         size: s(5), color: '#7a6a44', align: 'right'
       });
     }
@@ -4585,29 +4603,63 @@ export class Game {
       }
     }
 
-    // 3. Equipped slots → bench to stash (or sell if the stash is full).
+    // 3. Equipped slots → OPEN the inspect popup (stats + Unequip/Sell buttons). The
+    // actual bench/sell now happens from that popup's buttons, not on the slot tap, so
+    // the player can read what a piece does before deciding.
     for (const r of this.equipSlotRects) {
       if (pointInRect(mx, my, r)) {
         const occupant = this.playerStats.getEquipment()[r.key];
         if (!occupant) return false; // empty slot — let the tap fall through (nothing to do)
-        if (this.playerStats.unequipToStash(r.key)) {
-          this.syncMaxHealthAfterItemChange();
-          this.audio.playPurchase();
-          this.showShopToast(`Benched ${occupant.name}`);
-        } else {
-          // Stash full → sell it instead so the tap still does something useful.
-          const refund = this.playerStats.getRecycleValue(occupant);
-          this.playerStats.removeItem(occupant.id);
-          this.player.gold += refund;
-          this.syncMaxHealthAfterItemChange();
-          this.audio.playPurchase();
-          this.showShopToast(`Stash full — sold ${occupant.name} · +${refund}g`);
-        }
+        this.inspectedEquipKey = r.key;
+        this.audio.playPurchase();
         return true;
       }
     }
 
     return false;
+  }
+
+  /** Modal input handler for the equipped-item inspect popup. Runs before every other
+   *  shop interaction while a popup is open, so it owns all input: Unequip benches the
+   *  piece to the stash (or sells if the stash is full), Sell converts it to gold, and a
+   *  tap anywhere else closes the popup. Returns true if the tap was consumed. */
+  private handleInspectPopupTap(mx: number, my: number): boolean {
+    if (this.inspectedEquipKey === null || !this.player) return false;
+    const key = this.inspectedEquipKey;
+    const occupant = this.playerStats.getEquipment()[key];
+    if (!occupant) { this.inspectedEquipKey = null; return true; }
+
+    // Unequip → bench to stash (or sell if the stash is full, so it's never a dead tap).
+    if (this.inspectUnequipRect && pointInRect(mx, my, this.inspectUnequipRect)) {
+      if (this.playerStats.unequipToStash(key)) {
+        this.showShopToast(`Benched ${occupant.name}`);
+      } else {
+        const refund = this.playerStats.getRecycleValue(occupant);
+        this.playerStats.removeItem(occupant.id);
+        this.player.gold += refund;
+        this.showShopToast(`Stash full — sold ${occupant.name} · +${refund}g`);
+      }
+      this.syncMaxHealthAfterItemChange();
+      this.audio.playPurchase();
+      this.inspectedEquipKey = null;
+      return true;
+    }
+
+    // Sell → straight to gold at the recycle value.
+    if (this.inspectSellRect && pointInRect(mx, my, this.inspectSellRect)) {
+      const refund = this.playerStats.getRecycleValue(occupant);
+      this.playerStats.removeItem(occupant.id);
+      this.player.gold += refund;
+      this.syncMaxHealthAfterItemChange();
+      this.audio.playPurchase();
+      this.showShopToast(`Sold ${occupant.name} · +${refund}g`);
+      this.inspectedEquipKey = null;
+      return true;
+    }
+
+    // Tap anywhere else (including the panel body) closes the popup.
+    this.inspectedEquipKey = null;
+    return true;
   }
 
   /** Flash a one-line toast in the shop (equip/bench/sell feedback). */
@@ -4630,7 +4682,7 @@ export class Game {
     const { s, isMobile, cols, itemWidth, itemHeight, gap, startX, startY, lockButtonSize,
       buttonWidth, buttonHeight, continueY, rerollY,
       splitButtonWidth, rerollX, autoBuyX,
-      iconY, iconSize, nameY, nameSize, descY, descSize, costY, costSize,
+      nameSize, descSize, costSize,
       synergySize } = this.getShopLayout();
     const ctx = this.renderer.getContext();
 
@@ -4945,91 +4997,163 @@ export class Game {
         this.renderer.drawItemIcon('♻️', recycleButtonX + recycleButtonSize / 2, recycleButtonY + Math.round(recycleButtonSize * 0.12), Math.round(recycleButtonSize * 0.76), 'center');
       }
 
-      // Synergy indicator — NAME the combo so it's legible, not a vague "SYNERGY".
-      // Priority: completes a named duo > teaches an unowned duo pairing > tag synergy.
+      // ─── Card content: IMAGE LEFT, structured text block RIGHT ───────────────
+      // Reworked from the old centred/vertical stack (Felix: "place image to the
+      // left, description, category and tags organized nicely; make it clear if an
+      // item is a trinket or for a specific slot"). One horizontal row: a framed
+      // icon panel on the left, then a left-aligned text column — name, a prominent
+      // SLOT/TRINKET badge, the description, and a category+tags footer — with the
+      // price pinned bottom-right. All geometry derives from the card box so it
+      // reads identically across portrait / mobile-landscape / desktop.
+      const cardInset = s(8);            // clears the inner rarity border (drawn at +6)
+      const pad = s(isMobile ? 6 : 8);
+      const contentTop = y + cardInset;
+      const contentBottom = y + itemHeight - cardInset;
+      const contentH = contentBottom - contentTop;
+
+      // Left icon panel — a framed square filling most of the card height.
+      const iconBox = Math.min(Math.round(contentH * 0.94), Math.round(itemWidth * 0.34));
+      const iconLeft = x + cardInset;
+      const iconCX = iconLeft + iconBox / 2;
+      const iconCY = y + itemHeight / 2;
+      const iconTop = iconCY - iconBox / 2;
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,0.28)';
+      ctx.fillRect(iconLeft, iconTop, iconBox, iconBox);
+      ctx.strokeStyle = rarityColor;
+      ctx.globalAlpha = 0.55;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(iconLeft, iconTop, iconBox, iconBox);
+      ctx.restore();
+      const spriteSize = Math.round(iconBox * 0.74);
+      this.renderer.drawItemIcon(item.icon, iconCX, iconCY - spriteSize / 2, spriteSize, 'center');
+
+      // Text column bounds (right of the icon, clear of the top-right lock button).
+      const textX = iconLeft + iconBox + pad;
+      const textRight = x + itemWidth - cardInset;
+      const textW = Math.max(s(30), textRight - textX);
+      const lockLeft = x + itemWidth - lockButtonSize - s(4);
+      const nameMaxW = Math.max(s(30), lockLeft - textX - s(4));
+
+      // Small pixel "pill": filled chip with a border + centred label. Returns its
+      // width so a row of chips can be laid out left-to-right.
+      const drawPill = (px: number, py: number, label: string, fs: number,
+        textColor: string, bgColor: string, borderColor: string): number => {
+        const w = Math.round(label.length * fs) + s(9);
+        const h = fs + s(6);
+        ctx.save();
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(px, py, w, h);
+        ctx.strokeStyle = borderColor;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(px, py, w, h);
+        ctx.restore();
+        this.renderer.drawText(label, px + w / 2, py + s(3), {
+          size: fs, align: 'center', color: textColor, stroke: false,
+        });
+        return w;
+      };
+
+      let ty = contentTop;
+
+      // Row 1 — item name (left-aligned, rarity-coloured).
+      const nameS = nameSize;
+      this.renderer.drawText(item.name, textX, ty, {
+        size: nameS, align: 'left', color: rarityColor, maxWidth: nameMaxW,
+      });
+      ty += nameS + s(5);
+
+      // Row 2 — SLOT / TRINKET badge (the "what is this" answer Felix asked for),
+      // colour-coded: equipment slots teal, trinkets violet. A completed/looming
+      // combo tag rides the right end of the same row.
+      const SLOT_LABELS: Record<string, string> = {
+        'weapon-1h': 'WEAPON', 'weapon-2h': '2H WEAPON', 'offhand': 'OFF-HAND',
+        'head': 'HEAD', 'amulet': 'AMULET', 'torso': 'TORSO', 'legs': 'LEGS',
+        'feet': 'FEET', 'ring': 'RING', 'trinket': 'TRINKET',
+      };
+      const slot = classifyItemSlot(item);
+      const isTrinket = slot === 'trinket';
+      const badgeS = synergySize;
+      const badgeLabel = SLOT_LABELS[slot] ?? slot.toUpperCase();
+      const badgeW = drawPill(
+        textX, ty, badgeLabel, badgeS,
+        isTrinket ? '#f3e8ff' : '#e6fff7',
+        isTrinket ? '#4a2d6b' : '#12463a',
+        isTrinket ? '#c084fc' : '#4ec9b0',
+      );
+
+      // Synergy / combo indicator — NAME the combo so it's legible, right-aligned on
+      // the badge row. Priority: completes a named duo > teaches a pairing > tag fit.
       if (completesDuo || duoInfo || hasTagMatch || hasSynergy) {
         let indicatorText = '';
-        let indicatorColor = '#00ff00';
-        if (completesDuo && duoInfo) {
-          // You own the partner — buying this fires the combo now.
-          indicatorText = duoInfo.name.toUpperCase();
-          indicatorColor = '#ffd43b';
-        } else if (duoInfo) {
-          // Part of a named combo you don't have the partner for yet — teach the pairing.
-          indicatorText = `+ ${duoInfo.partner}`;
-          indicatorColor = '#74c0fc';
-        } else if (hasTagMatch) {
-          // Show which tags match (as uppercase text, not emoji)
-          const tagLabel = matchingTags.map(t => t.toUpperCase()).join('/');
-          indicatorText = `${tagLabel} FIT`;
-          indicatorColor = '#7bd94a';
-        } else if (hasSynergy) {
-          indicatorText = 'GOOD FIT';
-          indicatorColor = '#7bd94a';
-        }
-
+        let indicatorColor = '#7bd94a';
+        if (completesDuo && duoInfo) { indicatorText = duoInfo.name.toUpperCase(); indicatorColor = '#ffd43b'; }
+        else if (duoInfo) { indicatorText = `+ ${duoInfo.partner}`; indicatorColor = '#74c0fc'; }
+        else if (hasTagMatch) { indicatorText = `${matchingTags.map(t => t.toUpperCase()).join('/')} FIT`; indicatorColor = '#7bd94a'; }
+        else if (hasSynergy) { indicatorText = 'GOOD FIT'; indicatorColor = '#7bd94a'; }
         if (indicatorText) {
-          this.renderer.drawText(indicatorText, x + itemWidth / 2, y + s(6), {
-            size: synergySize,
-            align: 'center',
-            color: indicatorColor,
-            maxWidth: itemWidth - s(10)
+          this.renderer.drawText(indicatorText, textRight, ty + s(1), {
+            size: badgeS, align: 'right', color: indicatorColor,
+            maxWidth: Math.max(s(20), textW - badgeW - s(6)),
           });
         }
       }
+      ty += badgeS + s(6) + s(5);
 
-      // Icon with better positioning (pixel-art sprite)
-      this.renderer.drawItemIcon(item.icon, x + itemWidth / 2, y + iconY, iconSize);
+      // Row 3 — concrete stat lines ("+15% Damage · +2 Armor"), the at-a-glance
+      // numbers Felix asked the card contents to surface. Green, compact, joined with
+      // middots and clipped to one line (the full breakdown lives in the description +
+      // the equipped-item inspect popup). Skipped when the item has no numeric stats
+      // (pure-mechanic pieces) so the row never renders empty.
+      const statS = Math.max(s(6), Math.round(descSize * 0.9));
+      const stats = itemStatLines(item);
+      if (stats.length > 0) {
+        this.renderer.drawText(stats.join('  ·  '), textX, ty, {
+          size: statS, align: 'left', color: '#8ce99a', maxWidth: textW,
+        });
+        ty += statS + s(5);
+      }
 
-      // Name — pixel font is wide, so sizes are tuned to fit the card width
-      this.renderer.drawText(item.name, x + itemWidth / 2, y + nameY, {
-        size: nameSize,
-        align: 'center',
-        color: rarityColor
-      });
-
-      // Category chips (weapon / passive / active) — at-a-glance "what does this item do".
+      // Footer line — category (weapon/passive/active) + synergy tags, left; price,
+      // right. Reserve its band first so the description fills only the space above.
       const kindColors: Record<string, string> = { weapon: '#f0637a', passive: '#6aa9ff', active: '#ffc14d' };
       const kinds = getItemKinds(item);
-      const chipSize = Math.max(6, Math.round(nameSize * 0.5));
-      const chipLabel = kinds.map(k => k.toUpperCase()).join('  ');
-      // Sit the chip row in the gap between the name and the description so it scales
-      // with card height and never collides with either row.
-      const chipY = nameY + Math.round((descY - nameY) * 0.58);
-      this.renderer.drawText(chipLabel, x + itemWidth / 2, y + chipY, {
-        size: chipSize,
-        align: 'center',
-        color: kinds.length === 1 ? kindColors[kinds[0]] : '#cbb892',
-      });
+      const footerS = Math.max(s(6), Math.round(descSize * 0.82));
+      const footerY = contentBottom - footerS;
 
-      // Description (more compact) — swapped for the combo payoff when you'd complete a duo,
-      // so the card tells you WHAT the synergy does at the moment of decision, not just its name.
-      // Wrapped through the standardized text-box primitive: it fills the space between the
-      // description row and the cost row, wrapping onto as many lines as fit and shrinking only
-      // as a last resort — so a long description never overflows the card (portrait) or shrinks
-      // to an unreadable single line, however long the copy.
-      const descMaxW = itemWidth - s(12);
+      // Row 4 — description, wrapped, left-aligned. Swaps to the combo payoff when
+      // buying would complete a duo, so the card tells you WHAT fires at decision time.
+      const descTop = ty;
+      const descBottomLimit = footerY - s(4);
       const descLineH = descSize + Math.max(2, Math.round(descSize * 0.35));
-      const descMaxLines = Math.max(1, Math.floor((costY - descY) / descLineH));
+      const descMaxLines = Math.max(1, Math.floor((descBottomLimit - descTop) / descLineH));
       this.renderer.drawWrappedText(
         completesDuo && duoInfo ? duoInfo.effect : item.description,
-        x + itemWidth / 2, y + descY,
+        textX, descTop,
         {
-          size: descSize,
-          align: 'center',
+          size: descSize, align: 'left',
           color: completesDuo && duoInfo ? '#ffe066' : '#e5d9c3',
-          maxWidth: descMaxW,
-          maxLines: descMaxLines,
+          maxWidth: textW, maxLines: descMaxLines,
         }
       );
 
-      // Cost with better styling (bottom, prominent)
+      // Price — bottom-right, prominent (gold if affordable, red if not).
       const finalPrice = this.playerStats.getItemPrice(item, this.waveManager.currentWave);
       const canAfford = this.player.gold >= finalPrice;
-      this.renderer.drawText(`${finalPrice} G`, x + itemWidth / 2, y + costY, {
-        size: costSize,
-        align: 'center',
-        color: canAfford ? '#ffd700' : '#ef4444'
+      const priceLabel = `${finalPrice} G`;
+      const priceW = Math.round(priceLabel.length * costSize) + s(4);
+      this.renderer.drawText(priceLabel, textRight, footerY - s(1), {
+        size: costSize, align: 'right',
+        color: canAfford ? '#ffd700' : '#ef4444',
+      });
+
+      // Category + tags footer, left — muted so the badge stays the loud label.
+      const catLabel = kinds.map(k => k.toUpperCase()).join('/');
+      const footerText = item.tags.length ? `${catLabel}  ·  ${item.tags.join(' ')}` : catLabel;
+      this.renderer.drawText(footerText, textX, footerY, {
+        size: footerS, align: 'left',
+        color: kinds.length === 1 ? kindColors[kinds[0]] : '#b7a888',
+        maxWidth: Math.max(s(20), textRight - priceW - s(6) - textX),
       });
     }
 
@@ -5084,6 +5208,136 @@ export class Game {
     if (this.showCombosOverlay) this.drawCombosOverlay();
     // Full-stats popup draws on top of everything (opened by tapping the stats panel).
     if (this.showStatsPopup) this.drawStatsPopup();
+    // Equipped-item inspect popup draws last so its card + buttons sit above the strip.
+    if (this.inspectedEquipKey !== null) this.drawInspectPopup();
+  }
+
+  // Compact inspect card for the currently-tapped equipped item: framed panel with the
+  // piece's icon, name (rarity-coloured), slot label + upgrade level, its stat lines
+  // (via itemStatLines), the hand-written description, and Unequip / Sell buttons. Modal
+  // dimming behind it; a tap anywhere off the buttons closes it (handled in updateShop).
+  private drawInspectPopup(): void {
+    const key = this.inspectedEquipKey;
+    if (key === null) { this.inspectUnequipRect = this.inspectSellRect = null; return; }
+    const item = this.playerStats.getEquipment()[key];
+    if (!item) { this.inspectedEquipKey = null; return; }
+
+    const ctx = this.renderer.getContext();
+    const zoom = this.canvas.clientWidth ? this.canvas.width / this.canvas.clientWidth : 1;
+    const s = (v: number) => Math.round(v * zoom);
+    const W = this.canvas.width;
+    const H = this.canvas.height;
+    const isMobile = W / zoom < 800;
+
+    const rarityColor: Record<string, string> = {
+      common: '#c8c8c8', rare: '#74c0fc', epic: '#b06bd9', legendary: '#f2b04e',
+    };
+    const nameCol = rarityColor[item.rarity] ?? '#ffffff';
+    const level = item.upgradeLevel ?? 1;
+    const stats = itemStatLines(item);
+
+    // Panel geometry: centred card, width bounded for phone. Height grows with the
+    // number of stat lines + wrapped description lines.
+    const pad = s(10);
+    const panelW = Math.min(W - s(24), s(isMobile ? 300 : 360));
+    const bodySize = s(isMobile ? 8 : 9);
+    // Match Renderer.drawWrappedText's internal line height so measured rows and drawn
+    // rows agree (size + ~35% leading, min 2px).
+    const lineH = bodySize + Math.max(2, Math.round(bodySize * 0.35));
+    const headSize = s(isMobile ? 11 : 13);
+    const iconBox = s(isMobile ? 34 : 40);
+
+    // Estimate the description wrap to size the panel. Press-Start-2P advances ~1em per
+    // glyph, so chars-per-line ≈ boxWidth / fontSize; cap the block at 4 lines (the
+    // draw call also hard-caps via maxLines, shrinking the font if it still overflows).
+    const textW = panelW - pad * 2;
+    const charsPerLine = Math.max(8, Math.floor(textW / bodySize));
+    const estLines = Math.ceil(item.description.length / charsPerLine);
+    const descLineCount = Math.min(4, Math.max(1, estLines));
+
+    const headerH = Math.max(iconBox, headSize + lineH); // icon row height
+    const statsH = stats.length > 0 ? (stats.length * lineH + s(4)) : 0;
+    const descH = descLineCount * lineH + s(4);
+    const btnH = s(isMobile ? 26 : 30);
+    const panelH = pad + headerH + s(6) + statsH + descH + s(8) + btnH + pad;
+
+    const px = (W - panelW) / 2;
+    const py = Math.max(s(12), (H - panelH) / 2);
+
+    // Modal dim behind, then the framed card.
+    ctx.save();
+    ctx.fillStyle = 'rgba(8,5,2,0.72)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+    drawPanel(ctx, px, py, panelW, panelH, DARK_WOOD_THEME, 41, 88);
+
+    // Header: icon left, name + slot/level right.
+    const contentX = px + pad;
+    let cy = py + pad;
+    ctx.save();
+    ctx.fillStyle = '#241a0c';
+    ctx.fillRect(contentX, cy, iconBox, iconBox);
+    ctx.strokeStyle = nameCol;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(contentX, cy, iconBox, iconBox);
+    ctx.restore();
+    this.renderer.drawItemIcon(item.icon, contentX + iconBox / 2, cy + iconBox / 2 - s(6), s(isMobile ? 18 : 22));
+
+    const headTextX = contentX + iconBox + pad;
+    this.renderer.drawText(item.name, headTextX, cy + s(2), {
+      size: headSize, align: 'left', color: nameCol, maxWidth: panelW - (headTextX - px) - pad,
+    });
+    const slotStr = level > 1 ? `${slotLabel(item)}  ·  +${level - 1}` : slotLabel(item);
+    this.renderer.drawText(slotStr, headTextX, cy + headSize + s(6), {
+      size: bodySize, align: 'left', color: '#c9b98f',
+    });
+    cy += headerH + s(6);
+
+    // Stat lines (two-up on wide panels to stay compact; single column on mobile).
+    if (stats.length > 0) {
+      const statCols = isMobile ? 1 : 2;
+      const colW = textW / statCols;
+      for (let i = 0; i < stats.length; i++) {
+        const col = i % statCols;
+        const rowY = cy + Math.floor(i / statCols) * lineH;
+        this.renderer.drawText(stats[i], contentX + col * colW, rowY, {
+          size: bodySize, align: 'left', color: '#8ce99a',
+        });
+      }
+      cy += Math.ceil(stats.length / statCols) * lineH + s(4);
+    }
+
+    // Description (wrapped, capped).
+    this.renderer.drawWrappedText(item.description, contentX, cy, {
+      maxWidth: textW, size: bodySize, align: 'left', color: '#c8b998', maxLines: descLineCount,
+    });
+    cy += descLineCount * lineH + s(8);
+
+    // Buttons: Unequip (bench) left, Sell right. Sell shows the refund value.
+    const refund = this.playerStats.getRecycleValue(item);
+    const btnGap = s(8);
+    const btnW = (textW - btnGap) / 2;
+    const unX = contentX;
+    const sellX = contentX + btnW + btnGap;
+    const btnY = py + panelH - pad - btnH;
+
+    const drawBtn = (bx: number, label: string, face: string, border: string, textCol: string) => {
+      ctx.save();
+      ctx.fillStyle = face;
+      ctx.fillRect(bx, btnY, btnW, btnH);
+      ctx.strokeStyle = border;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(bx, btnY, btnW, btnH);
+      ctx.restore();
+      this.renderer.drawText(label, bx + btnW / 2, btnY + btnH / 2 - bodySize / 2, {
+        size: bodySize, align: 'center', color: textCol,
+      });
+    };
+    drawBtn(unX, 'UNEQUIP', '#2c3a4a', '#5a86b0', '#d6ecff');
+    drawBtn(sellX, `SELL +${refund}g`, '#4a2a18', '#c8894c', '#ffe0c8');
+
+    this.inspectUnequipRect = { x: unX, y: btnY, width: btnW, height: btnH };
+    this.inspectSellRect = { x: sellX, y: btnY, width: btnW, height: btnH };
   }
 
   // Full-screen breakdown of EVERY stat and bonus (not just the six on the shop
