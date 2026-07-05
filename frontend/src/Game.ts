@@ -1712,10 +1712,14 @@ export class Game {
         const angle = Math.atan2(nearest.y - py, nearest.x - px);
         const dmg = this.playerStats.getSwingDamage();
         const kb = this.playerStats.getSwingKnockback();
-        // With AOE the swing becomes a full 360° quake; otherwise a directional arc.
-        // Pushed through the shared meleeAttacks pipeline (collision/knockback/kill).
-        const arc = aoe > 0 ? Math.PI * 2 : this.playerStats.getSwingArc();
-        this.meleeAttacks.push(new MeleeAttack(px, py, angle, arc, reach, dmg, kb));
+        // The equipped weapon's STYLE decides how the swing reads and hits: a spear
+        // thrusts a narrow lane, a hammer slams a disc, a heavy blade / AOE swing
+        // whirls a full circle, everything else arcs. Pushed through the shared
+        // meleeAttacks pipeline (collision/knockback/kill) regardless of style.
+        const style = this.playerStats.getMeleeStyle();
+        // A spin whirls the full circle; every other style sweeps its configured arc.
+        const arc = style === 'spin' ? Math.PI * 2 : this.playerStats.getSwingArc();
+        this.meleeAttacks.push(new MeleeAttack(px, py, angle, arc, reach, dmg, kb, style));
       }
       this.auxMeleeTimer = this.playerStats.getSwingInterval();
     }

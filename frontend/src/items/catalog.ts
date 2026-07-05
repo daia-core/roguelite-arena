@@ -628,11 +628,55 @@ export const ITEM_CATALOG: Item[] = [
       unlocked: false,
       tags: ['melee'],
       weaponType: 'melee',    // suppresses the gun; the swing IS the attack
+      meleeStyle: 'arc',      // a wide sweeping cleave
       meleeDamageMult: 2.4,   // strong swing to stand alone without the gun
       swingRangeBonus: 30,
       swingArcBonus: Math.PI * 0.2,
       swingCooldownMult: 0.7, // fast swings
       knockback: 120
+    },
+    {
+      // SPEAR: a true melee loadout that THRUSTS — long forward reach, tight arc,
+      // heavy per-hit but slower. weaponType:'melee' silences the gun; the meleeStyle
+      // routes it through the thrust animation + narrow-lane hit test. Class-granted /
+      // shop-offered like other weapons.
+      id: 'melee_spear_t2',
+      name: 'Piercing Lance',
+      description: 'Melee only: a long forward thrust — huge reach, narrow lane, heavy hits',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 34,
+      icon: '🔱',
+      unlocked: true,
+      tags: ['melee'],
+      weaponType: 'melee',
+      meleeStyle: 'thrust',
+      meleeDamageMult: 2.8,      // fewer, harder pokes
+      swingRangeBonus: 70,        // long reach is the point
+      swingCooldownMult: 1.05,    // a touch slower — it's a committed lunge
+      piercing: 2,                // the lance runs through a line of enemies
+      knockback: 80
+    },
+    {
+      // HAMMER: a slow, heavy overhead SLAM onto a disc out front. Big AoE, big
+      // knockback, low swing speed. weaponType:'melee' silences the gun; slam style +
+      // swingAoe give it the crashing disc.
+      id: 'melee_hammer_t2',
+      name: 'Crashing Maul',
+      description: 'Melee only: a slow overhead slam that quakes a wide area and flings enemies',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 36,
+      icon: '🔨',
+      unlocked: true,
+      tags: ['melee'],
+      weaponType: 'melee',
+      meleeStyle: 'slam',
+      meleeDamageMult: 3.2,       // hits like a truck
+      swingRangeBonus: 20,
+      swingAoe: 55,               // the slam disc
+      swingCooldownMult: 1.45,    // heavy and slow
+      knockback: 200
     },
     {
       id: 'melee_sword_t2',
@@ -644,6 +688,7 @@ export const ITEM_CATALOG: Item[] = [
       icon: '🗡️',
       unlocked: true,
       tags: ['melee'],
+      meleeStyle: 'arc',
       meleeDamageMult: 1.5, // buffs the swing, not the gun
       swingRangeBonus: 25,
       swingArcBonus: Math.PI * 0.15,

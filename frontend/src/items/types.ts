@@ -58,6 +58,16 @@ export type WeaponType =
   | 'orbital' // Rotating projectiles around player
   | 'melee'; // Swing/slash around player
 
+// The visual + hit-shape of a melee swing. Purely how a swing READS and connects;
+// the damage/reach/arc numbers still come from the swing stats. Lets one melee
+// pipeline express the whole Brotato melee family (blades sweep, spears thrust,
+// heavy weapons whirl or slam) instead of a single generic pixel arc.
+//   arc    — a directional sweeping slash (swords/blades). Default.
+//   thrust — a narrow, deep forward lunge (spears/rapiers): long reach, tight arc.
+//   spin   — a full 360° whirl (heavy blades / when swingAoe is active).
+//   slam   — an overhead smash onto a circular zone out front (hammers/mauls).
+export type MeleeStyle = 'arc' | 'thrust' | 'spin' | 'slam';
+
 export interface Item {
   id: string;
   name: string;
@@ -98,6 +108,7 @@ export interface Item {
   swingCooldownMult?: number; // <1 = swing faster, >1 = slower/heavier
   swingAoe?: number; // radius of a full-circle AOE burst on each swing (px); makes the swing hit all around
   aoeRadiusMult?: number; // GLOBAL area multiplier — scales swing AOE, nova, and bomb radii
+  meleeStyle?: MeleeStyle; // swing shape/animation (arc default; thrust/spin/slam for spears/heavies)
 
   // Stat modifiers
   damageMultiplier?: number;

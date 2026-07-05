@@ -5,7 +5,7 @@
 import { TransformationTracker } from './TransformationSystem';
 import { DuoTracker, DUO_COMBOS, type DuoCombo } from './DuoSystem';
 import type { DamageType } from './Projectile';
-import { ItemTier, getItemKinds, type Item, type ItemTag, type ItemKind, type WeaponType, type Weapon } from './items/types';
+import { ItemTier, getItemKinds, type Item, type ItemTag, type ItemKind, type WeaponType, type MeleeStyle, type Weapon } from './items/types';
 import { ITEM_CATALOG } from './items/catalog';
 
 // Re-export the item types from their new home so every existing importer
@@ -1071,6 +1071,20 @@ export class PlayerStats {
   /** Knockback the swing imparts — a light base shove plus any item knockback. */
   getSwingKnockback(): number {
     return 40 + this.getKnockback();
+  }
+
+  /**
+   * The swing's visual + hit shape. Priority:
+   *   1. An equipped melee item that declares a meleeStyle (spear→thrust, hammer→slam…).
+   *   2. Otherwise a full-circle AOE swing whirls ('spin').
+   *   3. Otherwise the default directional arc.
+   * Purely presentational routing over the existing swing numbers.
+   */
+  getMeleeStyle(): MeleeStyle {
+    const styled = this.items.find(i => i.meleeStyle);
+    if (styled?.meleeStyle) return styled.meleeStyle;
+    if (this.getSwingAoe() > 0) return 'spin';
+    return 'arc';
   }
 
   hasBombDrop(): boolean {

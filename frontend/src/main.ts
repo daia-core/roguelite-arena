@@ -2,6 +2,7 @@
 
 import { Game } from './Game';
 import { STARTING_CLASSES } from './Classes';
+import { MeleeAttack } from './MeleeAttack';
 import { AoeZone } from './AoeZone';
 import { SpriteSheet } from './sprites';
 import { UISprites } from './UISprites';
@@ -55,6 +56,9 @@ const game = new Game(canvas);
 (window as unknown as { __AoeZone: typeof AoeZone }).__AoeZone = AoeZone;
 // Dev/QA hook: lets tooling enumerate the starting-class roster. Not a public API.
 (window as unknown as { __STARTING_CLASSES: typeof STARTING_CLASSES }).__STARTING_CLASSES = STARTING_CLASSES;
+// Dev/QA hook: lets tooling construct/inspect a melee swing in isolation (style hit
+// tests, sprite selection). Not a public API.
+(window as unknown as { __MeleeAttack: typeof MeleeAttack }).__MeleeAttack = MeleeAttack;
 
 // Game loop
 let lastTime = performance.now();

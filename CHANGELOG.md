@@ -8,6 +8,38 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-05 (night) — feature: melee weapons SWING a real weapon + show their hit zone
+
+Melee used to be one generic yellow pixel-fan for every weapon. Now each melee weapon **swings an
+actual animated weapon sprite** and **paints the exact area it damages**, and the whole Brotato
+melee family reads distinctly.
+
+- **A real weapon swings.** A pixel **blade / axe / spear** sprite now animates through the motion —
+  a blade sweeps across its arc, a spear lunges out and recoils, a heavy weapon whirls a full circle,
+  a maul rises and crashes down — instead of an abstract fan.
+- **The hit zone is highlighted.** Every swing paints a **dithered highlight of the exact area it
+  damages** (a wedge for a sweep, a lane for a thrust, a disc for a slam, a ring for a whirl), so you
+  can read the danger area at a glance — colour-matched to each style, brightest mid-swing.
+- **Four swing styles, one pipeline.** New `MeleeStyle` — **arc** (sweeping blades), **thrust**
+  (spears: long reach, narrow lane, runs through a line of enemies), **slam** (hammers: overhead
+  disc quake), **spin** (heavy/AoE swings: full 360° whirl). The style drives both the animation and
+  the hit test — a spear pokes a lane, not a fan.
+- **Two new melee weapons** exercising the styles: **Piercing Lance** 🔱 (thrust — huge reach, pierces
+  a line, heavy hits) and **Crashing Maul** 🔨 (slam — wide quake, big knockback). Existing blades
+  swing the arc style.
+
+Groundwork for Felix's ask to replicate the full Brotato roster — the melee half is now fully
+expressive. Roster→systems gap map written (`DESIGN-BROTATO-WEAPON-MAP.md`): ~90% of Brotato is
+already replicable; remaining gaps are 5 small self-contained modifiers (lifesteal, bounce,
+explode-on-kill, richer explosives, beam), no architectural blockers.
+
+**Commit `PENDING`** · live-verified `index-fHEerAy2.js` (HTTP 200, no SSO wall, new melee bundle
+serving). QA: new `qa-melee-styles.mjs` **19/19** on the shipped `dist` (each weapon routes to the
+right style; per-style hit-test proven — thrust rejects a 90° side point while arc/spin accept it,
+spin hits behind, thrust reaches its long lane; weapon_blade/axe/spear sprites registered; live-wave
+swing still damages a front enemy). Mid-swing screenshot reviewed (blade + AoE highlight visible).
+Zero console/page errors.
+
 ## 2026-07-05 (night) — BIG COMBAT UPDATE: classes, tougher enemies, weapon feel, universal items
 
 The largest gameplay pass in a while — four connected changes to how a run starts, how enemies

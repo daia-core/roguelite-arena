@@ -29,6 +29,7 @@ export class SpriteSheet {
     this.createProjectileSprites();
     this.createItemSprites();
     this.createPickupSprites();
+    this.createWeaponSprites();
     // Data-driven sprites load last so they override legacy hand-coded ones
     this.loadDataSprites();
   }
@@ -1449,6 +1450,63 @@ export class SpriteSheet {
 
       this.sprites.set(`item_${item.name}`, canvas);
     });
+  }
+
+  // ==================== MELEE WEAPON SPRITES ====================
+  // Full-size weapon sprites drawn IN-WORLD as the melee swing animates (distinct
+  // from the tiny shop item_* icons above). Each points along +x (handle/pivot at
+  // the left, striking end at the right) so MeleeAttack can rotate it to the swing
+  // angle and scale its length to the weapon's reach. Keyed 'weapon_<style>' so the
+  // swing can pick a visual per weapon family as the Brotato roster grows.
+  private static createWeaponSprites() {
+    const outline = '#20242b';
+    const grip = '#6b4423';
+    const gold = '#c9a227';
+    const steel = '#b8c0cc';
+    const shine = '#eef2f7';
+
+    // SWORD / BLADE — a slim steel blade for sweeping arc swings (18x5 base * 3).
+    const blade = this.createCanvas(18 * 3, 5 * 3);
+    const bladeCtx = blade.getContext('2d')!;
+    // 1 outline, 2 grip, 3 guard/pommel, 4 steel, 5 shine
+    const bladePixels = [
+      [0,0,0,0,0,0,3,1,4,4,4,4,4,4,4,1,0,0],
+      [0,0,1,2,2,1,3,4,5,5,5,5,5,5,4,4,1,0],
+      [1,2,2,2,2,2,3,4,5,5,5,5,5,5,5,5,4,1],
+      [0,0,1,2,2,1,3,4,5,5,5,5,5,5,4,4,1,0],
+      [0,0,0,0,0,0,3,1,4,4,4,4,4,4,4,1,0,0],
+    ];
+    this.drawPixels(bladeCtx, bladePixels, ['transparent', outline, grip, gold, steel, shine], 3);
+    this.sprites.set('weapon_blade', blade);
+
+    // AXE / HEAVY — a broad head for wide chopping arcs (16x7 base * 3).
+    const axe = this.createCanvas(16 * 3, 7 * 3);
+    const axeCtx = axe.getContext('2d')!;
+    const edge = '#d7dde6';
+    const axePixels = [
+      [0,0,0,0,0,0,0,0,0,0,0,1,1,4,4,1],
+      [0,0,0,0,0,0,0,0,0,0,1,4,4,4,5,1],
+      [0,0,1,2,2,2,2,2,1,1,4,4,5,5,5,1],
+      [1,2,2,2,2,2,2,2,3,4,4,5,5,5,4,1],
+      [0,0,1,2,2,2,2,2,1,1,4,4,5,5,5,1],
+      [0,0,0,0,0,0,0,0,0,0,1,4,4,4,5,1],
+      [0,0,0,0,0,0,0,0,0,0,0,1,1,4,4,1],
+    ];
+    this.drawPixels(axeCtx, axePixels, ['transparent', outline, grip, gold, steel, edge], 3);
+    this.sprites.set('weapon_axe', axe);
+
+    // SPEAR — a long shaft with a narrow head for straight thrusts (20x5 base * 3).
+    const spear = this.createCanvas(20 * 3, 5 * 3);
+    const spearCtx = spear.getContext('2d')!;
+    const spearPixels = [
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,1,0,0],
+      [0,0,1,2,2,2,2,2,2,2,2,2,2,1,4,4,5,4,1,0],
+      [1,2,2,2,2,2,2,2,2,2,2,2,2,3,4,5,5,5,4,1],
+      [0,0,1,2,2,2,2,2,2,2,2,2,2,1,4,4,5,4,1,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,1,0,0],
+    ];
+    this.drawPixels(spearCtx, spearPixels, ['transparent', outline, grip, gold, steel, shine], 3);
+    this.sprites.set('weapon_spear', spear);
   }
 
   private static createPickupSprites() {
