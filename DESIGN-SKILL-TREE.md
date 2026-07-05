@@ -1,5 +1,18 @@
 # Design — Skill Tree (replaces the level-up item pick)
 
+> **STATUS 2026-07-06: SHIPPED, but as a bigger design — the v1 three-column tree below was
+> SUPERSEDED before build.** Felix followed up: *"I want the skill tree to be massive… encompass
+> the same key features [as Path of Exile]. Maybe starting class should make you start at different
+> places in our tree."* So what shipped is a **PoE-style passive web** (88 nodes / 123 edges, six
+> radial arms + hub + gateway ring, four node kinds incl. keystones with trade-offs, class-specific
+> start nodes, drag/zoom navigation, connectivity-based allocation) rather than the 3×4-column
+> version drafted here. Implementation: `SkillTree.ts` (data model + allocation engine) + the
+> pan/zoom screen in `Game.ts`; QA `qa-skilltree.mjs` (30/30). The sections below are kept only as
+> the historical first-pass design. The identity-default `skill*` bonus-field plumbing (§"Where it
+> plugs in") DID survive into the shipped version.
+
+---
+
 **Requested by Felix, 2026-07-05.** Two steps in one thread: first "level-ups interrupt
 gameplay mid-wave" (fixed by banking picks and draining them at the between-waves shop),
 then "rework the level-up system so it uses a skill tree instead." This doc is the second:

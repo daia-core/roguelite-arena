@@ -33,7 +33,7 @@ import { ArtifactSystem, ARTIFACTS, ROLLABLE_ARTIFACTS, getArtifactById, type Ar
 import { randomEvent, EVENTS, type GameEvent, type EventEffect, type EventOption } from './EventSystem';
 import { EvolutionSystem, type Evolution } from './EvolutionSystem';
 import { VillageScene } from './VillageScene';
-import { SkillTree, SKILL_NODES, SKILL_BRANCHES, BRANCH_LABEL, BRANCH_COLOR } from './SkillTree';
+import { SkillTree, SKILL_NODES, SKILL_EDGES, ARM_COLOR, getNode, type SkillNode } from './SkillTree';
 import type { Scene } from './scenes/Scene';
 import { MenuScene } from './scenes/MenuScene';
 
@@ -166,7 +166,19 @@ export class Game {
   // banked points at the shop break and lands on the shop, mirroring the old flow.
   skillTree: SkillTree = new SkillTree();
   private skillTreeReturnsToShop: boolean = false; // opened at the shop break → land on the shop on Continue
-  private skillTreeScroll: number = 0;         // vertical scroll offset for the tree screen
+  // Pan/zoom camera for the PoE-style web screen. panX/panY are canvas-px offsets from
+  // the view centre; stZoom is logical-canvas-px per tree-unit. Pointer tracking below
+  // distinguishes a drag-to-pan from a tap-to-allocate by accumulated travel distance.
+  private stPanX: number = 0;
+  private stPanY: number = 0;
+  private stZoom: number = 0.5;
+  private stPointerActive: boolean = false;
+  private stLastX: number = 0;
+  private stLastY: number = 0;
+  private stDownX: number = 0;
+  private stDownY: number = 0;
+  private stDragDist: number = 0;
+  private stSelected: string | null = null;    // last-tapped node (for the info panel)
   private pendingWaveArtifact: boolean = false;   // elite/boss wave grants spoils on clear
   restResolved: boolean = false;             // rest node: an option has been taken
   restResultText: string = '';               // rest node outcome line
@@ -552,12 +564,13 @@ export class Game {
     // in max health below.
     this.applyClass(cls);
 
-    // Fresh skill tree for the new run (points + ranks reset), then push identity
-    // bonuses into PlayerStats so no stale skill bonus leaks across runs.
-    this.skillTree.reset();
+    // Fresh skill tree for the new run — anchored on the chosen class's START node
+    // (applyClass set selectedClassId just above), then push identity bonuses into
+    // PlayerStats so no stale skill bonus leaks across runs.
+    this.skillTree.reset(this.selectedClassId);
     this.skillTree.recomputeInto(this.playerStats);
     this.skillTreeReturnsToShop = false;
-    this.skillTreeScroll = 0;
+    this.centerSkillTreeOnStart();
 
     this.refreshMaxHealth();
     this.pendingWaveArtifact = false;
@@ -631,11 +644,11 @@ export class Game {
 
     // Restore the skill tree (points + ranks) and fold its bonuses into stats BEFORE the
     // Player is built so its maxHealth reflects skill investment on resume.
-    this.skillTree.reset();
+    this.skillTree.reset(this.selectedClassId);
     this.skillTree.load(save.skillTree);
     this.skillTree.recomputeInto(this.playerStats);
     this.skillTreeReturnsToShop = false;
-    this.skillTreeScroll = 0;
+    this.centerSkillTreeOnStart();
 
     this.player = new Player(this.worldWidth / 2, this.worldHeight / 2, this.playerStats);
     this.syncArtifactStatic();
@@ -1875,9 +1888,11 @@ export class Game {
    *  the shop, so Continue returns to the shop rather than back into the fight. */
   private openSkillTree(fromShop: boolean): void {
     this.skillTreeReturnsToShop = fromShop;
-    this.skillTreeScroll = 0;
     this.state = 'skilltree';
-    this.input.mouseDown = false;
+    this.stPointerActive = false;
+    this.stDragDist = 0;
+    this.centerSkillTreeOnStart();
+    this.input.disarmUntilRelease(); // a finger held over from the shop can't insta-tap a node
   }
 
   /** Leave the tree: land on the shop when opened at the break, otherwise resume play. */
@@ -1890,135 +1905,232 @@ export class Game {
     }
   }
 
-  /** Shared node grid + Continue-button geometry so draw() and update() never drift. */
-  private skillTreeLayout() {
-    const { s, W, H, isMobile } = this.screenScale();
-    const cols = SKILL_BRANCHES.length; // 3
-    const rows = 4;                     // nodes per branch
-    const outer = s(10);
-    const colGap = s(isMobile ? 6 : 12);
-    const rowGap = s(isMobile ? 8 : 10);
-    const gridW = W - outer * 2;
-    const cardW = (gridW - colGap * (cols - 1)) / cols;
-    const cardH = s(isMobile ? 62 : 66);
-    const topY = s(isMobile ? 66 : 82); // headroom for the unclipped branch labels above row 0
-    const btnH = s(isMobile ? 46 : 44);
-    const btnY = H - btnH - s(10);
-    const btnW = Math.min(W - s(40), s(isMobile ? 300 : 420));
-    const btnX = (W - btnW) / 2;
-    return { s, W, H, isMobile, cols, rows, outer, colGap, rowGap, cardW, cardH, topY, btnX, btnY, btnW, btnH };
+  /** Frame the current class's start node in the middle of the web at a default zoom. */
+  private centerSkillTreeOnStart(): void {
+    const { isMobile, zoom } = this.screenScale();
+    this.stZoom = isMobile ? 0.42 : 0.6;
+    const start = getNode(this.skillTree.startId);
+    const Z = this.stZoom * zoom;
+    this.stPanX = start ? -start.x * Z : 0;
+    this.stPanY = start ? -start.y * Z : 0;
+    this.stSelected = this.skillTree.startId;
   }
 
-  /** Rect for the node at (branchIndex, tier), accounting for scroll. */
-  private skillNodeRect(bi: number, tier: number) {
-    const L = this.skillTreeLayout();
-    const x = L.outer + bi * (L.cardW + L.colGap);
-    const y = L.topY + tier * (L.cardH + L.rowGap) - this.skillTreeScroll;
-    return { x, y, width: L.cardW, height: L.cardH };
+  /** Zoom about the view centre (keeps the centred tree-point fixed on screen). */
+  private stApplyZoom(factor: number): void {
+    const nz = Math.min(1.4, Math.max(0.16, this.stZoom * factor));
+    const f = nz / this.stZoom;
+    this.stPanX *= f;
+    this.stPanY *= f;
+    this.stZoom = nz;
+  }
+
+  /** Screen geometry: the pannable web band sits between the header and the info panel. */
+  private stView() {
+    const { s, W, H, isMobile, zoom } = this.screenScale();
+    const topBand = s(isMobile ? 46 : 56);
+    const btnH = s(isMobile ? 44 : 46);
+    const btnW = Math.min(W - s(40), s(isMobile ? 260 : 360));
+    const btnX = (W - btnW) / 2;
+    const infoH = s(isMobile ? 44 : 50);
+    const btnY = H - btnH - s(8);
+    const infoY = btnY - infoH - s(6);
+    const cx = W / 2;
+    const cy = topBand + (infoY - topBand) / 2;
+    return { s, W, H, isMobile, zoom, topBand, btnH, btnW, btnX, btnY, infoH, infoY, cx, cy };
+  }
+
+  /** Right-edge zoom-in / zoom-out / recenter buttons. */
+  private stButtons() {
+    const V = this.stView();
+    const { s, W, isMobile } = V;
+    const bs = s(isMobile ? 34 : 40);
+    const gap = s(8);
+    const rx = W - bs - s(8);
+    const midY = V.cy;
+    return {
+      bs,
+      zoomIn:   { x: rx, y: midY - bs * 1.5 - gap, width: bs, height: bs },
+      zoomOut:  { x: rx, y: midY - bs * 0.5,       width: bs, height: bs },
+      recenter: { x: rx, y: midY + bs * 0.5 + gap, width: bs, height: bs },
+    };
+  }
+
+  /** On-screen radius of a node (by type), scaled mildly with zoom. */
+  private stNodeRadius(node: SkillNode): number {
+    const { s } = this.screenScale();
+    const base = node.type === 'keystone' ? 15 : node.type === 'start' ? 15 : node.type === 'notable' ? 11 : 6.5;
+    const zs = Math.min(1.5, Math.max(0.6, this.stZoom / 0.5));
+    return s(base) * zs;
   }
 
   private updateSkillTree(): void {
-    if (!this.input.mouseDown) return;
-    const L = this.skillTreeLayout();
     const mx = this.input.mouseX, my = this.input.mouseY;
-
-    // Continue button
-    if (pointInRect(mx, my, { x: L.btnX, y: L.btnY, width: L.btnW, height: L.btnH })) {
-      this.input.mouseDown = false;
-      this.finishSkillTree();
-      return;
+    const down = this.input.mouseDown;
+    const { s } = this.screenScale();
+    if (down && !this.stPointerActive) {
+      // Press start — record the anchor so we can tell a tap from a pan on release.
+      this.stPointerActive = true;
+      this.stDownX = mx; this.stDownY = my;
+      this.stLastX = mx; this.stLastY = my;
+      this.stDragDist = 0;
+    } else if (down && this.stPointerActive) {
+      // Held — drag pans the web.
+      const dx = mx - this.stLastX, dy = my - this.stLastY;
+      this.stPanX += dx; this.stPanY += dy;
+      this.stDragDist += Math.abs(dx) + Math.abs(dy);
+      this.stLastX = mx; this.stLastY = my;
+    } else if (!down && this.stPointerActive) {
+      // Release — a small-travel press counts as a tap.
+      this.stPointerActive = false;
+      if (this.stDragDist <= s(6)) this.handleSkillTreeTap(this.stDownX, this.stDownY);
     }
+  }
 
-    // Nodes: tap an unlocked, affordable, non-maxed node to invest a point.
-    for (let bi = 0; bi < SKILL_BRANCHES.length; bi++) {
-      const branch = SKILL_BRANCHES[bi];
-      const nodes = SKILL_NODES.filter(n => n.branch === branch).sort((a, b) => a.tier - b.tier);
-      for (let ti = 0; ti < nodes.length; ti++) {
-        const node = nodes[ti];
-        const r = this.skillNodeRect(bi, ti);
-        if (r.y + r.height < L.topY || r.y > L.btnY) continue; // off the visible band
-        if (pointInRect(mx, my, r)) {
-          this.input.mouseDown = false;
-          if (this.skillTree.spend(node.id)) {
-            this.skillTree.recomputeInto(this.playerStats);
-            this.refreshMaxHealth();
-            this.audio.playLevelUp();
-            this.screenEffects.flash(BRANCH_COLOR[branch], 0.18);
-          }
-          return;
-        }
-      }
+  /** Resolve a tap: Continue / zoom / recenter buttons first, else a node hit-test. */
+  private handleSkillTreeTap(x: number, y: number): void {
+    const V = this.stView();
+    if (pointInRect(x, y, { x: V.btnX, y: V.btnY, width: V.btnW, height: V.btnH })) { this.finishSkillTree(); return; }
+    const B = this.stButtons();
+    if (pointInRect(x, y, B.zoomIn))   { this.stApplyZoom(1.25); return; }
+    if (pointInRect(x, y, B.zoomOut))  { this.stApplyZoom(0.8);  return; }
+    if (pointInRect(x, y, B.recenter)) { this.centerSkillTreeOnStart(); return; }
+
+    const Z = this.stZoom * V.zoom;
+    let hit: SkillNode | null = null;
+    for (const node of SKILL_NODES) {
+      const sx = V.cx + this.stPanX + node.x * Z;
+      const sy = V.cy + this.stPanY + node.y * Z;
+      const r = this.stNodeRadius(node);
+      if (Math.hypot(x - sx, y - sy) <= r + V.s(4)) { hit = node; break; }
+    }
+    if (!hit) return;
+    this.stSelected = hit.id;
+    if (this.skillTree.allocate(hit.id)) {
+      this.skillTree.recomputeInto(this.playerStats);
+      this.refreshMaxHealth();
+      this.audio.playLevelUp();
+      this.screenEffects.flash(ARM_COLOR[hit.arm] || '#ffd700', 0.16);
     }
   }
 
   private drawSkillTree(): void {
     const ctx = this.renderer.getContext();
-    const L = this.skillTreeLayout();
-    const { s, W, isMobile } = L;
+    const V = this.stView();
+    const { s, W, isMobile } = V;
+    const Z = this.stZoom * V.zoom;
     this.paintBackdrop();
 
-    const pts = this.skillTree.availablePoints;
-    this.renderer.drawText('SKILL TREE', W / 2, s(isMobile ? 18 : 24), { size: s(isMobile ? 14 : 20), align: 'center', color: '#ffd700' });
-    this.renderer.drawText(
-      pts > 0 ? `${pts} skill point${pts === 1 ? '' : 's'} to spend` : 'No points to spend — bank levels & return',
-      W / 2, s(isMobile ? 18 : 24) + s(isMobile ? 14 : 18),
-      { size: s(isMobile ? 8 : 9), align: 'center', color: pts > 0 ? '#a8e063' : '#c8b998' }
-    );
+    const screenOf = (n: SkillNode) => ({ x: V.cx + this.stPanX + n.x * Z, y: V.cy + this.stPanY + n.y * Z });
+    const zScale = Math.min(1.4, Math.max(0.6, this.stZoom / 0.5));
 
-    // Branch headers draw UNCLIPPED, above the node band (so they're never cut off).
-    for (let bi = 0; bi < SKILL_BRANCHES.length; bi++) {
-      const branch = SKILL_BRANCHES[bi];
-      const head = this.skillNodeRect(bi, 0);
-      this.renderer.drawText(BRANCH_LABEL[branch], head.x + head.width / 2, L.topY - s(isMobile ? 10 : 12), { size: s(isMobile ? 8 : 10), align: 'center', color: BRANCH_COLOR[branch] });
-    }
-
-    // Clip the scrollable node band so nothing bleeds over the header / Continue button.
+    // --- Web (edges + nodes), clipped to the band between header and info panel. ---
     ctx.save();
     ctx.beginPath();
-    ctx.rect(0, L.topY - s(1), W, L.btnY - (L.topY - s(1)) - s(6));
+    ctx.rect(0, V.topBand, W, V.infoY - V.topBand);
     ctx.clip();
 
-    const titlePx = s(isMobile ? 8 : 9);
-    const descPx = s(isMobile ? 7 : 8);
-    for (let bi = 0; bi < SKILL_BRANCHES.length; bi++) {
-      const branch = SKILL_BRANCHES[bi];
-      const branchColor = BRANCH_COLOR[branch];
-      const nodes = SKILL_NODES.filter(n => n.branch === branch).sort((a, b) => a.tier - b.tier);
+    // Edges first so nodes sit on top.
+    ctx.lineWidth = Math.max(1, s(1.2) * zScale);
+    for (const [a, b] of SKILL_EDGES) {
+      const na = getNode(a), nb = getNode(b);
+      if (!na || !nb) continue;
+      const pa = screenOf(na), pb = screenOf(nb);
+      if ((pa.x < -60 && pb.x < -60) || (pa.x > W + 60 && pb.x > W + 60)) continue;
+      const both = this.skillTree.isAllocated(a) && this.skillTree.isAllocated(b);
+      const either = this.skillTree.isAllocated(a) || this.skillTree.isAllocated(b);
+      ctx.strokeStyle = both ? '#ffe9a8' : either ? '#8a7a52' : '#3a3020';
+      ctx.beginPath(); ctx.moveTo(pa.x, pa.y); ctx.lineTo(pb.x, pb.y); ctx.stroke();
+    }
 
-      for (let ti = 0; ti < nodes.length; ti++) {
-        const node = nodes[ti];
-        const r = this.skillNodeRect(bi, ti);
-        const rank = this.skillTree.rankOf(node.id);
-        const unlocked = this.skillTree.isUnlocked(node.id);
-        const maxed = rank >= node.maxRank;
-        const affordable = this.skillTree.canSpend(node.id);
+    // Nodes.
+    const showLabels = this.stZoom >= 0.42;
+    for (const node of SKILL_NODES) {
+      const p = screenOf(node);
+      const r = this.stNodeRadius(node);
+      if (p.x < -r * 2 || p.x > W + r * 2 || p.y < V.topBand - r * 2 || p.y > V.infoY + r * 2) continue;
+      const alloc = this.skillTree.isAllocated(node.id);
+      const reachable = this.skillTree.isReachable(node.id);
+      const canAlloc = this.skillTree.canAllocate(node.id);
+      const armColor = node.arm === 'core' ? '#ffd700' : (ARM_COLOR[node.arm] || '#c8b998');
 
-        // Panel tint: locked = dim, affordable = branch-lit, owned/maxed = normal.
-        const seed = 11 + bi * 4 + ti;
-        drawPanel(ctx, r.x, r.y, r.width, r.height, DARK_WOOD_THEME, seed, unlocked ? 53 : 30);
-        if (affordable) {
-          ctx.save();
-          ctx.strokeStyle = branchColor;
-          ctx.lineWidth = Math.max(1, s(1.5));
-          ctx.strokeRect(r.x + s(1), r.y + s(1), r.width - s(2), r.height - s(2));
-          ctx.restore();
-        }
+      ctx.save();
+      ctx.beginPath();
+      if (node.type === 'keystone') {
+        ctx.moveTo(p.x, p.y - r); ctx.lineTo(p.x + r, p.y); ctx.lineTo(p.x, p.y + r); ctx.lineTo(p.x - r, p.y); ctx.closePath();
+      } else if (node.type === 'start') {
+        ctx.rect(p.x - r, p.y - r, r * 2, r * 2);
+      } else {
+        ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+      }
+      ctx.fillStyle = alloc ? armColor : canAlloc ? '#2a2416' : reachable ? '#231d12' : '#181206';
+      ctx.fill();
+      ctx.lineWidth = Math.max(1, s(canAlloc ? 2.2 : 1.4));
+      ctx.strokeStyle = alloc ? '#fff4cf' : canAlloc ? armColor : reachable ? '#6b5d47' : '#3a3020';
+      ctx.stroke();
+      if (this.stSelected === node.id) {
+        ctx.lineWidth = Math.max(1, s(1.5));
+        ctx.strokeStyle = '#ffffff';
+        ctx.beginPath(); ctx.arc(p.x, p.y, r + s(3), 0, Math.PI * 2); ctx.stroke();
+      }
+      ctx.restore();
 
-        const cx = r.x + r.width / 2;
-        const nameColor = !unlocked ? '#6b5d47' : maxed ? '#f2b04e' : '#ffffff';
-        this.renderer.drawText(node.icon, cx, r.y + s(isMobile ? 15 : 16), { size: s(isMobile ? 13 : 15), align: 'center', color: '#ffffff' });
-        this.renderer.drawText(node.name, cx, r.y + s(isMobile ? 28 : 30), { size: titlePx, align: 'center', color: nameColor });
-        this.renderer.drawText(node.desc, cx, r.y + s(isMobile ? 39 : 42), { size: descPx, align: 'center', color: unlocked ? '#d8c9a8' : '#6b5d47' });
-        // Rank pips e.g. "3/5", or LOCKED.
-        const rankLabel = unlocked ? `${rank}/${node.maxRank}` : 'LOCKED';
-        this.renderer.drawText(rankLabel, cx, r.y + r.height - s(isMobile ? 8 : 9), { size: descPx, align: 'center', color: maxed ? '#a8e063' : unlocked ? branchColor : '#6b5d47' });
+      if (r >= s(9)) {
+        this.renderer.drawText(node.icon, p.x, p.y + r * 0.35, { size: Math.round(r * 1.1), align: 'center', color: alloc ? '#1a1206' : '#ffffff' });
+      }
+      if (showLabels && node.type !== 'minor') {
+        this.renderer.drawText(node.name, p.x, p.y + r + s(9), { size: s(isMobile ? 7 : 8), align: 'center', color: alloc ? armColor : reachable ? '#d8c9a8' : '#6b5d47' });
       }
     }
-    ctx.restore();
+    ctx.restore(); // unclip
 
-    // Continue button
-    drawPanel(ctx, L.btnX, L.btnY, L.btnW, L.btnH, DARK_WOOD_THEME, 91, 60);
-    this.renderer.drawText(pts > 0 ? 'CONTINUE (points banked)' : 'CONTINUE', W / 2, L.btnY + L.btnH / 2 + s(4), { size: s(isMobile ? 11 : 13), align: 'center', color: '#ffd700' });
+    // --- Header ---
+    const pts = this.skillTree.availablePoints;
+    this.renderer.drawText('SKILL TREE', W / 2, s(isMobile ? 15 : 21), { size: s(isMobile ? 13 : 18), align: 'center', color: '#ffd700' });
+    this.renderer.drawText(
+      pts > 0 ? `${pts} point${pts === 1 ? '' : 's'} · drag to pan · tap a lit node` : 'drag to pan · tap a node to inspect',
+      W / 2, s(isMobile ? 29 : 39), { size: s(isMobile ? 7 : 9), align: 'center', color: pts > 0 ? '#a8e063' : '#c8b998' }
+    );
+
+    // --- Zoom / recenter buttons ---
+    const B = this.stButtons();
+    const iconBtn = (rct: { x: number; y: number; width: number; height: number }, label: string) => {
+      ctx.save();
+      ctx.fillStyle = 'rgba(20,14,6,0.85)';
+      ctx.fillRect(rct.x, rct.y, rct.width, rct.height);
+      ctx.strokeStyle = '#c8a15a';
+      ctx.lineWidth = Math.max(1, s(1.4));
+      ctx.strokeRect(rct.x, rct.y, rct.width, rct.height);
+      ctx.restore();
+      this.renderer.drawText(label, rct.x + rct.width / 2, rct.y + rct.height / 2 + s(5), { size: s(isMobile ? 15 : 18), align: 'center', color: '#ffd700' });
+    };
+    iconBtn(B.zoomIn, '+');
+    iconBtn(B.zoomOut, '\u2212');
+    iconBtn(B.recenter, '\u2302');
+
+    // --- Info panel for the selected node ---
+    drawPanel(ctx, V.btnX, V.infoY, V.btnW, V.infoH, DARK_WOOD_THEME, 71, 55);
+    const sel = this.stSelected ? getNode(this.stSelected) : null;
+    if (sel) {
+      const selAlloc = this.skillTree.isAllocated(sel.id);
+      const selCan = this.skillTree.canAllocate(sel.id);
+      const selReach = this.skillTree.isReachable(sel.id);
+      const status = sel.type === 'start' ? 'START'
+        : selAlloc ? 'ALLOCATED'
+        : selCan ? 'TAP TO ALLOCATE'
+        : selReach ? (pts > 0 ? '' : 'NEED A POINT')
+        : 'LOCKED';
+      const armColor = sel.arm === 'core' ? '#ffd700' : (ARM_COLOR[sel.arm] || '#c8b998');
+      this.renderer.drawText(`${sel.icon} ${sel.name}`, V.btnX + s(8), V.infoY + s(isMobile ? 15 : 17), { size: s(isMobile ? 9 : 11), align: 'left', color: armColor });
+      this.renderer.drawText(sel.desc || 'Travel node', V.btnX + s(8), V.infoY + s(isMobile ? 29 : 33), { size: s(isMobile ? 8 : 9), align: 'left', color: '#d8c9a8' });
+      if (status) this.renderer.drawText(status, V.btnX + V.btnW - s(8), V.infoY + s(isMobile ? 15 : 17), { size: s(isMobile ? 7 : 8), align: 'right', color: selAlloc ? '#a8e063' : selCan ? '#ffd700' : '#c8a15a' });
+    } else {
+      this.renderer.drawText('Tap a node to inspect it', V.btnX + V.btnW / 2, V.infoY + V.infoH / 2 + s(3), { size: s(isMobile ? 8 : 9), align: 'center', color: '#c8b998' });
+    }
+
+    // --- Continue button ---
+    drawPanel(ctx, V.btnX, V.btnY, V.btnW, V.btnH, DARK_WOOD_THEME, 91, 60);
+    this.renderer.drawText(pts > 0 ? 'CONTINUE (points banked)' : 'CONTINUE', W / 2, V.btnY + V.btnH / 2 + s(4), { size: s(isMobile ? 10 : 13), align: 'center', color: '#ffd700' });
   }
 
   // ==================== CLASS SELECT ====================

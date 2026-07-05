@@ -2,6 +2,7 @@
 
 import { Game } from './Game';
 import { STARTING_CLASSES } from './Classes';
+import { SKILL_NODES, SKILL_EDGES, neighborsOf, startNodeForClass } from './SkillTree';
 import { MeleeAttack } from './MeleeAttack';
 import { AoeZone } from './AoeZone';
 import { SpriteSheet } from './sprites';
@@ -56,6 +57,8 @@ const game = new Game(canvas);
 (window as unknown as { __AoeZone: typeof AoeZone }).__AoeZone = AoeZone;
 // Dev/QA hook: lets tooling enumerate the starting-class roster. Not a public API.
 (window as unknown as { __STARTING_CLASSES: typeof STARTING_CLASSES }).__STARTING_CLASSES = STARTING_CLASSES;
+// Dev/QA hook: lets tooling inspect the passive skill-web graph. Not a public API.
+(window as unknown as { __SKILL_TREE: object }).__SKILL_TREE = { SKILL_NODES, SKILL_EDGES, neighborsOf, startNodeForClass };
 // Dev/QA hook: lets tooling construct/inspect a melee swing in isolation (style hit
 // tests, sprite selection). Not a public API.
 (window as unknown as { __MeleeAttack: typeof MeleeAttack }).__MeleeAttack = MeleeAttack;

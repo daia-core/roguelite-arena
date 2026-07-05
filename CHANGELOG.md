@@ -8,6 +8,35 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-06 (early hours) — skill tree rebuilt as a massive Path-of-Exile-style passive web
+
+**The level-up reward is now a huge, interconnected passive tree you navigate by dragging and
+zooming — not a short list.** Response to "I want the skill tree to be massive… encompass the same
+key features [as PoE]. Maybe starting class should make you start at different places in our tree."
+
+- **A real web, not a menu.** 88 nodes / 123 edges across **six radial arms** — MIGHT, PRECISION,
+  ALACRITY, FORTUNE, VITALITY, AEGIS — joined by a central hub and a gateway ring, so you can
+  splash between arms instead of committing to one line.
+- **Four node kinds, PoE-style.** Small **travel/minor** nodes (little stat trickles) form the
+  connective web; **notables** anchor each cluster with a chunkier bonus; **keystones** (rendered as
+  diamonds at the arm tips) are build-defining with a real trade-off — e.g. *Overwhelm* +45% damage
+  but −20% fire rate, *Frenzy* +50% fire rate but −20% damage, *Juggernaut* +90 HP but −15% speed.
+- **Your class sets where you enter the tree.** Gunner starts at the hub, Ranger deep in ALACRITY,
+  Brawler in AEGIS, Arcanist in MIGHT — so the same tree plays differently per class.
+- **Connected allocation.** You can only allocate a node adjacent to one you already own, spending
+  banked skill points; the route you carve lights up in its arm's colour.
+- **Navigation:** drag to pan, on-screen **+ / − / ⌂** to zoom and recenter, tap a node to inspect
+  it (name, effect, status) and again to allocate. Points still bank silently during a wave and are
+  spent between waves — no mid-wave interruption. Baseline per-level stat bumps are unchanged.
+
+**Verified:** tsc + vite build green; new headless skill-tree QA passes **30/30** (graph integrity,
+full BFS connectivity from the hub, per-class start anchoring, allocation rules, bonus aggregation,
+save/load round-trip); tree eyeballed at phone (390×844) and desktop (1440×900), mobile + zoomed-out.
+
+Live-verified bundle **`index-D0rqPLwI.js`** on roguelite-game-blush.vercel.app.
+
+---
+
 ## 2026-07-06 (early hours) — tap an equipped item to inspect it (stats + Unequip/Sell); shop cards show numbers
 
 **Tapping a piece of equipped gear now opens an inspect popup instead of silently benching it.**
@@ -32,7 +61,7 @@ sell, equip-from-stash, tap-off close, unequip-when-stash-full sells, empty-slot
 shop-layout QA still passes all 11 viewports with the new card row; popup eyeballed at phone
 (390×844) and desktop (1440×900).
 
-Live-verified bundle **`__BUNDLE__`** on roguelite-game-blush.vercel.app.
+Live-verified bundle **`index-D0rqPLwI.js`** on roguelite-game-blush.vercel.app.
 
 ---
 
