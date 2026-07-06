@@ -484,7 +484,7 @@ export const ITEM_CATALOG: Item[] = [
     },
     {
       id: 'rapid_fire_t4',
-      name: 'Gatling Core',
+      name: 'Bullet Hose',
       description: '+70% fire rate & +2 projectiles, but -15% damage (bullet hose)',
       rarity: 'legendary',
       tier: ItemTier.Legendary,
@@ -2486,7 +2486,7 @@ export const ITEM_CATALOG: Item[] = [
     },
     {
       id: 'plague_bearer_t3',
-      name: 'Plague Bearer',
+      name: 'Plague Vial',
       description: 'Hits poison enemies, +30% elemental dmg',
       rarity: 'epic',
       tier: ItemTier.Rare,
@@ -3185,5 +3185,27 @@ export const ITEM_CATALOG: Item[] = [
     { id: 'ring_bloodstone', name: 'Bloodstone Ring', description: '+18% damage', rarity: 'epic', tier: ItemTier.Rare, cost: 40, icon: '❤️‍🔥', unlocked: true, tags: ['melee'], slot: 'ring', damageMultiplier: 1.18 },
     { id: 'ring_gilded_band', name: 'Gilded Band', description: '+20% gold earned', rarity: 'rare', tier: ItemTier.Uncommon, cost: 26, icon: '💛', unlocked: true, tags: ['economic'], slot: 'ring', goldBonus: 1.2 },
     { id: 'ring_serpent_coil', name: 'Serpent Coil', description: '+10% bleed chance', rarity: 'epic', tier: ItemTier.Rare, cost: 44, icon: '🐍', unlocked: true, tags: ['elemental'], slot: 'ring', bleed: 0.1 },
-    { id: 'ring_conquerors_seal', name: "Conqueror's Seal", description: '+20% damage and +10% fire rate', rarity: 'legendary', tier: ItemTier.Legendary, cost: 74, icon: '🏵️', unlocked: true, tags: ['melee'], slot: 'ring', damageMultiplier: 1.2, fireRateMultiplier: 1.1 }
+    { id: 'ring_conquerors_seal', name: "Conqueror's Seal", description: '+20% damage and +10% fire rate', rarity: 'legendary', tier: ItemTier.Legendary, cost: 74, icon: '🏵️', unlocked: true, tags: ['melee'], slot: 'ring', damageMultiplier: 1.2, fireRateMultiplier: 1.1 },
+
+    // ---- AMULET (a single build-defining necklace/charm): keystone-flavoured mix of
+    // offense, survival, status and economy so the one worn slot is a real build pick.
+    // Joins the 3 hand-placed amulets above (Health Pendant + Soul Tithe + Four-Leaf
+    // Charm keystones) to bring the slot to 20 per Felix's "20+ of each type" ask.
+    { id: 'am_copper_locket', name: 'Copper Locket', description: '+8% gold and +5 max health', rarity: 'common', tier: ItemTier.Common, cost: 9, icon: '📿', unlocked: true, tags: ['economic'], slot: 'amulet', goldBonus: 1.08, maxHealthBonus: 5 },
+    { id: 'am_hunters_fang', name: "Hunter's Fang", description: '+8% damage', rarity: 'common', tier: ItemTier.Common, cost: 11, icon: '🦷', unlocked: true, tags: ['ranged'], slot: 'amulet', damageMultiplier: 1.08 },
+    { id: 'am_warding_bead', name: 'Warding Bead', description: '+2 armor and +0.4 HP/sec', rarity: 'common', tier: ItemTier.Common, cost: 10, icon: '🧿', unlocked: true, tags: ['defensive'], slot: 'amulet', armor: 2, healthRegen: 0.4 },
+    { id: 'am_ember_pendant', name: 'Ember Pendant', description: '+12% chance to ignite; +5% elemental damage', rarity: 'rare', tier: ItemTier.Uncommon, cost: 22, icon: '🔥', unlocked: true, tags: ['elemental'], slot: 'amulet', burn: 0.12, elementalDamageMult: 1.05 },
+    { id: 'am_frost_charm', name: 'Frostbite Charm', description: '+14% chance to freeze enemies on hit', rarity: 'rare', tier: ItemTier.Uncommon, cost: 22, icon: '❄️', unlocked: true, tags: ['elemental'], slot: 'amulet', freeze: 0.14 },
+    { id: 'am_serpent_talisman', name: 'Serpent Talisman', description: '+12% bleed chance and +6% damage', rarity: 'rare', tier: ItemTier.Uncommon, cost: 24, icon: '🐍', unlocked: true, tags: ['melee'], slot: 'amulet', bleed: 0.12, damageMultiplier: 1.06 },
+    { id: 'am_zephyr', name: 'Zephyr Amulet', description: '+12% move speed and +6% fire rate', rarity: 'rare', tier: ItemTier.Uncommon, cost: 24, icon: '🌀', unlocked: true, tags: ['utility'], slot: 'amulet', speedMultiplier: 1.12, fireRateMultiplier: 1.06 },
+    { id: 'am_ironwood_medallion', name: 'Ironwood Medallion', description: '+5 armor and +12 max health', rarity: 'rare', tier: ItemTier.Uncommon, cost: 26, icon: '🪵', unlocked: true, tags: ['defensive'], slot: 'amulet', armor: 5, maxHealthBonus: 12 },
+    { id: 'am_lucky_coin', name: 'Lucky Coin Necklace', description: '+12% luck and +10% gold', rarity: 'rare', tier: ItemTier.Uncommon, cost: 26, icon: '🪙', unlocked: true, tags: ['economic'], slot: 'amulet', luck: 0.12, goldBonus: 1.1 },
+    { id: 'am_vampiric_choker', name: 'Vampiric Choker', description: 'Heal for 8% of damage dealt; +8% damage', rarity: 'epic', tier: ItemTier.Rare, cost: 44, icon: '🩸', unlocked: true, tags: ['melee'], slot: 'amulet', lifesteal: 0.08, damageMultiplier: 1.08 },
+    { id: 'am_berserkers_torc', name: "Berserker's Torc", description: '+18% damage but -8% move speed', rarity: 'epic', tier: ItemTier.Rare, cost: 46, icon: '⚔️', unlocked: true, tags: ['melee'], slot: 'amulet', damageMultiplier: 1.18, speedMultiplier: 0.92 },
+    { id: 'am_sentinel_pendant', name: 'Sentinel Pendant', description: '+7 armor and +10% dodge', rarity: 'epic', tier: ItemTier.Rare, cost: 48, icon: '🔰', unlocked: true, tags: ['defensive'], slot: 'amulet', armor: 7, dodge: 0.1 },
+    { id: 'am_gilded_scarab', name: 'Gilded Scarab', description: '+25% gold and +8% banking interest', rarity: 'epic', tier: ItemTier.Rare, cost: 44, icon: '🪲', unlocked: true, tags: ['economic'], slot: 'amulet', goldBonus: 1.25, interestBonus: 0.08 },
+    { id: 'am_tacticians_sigil', name: "Tactician's Sigil", description: '+12% crit chance and +20% crit damage', rarity: 'epic', tier: ItemTier.Rare, cost: 50, icon: '✴️', unlocked: true, tags: ['ranged'], slot: 'amulet', critChance: 0.12, critDamageMultiplier: 1.2 },
+    { id: 'am_doomcaller_idol', name: 'Doomcaller Idol', description: '+18% doom chance and +15% wound (amplifies all damage-over-time)', rarity: 'legendary', tier: ItemTier.Legendary, cost: 76, icon: '💀', unlocked: true, tags: ['elemental'], slot: 'amulet', doom: 0.18, wound: 0.15 },
+    { id: 'am_phoenix_tear', name: 'Phoenix Tear', description: '+30 max health, +2 HP/sec and +10% dodge', rarity: 'legendary', tier: ItemTier.Legendary, cost: 78, icon: '💧', unlocked: true, tags: ['defensive'], slot: 'amulet', maxHealthBonus: 30, healthRegen: 2, dodge: 0.1 },
+    { id: 'am_glass_heart', name: 'Glass Heart Locket', description: '+35% damage but -20 max health — a glass-cannon keystone', rarity: 'legendary', tier: ItemTier.Legendary, cost: 80, icon: '💎', unlocked: true, tags: ['ranged'], slot: 'amulet', damageMultiplier: 1.35, maxHealthBonus: -20 }
 ];

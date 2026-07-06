@@ -8,6 +8,32 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-06 (night) — the amulet slot now has real choices (3 → 20 items)
+
+Felix asked for **at least 20 items per equip slot** so every shop reroll is a genuine decision, not
+"take the one thing that fits". The amulet slot was the thinnest at only **3** — so it now has **20**.
+
+**17 new amulets across all four rarities**, each a distinct build lean rather than a stat-stick:
+Copper Locket / Hunter's Fang / Warding Bead (common); Ember Pendant (burn), Frost Charm (freeze),
+Serpent Talisman (bleed), Zephyr Amulet (speed + fire-rate), Ironwood Medallion (tanky), Lucky Coin
+(luck + gold) (uncommon); Vampiric Choker (lifesteal), Berserker's Torc (raw dmg, −speed tradeoff),
+Sentinel Pendant (armor + dodge), Gilded Scarab (gold + interest), Tactician's Sigil (crit)
+(rare); Doomcaller Idol (doom + wound), Phoenix Tear (survival), Glass Heart Locket (+35% dmg,
+−20 max HP glass-cannon) (legendary). Because an amulet fills a single bounded slot — and the new
+aggregate damage soft-knee already caps the heavy tail — richer stats here are safe.
+
+Also fixed **2 lingering duplicate item names** surfaced while auditing the catalog (Gatling Core →
+"Bullet Hose" on rapid_fire_t4; Plague Bearer → "Plague Vial" on plague_bearer_t3) so each item reads
+as its own thing in the shop. Names only, zero stat change.
+
+**Verified:** tsc + vite build green; item-icon QA 140/140 render, shop 8-slot 29/29, empirical
+balance sim runs clean (no crashes, deaths in the normal wave 4-7 random-agent band). 20 amulet-slot
+items, 0 duplicate ids, 0 duplicate names.
+
+Live-verified bundle **`__BUNDLE__`** (commit `__SHA__`) on roguelite-game-blush.vercel.app.
+
+---
+
 ## 2026-07-06 (night) — gear-named items now slot properly + a ceiling on runaway damage
 
 Two changes from Felix's "review every item: trinket or equip? and review the balance" pass — this
