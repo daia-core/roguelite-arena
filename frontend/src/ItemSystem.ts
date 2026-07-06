@@ -377,6 +377,28 @@ export class PlayerStats {
     return PlayerStats.DMG_AGG_KNEE * Math.pow(d / PlayerStats.DMG_AGG_KNEE, PlayerStats.DMG_AGG_EXP);
   }
 
+  // ---- CRIT MULTIPLIER KNEE (balance, 2026-07-06) ----
+  // The realized projectile/melee hit is getDamage() × typeMult × getCritMultiplier().
+  // The first two axes each pass through a diminishing-returns knee (softKneeDamageMult
+  // / aggKneeDamage), but crit was the ONE unbounded axis — only a 1e15 numeric-safety
+  // clamp, no balance knee. A crit-stacked build therefore escaped the damage ceiling
+  // by up to 55,000,000× (probe: 6,946,492× crit → 3.5e12 dmg/projectile, the "2.3M/
+  // projectile, enemies insta-die" report). This knee gives crit the SAME treatment as
+  // every other multiplier so no single axis runs to infinity:
+  //   m <= KNEE:  m                                  (normal crit builds untouched)
+  //   m >  KNEE:  KNEE * (m / KNEE) ^ EXP            (heavy crit-stacking compressed)
+  // KNEE 25 keeps essentially all normal builds (base 2×, invested 3–25×) fully linear;
+  // EXP 0.42 mirrors the aggregate-damage knee for one consistent mental model. Verified
+  // via qa-balance-probe: a 927× crit → ~114×, the pathological 6.9M× → ~4,800× (bounded,
+  // no longer infinite). This bounds the runaway axis; the deeper "how godlike should a
+  // fully-maxed build be" is a separate taste call on the overall damage-vs-HP ceiling.
+  static readonly CRIT_KNEE = 25;
+  static readonly CRIT_EXP = 0.42;
+  static critKneeMultiplier(m: number): number {
+    if (!(m > PlayerStats.CRIT_KNEE)) return m; // NaN-safe; below/at knee = linear
+    return PlayerStats.CRIT_KNEE * Math.pow(m / PlayerStats.CRIT_KNEE, PlayerStats.CRIT_EXP);
+  }
+
   // ---- ARTIFACT contributions (ArtifactSystem folds its static roster into these) ----
   // Defaults are identity (×1 / +0) so a run with no artifacts behaves exactly as before.
   artifactDamageMult: number = 1;
@@ -842,6 +864,9 @@ export class PlayerStats {
     mult *= this.artifactCritMultMult;
     // SKILL TREE contribution
     mult *= this.skillCritMultMult;
+    // BALANCE KNEE — give crit the same diminishing-returns treatment as every other
+    // damage axis so it can't run to infinity (was the one unbounded multiplier).
+    mult = PlayerStats.critKneeMultiplier(mult);
     // Numerical-safety only (not a balance cap) — keep runaway builds finite.
     return Math.min(PlayerStats.SANITY_MULT_CAP, mult);
   }
