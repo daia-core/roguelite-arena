@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import puppeteer from 'puppeteer-core';
 
-const DIST = '/Users/daia/code/daia/workspace/work/roguelite-game/frontend/dist';
+const DIST = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../../frontend/dist');
 const OUT = process.argv[2] || '/tmp/roguelite-shots/shots-combat';
 fs.mkdirSync(OUT, { recursive: true });
 const MIME = { '.html':'text/html', '.js':'text/javascript', '.css':'text/css', '.png':'image/png' };
@@ -29,7 +29,19 @@ const page = await browser.newPage();
 page.on('pageerror', (e) => console.log('[pageerror]', e.message));
 await page.goto(base, { waitUntil: 'networkidle2' });
 await new Promise((r) => setTimeout(r, 1200));
-await page.click('#startBtn');
+// #startBtn now opens the class-select screen (PoE skill-tree rework) → g.player null,
+// so the old click never reached live combat. startNewGame() = stable QA entry; then
+// enter a combat node so enemies spawn and g.player exists for the pattern-spawn below.
+await page.evaluate(async () => {
+  const g = window.__game;
+  g.startNewGame();
+  await new Promise((r) => setTimeout(r, 300));
+  if (g.state === 'map') {
+    const ids = g.mapSystem.reachable();
+    const combat = ids.find((id) => { const n = g.mapSystem.nodeById(id); return n && (n.type === 'battle' || n.type === 'elite' || n.type === 'boss'); });
+    g.onMapNodePicked(combat || ids[0]);
+  }
+});
 await new Promise((r) => setTimeout(r, 800));
 
 await new Promise((r) => setTimeout(r, 2000));

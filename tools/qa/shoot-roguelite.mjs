@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import puppeteer from 'puppeteer-core';
 
-const DIST = '/Users/daia/code/daia/workspace/work/roguelite-game/frontend/dist';
+const DIST = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../../frontend/dist');
 const OUT = process.argv[2] || '/tmp/roguelite-shots/shots';
 fs.mkdirSync(OUT, { recursive: true });
 
@@ -34,8 +34,19 @@ await page.goto(base, { waitUntil: 'networkidle2', timeout: 30000 });
 await new Promise(r => setTimeout(r, 1500));
 await page.screenshot({ path: path.join(OUT, '01-menu.png') });
 
-// Start the game
-await page.click('#startBtn').catch(e => console.log('start click failed:', e.message));
+// Start the game. #startBtn now opens the class-select screen (PoE skill-tree rework)
+// → g.player null, so the old click screenshotted the class-select, not gameplay.
+// startNewGame() = stable QA entry; then enter a combat node to reach live 'playing'.
+await page.evaluate(async () => {
+  const g = window.__game;
+  g.startNewGame();
+  await new Promise((r) => setTimeout(r, 300));
+  if (g.state === 'map') {
+    const ids = g.mapSystem.reachable();
+    const combat = ids.find((id) => { const n = g.mapSystem.nodeById(id); return n && (n.type === 'battle' || n.type === 'elite' || n.type === 'boss'); });
+    g.onMapNodePicked(combat || ids[0]);
+  }
+});
 await new Promise(r => setTimeout(r, 2500));
 await page.screenshot({ path: path.join(OUT, '02-gameplay-early.png') });
 

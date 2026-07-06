@@ -33,8 +33,26 @@ page.on('pageerror', (e) => errors.push(e.message));
 page.on('console', (m) => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
 await page.goto(base, { waitUntil: 'networkidle2', timeout: 30000 });
 await new Promise((r) => setTimeout(r, 1200));
-await page.click('#startBtn');
+// Clicking #startBtn now opens the class-select screen (added with the PoE skill-tree
+// rework — "starting class sets your entry point"), which leaves g.player null so the
+// mechanic drive below never fires (no player → no shots → no loaded volley, the false
+// FAIL this test reported). startNewGame() is the documented stable headless-QA entry
+// point: beginRun(Gunner) → a live player on the map. Then pick a combat node so the
+// game reaches 'playing' and actually shoots.
+await page.evaluate(() => window.__game.startNewGame());
 await new Promise((r) => setTimeout(r, 800));
+await page.evaluate(async () => {
+  const g = window.__game;
+  if (g.state === 'map') {
+    const ids = g.mapSystem.reachable();
+    const combat = ids.find((id) => {
+      const n = g.mapSystem.nodeById(id);
+      return n && (n.type === 'battle' || n.type === 'elite' || n.type === 'boss');
+    });
+    g.onMapNodePicked(combat || ids[0]);
+  }
+  await new Promise((r) => setTimeout(r, 300));
+});
 
 const checks = [];
 const rec = (name, pass, detail) => checks.push({ name, pass, detail });

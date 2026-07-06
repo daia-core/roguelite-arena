@@ -4,6 +4,12 @@ Headless-Chrome scripts for visually verifying the game (they need `puppeteer-co
 resolvable from the working directory, and Chrome — override the binary with
 `CHROME_BIN`). Each takes an optional output dir argument.
 
+All screenshot scripts resolve `frontend/dist` relative to their own location, so they
+run from any checkout (Felix's Mac or the container). They enter a run via the stable
+`window.__game.startNewGame()` hook, then pick a combat map node — NOT `#startBtn`, which
+now opens the class-select screen and leaves `player` null (the old click silently
+screenshotted the class-select screen instead of gameplay/shop).
+
 - `shoot-roguelite.mjs` — serves `frontend/dist`, plays ~15s of wave 1 with
   keyboard movement, captures menu + gameplay frames + a center crop.
 - `shoot-gallery.mjs` — starts `vite dev` and captures `/gallery.html`, the
@@ -32,12 +38,15 @@ the class-select screen and leaves `player` null).
   first card's hitbox center maps onto the visible card. Runs clean. NOTE: the end-to-end
   touch-PURCHASE is informational only — synthetic headless touch doesn't drive the
   deployed build's rAF input loop, so `bought.goldDropped:false` is NOT a live bug.
+- `verify-pennib.mjs` — 8 checks on **Pen Nib (Loaded Shot)**: catalog presence, unlock,
+  shop reachability, and the mechanic firing (every 10th primary volley is a fat golden
+  high-pierce projectile at 3× damage). All 8 PASS — the mechanic is confirmed healthy
+  (loaded 90 = 3× base 30, radius 13, pierce 999, golden `#ffd43b`). The earlier "6/8 FAIL"
+  was harness rot, not a product bug: the test still clicked `#startBtn` → class-select →
+  `player` null → no shots → no loaded volley. Fixed to the `startNewGame()` startup.
 
 ### Known issues
 
-- `verify-pennib.mjs` — 6/8 pass, but the **Pen Nib loaded-shot** checks FAIL: the fat
-  golden high-pierce projectile is never observed firing (loaded dmg ratio null). Either
-  the loaded-shot mechanic regressed or the projectile-observation window is stale — needs
-  investigation before treating Pen Nib as verified.
-- `shoot-shop.mjs` — defaults `executablePath` to a macOS Chrome path; set `CHROME_BIN`
-  when running in-container (it honours the env override).
+- `shoot-shop.mjs` / `shoot-combat.mjs` — default `executablePath` to a macOS Chrome path;
+  set `CHROME_BIN` when running in-container (they honour the env override). DIST paths are
+  now portable, so only the Chrome binary needs the override.
