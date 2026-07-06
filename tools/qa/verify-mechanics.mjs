@@ -34,7 +34,11 @@ page.on('pageerror', (e) => errors.push(e.message));
 page.on('console', (m) => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
 await page.goto(base, { waitUntil: 'networkidle2', timeout: 30000 });
 await new Promise((r) => setTimeout(r, 1200));
-await page.click('#startBtn');
+// Clicking #startBtn now opens the class-select screen (added with the PoE skill-tree
+// rework — "starting class sets your entry point"), which leaves g.player null and
+// crashes the tests below. startNewGame() is the game's documented stable headless-QA
+// entry point: it runs beginRun(Gunner) directly → a live player on the map.
+await page.evaluate(() => window.__game.startNewGame());
 await new Promise((r) => setTimeout(r, 800));
 
 // --- Test 1: base interest (no banker item), 200 gold at wave 1 → 10% = 20, cap 12 ---
@@ -173,6 +177,55 @@ const r5 = await page.evaluate(() => {
   return { base, capped, maxSpeed, speedItemCount: speedItems.length };
 });
 
+// --- Test 6: UPGRADE-ON-DUPLICATE (Felix's "buy the same amulet again → Amulet +N") ---
+// Buying an item you already own must BUMP its upgradeLevel (not add a 2nd copy / swap),
+// and level N must contribute exactly as if bought N times: multiplicative stats ^N,
+// additive stats ×N. Uses fresh PlayerStats instances so the sheet is known-clean.
+const r6 = await page.evaluate(() => {
+  const DB = window.__ItemDatabase;
+  const PS = window.__game.playerStats.constructor; // PlayerStats
+  const clone = (id) => JSON.parse(JSON.stringify(DB.getItemById(id)));
+  const countOwned = (p, id) => {
+    let n = 0;
+    for (const k of ['weapon', 'offhand', 'head', 'amulet', 'torso', 'legs', 'feet', 'ring'])
+      if (p.equipment[k]?.id === id) n++;
+    n += p.trinkets.filter((i) => i.id === id).length;
+    n += p.stash.filter((i) => i.id === id).length;
+    return n;
+  };
+
+  // (a) Multiplicative scaling + upgrade contract — Hunter's Fang amulet (pure +8% dmg).
+  const ps = new PS();
+  const base = ps.getDamage();
+  const a1 = ps.addItem(clone('am_hunters_fang')); // fresh buy → new instance, level 1
+  ps.invalidateAgg?.();
+  const d1 = ps.getDamage();
+  const a2 = ps.addItem(clone('am_hunters_fang')); // duplicate → upgrade to +1 (level 2)
+  ps.invalidateAgg?.();
+  const d2 = ps.getDamage();
+  const a3 = ps.addItem(clone('am_hunters_fang')); // duplicate → upgrade to +2 (level 3)
+  ps.invalidateAgg?.();
+  const d3 = ps.getDamage();
+  const copies = countOwned(ps, 'am_hunters_fang');
+
+  // (b) Additive scaling — Warding Bead amulet (+2 armor): level 2 must give +4 armor.
+  const ps2 = new PS();
+  const baseArmor = ps2.getArmor();
+  ps2.addItem(clone('am_warding_bead'));
+  ps2.invalidateAgg?.();
+  const armor1 = ps2.getArmor();
+  ps2.addItem(clone('am_warding_bead')); // upgrade → level 2
+  ps2.invalidateAgg?.();
+  const armor2 = ps2.getArmor();
+
+  return {
+    a1: { upgraded: a1.upgraded, level: a1.upgradeLevel },
+    a2: { upgraded: a2.upgraded, level: a2.upgradeLevel },
+    a3: { upgraded: a3.upgraded, level: a3.upgradeLevel },
+    copies, base, d1, d2, d3, baseArmor, armor1, armor2,
+  };
+});
+
 await page.screenshot({ path: '/tmp/roguelite-mechanics-shop.png' });
 await browser.close();
 server.close();
@@ -202,11 +255,33 @@ const result = {
     // base is the new 240 floor; stacking many speed items must clamp to maxSpeed (480), not exceed it.
     pass: r5.base === 240 && r5.maxSpeed === 480 && r5.capped === 480 && r5.speedItemCount > 0,
   },
+  test6_upgradeOnDuplicate: (() => {
+    const MULT = 1.08; // am_hunters_fang damageMultiplier
+    // Per-LEVEL ratio isolates the upgrade compounding: level N contributes value^N, so
+    // d(N+1)/d(N) === MULT exactly (all constant sheet-wide multipliers cancel). NOTE we do
+    // NOT check d1/base — the amulet is 'ranged'-tagged, so the first buy also activates the
+    // ranged specialization bonus, which is a one-time step, not part of upgrade scaling.
+    const ratioOk = (a, b) => a > 0 && Math.abs(b / a - MULT) < 1e-4;
+    return {
+      ...r6,
+      pass:
+        // upgrade CONTRACT: 1st buy is a fresh instance, each duplicate bumps the level
+        r6.a1.upgraded === false && r6.a1.level === 1 &&
+        r6.a2.upgraded === true && r6.a2.level === 2 &&
+        r6.a3.upgraded === true && r6.a3.level === 3 &&
+        r6.copies === 1 && // never a 2nd copy — the same instance deepens
+        r6.d1 > r6.base && // the item is actually active at level 1
+        // multiplicative stat compounds ^N (each upgrade applies the multiplier once more)
+        ratioOk(r6.d1, r6.d2) && ratioOk(r6.d2, r6.d3) &&
+        // additive stat scales ×N: +2 armor at level 2 = +4 over base
+        r6.armor1 === r6.baseArmor + 2 && r6.armor2 === r6.baseArmor + 4,
+    };
+  })(),
   errors,
 };
 console.log(JSON.stringify(result, null, 2));
 const ok = result.test1_baseInterest.pass && result.test2_statLogic.pass &&
   result.test3_nonStackingExcluded.pass && result.test4_synergyLegible.pass &&
-  result.test5_speedCap.pass && errors.length === 0;
+  result.test5_speedCap.pass && result.test6_upgradeOnDuplicate.pass && errors.length === 0;
 console.log(ok ? 'ALL PASS' : 'FAIL');
 process.exit(ok ? 0 : 1);

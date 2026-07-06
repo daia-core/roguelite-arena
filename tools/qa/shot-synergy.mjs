@@ -17,7 +17,9 @@ page.on('pageerror', (e) => errors.push(e.message));
 page.on('console', (m) => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
 await page.goto(URL, { waitUntil: 'networkidle2', timeout: 30000 });
 await new Promise((r) => setTimeout(r, 1200));
-await page.click('#startBtn');
+// #startBtn now opens the class-select screen (PoE skill-tree rework); startNewGame() is
+// the game's stable headless-QA entry point (beginRun(Gunner) → a live player on the map).
+await page.evaluate(() => window.__game.startNewGame());
 await new Promise((r) => setTimeout(r, 800));
 
 const info = await page.evaluate(() => {

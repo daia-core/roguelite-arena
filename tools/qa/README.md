@@ -17,3 +17,27 @@ resolvable from the working directory, and Chrome — override the binary with
 Workflow for art changes: build → shoot → actually LOOK at the PNGs.
 The sprite pipeline itself lives in ../pixel-art/ (style guide, PNG renderer,
 spriteData codegen).
+
+## Mechanic / regression gates
+
+Assertion harnesses (not just screenshots) that exit non-zero on failure. They enter a
+run via the stable `window.__game.startNewGame()` hook (NOT `#startBtn`, which now opens
+the class-select screen and leaves `player` null).
+
+- `verify-mechanics.mjs` — 6 checks over the stat/item system, incl. **Test 6: buying a
+  duplicate item upgrades it** (upgradeLevel, multiplicative + additive scaling — Felix's
+  explicit "amulet +7" requirement). All 6 PASS.
+- `shot-synergy.mjs` — shop rolls never surface removed/homing cards. PASS.
+- `verify-live.mjs` — screenshots the LIVE deploy's menu + portrait shop and checks the
+  first card's hitbox center maps onto the visible card. Runs clean. NOTE: the end-to-end
+  touch-PURCHASE is informational only — synthetic headless touch doesn't drive the
+  deployed build's rAF input loop, so `bought.goldDropped:false` is NOT a live bug.
+
+### Known issues
+
+- `verify-pennib.mjs` — 6/8 pass, but the **Pen Nib loaded-shot** checks FAIL: the fat
+  golden high-pierce projectile is never observed firing (loaded dmg ratio null). Either
+  the loaded-shot mechanic regressed or the projectile-observation window is stale — needs
+  investigation before treating Pen Nib as verified.
+- `shoot-shop.mjs` — defaults `executablePath` to a macOS Chrome path; set `CHROME_BIN`
+  when running in-container (it honours the env override).
