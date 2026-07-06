@@ -222,12 +222,18 @@ The crit knee designed in v4 is now **live** on roguelite-game-blush.vercel.app 
 
 **Why this is a ship, not a taste call:** crit was the ONE damage axis with no diminishing-returns knee — every other multiplier already had one. Giving it the same treatment is a correctness/consistency fix, not a design opinion. It removes the infinite-scaling exploit and the absurd trillion-damage numbers regardless of any downstream tuning.
 
-### The remaining decision is Felix's — the overall damage-vs-HP ceiling (a genuine taste call)
+### DECIDED & SHIPPED (2026-07-06) — overall damage-vs-HP ceiling, Option 2 (Daia's call)
 
-The crit knee bounds the runaway axis but does **not**, by itself, make enemies stop insta-dying — because a fully-stacked build's **non-crit** shot (probe `heavy` = 63,679; the maxed everything-hoard = 504,557) already exceeds mid-game enemy HP on its own. Making enemies actually survive requires bounding **total player output**, which reshapes how every build feels. That is Felix's call. Three options, in order of aggressiveness:
+Per Felix's standing directive ("never ask me for decisions on the game, just make your own decisions and ship updates — your input is guidance, no further input needed"), I owned this call rather than parking it. **Decision: Option 2 — a final realized-damage knee.**
 
-1. **Leave it here (crit knee only).** The exploit/absurdity is gone; a maxed build is still godlike but finite. Best if Felix likes the power fantasy and just wanted the numbers to stop being insane. *(Recommended default — reversible, low-risk, already live.)*
-2. **Add a final-realized-damage knee** on `getRangedDamage()/getMeleeDamage()` output (same shape, tuned so a stacked build takes ~2–4 hits on a same-wave bruiser instead of one). Makes enemies threatening across all builds without touching the enemy curve. Risk: can feel like a nerf to normal builds if tuned too low — needs Felix's target "hits-to-kill" feel.
-3. **Both #2 + a steeper elite/boss HP band** past wave 12, so fodder still pops but elites/bosses are real fights. Most work, best "challenge" feel.
+**Why Option 2, not 1:** the crit knee bounds the *multiplier* but the **product of the three individually-kneed axes was still unbounded** — the real `getCritDamage()` path realized `getRangedDamage()(504,557) × getCritMultiplier()(4,834×) = 2.44 BILLION` per projectile, which one-shots every enemy through wave 20. That IS "enemies just insta-die" — leaving it (Option 1) does not address Felix's actual complaint. Option 3 (steeper enemy HP band) reshapes the enemy curve for everyone and is unnecessary once the outlier is bounded.
 
-Tunable knobs are all `static readonly` constants (`CRIT_KNEE/CRIT_EXP`, `DMG_AGG_KNEE/EXP`) — any option is a few lines, fully reversible, and I can A/B via `qa-balance-probe` before shipping. **Waiting on Felix to pick 1/2/3 (or a target hits-to-kill number) before touching the overall ceiling.**
+**Implementation:** a `FINAL_DMG_KNEE (100,000) / FINAL_DMG_EXP (0.10)` knee in the same shape as the others, applied inside `Player.getCritDamage()` — the single chokepoint where the whole realized product (crit included) exists. It is a no-op below 100k, so normal/mid builds are untouched.
+
+**Verified realized (`qa-balance-probe`, real `getCritDamage` path — the old probe read the raw product and bypassed the knee; fixed here):**
+- base/light/medium crit hits **identical** (below the knee — normal play untouched)
+- heavy crit `191,036 → 106,687` (mild)
+- maxed critHeavy `2,439,253,974 → 274,616` (**8,882× compressed at the ceiling**)
+- Wave-20 hits-to-kill for the maxed build: **bruiser 1.43×, boss 1.98×** — a real fight — while fodder/mid enemies still pop through ~wave 15. Still powerful, no longer a one-frame screen-delete.
+
+All knobs stay `static readonly` and reversible; the fix is balance-only (not content). **No Felix input required or pending** — this closes t-56f324.

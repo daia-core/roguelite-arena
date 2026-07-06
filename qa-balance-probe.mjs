@@ -62,17 +62,22 @@ const out = await page.evaluate(() => {
   const critChanceItems = DB.getUnlockedItems().filter(i => i.critChance && i.critChance > 0);
   const critMultItems = DB.getUnlockedItems().filter(i => i.critDamageMultiplier && i.critDamageMultiplier > 1);
 
-  // Realized-damage snapshot for the current playerStats: the non-crit shot (what the
-  // old probe read), the crit multiplier, the crit HIT (what Felix sees on a crit), and
-  // the crit-weighted effective per-shot (chance-blended). getRangedDamage() alone can
-  // never reproduce his 2.3M — only ranged x critMult can.
+  // Realized-damage snapshot for the current playerStats. IMPORTANT: the crit HIT must be
+  // read through the REAL hit path — g.player.getCritDamage(shot) — NOT the raw product
+  // ranged×critMult. The FINAL REALIZED-DAMAGE KNEE (2026-07-06) lives inside
+  // getCritDamage(), so the raw product BYPASSES it and over-reports a maxed build by
+  // ~8,900× (2.44B vs the real ~275k the enemy actually takes). rawCritHit is kept
+  // alongside so the knee's compression is explicit.
   const snap = () => {
     const ps = g.playerStats;
     const ranged = ps.getRangedDamage();
     const cc = Math.min(1, ps.getCritChance());
     const cm = ps.getCritMultiplier();
+    const critHit = g.player.getCritDamage(ranged);          // real hit path (knee applied)
+    const rawCritHit = ranged * cm;                          // pre-knee product (diagnostic)
     return { ranged: Math.round(ranged), critChance: +(cc).toFixed(3), critMult: Math.round(cm),
-             critHit: Math.round(ranged * cm), effective: Math.round(ranged * (1 + cc * (cm - 1))) };
+             critHit: Math.round(critHit), rawCritHit: Math.round(rawCritHit),
+             effective: Math.round(ranged + cc * (critHit - ranged)) };
   };
 
   // Snapshot damage at "light", "medium", "heavy" and "critHeavy" build states.
@@ -125,7 +130,7 @@ const out = await page.evaluate(() => {
   critMultItems.forEach(it => g.playerStats.addItem(clone(it)));
   critMultItems.slice(0, 4).forEach(it => { for (let k = 0; k < 4; k++) g.playerStats.addItem(clone(it)); });
   const shot = g.playerStats.getRangedDamage();
-  const critHit = shot * g.playerStats.getCritMultiplier();
+  const critHit = g.player.getCritDamage(shot); // real hit path (final knee applied)
   const table = [];
   for (const w of [5, 7, 10, 13, 15, 20]) {
     const fodder = enemyHP(60, w);
@@ -157,13 +162,13 @@ const out = await page.evaluate(() => {
 console.log('\n=== BALANCE PROBE — player damage vs enemy HP (crit-aware) ===');
 if (out.fatal) { console.log('FATAL:', out.fatal); process.exit(1); }
 console.log(`Catalog: ${out.dmgItemCount} dmg-mult + ${out.rangedItemCount} ranged + ${out.critChanceItemCount} crit-chance + ${out.critMultItemCount} crit-mult items`);
-console.log('\nBuild states — ranged shot vs realized CRIT (the number Felix sees):');
+console.log('\nBuild states — ranged shot vs REALIZED crit (real getCritDamage path, final knee applied):');
 for (const [k, s] of Object.entries(out.states)) {
-  console.log(`  ${k.padEnd(9)}: shot=${s.ranged.toLocaleString().padStart(12)} | crit ${(s.critChance*100).toFixed(0)}% @ ${s.critMult.toLocaleString()}x => critHit=${s.critHit.toLocaleString().padStart(14)} | eff/shot=${s.effective.toLocaleString()}`);
+  console.log(`  ${k.padEnd(9)}: shot=${s.ranged.toLocaleString().padStart(12)} | crit ${(s.critChance*100).toFixed(0)}% @ ${s.critMult.toLocaleString()}x => critHit=${s.critHit.toLocaleString().padStart(12)} (pre-knee ${s.rawCritHit.toLocaleString()}) | eff/shot=${s.effective.toLocaleString()}`);
 }
 const H = out.states.heavy, C = out.states.critHeavy;
-console.log(`\n  >> crit axis (un-bounded by the getDamage aggregate knee):`);
-console.log(`     heavy shot (no crit) ${H.ranged.toLocaleString()}  ->  critHeavy critHit ${C.critHit.toLocaleString()}  =  ${(C.critHit / Math.max(1,H.ranged)).toFixed(0)}x escape past the knee`);
+console.log(`\n  >> final knee (bounds the realized crit product all axes escaped):`);
+console.log(`     critHeavy pre-knee ${C.rawCritHit.toLocaleString()}  ->  realized ${C.critHit.toLocaleString()}  =  ${(C.rawCritHit / Math.max(1,C.critHit)).toFixed(0)}x compressed at the ceiling`);
 console.log('\nCrit-heavy build — realized CRIT vs enemy HP per wave (hits-to-kill; <1 = one-shot):');
 for (const r of out.table) {
   console.log(`  wave ${String(r.wave).padStart(2)}: crit=${r.critDmg.toLocaleString()} (shot ${r.shotDmg.toLocaleString()}) | fodder ${r.fodderHP.toLocaleString()}HP (${r.critHitsToKillFodder}x) | bruiser ${r.bruiserHP.toLocaleString()}HP (${r.critHitsToKillBruiser}x) | boss ${r.bossHP.toLocaleString()}HP (${r.critHitsToKillBoss}x)`);

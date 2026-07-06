@@ -462,6 +462,10 @@ export class Player {
   }
 
   getCritDamage(baseDamage: number): number {
-    return baseDamage * this.stats.getCritMultiplier();
+    // FINAL REALIZED-DAMAGE KNEE — the outermost balance ceiling. Each damage axis is
+    // individually kneed, but their product (shot × crit) still ran to billions on a
+    // maxed build; this compresses the final realized hit so the overall damage-vs-HP
+    // curve stays finite. A no-op below the knee, so normal/mid crit builds are untouched.
+    return PlayerStats.finalDamageKnee(baseDamage * this.stats.getCritMultiplier());
   }
 }

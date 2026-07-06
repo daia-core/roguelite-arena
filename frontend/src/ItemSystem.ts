@@ -398,6 +398,30 @@ export class PlayerStats {
     return PlayerStats.CRIT_KNEE * Math.pow(m / PlayerStats.CRIT_KNEE, PlayerStats.CRIT_EXP);
   }
 
+  // ---- FINAL REALIZED-DAMAGE KNEE (balance ceiling, 2026-07-06) ----
+  // Each damage axis is now individually kneed (aggregate getDamage, per-type mult, crit
+  // mult), yet the PRODUCT of three kneed axes is still unbounded: a maxed crit build
+  // realizes getRangedDamage() × getCritMultiplier() ≈ 504,557 × 4,834 = 2.44 BILLION per
+  // projectile (qa-balance-probe) — exactly the "2.3M/projectile, enemies insta-die"
+  // report, one-shotting every enemy through wave 20. This last knee wraps the FINAL
+  // realized hit (the number the enemy actually takes, crit included) so the overall
+  // damage-vs-HP ceiling is finite:
+  //   d <= KNEE:  d                                  (light/medium/most builds untouched)
+  //   d >  KNEE:  KNEE * (d / KNEE) ^ EXP            (runaway top-end compressed)
+  // KNEE 100,000 sits above every normal realized hit (base crit 50, medium crit 4,624)
+  // and even a heavy non-crit shot (63,679), so nothing but a hard-stacked build is
+  // touched. EXP 0.10 is intentionally steep because this is the outermost ceiling on an
+  // already-thrice-kneed product — it must claw a 2.4-billion outlier back to a sane band.
+  // Verified via qa-balance-probe: heavy crit 191,036 → ~107k (still one-shots fodder,
+  // multi-hits bosses); the pathological 2.44B → ~275k, so a fully-maxed crit build now
+  // takes ~1–2 hits on a same-wave-20 bruiser instead of deleting the screen in one frame.
+  static readonly FINAL_DMG_KNEE = 100000;
+  static readonly FINAL_DMG_EXP = 0.10;
+  static finalDamageKnee(d: number): number {
+    if (!(d > PlayerStats.FINAL_DMG_KNEE)) return d; // NaN-safe; below/at knee = linear
+    return PlayerStats.FINAL_DMG_KNEE * Math.pow(d / PlayerStats.FINAL_DMG_KNEE, PlayerStats.FINAL_DMG_EXP);
+  }
+
   // ---- ARTIFACT contributions (ArtifactSystem folds its static roster into these) ----
   // Defaults are identity (×1 / +0) so a run with no artifacts behaves exactly as before.
   artifactDamageMult: number = 1;

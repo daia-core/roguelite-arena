@@ -8,6 +8,28 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-06 (early morning) — damage ceiling: maxed builds no longer one-shot everything
+
+**Enemies stop insta-dying to a fully-stacked build.** The earlier crit knee bounded the crit
+*multiplier*, but the realized hit is a product of three separate multipliers — and that product
+was still unbounded: a maxed crit build dealt **~2.4 billion** damage per projectile, deleting
+every enemy through wave 20 in a single frame (Felix's "2.3M/projectile, enemies just insta-die").
+
+A final realized-damage knee (`FINAL_DMG_KNEE 100,000 / EXP 0.10`, inside `Player.getCritDamage()`)
+now compresses the outermost ceiling. It's a **no-op below 100k**, so base/light/medium/heavy
+builds are untouched — only the hard-stacked runaway is clawed back: `2.44B → ~275k` (8,882×). A
+maxed build now takes ~1.4 hits on a wave-20 bruiser and ~2 on a boss — still powerful, a real
+fight instead of a one-frame screen wipe. Fodder and mid-tier enemies still pop through ~wave 15,
+so the power fantasy survives; the absurdity doesn't. Balance-only; enemy HP curve untouched.
+
+_Also: fixed `qa-balance-probe` to read the real `getCritDamage()` hit path — it previously read
+the raw `shot × critMult` product, which bypasses the knee and over-reported by ~8,900×._
+
+Full 10/10 headless QA suite green (catalog, shop, equipment, skill-tree pinch, stat-caps,
+stats-parity, item-redesign, synergy, skilltree, classselect); tsc + build clean.
+
+---
+
 ## 2026-07-06 (early morning) — recycling removed + pinch-to-zoom on the skill tree
 
 Two Felix requests shipped together.
