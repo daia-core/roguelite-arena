@@ -30,7 +30,7 @@ as its own thing in the shop. Names only, zero stat change.
 balance sim runs clean (no crashes, deaths in the normal wave 4-7 random-agent band). 20 amulet-slot
 items, 0 duplicate ids, 0 duplicate names.
 
-Live-verified bundle **`__BUNDLE__`** (commit `__SHA__`) on roguelite-game-blush.vercel.app.
+Live-verified bundle **`index-DgIjtTCo.js`** (commit `c91deb9`) on roguelite-game-blush.vercel.app.
 
 ---
 
