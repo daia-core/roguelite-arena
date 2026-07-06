@@ -145,6 +145,46 @@ async function simulateRun(page, maxWave) {
           }
           continue;
         }
+        // Skill-tree screen (added 2026-07-06 by the PoE-style tree rework, which
+        // REPLACED the old level-up item pick — so the 'levelup' handler above no
+        // longer fires, and with no 'skilltree' handler the run STALLED here at
+        // wave ~3-4 the instant the first banked point auto-opened the tree at the
+        // wave-complete break). Spend every banked point greedily on any allocatable
+        // node (an outward walk from the class start), sync stats exactly the way the
+        // real tap handler does (allocate → recomputeInto → refreshMaxHealth), then
+        // exit. Allocating rather than just leaving keeps the bot getting stronger
+        // between waves, so the balance data reflects a real progressing build.
+        if (g.state === 'skilltree') {
+          const nodes = (window.__SKILL_TREE && window.__SKILL_TREE.SKILL_NODES) || [];
+          // Score a node by its combat value so the bot paths toward power the way a
+          // real player would, rather than wandering into dead travel nodes (a naive
+          // first-allocatable walk left the bot too weak and it died at wave ~3). Weight
+          // offense/survival deltas, and bias toward notables/keystones as path goals.
+          const W = { damageMult: 3, fireRateMult: 3, maxHealthBonus: 2, armorBonus: 2,
+            critChanceBonus: 1.5, critMultMult: 1.5, speedMult: 1, regenBonus: 1 };
+          const score = (n) => {
+            let s = 0;
+            for (const d of (n.deltas || [])) {
+              const w = W[d.field] ?? 0.3;
+              if (d.mul !== undefined) s += (d.mul - 1) * 100 * w;
+              if (d.add !== undefined) s += d.add * w;
+            }
+            if (n.type === 'keystone') s += 5;
+            else if (n.type === 'notable') s += 2;
+            return s;
+          };
+          let spent = true;
+          while (g.skillTree.availablePoints > 0 && spent) {
+            spent = false;
+            const cands = nodes.filter((n) => g.skillTree.canAllocate(n.id))
+              .sort((a, b) => score(b) - score(a));
+            if (cands.length && g.skillTree.allocate(cands[0].id)) spent = true;
+          }
+          g.skillTree.recomputeInto(g.playerStats);
+          if (typeof g.refreshMaxHealth === 'function') g.refreshMaxHealth();
+          g.finishSkillTree();
+          continue;
+        }
         if (g.state === 'map') {
           const ids = g.mapSystem.reachable();
           if (!ids || ids.length === 0) { g.startNextWave(); continue; }
