@@ -180,6 +180,19 @@ export function itemStatLines(item: Item): string[] {
   return lines;
 }
 
+// True when the hand-written description merely restates the auto-generated stat
+// lines (e.g. description "+8% damage" vs stat row "+8% Damage") — pure redundancy
+// that shows the same numbers twice on a card, so the shop card + inspect popup skip
+// drawing the description entirely and let the green stat row stand alone. Conservative
+// by design: only an EXACT match after normalising case/punctuation is suppressed, so
+// any flavour or extra-mechanic text is always kept. (30/275 catalog items restate
+// their stats verbatim; the other 227 carry genuinely different description text.)
+export function descRestatesStats(description: string, stats: string[]): boolean {
+  if (stats.length === 0) return false;
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9%+\-]/g, '');
+  return norm(description) === norm(stats.join(' '));
+}
+
 // Weapon attack patterns (Brotato-inspired)
 export type WeaponType =
   | 'auto-aim' // Default: auto-aim bullets

@@ -6,7 +6,7 @@ import { Projectile } from './Projectile';
 import { MeleeAttack } from './MeleeAttack';
 import { Particle, DamageNumber } from './Particle';
 import { WaveManager } from './WaveManager';
-import { PlayerStats, ItemDatabase, getItemKinds, classifyItemSlot, slotLabel, itemStatLines, type Item, type EquipHolderKey } from './ItemSystem';
+import { PlayerStats, ItemDatabase, getItemKinds, classifyItemSlot, slotLabel, itemStatLines, descRestatesStats, type Item, type EquipHolderKey } from './ItemSystem';
 import { STARTING_CLASSES, type StartingClass } from './Classes';
 import { SaveManager } from './SaveManager';
 import { Input } from './Input';
@@ -5224,19 +5224,24 @@ export class Game {
 
       // Row 4 — description, wrapped, left-aligned. Swaps to the combo payoff when
       // buying would complete a duo, so the card tells you WHAT fires at decision time.
+      // Skipped entirely when the description just restates the green stat row above
+      // (30 catalog items) — the duo payoff always shows, since it adds real info.
       const descTop = ty;
       const descBottomLimit = footerY - s(4);
       const descLineH = descSize + Math.max(2, Math.round(descSize * 0.35));
       const descMaxLines = Math.max(1, Math.floor((descBottomLimit - descTop) / descLineH));
-      this.renderer.drawWrappedText(
-        completesDuo && duoInfo ? duoInfo.effect : item.description,
-        textX, descTop,
-        {
-          size: descSize, align: 'left',
-          color: completesDuo && duoInfo ? '#ffe066' : '#e5d9c3',
-          maxWidth: textW, maxLines: descMaxLines,
-        }
-      );
+      const cardShowDesc = (completesDuo && duoInfo) || !descRestatesStats(item.description, stats);
+      if (cardShowDesc) {
+        this.renderer.drawWrappedText(
+          completesDuo && duoInfo ? duoInfo.effect : item.description,
+          textX, descTop,
+          {
+            size: descSize, align: 'left',
+            color: completesDuo && duoInfo ? '#ffe066' : '#e5d9c3',
+            maxWidth: textW, maxLines: descMaxLines,
+          }
+        );
+      }
 
       // Price — bottom-right, prominent (gold if affordable, red if not).
       const finalPrice = this.playerStats.getItemPrice(item, this.waveManager.currentWave);
@@ -5354,11 +5359,14 @@ export class Game {
     const textW = panelW - pad * 2;
     const charsPerLine = Math.max(8, Math.floor(textW / bodySize));
     const estLines = Math.ceil(item.description.length / charsPerLine);
-    const descLineCount = Math.min(4, Math.max(1, estLines));
+    // Drop the description block entirely when it just restates the stat rows above
+    // (same redundancy the shop card skips) so the panel doesn't reserve empty space.
+    const descRedundant = descRestatesStats(item.description, stats);
+    const descLineCount = descRedundant ? 0 : Math.min(4, Math.max(1, estLines));
 
     const headerH = Math.max(iconBox, headSize + lineH); // icon row height
     const statsH = stats.length > 0 ? (stats.length * lineH + s(4)) : 0;
-    const descH = descLineCount * lineH + s(4);
+    const descH = descLineCount > 0 ? descLineCount * lineH + s(4) : 0;
     const btnH = s(isMobile ? 26 : 30);
     const panelH = pad + headerH + s(6) + statsH + descH + s(8) + btnH + pad;
 
@@ -5408,11 +5416,15 @@ export class Game {
       cy += Math.ceil(stats.length / statCols) * lineH + s(4);
     }
 
-    // Description (wrapped, capped).
-    this.renderer.drawWrappedText(item.description, contentX, cy, {
-      maxWidth: textW, size: bodySize, align: 'left', color: '#c8b998', maxLines: descLineCount,
-    });
-    cy += descLineCount * lineH + s(8);
+    // Description (wrapped, capped) — omitted when it merely restates the stat rows.
+    if (descLineCount > 0) {
+      this.renderer.drawWrappedText(item.description, contentX, cy, {
+        maxWidth: textW, size: bodySize, align: 'left', color: '#c8b998', maxLines: descLineCount,
+      });
+      cy += descLineCount * lineH + s(8);
+    } else {
+      cy += s(8);
+    }
 
     // Buttons: Unequip (bench) left, Sell right. Sell shows the refund value.
     const refund = this.playerStats.getSellValue(item);
