@@ -46,6 +46,11 @@ export class Input {
   dashPressed: boolean = false;
   blastPressed: boolean = false;
 
+  // Multi-touch tracking (canvas-space) for pinch-to-zoom on the skill-tree screen.
+  // The mouse/joystick path collapses everything to one pointer; this keeps every
+  // live finger so a two-finger gesture can be measured independently.
+  private activeTouches: Map<number, { x: number; y: number }> = new Map();
+
   private canvas: HTMLCanvasElement;
   private dashButton: HTMLButtonElement | null = null;
   private blastButton: HTMLButtonElement | null = null;
@@ -112,6 +117,7 @@ export class Input {
         // Update mouse position for shop/UI interactions
         this.mouseX = x;
         this.mouseY = y;
+        this.activeTouches.set(touch.identifier, { x, y });
         if (!this.pressDisarmed) this.mouseDown = true; // ignore a held-over touch
 
         // Anywhere on screen activates joystick (ONLY during gameplay, not in shop/menu/gameover)
@@ -147,6 +153,7 @@ export class Input {
         // Update mouse position
         this.mouseX = x;
         this.mouseY = y;
+        if (this.activeTouches.has(touch.identifier)) this.activeTouches.set(touch.identifier, { x, y });
 
         if (touch.identifier === this.joystick.identifier) {
           this.joystick.currentX = x;
@@ -175,6 +182,7 @@ export class Input {
       this.pressDisarmed = false; // release seen → next touch is a fresh tap
       for (let i = 0; i < e.changedTouches.length; i++) {
         const touch = e.changedTouches[i];
+        this.activeTouches.delete(touch.identifier);
         if (touch.identifier === this.joystick.identifier) {
           this.joystick.active = false;
           this.joystick.deltaX = 0;
@@ -182,6 +190,28 @@ export class Input {
         }
       }
     }, { passive: false });
+
+    // A cancelled touch (system gesture, call, etc.) never fires touchend, so
+    // drop it here too — otherwise a phantom finger would linger in the pinch map.
+    this.canvas.addEventListener('touchcancel', (e) => {
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        this.activeTouches.delete(e.changedTouches[i].identifier);
+      }
+      if (this.activeTouches.size === 0) this.mouseDown = false;
+    }, { passive: false });
+  }
+
+  /**
+   * Two-finger pinch state in canvas pixels — distance between the first two live
+   * fingers and their midpoint — or null when fewer than two touches are down.
+   */
+  getPinch(): { dist: number; cx: number; cy: number } | null {
+    if (this.activeTouches.size < 2) return null;
+    const it = this.activeTouches.values();
+    const a = it.next().value as { x: number; y: number };
+    const b = it.next().value as { x: number; y: number };
+    const dx = a.x - b.x, dy = a.y - b.y;
+    return { dist: Math.hypot(dx, dy), cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2 };
   }
 
   private setupTouchButtons(): void {

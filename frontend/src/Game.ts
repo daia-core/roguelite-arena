@@ -178,6 +178,7 @@ export class Game {
   private stDownX: number = 0;
   private stDownY: number = 0;
   private stDragDist: number = 0;
+  private stPinchDist: number = 0;             // finger spread on the previous pinch frame (0 = not pinching)
   private stSelected: string | null = null;    // last-tapped node (for the info panel)
   private pendingWaveArtifact: boolean = false;   // elite/boss wave grants spoils on clear
   restResolved: boolean = false;             // rest node: an option has been taken
@@ -1925,6 +1926,23 @@ export class Game {
     this.stZoom = nz;
   }
 
+  /** Zoom about an arbitrary screen point (sx,sy) — keeps the tree-point under it
+   *  fixed, so a pinch feels anchored between the fingers. */
+  private stZoomAbout(factor: number, sx: number, sy: number): void {
+    const nz = Math.min(1.4, Math.max(0.16, this.stZoom * factor));
+    if (nz === this.stZoom) return;
+    const { zoom } = this.screenScale();
+    const V = this.stView();
+    const Z = this.stZoom * zoom;
+    const Zn = nz * zoom;
+    // Tree-space point currently under (sx,sy) — hold it in place across the zoom.
+    const tx = (sx - V.cx - this.stPanX) / Z;
+    const ty = (sy - V.cy - this.stPanY) / Z;
+    this.stPanX = sx - V.cx - tx * Zn;
+    this.stPanY = sy - V.cy - ty * Zn;
+    this.stZoom = nz;
+  }
+
   /** Screen geometry: the pannable web band sits between the header and the info panel. */
   private stView() {
     const { s, W, H, isMobile, zoom } = this.screenScale();
@@ -1968,6 +1986,21 @@ export class Game {
     const mx = this.input.mouseX, my = this.input.mouseY;
     const down = this.input.mouseDown;
     const { s } = this.screenScale();
+
+    // Two fingers → pinch-zoom about the midpoint. Owns input while active: the
+    // single-pointer pan/tap logic below is suppressed so lifting a finger can't
+    // register a tap or make the web jump.
+    const pinch = this.input.getPinch();
+    if (pinch) {
+      if (this.stPinchDist > 0 && pinch.dist > 0) {
+        this.stZoomAbout(pinch.dist / this.stPinchDist, pinch.cx, pinch.cy);
+      }
+      this.stPinchDist = pinch.dist;
+      this.stPointerActive = false;   // abandon any in-progress single-finger pan
+      return;
+    }
+    this.stPinchDist = 0;
+
     if (down && !this.stPointerActive) {
       // Press start — record the anchor so we can tell a tap from a pan on release.
       this.stPointerActive = true;
@@ -3065,32 +3098,8 @@ export class Game {
       const lockButtonX = x + itemWidth - lockButtonSize - s(4);
       const lockButtonY = y + s(4);
 
-      // RECYCLING: Recycle button in bottom-left corner
-      const recycleButtonSize = lockButtonSize;
-      const recycleButtonX = x + s(4);
-      const recycleButtonY = y + itemHeight - recycleButtonSize - s(4);
-
-      // Check recycle button (if player owns this item type)
-      const ownsItem = this.playerStats.items.some(owned => owned.id === item.id);
-      if (ownsItem && pointInRect(mouseX, mouseY, { x: recycleButtonX, y: recycleButtonY, width: recycleButtonSize, height: recycleButtonSize })) {
-        if (this.input.mouseDown) {
-          // Recycle item: remove from inventory, get 25% gold back (+ recycle bonus)
-          const recycleValue = this.playerStats.getRecycleValue(item);
-          this.player.gold += recycleValue;
-          this.playerStats.removeItem(item.id);
-
-          // Update player stats
-          this.player.maxHealth = this.playerStats.getMaxHealth();
-          if (this.player.health > this.player.maxHealth) {
-            this.player.health = this.player.maxHealth;
-          }
-
-          this.audio.playPurchase();
-          this.input.mouseDown = false;
-        }
-      }
       // Check lock button (FREE - no cost)
-      else if (pointInRect(mouseX, mouseY, { x: lockButtonX, y: lockButtonY, width: lockButtonSize, height: lockButtonSize })) {
+      if (pointInRect(mouseX, mouseY, { x: lockButtonX, y: lockButtonY, width: lockButtonSize, height: lockButtonSize })) {
         if (this.input.mouseDown) {
           if (this.lockedShopItems.has(i)) {
             // Unlock (free)
@@ -3189,9 +3198,9 @@ export class Game {
     }
 
     // SLOT REWORK: if equipping displaced an item but the stash was full, the old
-    // piece can't be kept — refund its recycle value so the buy is never a silent loss.
+    // piece can't be kept — refund its sell value so the buy is never a silent loss.
     if (overflow) {
-      this.player.gold += this.playerStats.getRecycleValue(overflow);
+      this.player.gold += this.playerStats.getSellValue(overflow);
     }
 
     // GAME FEEL: Duo unlock effects
@@ -4677,7 +4686,7 @@ export class Game {
    * Phase 2 tap-to-manage handler for the equipment strip. Returns true if the tap hit
    * an interactive region (so the caller consumes the input). Priority order matches the
    * draw z-order: stash sell ✕ badges (smallest, on top) → stash icons → equipped slots.
-   *   • sell badge  → sell the stashed item for its recycle value (gold in, item gone)
+   *   • sell badge  → sell the stashed item for its sell value (gold in, item gone)
    *   • stash icon  → equip it (swaps any current occupant back to the stash)
    *   • equipped slot → bench it to the stash; if the stash is full, sell it instead so
    *     the tap is never a dead no-op (with a toast telling the player which happened)
@@ -4691,7 +4700,7 @@ export class Game {
       if (pointInRect(mx, my, r)) {
         const item = stash[r.index];
         if (item) {
-          const refund = this.playerStats.getRecycleValue(item);
+          const refund = this.playerStats.getSellValue(item);
           this.playerStats.removeItem(item.id);
           this.player.gold += refund;
           this.syncMaxHealthAfterItemChange();
@@ -4746,7 +4755,7 @@ export class Game {
       if (this.playerStats.unequipToStash(key)) {
         this.showShopToast(`Benched ${occupant.name}`);
       } else {
-        const refund = this.playerStats.getRecycleValue(occupant);
+        const refund = this.playerStats.getSellValue(occupant);
         this.playerStats.removeItem(occupant.id);
         this.player.gold += refund;
         this.showShopToast(`Stash full — sold ${occupant.name} · +${refund}g`);
@@ -4757,9 +4766,9 @@ export class Game {
       return true;
     }
 
-    // Sell → straight to gold at the recycle value.
+    // Sell → straight to gold at the sell value.
     if (this.inspectSellRect && pointInRect(mx, my, this.inspectSellRect)) {
-      const refund = this.playerStats.getRecycleValue(occupant);
+      const refund = this.playerStats.getSellValue(occupant);
       this.playerStats.removeItem(occupant.id);
       this.player.gold += refund;
       this.syncMaxHealthAfterItemChange();
@@ -4781,7 +4790,7 @@ export class Game {
   }
 
   /** Recompute maxHealth after an item leaves/enters the active set, clamping current HP.
-   *  Mirrors the recycle path so a +maxHP item removed can't leave HP above the cap. */
+   *  Mirrors the sell path so a +maxHP item removed can't leave HP above the cap. */
   private syncMaxHealthAfterItemChange(): void {
     if (!this.player) return;
     this.player.maxHealth = this.playerStats.getMaxHealth();
@@ -5088,26 +5097,6 @@ export class Game {
 
       // Lock icon
       this.renderer.drawItemIcon(isLocked ? '🔒' : '🔓', lockButtonX + lockButtonSize / 2, lockButtonY + Math.round(lockButtonSize * 0.12), Math.round(lockButtonSize * 0.76), 'center');
-
-      // Recycle button in bottom-left corner (if player owns this item)
-      const ownsItem = this.playerStats.items.some(owned => owned.id === item.id);
-      if (ownsItem) {
-        const recycleButtonSize = lockButtonSize;
-        const recycleButtonX = x + s(4);
-        const recycleButtonY = y + itemHeight - recycleButtonSize - s(4);
-
-        // Recycle button background
-        ctx.save();
-        ctx.fillStyle = '#2e1c0e';
-        ctx.fillRect(recycleButtonX, recycleButtonY, recycleButtonSize, recycleButtonSize);
-        ctx.strokeStyle = '#ff8800';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(recycleButtonX, recycleButtonY, recycleButtonSize, recycleButtonSize);
-        ctx.restore();
-
-        // Recycle icon
-        this.renderer.drawItemIcon('♻️', recycleButtonX + recycleButtonSize / 2, recycleButtonY + Math.round(recycleButtonSize * 0.12), Math.round(recycleButtonSize * 0.76), 'center');
-      }
 
       // ─── Card content: IMAGE LEFT, structured text block RIGHT ───────────────
       // Reworked from the old centred/vertical stack (Felix: "place image to the
@@ -5426,7 +5415,7 @@ export class Game {
     cy += descLineCount * lineH + s(8);
 
     // Buttons: Unequip (bench) left, Sell right. Sell shows the refund value.
-    const refund = this.playerStats.getRecycleValue(item);
+    const refund = this.playerStats.getSellValue(item);
     const btnGap = s(8);
     const btnW = (textW - btnGap) / 2;
     const unX = contentX;
@@ -5509,7 +5498,6 @@ export class Game {
         ['Luck', pct(ps.getLuck()), ps.getLuck() > 0],
         ['Shop Discount', pct(ps.getShopDiscount()), ps.getShopDiscount() > 0],
         ['Reroll Discount', pct(ps.getRerollDiscount()), ps.getRerollDiscount() > 0],
-        ['Recycle Bonus', pct(ps.getRecycleBonus()), ps.getRecycleBonus() > 0],
         ['Bank Interest', pct(ps.getInterestBonus()), ps.getInterestBonus() > 0],
       ]],
       ['SPECIAL', '#e599f7', [

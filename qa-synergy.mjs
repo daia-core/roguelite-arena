@@ -77,7 +77,7 @@ const result = await page.evaluate(() => {
   out.B_bothItemsExist = give(A_ID) && DB.getItemById(B_ID) !== undefined;
   const pot = s.getPotentialDuos().find(p => p.duo.id === 'storm_surge');
   out.B_potentialListed = !!pot;
-  out.B_ownedName = pot?.owned?.name || null;   // Storm Essence
+  out.B_ownedName = pot?.owned?.name || null;   // Static Charge
   out.B_neededName = pot?.needed?.name || null;  // Seeking Rune
 
   // --- Case C: owning BOTH (active) or NEITHER keeps it out of potential ---
@@ -123,7 +123,7 @@ errors.forEach(e => console.log('  ', e));
 const pass = result && !result.fatal
   && result.A_oneHalfActive === false && result.A_bothActive === true
   && result.B_bothItemsExist === true && result.B_potentialListed === true
-  && result.B_ownedName === 'Storm Essence' && result.B_neededName === 'Seeking Rune'
+  && result.B_ownedName === 'Static Charge' && result.B_neededName === 'Seeking Rune'
   && result.C_bothNotPotential === true && result.C_neitherNotPotential === true
   && result.D_completes === true && result.D_hasEffect === true && result.D_names === 'Storm Surge'
   && result.E_closedOnEnter === true && result.E_opensOnTap === true && result.E_closesOnTap === true

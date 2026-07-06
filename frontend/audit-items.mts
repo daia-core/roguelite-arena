@@ -31,7 +31,7 @@ const TRINKET_MECHANICS = new Set([
   'swingDamageMult','swingRangeBonus','swingArcBonus','swingCooldownMult','swingAoe','aoeRadiusMult','meleeStyle',
   'piercing','explosionOnHit','chainLightning','multishot','projectileSpeed','knockback','homing','poison',
   'freeze','burn','bleed','poisonSpread','doom','wound','multicast',
-  'rerollDiscount','shopDiscount','recycleBonus','interestBonus','goldBonus','luck',
+  'rerollDiscount','shopDiscount','interestBonus','goldBonus','luck',
   'waveRampDamage','lowHpPower','killStackDamage','highHpPower','goldScaleDamage','soulTithe','ceremonialDaggers',
   'loadedShot','warChest','executeThreshold','fourleafCharm','shield',
   'meleeDamageMult','rangedDamageMult','elementalDamageMult','lifesteal','thorns',

@@ -73,6 +73,10 @@ const result = await page.evaluate(() => {
     // compressed base the real getters do.
     const AKNEE = s.constructor.DMG_AGG_KNEE, AEXP = s.constructor.DMG_AGG_EXP;
     const aggKnee = (d) => (d > AKNEE ? AKNEE * Math.pow(d / AKNEE, AEXP) : d);
+    // CRIT KNEE (2026-07-06): getCritMultiplier() passes the crit product through its
+    // own soft knee (crit was the last unbounded damage axis). Mirror critKneeMultiplier.
+    const CKNEE = s.constructor.CRIT_KNEE, CEXP = s.constructor.CRIT_EXP;
+    const critKnee = (m) => (m > CKNEE ? CKNEE * Math.pow(m / CKNEE, CEXP) : m);
     const damage = aggKnee(s.baseDamage * knee(prod('damageMultiplier')) * specBonus
       * tf.damageMultiplier * du.damageMultiplier * s.artifactDamageMult * s.runtimeDamageMult
       * s.skillDamageMult);
@@ -104,7 +108,9 @@ const result = await page.evaluate(() => {
       getSpeed: Math.min(s.baseSpeed * prod('speedMultiplier') * tf.speedMultiplier * du.speedMultiplier * s.artifactSpeedMult, s.maxSpeed),
       getMaxHealth: Math.max(1, s.baseMaxHealth + sum('maxHealthBonus') + tf.maxHealthBonus + s.artifactMaxHealthBonus),
       getCritChance: Math.min(1, s.baseCritChance + sum('critChance') + tf.critChance + du.critChance + s.artifactCritChanceBonus),
-      getCritMultiplier: s.baseCritMultiplier * prod('critDamageMultiplier') * tf.critDamageMultiplier * s.artifactCritMultMult,
+      getCritMultiplier: Math.min(s.constructor.SANITY_MULT_CAP, critKnee(
+        s.baseCritMultiplier * prod('critDamageMultiplier') * tf.critDamageMultiplier
+        * s.artifactCritMultMult * s.skillCritMultMult)),
       getHealthRegen: sum('healthRegen'),
       getArmor: s.metaArmor + sum('armor') + tf.armor,
       getLifesteal: Math.min(1, sum('lifesteal') + du.lifesteal),
@@ -125,7 +131,6 @@ const result = await page.evaluate(() => {
       getMulticastChance: Math.min(0.9, sum('multicast')),
       getRerollDiscount: Math.min(0.9, sum('rerollDiscount')),
       getShopDiscount: Math.min(0.3, sum('shopDiscount') + tf.shopDiscount),
-      getRecycleBonus: Math.min(s.constructor.RECYCLE_CAP, sum('recycleBonus')),
       getInterestBonus: Math.min(0.4, sum('interestBonus')),
       getLuck: Math.min(1.0, sum('luck')),
       hasExplosionOnHit: any('explosionOnHit'),

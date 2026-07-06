@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // STAT-CAP + OFFER-FILTER test. Proves Felix's balancing request:
 //  1) Quality-of-life / economy stats enemies DON'T scale against are hard-capped
-//     (gold ×10, xp-magnet ×10, recycle +300%, dodge 75%).
+//     (gold ×10, xp-magnet ×10, dodge 75%).
 //  2) Combat stats enemies DO scale against stay UNCAPPED for balance — a runaway
 //     build still multiplies far past the QoL cap — but are numerically sane
 //     (finite, ≤ 1e15) so no stat ever reads Infinity/NaN.
@@ -52,7 +52,7 @@ const result = await page.evaluate(() => {
   const stack = (s, id, n) => { const it = DB.getItemById(id); for (let k = 0; k < n; k++) s.addItem(it); };
 
   const PS = g.playerStats.constructor;
-  const GOLD = PS.GOLD_MULT_CAP, XPM = PS.XP_MAGNET_CAP, REC = PS.RECYCLE_CAP, DODGE = PS.DODGE_CAP, SANE = PS.SANITY_MULT_CAP;
+  const GOLD = PS.GOLD_MULT_CAP, XPM = PS.XP_MAGNET_CAP, DODGE = PS.DODGE_CAP, SANE = PS.SANITY_MULT_CAP;
 
   // ---- A) Economy / QoL stats are hard-capped ----
   {
@@ -60,11 +60,9 @@ const result = await page.evaluate(() => {
     const s = g.playerStats;
     stack(s, 'gold_bonus_t2', 40);   // 1.25^40 ≈ 7.5e3  → must clamp to GOLD
     stack(s, 'xp_magnet_t1', 40);    // 1.30^40 ≈ 3.6e4  → must clamp to XPM
-    stack(s, 'recycle_bonus_t2', 40);// +0.5×40 = 20     → must clamp to REC
     stack(s, 'dodge_t2', 40);        // +0.08×40 = 3.2    → must clamp to DODGE
     ok('gold capped', s.getGoldBonus() === GOLD, `gold=${s.getGoldBonus()} cap=${GOLD}`);
     ok('xp-magnet capped', s.getXPMagnet() === XPM, `xpm=${s.getXPMagnet()} cap=${XPM}`);
-    ok('recycle capped', s.getRecycleBonus() === REC, `rec=${s.getRecycleBonus()} cap=${REC}`);
     ok('dodge capped', s.getDodgeChance() === DODGE, `dodge=${s.getDodgeChance()} cap=${DODGE}`);
   }
 

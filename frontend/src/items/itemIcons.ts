@@ -506,22 +506,6 @@ const GLYPHS: Record<string, Glyph> = {
       [0,0,0,1,1,1,1,1,0,0,0,0],
     ],
   },
-  // ♻️ recycle — reroll / economy loop
-  recycle: {
-    p: ['transparent', '#14532d', '#16a34a', '#86efac'],
-    g: [
-      [0,0,0,0,1,2,1,0,0,0,0,0],
-      [0,0,0,1,2,2,2,1,0,0,0,0],
-      [0,0,1,2,1,0,0,0,0,0,0,0],
-      [0,1,2,1,0,0,0,1,1,0,0,0],
-      [1,2,2,0,0,0,0,2,2,1,0,0],
-      [1,2,1,0,0,0,0,1,2,1,0,0],
-      [0,1,1,0,0,0,0,1,2,2,1,0],
-      [0,0,0,0,0,0,0,0,1,2,1,0],
-      [0,0,0,1,2,2,2,1,0,1,0,0],
-      [0,0,0,0,1,2,1,0,0,0,0,0],
-    ],
-  },
   // 🏦 bank — banking / interest
   bank: {
     p: ['transparent', '#334155', '#94a3b8', '#e2e8f0', '#facc15'],
@@ -1691,7 +1675,6 @@ const EMOJI_MAP: Record<string, keyof typeof GLYPHS> = {
   '👊': 'fist', '🥊': 'fist', '🧤': 'fist', '🦾': 'fist', '✊': 'fist',
   '☣️': 'poison', '☣': 'poison', '🧟': 'poison', '🤢': 'poison',
   '⏱️': 'timer', '⏱': 'timer', '⏳': 'timer', '⌛': 'timer', '⏰': 'timer',
-  '♻️': 'recycle', '♻': 'recycle', '🔄': 'recycle', '🔀': 'recycle',
   '🏦': 'bank',
   // Batch 2 — authored glyphs for the remaining catalog emojis.
   '👑': 'crown', '🔱': 'trident', '🍷': 'wine', '🌵': 'cactus', '🦷': 'tooth',
@@ -1710,12 +1693,12 @@ const EMOJI_MAP: Record<string, keyof typeof GLYPHS> = {
   // Remaps to existing glyphs for close-enough concepts.
   '👢': 'boot', '❤️‍🔥': 'heart', '💸': 'coin', '🌌': 'spiral', '⚒️': 'hammer',
   '🔥❄️': 'flame', '⛈️': 'bolt', '🎇': 'burst', '🔆': 'star', '〽️': 'bolt',
-  // Batch 3 — UI icons (shop lock/recycle, village upgrades) + duo-combo labels.
+  // Batch 3 — UI icons (shop lock, village upgrades) + duo-combo labels.
   '🎁': 'gift', '⬆️': 'uparrow', '⬆': 'uparrow', '🔒': 'lock', '🔓': 'unlock',
   '🏪': 'bank', '🔰': 'shield', '🧠': 'orb', '⏭️': 'skip', '⏭': 'skip', '⏩': 'skip',
   '⚡🌊': 'bolt', '💣🎯': 'bomb', '❄️💥': 'frost', '☠️⚡': 'skull', '🎯🔱': 'target',
   '🗡️💢': 'dagger', '⚡💢': 'bolt', '🛡️🌹': 'shield', '❤️💚': 'heart', '🩸⚔️': 'drop',
-  '💨👻': 'ghost', '⚡🔫': 'gun', '💰✨': 'coin', '♻️💸': 'recycle', '🔥❄️⚡': 'flame',
+  '💨👻': 'ghost', '⚡🔫': 'gun', '💰✨': 'coin', '🔥❄️⚡': 'flame',
 };
 
 const ART_SCALE = 6; // canvas px per art pixel

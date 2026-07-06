@@ -46,7 +46,7 @@ export const DUO_COMBOS: DuoCombo[] = [
     name: 'Storm Surge',
     description: 'Lightning chains to ALL nearby enemies',
     icon: '⚡🌊',
-    item1Id: 'chain_lightning_t3',  // Storm Essence
+    item1Id: 'chain_lightning_t3',  // Static Charge
     item2Id: 'homing_t3',            // Seeking Rune
     chainLightning: 0.4,             // +40% more chain chance
     damageMultiplier: 1.3,
@@ -87,7 +87,7 @@ export const DUO_COMBOS: DuoCombo[] = [
     description: 'Poison spreads to nearby enemies + lightning',
     icon: '☠️⚡',
     item1Id: 'poison_t3',            // Toxic Vial
-    item2Id: 'chain_lightning_t3',   // Storm Essence
+    item2Id: 'chain_lightning_t3',   // Static Charge
     chainLightning: 0.3,
     damageMultiplier: 1.25,
     glowColor: '#84cc16',
@@ -215,18 +215,6 @@ export const DUO_COMBOS: DuoCombo[] = [
     shopDiscount: 0.15,              // +15% shop discount
     glowColor: '#eab308',
     specialEffect: 'Every shop purchase grants +1 gold/sec permanently'
-  },
-
-  {
-    id: 'recycling_master',
-    name: 'Recycling Master',
-    description: 'Sell items for MORE than you paid',
-    icon: '♻️💸',
-    item1Id: 'recycle_bonus_t2',     // Haggler Badge
-    item2Id: 'reroll_discount_t2',   // Spyglass
-    goldBonus: 1.3,
-    glowColor: '#22c55e',
-    specialEffect: 'Recycled items give 75% value + reroll cost = 0'
   },
 
   // ==================== ELEMENTAL DUOS ====================

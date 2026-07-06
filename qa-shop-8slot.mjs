@@ -4,7 +4,7 @@
 //   • A 2h weapon fills `weapon` AND disables `offhand` (benching any offhand).
 //   • Buying an item you already own UPGRADES it (+1 level) instead of adding a copy;
 //     aggregation scales each contribution by the level ("amulet +N" = bought N times).
-//   • Additive fields scale ×N; multiplicative fields scale ^N; recycle value scales ×N.
+//   • Additive fields scale ×N; multiplicative fields scale ^N; sell value scales ×N.
 //   • Aggregation parity: items[] == equipped-nonnull + trinkets (id multiset).
 //   • Shop offers exactly 3 items.
 //
@@ -159,17 +159,17 @@ const out = await page.evaluate(() => {
     R.trinketStackMath = near(b3 / b1, Math.pow(1.1, 2)); // level 1→3 = ×1.1²
   }
 
-  // ---- 7. RECYCLE value scales with level ----
+  // ---- 7. SELL value scales with level ----
   fresh();
   {
-    // torso_padded_vest cost 12 → recycle base floor(12*0.25)=3 (clean integer).
+    // torso_padded_vest cost 12 → sell base floor(12*0.25)=3 (clean integer).
     g.playerStats.addItem(clone('torso_padded_vest'));
-    const rec1 = g.playerStats.getRecycleValue(eqOf().torso);
+    const rec1 = g.playerStats.getSellValue(eqOf().torso);
     g.playerStats.addItem(clone('torso_padded_vest')); // level 2
-    const rec2 = g.playerStats.getRecycleValue(eqOf().torso);
+    const rec2 = g.playerStats.getSellValue(eqOf().torso);
     g.playerStats.addItem(clone('torso_padded_vest')); // level 3
-    const rec3 = g.playerStats.getRecycleValue(eqOf().torso);
-    R.recycleScales = rec1 === 3 && rec2 === 6 && rec3 === 9;
+    const rec3 = g.playerStats.getSellValue(eqOf().torso);
+    R.sellScales = rec1 === 3 && rec2 === 6 && rec3 === 9;
   }
 
   // ---- 8. SHOP offers exactly 3 items ----
@@ -206,7 +206,7 @@ const checks = [
   'upgUpgradedFlag','upgLevel3','upgNoDuplicateCopies','upgAdditiveScales',
   'upgMultL1','upgMultL2',
   'trinketUpgrades','trinketStackMath',
-  'recycleScales',
+  'sellScales',
   'shopOffersThree',
   'resetClears',
 ];

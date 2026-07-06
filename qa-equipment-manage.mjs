@@ -8,7 +8,7 @@
 // Interaction contract under test (8-slot model):
 //   • tap an occupied slot         → inspect popup opens (inspectedEquipKey set), no mutation
 //   • popup UNEQUIP button         → item benched to stash (slot freed, no gold change), popup closes
-//   • popup SELL button            → item sold: removed + gold += recycleValue, popup closes
+//   • popup SELL button            → item sold: removed + gold += sellValue, popup closes
 //   • tap off the buttons          → popup closes, nothing mutated
 //   • tap a stash icon             → item equipped
 //   • tap a stash sell-✕ badge     → item sold
@@ -147,7 +147,7 @@ const out = await page.evaluate(() => {
     R.equipParity = parity();
   }
 
-  // 4. SELL BUTTON: open the shield popup, tap Sell → removed + gold += recycle, gone.
+  // 4. SELL BUTTON: open the shield popup, tap Sell → removed + gold += sellValue, gone.
   {
     g.draw();
     const off = g.equipSlotRects.find(r => r.key === 'offhand');
@@ -156,14 +156,14 @@ const out = await page.evaluate(() => {
     R.sellPopupOpened = g.inspectedEquipKey === 'offhand';
     g.draw();
     const occupant = g.playerStats.getEquipment().offhand;
-    const recycle = g.playerStats.getRecycleValue(occupant);
+    const sellValue = g.playerStats.getSellValue(occupant);
     const goldBefore = g.player.gold;
     c = center(g.inspectSellRect);
     tap(c.x, c.y); // sell it
     R.sellRemovesItem = !g.playerStats.items.some(i => i.id === SHIELD);
     R.sellNotEquipped = g.playerStats.getEquipment().offhand === null;
     R.sellNotInStash = !g.playerStats.getStash().some(i => i.id === SHIELD);
-    R.sellRefundsGold = g.player.gold === goldBefore + recycle && recycle > 0;
+    R.sellRefundsGold = g.player.gold === goldBefore + sellValue && sellValue > 0;
     R.sellClosesPopup = g.inspectedEquipKey === null;
     R.sellParity = parity();
   }
@@ -208,14 +208,14 @@ const out = await page.evaluate(() => {
     tap(c.x, c.y); // open amulet popup
     g.draw();
     const occupant = g.playerStats.getEquipment().amulet;
-    const recycle = occupant ? g.playerStats.getRecycleValue(occupant) : 0;
+    const sellValue = occupant ? g.playerStats.getSellValue(occupant) : 0;
     const goldBefore = g.player.gold;
     c = center(g.inspectUnequipRect);
     tap(c.x, c.y); // unequip → must SELL (stash full)
     R.fullStashSetup = stashFull && !!occupant;
     R.fullStashSlotEmptied = g.playerStats.getEquipment().amulet === null;
     R.fullStashStillCap = g.playerStats.getStash().length === CAP; // amulet NOT benched
-    R.fullStashSoldForGold = g.player.gold === goldBefore + recycle && recycle > 0;
+    R.fullStashSoldForGold = g.player.gold === goldBefore + sellValue && sellValue > 0;
     R.fullStashParity = parity();
   }
 

@@ -275,18 +275,6 @@ export const ITEM_CATALOG: Item[] = [
       tags: ['economic'],
       shopDiscount: 0.1
     },
-    {
-      id: 'recycle_bonus_t2',
-      name: 'Haggler Badge',
-      description: '+50% recycle value',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 20,
-      icon: '♻️',
-      unlocked: true,
-      tags: ['economic'],
-      recycleBonus: 0.5
-    },
 
     // ==================== TIER 3 (RARE) ====================
     // Strong effects and build-defining mechanics
@@ -1300,19 +1288,6 @@ export const ITEM_CATALOG: Item[] = [
       rerollDiscount: 0.2
     },
     {
-      id: 'recycler_t2',
-      name: 'Salvage Rig',
-      description: '+40% recycle value, -6% shop prices',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 22,
-      icon: '♻️',
-      unlocked: true,
-      tags: ['economic'],
-      recycleBonus: 0.4,
-      shopDiscount: 0.06
-    },
-    {
       id: 'soul_collector_t3',
       name: 'Soul Collector',
       description: '+50% pickup range and +5% lifesteal (drain the souls you reap)',
@@ -1554,7 +1529,7 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'merchants_ring_t3',
       name: 'Merchant\'s Ring',
-      description: 'The master shopper: sell high, buy low. +40% gold, +35% recycle value, -12% prices',
+      description: 'The master shopper: buy low, earn more. +40% gold, -12% prices',
       rarity: 'epic',
       tier: ItemTier.Rare,
       cost: 58,
@@ -1562,7 +1537,6 @@ export const ITEM_CATALOG: Item[] = [
       unlocked: true,
       tags: ['economic'],
       goldBonus: 1.4,
-      recycleBonus: 0.35,
       shopDiscount: 0.12
     },
     {
@@ -1654,7 +1628,7 @@ export const ITEM_CATALOG: Item[] = [
     // ==================== TRADE-OFF ITEMS (BROTATO-STYLE) ====================
     // Every one gives a strong bonus with a REAL drawback, forcing you to
     // commit to a lane / manage risk. This is where build identity comes from:
-    // a glass-cannon player keeps these, a tank recycles them.
+    // a glass-cannon player keeps these, a tank sells them off.
     {
       id: 'reckless_charm_t2',
       name: 'Reckless Charm',
@@ -2815,19 +2789,6 @@ export const ITEM_CATALOG: Item[] = [
       tags: ['economic'],
       shopDiscount: 0.08,
       goldBonus: 1.1
-    },
-    {
-      id: 'scavenger_t2',
-      name: 'Scavenger Kit',
-      description: '+50% recycle value, +15% gold',
-      rarity: 'rare',
-      tier: ItemTier.Uncommon,
-      cost: 24,
-      icon: '🧰',
-      unlocked: true,
-      tags: ['economic'],
-      recycleBonus: 0.5,
-      goldBonus: 1.15
     },
     {
       id: 'merchant_scale_t2',

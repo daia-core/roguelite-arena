@@ -78,13 +78,13 @@ admission-control layer in front of the existing `items[]`**, not a new stat pat
 2. **Trinket** → push to `trinkets[]` + `items[]` (stacks freely). Done.
 3. **Equipment**, slot free → equip: set slot, push to `items[]`.
 4. **Equipment**, slot full → **auto-swap**: displaced item leaves `items[]` → `stash[]` (if stash
-   full, the displaced item is sold for its recycle value instead, with a note). New item equips.
+   full, the displaced item is sold for its sell value instead, with a note). New item equips.
 5. Two-hand into Weapon A: if B occupied, B's item is displaced to stash too.
 
 ### Sell / unequip (player actions in shop)
 
 - **Sell** an equipped/stashed/trinket item → remove from its home (+ from `items[]` if active),
-  refund recycle value. (Replaces today's recycle button, generalised.)
+  refund sell value.
 - **Unequip** → move an equipped item to stash (frees the slot without selling).
 - **Equip from stash** → move a stashed item into its slot (swapping the current occupant to stash).
 

@@ -28,10 +28,9 @@ emoji→sprite map (~1230–1279). This is what commit `1e658f8` ("remove all UI
 | Source | Count | Path |
 |---|---|---|
 | `items/catalog.ts` item `icon:` | ~200 | `drawItemIcon` → sprite |
-| `DuoSystem.ts` duo `icon:` | 15 | `drawItemIcon` (Game.ts:4263/4289); mapped itemIcons 1277–1279 |
+| `DuoSystem.ts` duo `icon:` | 14 | `drawItemIcon` (Game.ts:4263/4289); mapped itemIcons 1277–1279 |
 | `MetaProgression.ts` upgrade `icon:` (19) | 19 | drawn at `VillageScene.ts:844` via `drawItemIcon`; every emoji mapped |
 | `Game.ts:3923` lock/unlock buttons `🔒/🔓` | 2 | `drawItemIcon` → lock/unlock sprites |
-| `Game.ts:3942` recycle button `♻️` | 1 | `drawItemIcon` → recycle sprite |
 
 All of the above are correct. No change needed.
 

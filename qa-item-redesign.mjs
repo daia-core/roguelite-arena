@@ -59,7 +59,7 @@ const SPEC = {
   jackpot_t4:           { critChance: 0.20, critDamageMultiplier: 2.0, explosionOnHit: true, luck: 0.3 },
   crit_synergy_t3:      { critChance: 0.15, critDamageMultiplier: 1.35, bleed: 0.4 },
   guardian_aura_t3:     { maxHealthBonus: 50, armor: 8, thorns: 0.3, novaPulse: true, novaDamageMult: 0.55 },
-  merchants_ring_t3:    { goldBonus: 1.4, recycleBonus: 0.35, shopDiscount: 0.12 },
+  merchants_ring_t3:    { goldBonus: 1.4, shopDiscount: 0.12 },
   golden_vault_t3:      { interestBonus: 0.18, luck: 0.25, goldBonus: 1.2 },
   deadly_precision_t3:  { critChance: 0.15, critDamageMultiplier: 1.6, piercing: 3, fireRateMultiplier: 0.85 },
   compound_interest_t3: { goldBonus: 1.3, goldScaleDamage: 0.10 },

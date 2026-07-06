@@ -8,6 +8,33 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-06 (early morning) — recycling removed + pinch-to-zoom on the skill tree
+
+Two Felix requests shipped together.
+
+**Recycling is gone.** The in-shop "recycle an item for a bonus" mechanic never made sense — you
+don't recycle gear you just bought — so it's removed entirely. Cut with it: the `recycleBonus` stat
+and its cap, and the three items whose whole identity was recycling (Haggler Badge, Salvage Rig,
+Scavenger Kit) plus the Recycling Master duo. Merchant's Ring keeps its gold + shop-discount and
+drops the recycle line. **Selling still works** — that's a separate, kept feature (sell an
+equipped/stashed item, or auto-sell an overflow piece); it now pays a clean flat **25% of cost ×
+upgrade level**, with no recycle term muddying it. No dead picks left behind: the catalog is back to
+a tidy 275 items with zero dangling references.
+
+**Pinch-to-zoom on the skill tree (mobile).** Two fingers now zoom the passive tree in/out, anchored
+on the pinch midpoint so the point under your fingers stays put. Clamps at 0.16–1.4× like the
+buttons; a two-finger gesture never leaks a stray node-allocation tap, and single-finger pan/tap is
+untouched.
+
+QA: full headless suite green (10/10 — shop, equipment, stat-caps, stats-parity, item-redesign,
+synergy, skill-tree, pinch, catalog-integrity, class-select). While in the harnesses, fixed two
+stale QA assertions unrelated to this change (crit-knee parity model and a renamed-item name check).
+
+Live bundle `index-UFFzf9dI.js` (verified: prod alias HTTP 200, serves the new bundle, no
+`getRecycleValue`/`recycleBonus` anywhere in it, 0 console errors).
+
+---
+
 ## 2026-07-06 (early morning) — balance: crit damage no longer scales to infinity
 
 Follow-up to Felix's "2.3M dmg/projectile on wave 13, enemies insta-die" report. The root cause was

@@ -50,7 +50,7 @@ export class ItemDatabase {
   private static readonly ADD_KEYS: (keyof Item)[] = [
     'critChance', 'maxHealthBonus', 'healthRegen', 'armor', 'lifesteal', 'thorns',
     'multishot', 'piercing', 'projectileSpeed', 'knockback', 'dodge', 'chainLightning',
-    'freeze', 'rerollDiscount', 'shopDiscount', 'recycleBonus', 'interestBonus', 'luck', 'xpMagnet',
+    'freeze', 'rerollDiscount', 'shopDiscount', 'interestBonus', 'luck', 'xpMagnet',
     'orbitOrbs'
   ];
 
@@ -220,7 +220,7 @@ interface ItemAgg {
   critChance: number; maxHealthBonus: number; healthRegen: number; armor: number; lifesteal: number;
   thorns: number; knockback: number; piercing: number; multishot: number; dodge: number;
   chainLightning: number; freeze: number; burn: number; bleed: number; doom: number; wound: number;
-  multicast: number; rerollDiscount: number; shopDiscount: number; recycleBonus: number;
+  multicast: number; rerollDiscount: number; shopDiscount: number;
   interestBonus: number; luck: number; orbitOrbs: number; swingRangeBonus: number;
   swingArcBonus: number; swingAoe: number;
   // conditional/triggered (additive rates; paid out at runtime by Game when the condition holds)
@@ -248,7 +248,7 @@ function freshAgg(): ItemAgg {
     critChance: 0, maxHealthBonus: 0, healthRegen: 0, armor: 0, lifesteal: 0,
     thorns: 0, knockback: 0, piercing: 0, multishot: 0, dodge: 0,
     chainLightning: 0, freeze: 0, burn: 0, bleed: 0, doom: 0, wound: 0,
-    multicast: 0, rerollDiscount: 0, shopDiscount: 0, recycleBonus: 0,
+    multicast: 0, rerollDiscount: 0, shopDiscount: 0,
     interestBonus: 0, luck: 0, orbitOrbs: 0, swingRangeBonus: 0,
     swingArcBonus: 0, swingAoe: 0,
     waveRampDamage: 0, lowHpPower: 0, killStackDamage: 0,
@@ -323,11 +323,10 @@ export class PlayerStats {
   // output, so damage / fire rate / crit-damage / multishot / piercing / armor stay
   // UNCAPPED — a broken one-shot build is meant to be reachable. What we DO cap are
   // the quality-of-life & economy stats that enemies never scale against, because
-  // past their useful maximum they only trivialise non-combat play (or, for recycle,
-  // open an infinite-gold loop). Each is a single tunable constant.
+  // past their useful maximum they only trivialise non-combat play. Each is a single
+  // tunable constant.
   static readonly GOLD_MULT_CAP = 4;      // ×4 total gold earned (=300%); was ×10, which let income lap the whole shop every wave
   static readonly XP_MAGNET_CAP = 10;     // ×10 pickup radius (base 95 → ~950px, ~full screen)
-  static readonly RECYCLE_CAP = 3;        // +300% → recycle refunds at most 100% of item cost (break-even)
   static readonly DODGE_CAP = 0.75;       // 75% (already enforced; named here for the offer filter)
   // Purely a numerical-safety ceiling, NOT a balance cap: unbounded multiplicative
   // stacking on a very deep run overflowed to literal Infinity (the player's "Melee
@@ -488,7 +487,6 @@ export class PlayerStats {
       if (item.multicast) a.multicast += item.multicast * lv;
       if (item.rerollDiscount) a.rerollDiscount += item.rerollDiscount * lv;
       if (item.shopDiscount) a.shopDiscount += item.shopDiscount * lv;
-      if (item.recycleBonus) a.recycleBonus += item.recycleBonus * lv;
       if (item.interestBonus) a.interestBonus += item.interestBonus * lv;
       if (item.luck) a.luck += item.luck * lv;
       if (item.orbitOrbs) a.orbitOrbs += item.orbitOrbs * lv;
@@ -662,7 +660,7 @@ export class PlayerStats {
   /**
    * Remove an item wherever it lives (an equipped slot, the trinket pile, or the
    * stash) by object identity first, falling back to id. Returns the removed item.
-   * Used by sell/recycle. When removing an ACTIVE item the active set is rebuilt.
+   * Used when selling an item. When removing an ACTIVE item the active set is rebuilt.
    */
   removeItem(itemId: string): Item | null {
     // Equipped slots (identity by id — one per slot).
@@ -1055,12 +1053,6 @@ export class PlayerStats {
     return Math.min(0.3, discount); // Max 30% discount (was 50% — combined with runaway gold it made the shop free)
   }
 
-  getRecycleBonus(): number {
-    // Cap so a buy→recycle loop can at best break even (refund ≤ 100% of cost),
-    // never mint infinite gold. Enemies don't scale against economy, so it's capped.
-    return Math.min(PlayerStats.RECYCLE_CAP, this.ensureAgg().recycleBonus);
-  }
-
   // Banking: extra interest rate on gold you hold entering the shop
   getInterestBonus(): number {
     return Math.min(0.4, this.ensureAgg().interestBonus); // cap +40% so interest stays bounded
@@ -1125,7 +1117,7 @@ export class PlayerStats {
     'critChance', 'maxHealthBonus', 'healthRegen', 'armor', 'lifesteal', 'thorns',
     'knockback', 'piercing', 'multishot', 'dodge', 'chainLightning', 'freeze', 'burn',
     'bleed', 'doom', 'wound', 'multicast', 'rerollDiscount', 'shopDiscount',
-    'recycleBonus', 'interestBonus', 'luck', 'orbitOrbs', 'swingRangeBonus',
+    'interestBonus', 'luck', 'orbitOrbs', 'swingRangeBonus',
     'swingArcBonus', 'swingAoe',
   ];
   private static readonly OFFER_BOOL_FIELDS: (keyof Item)[] = [
@@ -1155,7 +1147,6 @@ export class PlayerStats {
       multicast: this.getMulticastChance() >= 0.9,
       goldBonus: agg.goldMult >= PlayerStats.GOLD_MULT_CAP,
       xpMagnet: agg.xpMagnetMult >= PlayerStats.XP_MAGNET_CAP,
-      recycleBonus: agg.recycleBonus >= PlayerStats.RECYCLE_CAP,
     };
   }
 
@@ -1293,13 +1284,11 @@ export class PlayerStats {
     return Math.max(1, Math.floor(finalPrice));
   }
 
-  // Calculate recycle value (25% base + recycle bonus). Scales with upgrade level —
-  // an item at +N cost N buys' worth, so selling it refunds proportionally more.
-  getRecycleValue(item: Item): number {
+  // Gold refunded when an item is sold — a flat 25% of its cost. Scales with upgrade
+  // level: an item at +N cost N buys' worth, so selling it refunds proportionally more.
+  getSellValue(item: Item): number {
     const lv = item.upgradeLevel && item.upgradeLevel > 1 ? item.upgradeLevel : 1;
-    const baseValue = item.cost * 0.25 * lv;
-    const bonus = this.getRecycleBonus();
-    return Math.floor(baseValue * (1 + bonus));
+    return Math.floor(item.cost * 0.25 * lv);
   }
 
   // Weapon system

@@ -56,25 +56,26 @@ Everything not in a slot is a **trinket** (unlimited pile, stacks/upgrades).
   - multiplicative fields: applied `level` times (e.g. `×1.15 dmg` at +3 → `×1.15³`), which is the
     exact "bought it 3 times" result the old stacking gave.
   - booleans/`Math.max` fields: unchanged by level (a flag is a flag).
-- Recycle/sell value of an upgraded item scales with its level (you invested N buys).
+- Sell value of an upgraded item scales with its level (you invested N buys).
 - Pricing: an upgrade buy costs the item's normal wave price (buying the Nth copy = Nth price).
 
 ## Files touched
 
 - `items/types.ts` — expand `EquipSlot`; add `upgradeLevel?`; rewrite `classifyItemSlot`.
 - `ItemSystem.ts` — `EquipSlots` → 8 holders; `addItem` upgrade-on-duplicate + 8-slot routing;
-  `rebuildActiveItems`; aggregation `× upgradeLevel`; recycle scales with level; helpers
+  `rebuildActiveItems`; aggregation `× upgradeLevel`; sell value scales with level; helpers
   (`getEquipment`, `hasTwoHandEquipped`, offhand-disabled check).
 - `items/catalog.ts` — author 6–8 items each for head/torso/legs/feet/ring (+ tag existing gear).
 - `Game.ts` — `SLOTS = 3`; rebuild the shop equipment strip for 8 slots + upgrade badges; buy flow
   passes through the upgrade path; keep tap-to-manage where it still applies.
 - `qa-shop-8slot.mjs` — new headless QA: 8-slot routing, 2h disables offhand, upgrade-on-duplicate
-  math, aggregation parity, recycle scaling, 3-item shop.
+  math, aggregation parity, sell-value scaling, 3-item shop.
 
 ## Phasing
 
 - **v2.0 (this ship):** model + upgrade + 3-item shop + rebuilt strip + 6–8 items/new-slot, QA, live.
 - **v2.1+:** fill each slot type to 20+; slot-aware shop weighting; upgrade-level cosmetics/caps if
-  balance needs it.
+  balance needs it. **→ The concrete 51-item fill (head/torso/legs/feet/ring → 20 each) is designed
+  and paste-ready in `DESIGN-SLOT-FILL-TO-20.md` — execute it as ONE budget-fresh batch commit.**
 
 Each ship deploys + live-verifies + updates CHANGELOG.

@@ -319,7 +319,6 @@ export interface Item {
   // Brotato-inspired mechanics
   rerollDiscount?: number; // Reduce shop reroll cost
   shopDiscount?: number; // Reduce all shop prices
-  recycleBonus?: number; // Increase recycle value
   interestBonus?: number; // Additional interest rate on banked gold (additive, e.g. 0.05 = +5%)
   luck?: number; // Raises shop rarity + health-orb drop chance (additive, e.g. 0.15 = +15%)
 

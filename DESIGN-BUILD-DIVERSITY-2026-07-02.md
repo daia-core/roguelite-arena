@@ -81,7 +81,7 @@ none of our current items touch.
   - _Piggy Bank_ (T2): interest cap +5/wave.
   - _Compound Ledger_ (T3): interest rate → +1 per 20 gold **and** −15% damage (tradeoff: the
     banker is weak until the investment pays off).
-  - _Midas Vault_ (T4): interest cap +15, but you **can't recycle items** (all-in on income).
+  - _Midas Vault_ (T4): interest cap +15, but items **sell for nothing** (all-in on income).
 - **UI:** show "+Xg interest" in the end-of-wave shop banner so the choice is legible.
 
 ### 3b. Luck — rarity & drop stat (unlocks a whole meta build)
@@ -130,7 +130,7 @@ Bold = gain, _italic_ = cost. ~12 to start, spread across tiers:
 | Blood Contract | T3 | **+25% lifesteal, +30% damage** | _−30% max HP_ |
 | Compound Ledger | T3 | **+interest rate** | _−15% damage_ |
 | Fragile Genius | T4 | **+100% crit damage, +20% crit** | _dodge disabled, −25% max HP_ |
-| Midas Vault | T4 | **+15 interest cap, +100% gold** | _cannot recycle items_ |
+| Midas Vault | T4 | **+15 interest cap, +100% gold** | _items sell for nothing_ |
 
 Design rule (from Brotato): the downside should hit a stat the *build using this item doesn't care
 about*, so it's a real choice — a glass-cannon player happily takes −HP, a tank happily takes −range.
