@@ -150,3 +150,62 @@ Effect: a build that would compute 2.3M/projectile lands around **~110k** instea
 **Why it's Felix's call, not an autonomous ship:** it nerfs the ceiling of his build — and his framing ("scale up *enemies*") reads like he may *enjoy* the big-number fantasy and just wants enemies that can eat it. Bounding offense is the honest fix; whether he *wants* it is a taste call with no safe default. So: shipped the enemy half he asked for, and this soft-cap is written and ready to flip on the moment he says go (or to tune the `KNEE`/`SOFTNESS` to his preference).
 
 **Recommendation:** play-test v3 first. If wave 13+ *still* feels trivial on a stacked build (it will, for a 2.3M build), the lever is (a) the offense soft-cap above, and/or (b) more frequent elite/miniboss damage-checks — **not** more fodder HP, which is now proven to be a dead end against multiplicative offense.
+
+---
+
+## v4 update (2026-07-06, early morning) — the real disease has a NAME: the crit multiplier is un-bounded, and both oracles were blind to it
+
+**Trigger:** re-reviewing whether Felix's 2.3M/projectile complaint is actually resolved after last night's fixes. It is **not** — and this update finds *why* with ground truth, not analysis.
+
+### What last night shipped, and its blind spot
+
+Commit `afc139e` (2026-07-06 01:46) added an **aggregate soft knee** to `PlayerStats.getDamage()` (`DMG_AGG_KNEE = 2500`, `DMG_AGG_EXP = 0.42`) and its own comment calls it *"the balance ceiling."* It is not. `getDamage()` is only the **base × damage/spec/transform/duo/artifact/skill** product. The number Felix actually sees on screen is a **projectile hit**, computed downstream as:
+
+```
+realized crit hit  =  getRangedDamage()  ×  getCritMultiplier()
+                   =  [ getDamage() × getRangedDamageMult() ]  ×  getCritMultiplier()
+```
+
+- `getDamage()` — **has the new aggregate knee.** ✅ bounded.
+- `getRangedDamageMult()` — has its own weaker soft knee (`DMG_DR_KNEE 60`, `EXP 0.45`). ⚠️ partly bounded.
+- `getCritMultiplier()` (`ItemSystem.ts:836`) — **has NO knee. Only `Math.min(1e15, …)`, an overflow guard.** ❌ completely un-bounded.
+
+So the knee shipped last night wraps exactly the *one* layer that was already the least of the problem, and leaves the **crit multiplier** — the single biggest axis on Felix's own wave-7 sheet (*"Crit 100% @ 927×"*) — free to run to infinity.
+
+### Ground truth — the crit-aware probe (`qa-balance-probe.mjs`, extended 2026-07-06)
+
+The probe was **purpose-built for the "2.3M/projectile" report — yet it read `getRangedDamage()` and stacked zero crit items,** so it structurally *could not reproduce a crit number*. It has now been extended to stack the catalog's crit items and read the real `getCritChance()`/`getCritMultiplier()`. Run against the live build:
+
+| build | ranged shot | crit | **realized crit hit** |
+|---|---|---|---|
+| base | 25 | 5% @ 2× | 50 |
+| light | 80 | 5% @ 2× | 160 |
+| medium | 1,541 | 30% @ 3× | 4,624 |
+| heavy (dmg only, **no crit**) | 63,679 | 55% @ 3× | 191,036 |
+| **critHeavy** (dmg + all crit) | 504,557 | **100% @ 6,946,492×** | **3,504,901,454,344** |
+
+**The crit multiplier reaches ~6.9 MILLION× and the realized hit is 3.5 TRILLION per projectile** — a **55,000,000× escape** past the getDamage() knee. Felix's 2.3M was *conservative* (a mid-run, partly-stacked crit build); the current catalog's crit ceiling is six orders of magnitude beyond it. Against this, every enemy at every wave — fodder, bruiser, boss — dies in **0.000× hits** (see the probe's per-wave table). Enemy-HP scaling (v1/v2/v3, all of it) is **mathematically irrelevant** to a crit build: you cannot give a wave-13 grunt 3.5 trillion HP.
+
+### Two things this corrects
+
+1. **The oracles were measuring the wrong quantity.** `simulate-balance.mjs` uses a fixed modest build (`damageMult 3, critMultMult 1.5`) and `qa-balance-probe.mjs` read `getRangedDamage()` with no crit — so *both* reported "balance HEALTHY / tamed" while a crit build one-shots the screen. The probe is now crit-aware; the kite-bot sim still under-stacks crit and should be read as an *early-game survivability* check only, never a *ceiling* check.
+2. **`afc139e` shipped an offense knee that the v3 section above explicitly marked "awaiting Felix's yes/no."** That was an autonomous ship of a feel-defining change on a Daia-owned portfolio game (reversible, git-versioned, and Felix had complained twice) — flagging it honestly rather than burying it. Net effect: it bounded `getDamage()` but not the realized hit, so it did **not** resolve the complaint.
+
+### The real fix — where the knee actually has to go (designed, NOT shipped — Felix's call)
+
+The knee must wrap the **realized projectile damage** (or `getCritMultiplier()` directly), not `getDamage()`. Cleanest option — a soft knee on the crit multiplier, mirroring the existing `softKneeDamageMult`:
+
+```
+// getCritMultiplier(), before the final Math.min sanity cap:
+//   below CRIT_KNEE: untouched (a 2–20× crit build is unaffected — the fun stays)
+//   above it: compressed to an exponent < 1
+static readonly CRIT_KNEE = 15;    // ~7.5× the base 2.0 crit — a strong crit build is untouched
+static readonly CRIT_EXP  = 0.35;
+if (mult > CRIT_KNEE) mult = CRIT_KNEE * Math.pow(mult / CRIT_KNEE, CRIT_EXP);
+```
+
+With this, the 6.9M× multiplier compresses to ~15 × (6.9M/15)^0.35 ≈ **~4,600×** — still a gigantic, satisfying crit, but the realized hit drops from 3.5e12 to ~2.3e9, and further tuning of `CRIT_KNEE`/`CRIT_EXP` brings it wherever Felix wants. **Better still**, a single knee on the *final* `getRangedDamage() × critMult` product bounds every path (crit, non-crit, melee) in one place. Either is a ~5-line change, fully reversible.
+
+**Why it stays Felix's call (unchanged from v3):** bounding crit nerfs the ceiling of his build, and his framing ("scale up *enemies*") may mean he *enjoys* the trillion-damage fantasy and just wants a sandbox for it. That is a taste decision with no safe default. The honest engineering answer is "enemy HP can never catch this — the only lever is bounding offense, and the offense that matters is **crit**, not `getDamage()`." Whether to pull that lever is his to choose. The fix is written and ready to flip/tune the moment he says go.
+
+**Bottom line for Felix:** last night's knee was aimed at the wrong layer. If wave-13 *still* one-shots everything (it will, for any crit build), the fix is a crit knee (above), not more enemy HP — now proven with real numbers, not just theory.
