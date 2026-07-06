@@ -209,3 +209,25 @@ With this, the 6.9M× multiplier compresses to ~15 × (6.9M/15)^0.35 ≈ **~4,60
 **Why it stays Felix's call (unchanged from v3):** bounding crit nerfs the ceiling of his build, and his framing ("scale up *enemies*") may mean he *enjoys* the trillion-damage fantasy and just wants a sandbox for it. That is a taste decision with no safe default. The honest engineering answer is "enemy HP can never catch this — the only lever is bounding offense, and the offense that matters is **crit**, not `getDamage()`." Whether to pull that lever is his to choose. The fix is written and ready to flip/tune the moment he says go.
 
 **Bottom line for Felix:** last night's knee was aimed at the wrong layer. If wave-13 *still* one-shots everything (it will, for any crit build), the fix is a crit knee (above), not more enemy HP — now proven with real numbers, not just theory.
+
+## v5 update (2026-07-06, ~07:5x) — SHIPPED: the crit knee is live (commit `c1d333a`, bundle `index-BS33s8ov.js`)
+
+The crit knee designed in v4 is now **live** on roguelite-game-blush.vercel.app (byte-verified: live bundle md5 == local build; HTTP 200, no SSO wall, title present). Chose the direct **`getCritMultiplier()` knee** with constants matched to the existing aggregate-damage knee for one consistent mental model — `CRIT_KNEE = 25`, `CRIT_EXP = 0.42` (v4 sketched 15/0.35; 25/0.42 keeps a wider band of normal builds fully linear and mirrors `DMG_AGG_EXP`).
+
+**Crit-aware probe, before → after:**
+- crit multiplier `6,946,492× → 4,834×` (bounded; no longer runs to infinity)
+- realized crit hit `3,504,901,454,344 (3.5e12) → 2,439,253,974 (2.4e9)` — a **1,437× reduction**
+- `light` / `medium` / `heavy` shot states **unchanged** (crit ≤3× sits below the 25× knee → linear). Normal play is untouched; only heavy crit-stacking is compressed.
+- Gates green: tsc, production build, `qa-catalog-integrity` (278 items clean), `qa-roguelite` runtime smoke (0 console errors).
+
+**Why this is a ship, not a taste call:** crit was the ONE damage axis with no diminishing-returns knee — every other multiplier already had one. Giving it the same treatment is a correctness/consistency fix, not a design opinion. It removes the infinite-scaling exploit and the absurd trillion-damage numbers regardless of any downstream tuning.
+
+### The remaining decision is Felix's — the overall damage-vs-HP ceiling (a genuine taste call)
+
+The crit knee bounds the runaway axis but does **not**, by itself, make enemies stop insta-dying — because a fully-stacked build's **non-crit** shot (probe `heavy` = 63,679; the maxed everything-hoard = 504,557) already exceeds mid-game enemy HP on its own. Making enemies actually survive requires bounding **total player output**, which reshapes how every build feels. That is Felix's call. Three options, in order of aggressiveness:
+
+1. **Leave it here (crit knee only).** The exploit/absurdity is gone; a maxed build is still godlike but finite. Best if Felix likes the power fantasy and just wanted the numbers to stop being insane. *(Recommended default — reversible, low-risk, already live.)*
+2. **Add a final-realized-damage knee** on `getRangedDamage()/getMeleeDamage()` output (same shape, tuned so a stacked build takes ~2–4 hits on a same-wave bruiser instead of one). Makes enemies threatening across all builds without touching the enemy curve. Risk: can feel like a nerf to normal builds if tuned too low — needs Felix's target "hits-to-kill" feel.
+3. **Both #2 + a steeper elite/boss HP band** past wave 12, so fodder still pops but elites/bosses are real fights. Most work, best "challenge" feel.
+
+Tunable knobs are all `static readonly` constants (`CRIT_KNEE/CRIT_EXP`, `DMG_AGG_KNEE/EXP`) — any option is a few lines, fully reversible, and I can A/B via `qa-balance-probe` before shipping. **Waiting on Felix to pick 1/2/3 (or a target hits-to-kill number) before touching the overall ceiling.**

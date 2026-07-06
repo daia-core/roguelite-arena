@@ -8,6 +8,27 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-06 (early morning) — balance: crit damage no longer scales to infinity
+
+Follow-up to Felix's "2.3M dmg/projectile on wave 13, enemies insta-die" report. The root cause was
+the **crit multiplier** — the one damage axis that had no diminishing-returns cap (every other
+multiplier already did). A crit-stacked build could reach a **6,946,492× crit → 3.5 trillion dmg per
+projectile**, so no amount of enemy HP could ever matter.
+
+**Fix:** crit now passes through the same soft knee as the other damage stats. Normal crit builds are
+**completely unchanged** (anything up to a 25× crit is untouched — the fun stays); only extreme
+crit-stacking is compressed. The pathological 6.9M× crit drops to ~4,834×, and the realized hit falls
+from 3.5 trillion → 2.4 billion — a 1,437× cut with zero effect on light/medium/heavy builds.
+
+This kills the runaway/exploit. Note: a fully-maxed hoard is still very strong (its *non-crit* shot
+alone is large) — whether to clamp overall damage harder so mid-game enemies survive longer is a
+separate feel decision (see `BALANCE-enemy-scaling-review.md` v5, options 1/2/3).
+
+Commit `c1d333a` · live bundle `index-BS33s8ov.js` (byte-verified: live md5 == local build; HTTP 200,
+game loads clean, 0 console errors).
+
+---
+
 ## 2026-07-06 (night) — the amulet slot now has real choices (3 → 20 items)
 
 Felix asked for **at least 20 items per equip slot** so every shop reroll is a genuine decision, not
