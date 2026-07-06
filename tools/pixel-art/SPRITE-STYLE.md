@@ -9,9 +9,9 @@ Your job is to make each sprite look genuinely hand-crafted.
 - Drawn on warm green grass (#6ab63e family) at native size, viewer sees them ~60-90px tall.
 - Every sprite sits in a `number[][]` grid; each int indexes a palette array
   (index 0 = transparent). Cell = 8×8 canvas px ("art pixel").
-- Current (bad) versions: read `/Users/daia/code/daia/workspace/work/roguelite-game/frontend/src/sprites.ts`.
+- Current (bad) versions: read `/workspace/work/roguelite-game/frontend/src/sprites.ts`.
 - Enemy identity (color, radius, behavior) lives in `ENEMY_TYPES` in
-  `/Users/daia/code/daia/workspace/work/roguelite-game/frontend/src/Enemy.ts` (lines 25-460).
+  `/workspace/work/roguelite-game/frontend/src/Enemy.ts` (lines 25-460).
 
 ## Hard rules
 1. **Black `#000000` outline** around the full exterior silhouette. Interior
@@ -44,15 +44,17 @@ Your job is to make each sprite look genuinely hand-crafted.
    `export const sprites = [{ name, scale: 8, palette: [...], frames: [grid] }]`
    (2-frame `frames: [g1, g2]` idle animation encouraged for organic creatures —
    subtle squash/breathe, NOT a redraw).
-2. Render: `node /private/tmp/claude-502/-Users-daia-code-daia/da028c1c-2275-46bf-a7bc-ad962b4f8c66/scratchpad/pixelpng.mjs <your.mjs> <outdir>`
+2. Render: `node /workspace/work/roguelite-game/tools/pixel-art/pixelpng.mjs <your.mjs> <outdir>`
 3. **Read the PNG with the Read tool and LOOK at it.** Critique against the rules
    above, then fix. You MUST do at least 2 render→look→fix cycles per sprite, and
    iterate until you'd defend the sprite next to Stardew Valley art.
 4. Final deliverable per sprite: one JSON file in the shared out dir
-   (`.../scratchpad/sprites-out/<name>.json`):
+   (`/workspace/work/roguelite-game/tools/pixel-art/sprites/<name>.json`):
    `{ "name": "...", "scale": 8, "frameRate": 6, "palette": ["transparent", "#000000", ...], "frames": [[[...]]] }`
    JSON must be valid (no comments, no trailing commas). Index 0 of palette must
    be "transparent"; index 1 should be "#000000" outline.
+5. Converting an AI-generated or found image instead of hand-authoring? Use the
+   `pixel-art` skill's conform scripts (`/home/node/.claude/skills/pixel-art/scripts/`).
 
 ## Common failures to avoid (seen in this codebase)
 - Eyes buried in shadow tones → invisible at game size

@@ -121,9 +121,12 @@ errors.forEach(e => console.log('  ', e));
 const approx = (a, b) => Math.abs(a - b) < 1e-6;
 const pass = result && !result.fatal
   && result.A_melee === 1 && result.A_ranged === 1 && result.A_elem === 1
-  && approx(result.B_meleeMult, 1.45) && result.B_rangedMult === 1
-  && approx(result.B_meleeDmg, result.B_base * 1.45) && approx(result.B_rangedDmg, result.B_base)
-  && approx(result.C_rangedMult, 1.40) && result.C_meleeMult === 1
+  // CROSS_TYPE_BLEED = 0.5 (universality): a pure-melee item bleeds half its bonus
+  // into the ranged mult (1.45 → ranged 1 + 0.45×0.5 = 1.225) and vice-versa. The
+  // off-type is no longer exactly 1 — assert the bled value.
+  && approx(result.B_meleeMult, 1.45) && approx(result.B_rangedMult, 1.225)
+  && approx(result.B_meleeDmg, result.B_base * 1.45) && approx(result.B_rangedDmg, result.B_base * 1.225)
+  && approx(result.C_rangedMult, 1.40) && approx(result.C_meleeMult, 1.20)
   && result.D_meleeEqualsDx2 === true
   && approx(result.E_elem, 1.35 * 1.55)
   && approx(result.F_sniperRanged, 1.40) && approx(result.F_brawlerMelee, 1.45)

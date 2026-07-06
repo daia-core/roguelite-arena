@@ -115,10 +115,19 @@ const result = await page.evaluate(() => {
   fresh();
   const maxHp0 = g.player.maxHealth;
   g.applyEventEffect({ kind: 'maxHp', amount: 60 });
+  // Measure the +60 boon HERE, before the random { kind: 'artifact' } grant below — some
+  // rollable artifacts carry their own maxHealthBonus (80/45/20/90), which would otherwise
+  // pollute this exact-+60 assertion and make it RNG-flaky.
+  out.dullnessMaxHp = g.player.maxHealth === maxHp0 + 60;
   g.applyEventEffect({ kind: 'artifact' });
   g.applyEventEffect({ kind: 'curse', id: 'curse_dullness' });
-  out.dullnessMaxHp = g.player.maxHealth === maxHp0 + 60;
   out.dullnessHeld = g.artifacts.has('curse_dullness');
+  // Assert the -25% fire malus in ISOLATION (same RNG-fix as maxHp above): artifactFireRateMult
+  // is the PRODUCT of every artifact's fireRateMult, and the random { kind:'artifact' } grant can
+  // carry its own (1.2/1.4/1.12) — so 0.75×1.4 = 1.05 would break near(0.75). Apply only the curse
+  // on a fresh state so the assertion measures the curse's own malus, not a random product.
+  fresh();
+  g.applyEventEffect({ kind: 'curse', id: 'curse_dullness' });
   out.dullnessFireMalus = g.playerStats.artifactFireRateMult < 1 && near(g.playerStats.artifactFireRateMult, 0.75);
 
   // === 5. Walk-away grants NOTHING. ===
