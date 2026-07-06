@@ -8,6 +8,27 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-06 (evening) — shop cards no longer print the same stat twice
+
+**Cleaner shop cards.** 30 items showed their stat line twice: the green at-a-glance
+stat row (e.g. Kite Shield "+3 Armor") was followed by a hand-written description that
+only restated it in tan ("+3 armor"). The description now renders only when it adds real
+information — so those 30 cards drop the duplicate line and read clean, while the 227 items
+with genuinely descriptive text and every duo-combo payoff are untouched. Same guard applied
+to the equipped-item inspect popup.
+
+Conservative by design: the suppression fires only on an *exact* normalized restatement, so
+near-duplicates that differ in wording (e.g. "+20 Max HP" / "+20 max health") deliberately
+keep both lines rather than risk hiding real info. Footer and price are anchored to the card
+bottom, so removing the line leaves clean whitespace with no reflow.
+
+Commit `c7d5152`; live-verified bundle **`index-DNe-zmos.js`** on
+roguelite-game-blush.vercel.app (headless QA reached the shop clean, `errors: []`), confirmed
+at mobile portrait (390×844) — Kite Shield now shows a single "+3 Armor" line. Fix-only; no
+balance or content change.
+
+---
+
 ## 2026-07-06 (early morning) — damage ceiling: maxed builds no longer one-shot everything
 
 **Enemies stop insta-dying to a fully-stacked build.** The earlier crit knee bounded the crit
