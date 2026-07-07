@@ -7,6 +7,11 @@ import { DuoTracker, DUO_COMBOS, type DuoCombo } from './DuoSystem';
 import type { DamageType } from './Projectile';
 import { ItemTier, getItemKinds, classifyItemSlot, slotHolder, slotLabel, isTrinket, itemStatLines, itemStatSegments, descRestatesStats, type Item, type ItemStatSegment, type ItemTag, type ItemKind, type WeaponType, type MeleeStyle, type Weapon, type EquipSlot } from './items/types';
 import { ITEM_CATALOG } from './items/catalog';
+import { applyBalanceDrawbacks } from './items/balanceDrawbacks';
+
+// Brotato-style rebalance: pair thematic drawbacks onto strong pure-upside items.
+// Mutates the shared catalog once at module load, before any consumer reads it.
+applyBalanceDrawbacks(ITEM_CATALOG);
 
 // Re-export the item types from their new home so every existing importer
 // (Game.ts, Player.ts, ArtifactSystem.ts, …) keeps working unchanged.

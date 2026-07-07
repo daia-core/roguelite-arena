@@ -128,7 +128,7 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'attack_speed_t2',
       name: 'Rapid Gauntlets',
-      description: '+20% fire rate, +1 projectile',
+      description: '+20% fire rate, +1 projectile, -10% damage (spray over precision)',
       rarity: 'rare',
       tier: ItemTier.Uncommon,
       cost: 30,
@@ -136,7 +136,8 @@ export const ITEM_CATALOG: Item[] = [
       unlocked: true,
       tags: ['ranged'],
       fireRateMultiplier: 1.2,
-      multishot: 1
+      multishot: 1,
+      damageMultiplier: 0.9
     },
     {
       id: 'movement_speed_t2',
@@ -155,14 +156,15 @@ export const ITEM_CATALOG: Item[] = [
       id: 'max_hp_t2',
       slot: 'ring',
       name: 'Vitality Ring',
-      description: '+30 max health',
+      description: '+30 max health, -5% speed (the heavy ring slows your step)',
       rarity: 'rare',
       tier: ItemTier.Uncommon,
       cost: 28,
       icon: '❤️‍🔥',
       unlocked: true,
       tags: ['defensive'],
-      maxHealthBonus: 30
+      maxHealthBonus: 30,
+      speedMultiplier: 0.95
     },
     {
       id: 'crit_chance_t2',
@@ -229,7 +231,7 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'armor_t2',
       name: 'Chain Mail',
-      description: '+5 armor, +1.5 HP/s',
+      description: '+5 armor, +1.5 HP/s, -6% speed (the mail rattles and slows)',
       rarity: 'rare',
       tier: ItemTier.Uncommon,
       cost: 34,
@@ -237,7 +239,8 @@ export const ITEM_CATALOG: Item[] = [
       unlocked: true,
       tags: ['defensive'],
       armor: 5,
-      healthRegen: 1.5
+      healthRegen: 1.5,
+      speedMultiplier: 0.94
     },
     {
       id: 'gold_bonus_t2',
@@ -307,62 +310,67 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'piercing_t3',
       name: 'Penetrating Shot',
-      description: 'Pierce +2 enemies',
+      description: 'Pierce +2 enemies, -10% damage (spreading power thins each hit)',
       rarity: 'epic',
       tier: ItemTier.Rare,
       cost: 55,
       icon: '🎯',
       unlocked: true,
       tags: ['ranged'],
-      piercing: 2
+      piercing: 2,
+      damageMultiplier: 0.9
     },
     {
       id: 'multishot_t3',
       name: 'Trident',
-      description: '+2 projectiles',
+      description: '+2 projectiles, each prong hits lighter. -15% damage',
       rarity: 'epic',
       tier: ItemTier.Rare,
       cost: 65,
       icon: '🔱',
       unlocked: true,
       tags: ['ranged'],
-      multishot: 2
+      multishot: 2,
+      damageMultiplier: 0.85
     },
     {
       id: 'homing_t3',
       name: 'Seeking Rune',
-      description: 'Homing projectiles',
+      description: 'Homing projectiles — tracking overhead slows fire. -15% fire rate',
       rarity: 'epic',
       tier: ItemTier.Rare,
       cost: 70,
       icon: '🎯',
       unlocked: true,
       tags: ['ranged', 'elemental'],
-      homing: true
+      homing: true,
+      fireRateMultiplier: 0.85
     },
     {
       id: 'explosive_t3',
       name: 'Demolition Kit',
-      description: 'Explosions on hit',
+      description: 'Explosions on hit, -10% damage (spray and pray)',
       rarity: 'epic',
       tier: ItemTier.Rare,
       cost: 75,
       icon: '💣',
       unlocked: true,
       tags: ['ranged', 'elemental'],
-      explosionOnHit: true
+      explosionOnHit: true,
+      damageMultiplier: 0.9
     },
     {
       id: 'chain_lightning_t3',
       name: 'Static Charge',
-      description: '25% chain to nearby',
+      description: '25% chain to nearby — arcing siphons fire speed. -8% fire rate',
       rarity: 'epic',
       tier: ItemTier.Rare,
       cost: 68,
       icon: '⚡',
       unlocked: true,
       tags: ['elemental', 'ranged'],
-      chainLightning: 0.25
+      chainLightning: 0.25,
+      fireRateMultiplier: 0.92
     },
     {
       id: 'poison_t3',
@@ -500,7 +508,7 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'time_slow_t4',
       name: 'Chrono Crystal',
-      description: 'Slow time on crit',
+      description: 'Slow time on crit — the crystal weighs you down. -15% speed',
       rarity: 'legendary',
       tier: ItemTier.Legendary,
       cost: 145,
@@ -508,24 +516,26 @@ export const ITEM_CATALOG: Item[] = [
       unlocked: true,
       tags: ['elemental', 'utility'],
       critChance: 0.15,
-      freeze: 0.3 // 30% chance to slow
+      freeze: 0.3, // 30% chance to slow
+      speedMultiplier: 0.85
     },
     {
       id: 'clone_projectiles_t4',
       name: 'Mirror Shard',
-      description: 'Clone projectiles',
+      description: 'Clone projectiles — echoes hit lighter. -20% damage',
       rarity: 'legendary',
       tier: ItemTier.Legendary,
       cost: 155,
       icon: '🪞',
       unlocked: true,
       tags: ['ranged'],
-      multishot: 3
+      multishot: 3,
+      damageMultiplier: 0.8
     },
     {
       id: 'chain_lightning_t4',
       name: 'Arc Reactor',
-      description: 'Chain to all nearby',
+      description: 'Chain to all nearby + explosions — the reactor burns your life force. -20 max HP',
       rarity: 'legendary',
       tier: ItemTier.Legendary,
       cost: 148,
@@ -533,12 +543,13 @@ export const ITEM_CATALOG: Item[] = [
       unlocked: true,
       tags: ['elemental', 'ranged'],
       chainLightning: 0.5,
-      explosionOnHit: true
+      explosionOnHit: true,
+      maxHealthBonus: -20
     },
     {
       id: 'immortal_t4',
       name: 'Phoenix Feather',
-      description: 'Reborn in flame: near death you rage harder (+dmg & fire rate) and your hits ignite. +60 HP, +6 HP/s',
+      description: 'Reborn in flame: near death you rage harder and your hits ignite. +60 HP, +6 HP/s — but you tank hits rather than deal them. -20% damage',
       rarity: 'legendary',
       tier: ItemTier.Legendary,
       cost: 142,
@@ -548,12 +559,13 @@ export const ITEM_CATALOG: Item[] = [
       maxHealthBonus: 60,
       healthRegen: 6,
       lowHpPower: 0.5,
-      burn: 0.3
+      burn: 0.3,
+      damageMultiplier: 0.8
     },
     {
       id: 'mega_knockback_t4',
       name: 'Titan Fist',
-      description: 'Massive knockback',
+      description: 'Massive knockback, +30% dmg — the heavy fist slows your rhythm. -15% fire rate',
       rarity: 'legendary',
       tier: ItemTier.Legendary,
       cost: 138,
@@ -561,19 +573,21 @@ export const ITEM_CATALOG: Item[] = [
       unlocked: true,
       tags: ['melee'],
       knockback: 500,
-      damageMultiplier: 1.3
+      damageMultiplier: 1.3,
+      fireRateMultiplier: 0.85
     },
     {
       id: 'infinite_piercing_t4',
       name: 'Void Lance',
-      description: 'Pierce all enemies',
+      description: 'Pierce all enemies, but the void drains each hit. -35% damage',
       rarity: 'legendary',
       tier: ItemTier.Legendary,
       cost: 160,
       icon: '🌌',
       unlocked: true,
       tags: ['ranged'],
-      piercing: 999
+      piercing: 999,
+      damageMultiplier: 0.65
     },
     {
       id: 'gold_rush_t4',
@@ -914,7 +928,7 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'cataclysm_core_t4',
       name: 'Cataclysm Core',
-      description: '+45% AOE radius and a full-circle swing shockwave',
+      description: '+45% AOE, full-circle swing shockwave — charging the core slows your attack rhythm. -15% fire rate',
       rarity: 'legendary',
       tier: ItemTier.Legendary,
       cost: 95,
@@ -923,7 +937,8 @@ export const ITEM_CATALOG: Item[] = [
       tags: ['utility', 'elemental'],
       aoeRadiusMult: 1.45,
       swingAoe: 70,
-      meleeDamageMult: 1.3
+      meleeDamageMult: 1.3,
+      fireRateMultiplier: 0.85
     },
 
     // ==================== STATUS ENGINES (Phase 3b — Soulstone Survivors inspired) ====================
@@ -944,7 +959,7 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'wildfire_torch_t3',
       name: 'Wildfire Torch',
-      description: '60% chance to Ignite, +40% elemental damage',
+      description: '60% chance to Ignite, +40% elemental — the torch scorches your own defenses. -3 armor',
       rarity: 'epic',
       tier: ItemTier.Rare,
       cost: 52,
@@ -952,7 +967,8 @@ export const ITEM_CATALOG: Item[] = [
       unlocked: true,
       tags: ['elemental'],
       burn: 0.6,
-      elementalDamageMult: 1.4
+      elementalDamageMult: 1.4,
+      armor: -3
     },
     {
       id: 'serrated_edge_t2',
@@ -1007,7 +1023,7 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'harbingers_seal_t4',
       name: "Harbinger's Seal",
-      description: '55% Doom chance, +35% elemental damage — detonations hit like a truck',
+      description: '55% Doom chance, +35% elemental — detonations hit like a truck, but the seal weighs on you. -12% fire rate',
       rarity: 'legendary',
       tier: ItemTier.Legendary,
       cost: 92,
@@ -1015,7 +1031,8 @@ export const ITEM_CATALOG: Item[] = [
       unlocked: true,
       tags: ['elemental'],
       doom: 0.55,
-      elementalDamageMult: 1.35
+      elementalDamageMult: 1.35,
+      fireRateMultiplier: 0.88
     },
     {
       id: 'rending_mark_t2',
@@ -1044,7 +1061,7 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'twin_echo_core_t4',
       name: 'Twin Echo Core',
-      description: '55% Multicast chance and +20% fire rate',
+      description: '55% Multicast chance, +20% fire rate — echoes are weaker than the original. -15% damage',
       rarity: 'legendary',
       tier: ItemTier.Legendary,
       cost: 90,
@@ -1052,7 +1069,8 @@ export const ITEM_CATALOG: Item[] = [
       unlocked: true,
       tags: ['ranged'],
       multicast: 0.55,
-      fireRateMultiplier: 1.2
+      fireRateMultiplier: 1.2,
+      damageMultiplier: 0.85
     },
 
     // ==================== NEW ITEMS (BINDING OF ISAAC INSPIRED) ====================
@@ -1138,26 +1156,28 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'vampiric_embrace_t3',
       name: 'Vampiric Embrace',
-      description: '25% lifesteal',
+      description: '25% lifesteal — the blood pact binds you. -15 max HP',
       rarity: 'epic',
       tier: ItemTier.Rare,
       cost: 58,
       icon: '🩸',
       unlocked: true,
       tags: ['utility'],
-      lifesteal: 0.25
+      lifesteal: 0.25,
+      maxHealthBonus: -15
     },
     {
       id: 'chain_reaction_t3',
       name: 'Chain Reaction',
-      description: '50% chain lightning',
+      description: '50% chain lightning — the chain siphons fire speed. -10% fire rate',
       rarity: 'epic',
       tier: ItemTier.Rare,
       cost: 62,
       icon: '⚡',
       unlocked: true,
       tags: ['elemental', 'ranged'],
-      chainLightning: 0.5
+      chainLightning: 0.5,
+      fireRateMultiplier: 0.9
     },
     {
       id: 'triple_shot_t2',
@@ -1175,27 +1195,29 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'rapid_fire_t2',
       name: 'Rapid Fire',
-      description: '+40% fire rate',
+      description: '+40% fire rate, -12% damage (volume over power)',
       rarity: 'rare',
       tier: ItemTier.Uncommon,
       cost: 33,
       icon: '🔥',
       unlocked: true,
       tags: ['ranged'],
-      fireRateMultiplier: 1.4
+      fireRateMultiplier: 1.4,
+      damageMultiplier: 0.88
     },
     {
       id: 'armor_plating_t2',
       slot: 'torso',
       name: 'Armor Plating',
-      description: '+8 armor',
+      description: '+8 armor, -8% speed (heavy steel)',
       rarity: 'rare',
       tier: ItemTier.Uncommon,
       cost: 30,
       icon: '🛡️',
       unlocked: true,
       tags: ['defensive'],
-      armor: 8
+      armor: 8,
+      speedMultiplier: 0.92
     },
     {
       id: 'regeneration_t2',
@@ -1363,7 +1385,7 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'frostfire_t3',
       name: 'Frostfire',
-      description: 'Poison + Freeze combo',
+      description: 'Poison + Freeze combo — the volatile mix costs precision. -8% damage',
       rarity: 'epic',
       tier: ItemTier.Rare,
       cost: 65,
@@ -1371,12 +1393,13 @@ export const ITEM_CATALOG: Item[] = [
       unlocked: true,
       tags: ['elemental'],
       poison: true,
-      freeze: 0.2
+      freeze: 0.2,
+      damageMultiplier: 0.92
     },
     {
       id: 'storm_essence_t3',
       name: 'Storm Essence',
-      description: '35% chain + explosions',
+      description: '35% chain + explosions — the storm consumes some of your raw force. -12% damage',
       rarity: 'epic',
       tier: ItemTier.Rare,
       cost: 72,
@@ -1384,12 +1407,13 @@ export const ITEM_CATALOG: Item[] = [
       unlocked: true,
       tags: ['elemental', 'ranged'],
       chainLightning: 0.35,
-      explosionOnHit: true
+      explosionOnHit: true,
+      damageMultiplier: 0.88
     },
     {
       id: 'toxic_explosion_t3',
       name: 'Toxic Explosion',
-      description: 'Explosions poison nearby',
+      description: 'Explosions poison nearby — the cloud obscures your own shots. -10% fire rate',
       rarity: 'epic',
       tier: ItemTier.Rare,
       cost: 68,
@@ -1397,14 +1421,15 @@ export const ITEM_CATALOG: Item[] = [
       unlocked: true,
       tags: ['elemental', 'ranged'],
       explosionOnHit: true,
-      poison: true
+      poison: true,
+      fireRateMultiplier: 0.9
     },
 
     // Defensive combos
     {
       id: 'guardian_aura_t3',
       name: 'Guardian Aura',
-      description: 'A protective aura pulses outward, punishing attackers. +50 HP, +8 armor, 30% thorns, periodic shockwave',
+      description: 'A protective aura pulses outward, punishing attackers. +50 HP, +8 armor, 30% thorns, shockwave — you become the immovable wall. -20% speed',
       rarity: 'epic',
       tier: ItemTier.Rare,
       cost: 78,
@@ -1415,13 +1440,14 @@ export const ITEM_CATALOG: Item[] = [
       armor: 8,
       thorns: 0.3,
       novaPulse: true,
-      novaDamageMult: 0.55
+      novaDamageMult: 0.55,
+      speedMultiplier: 0.8
     },
     {
       id: 'vampire_armor_t3',
       slot: 'torso',
       name: 'Vampire Armor',
-      description: '15% lifesteal, +8 armor',
+      description: '15% lifesteal, +8 armor — the heavy cursed plate slows you. -10% speed',
       rarity: 'epic',
       tier: ItemTier.Rare,
       cost: 70,
@@ -1429,12 +1455,13 @@ export const ITEM_CATALOG: Item[] = [
       unlocked: true,
       tags: ['defensive', 'utility'],
       lifesteal: 0.15,
-      armor: 8
+      armor: 8,
+      speedMultiplier: 0.9
     },
     {
       id: 'regenerative_shield_t3',
       name: 'Regenerative Shield',
-      description: 'Shield + 5 HP/s regen',
+      description: 'Shield + 5 HP/s regen — tanking, not killing. -20% damage',
       rarity: 'epic',
       tier: ItemTier.Rare,
       cost: 78,
@@ -1442,13 +1469,14 @@ export const ITEM_CATALOG: Item[] = [
       unlocked: true,
       tags: ['defensive'],
       shield: true,
-      healthRegen: 5
+      healthRegen: 5,
+      damageMultiplier: 0.8
     },
     {
       id: 'evasive_armor_t3',
       slot: 'torso',
       name: 'Evasive Armor',
-      description: '15% dodge, +25% speed',
+      description: '15% dodge, +25% speed — moving fast, hitting soft. -12% damage',
       rarity: 'epic',
       tier: ItemTier.Rare,
       cost: 62,
@@ -1456,7 +1484,8 @@ export const ITEM_CATALOG: Item[] = [
       unlocked: true,
       tags: ['defensive', 'utility'],
       dodge: 0.15,
-      speedMultiplier: 1.25
+      speedMultiplier: 1.25,
+      damageMultiplier: 0.88
     },
 
     // Projectile modifiers
@@ -1501,7 +1530,7 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'explosive_pierce_t3',
       name: 'Explosive Pierce',
-      description: 'Pierce +2, explosions',
+      description: 'Pierce +2, explosions — spread and blast cost precision. -12% damage',
       rarity: 'epic',
       tier: ItemTier.Rare,
       cost: 68,
@@ -1509,7 +1538,8 @@ export const ITEM_CATALOG: Item[] = [
       unlocked: true,
       tags: ['ranged', 'elemental'],
       piercing: 2,
-      explosionOnHit: true
+      explosionOnHit: true,
+      damageMultiplier: 0.88
     },
 
     // Economic/utility
@@ -1556,7 +1586,7 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'necromantic_power_t4',
       name: 'Necromantic Power',
-      description: 'Kills spawn skeleton ally',
+      description: 'Kills spawn skeleton ally, +20% dmg, 10% lifesteal — commanding the dead slows you. -20% speed',
       rarity: 'legendary',
       tier: ItemTier.Legendary,
       cost: 160,
@@ -1564,7 +1594,8 @@ export const ITEM_CATALOG: Item[] = [
       unlocked: true,
       tags: ['utility', 'elemental'],
       damageMultiplier: 1.2,
-      lifesteal: 0.1
+      lifesteal: 0.1,
+      speedMultiplier: 0.8
     },
     {
       id: 'berserker_soul_t4',
@@ -1584,7 +1615,7 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'elemental_mastery_t4',
       name: 'Elemental Mastery',
-      description: 'All elemental effects',
+      description: 'All elemental effects — pure power through the elements, raw damage abandoned. -25% damage',
       rarity: 'legendary',
       tier: ItemTier.Legendary,
       cost: 175,
@@ -1594,12 +1625,13 @@ export const ITEM_CATALOG: Item[] = [
       poison: true,
       freeze: 0.25,
       chainLightning: 0.3,
-      explosionOnHit: true
+      explosionOnHit: true,
+      damageMultiplier: 0.75
     },
     {
       id: 'divine_protection_t4',
       name: 'Divine Protection',
-      description: 'Shield + 30% dodge',
+      description: 'Shield + 30% dodge + 10 armor — all defense, no offense. -25% damage',
       rarity: 'legendary',
       tier: ItemTier.Legendary,
       cost: 152,
@@ -1608,12 +1640,13 @@ export const ITEM_CATALOG: Item[] = [
       tags: ['defensive'],
       shield: true,
       dodge: 0.3,
-      armor: 10
+      armor: 10,
+      damageMultiplier: 0.75
     },
     {
       id: 'infinity_core_t4',
       name: 'Infinity Core',
-      description: 'Pierce all + multishot 5',
+      description: 'Pierce all + 5 projectiles + homing — the core overloads everything but brute damage. -40% damage',
       rarity: 'legendary',
       tier: ItemTier.Legendary,
       cost: 180,
@@ -1622,7 +1655,8 @@ export const ITEM_CATALOG: Item[] = [
       tags: ['ranged'],
       piercing: 999,
       multishot: 5,
-      homing: true
+      homing: true,
+      damageMultiplier: 0.6
     },
 
     // ==================== TRADE-OFF ITEMS (BROTATO-STYLE) ====================
@@ -1852,14 +1886,15 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'prism_lens_t4',
       name: 'Prism Lens',
-      description: '+90% elemental dmg — chain & blast melt crowds',
+      description: '+90% elemental dmg — chain & blast melt crowds, but the lens is cumbersome. -15% speed',
       rarity: 'legendary',
       tier: ItemTier.Legendary,
       cost: 92,
       icon: '💠',
       unlocked: true,
       tags: ['elemental'],
-      elementalDamageMult: 1.90
+      elementalDamageMult: 1.90,
+      speedMultiplier: 0.85
     },
 
     // ==================== BANKING ITEMS (interest economy) ====================
@@ -1923,7 +1958,7 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'cosmic_dice_t4',
       name: 'Cosmic Dice',
-      description: 'Reality rolls twice: a chance to fire a bonus volley the same frame. +80% luck, +40% gold, +10% crit',
+      description: 'Reality rolls twice: bonus volleys, +80% luck, +40% gold, +10% crit — chaos costs precision. -20% damage',
       rarity: 'legendary',
       tier: ItemTier.Legendary,
       cost: 110,
@@ -1933,7 +1968,8 @@ export const ITEM_CATALOG: Item[] = [
       luck: 0.80,
       goldBonus: 1.40,
       critChance: 0.10,
-      multicast: 0.25
+      multicast: 0.25,
+      damageMultiplier: 0.8
     },
 
     // ============ UNIQUE IMPACTFUL ITEMS (build-defining, 2026-07-02) ============
@@ -1984,7 +2020,7 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'cryo_capacitor_t3',
       name: 'Cryo Capacitor',
-      description: '40% freeze + arcs to nearby, +20% elemental dmg',
+      description: '40% freeze + arcs to nearby, +20% elemental — the cold slows you too. -8% speed',
       rarity: 'epic',
       tier: ItemTier.Rare,
       cost: 88,
@@ -1993,7 +2029,8 @@ export const ITEM_CATALOG: Item[] = [
       tags: ['elemental'],
       freeze: 0.4,
       chainLightning: 0.25,
-      elementalDamageMult: 1.2
+      elementalDamageMult: 1.2,
+      speedMultiplier: 0.92
     },
     {
       id: 'sanguine_edge_t3',
@@ -2090,7 +2127,7 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'orbit_orb_swarm_t3',
       name: 'Orbital Swarm',
-      description: '+2 orbiting orbs and they hit harder',
+      description: '+2 orbiting orbs and they hit harder — the orbiting mass throws off your aim. -10% ranged dmg',
       rarity: 'epic',
       tier: ItemTier.Rare,
       cost: 78,
@@ -2098,7 +2135,8 @@ export const ITEM_CATALOG: Item[] = [
       unlocked: true,
       tags: ['utility', 'elemental'],
       orbitOrbs: 2,
-      orbitDamageMult: 1.4
+      orbitDamageMult: 1.4,
+      rangedDamageMult: 0.9
     },
     {
       id: 'whirl_blades_t2',
@@ -2115,7 +2153,7 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'blade_storm_t4',
       name: 'Blade Storm',
-      description: 'A faster, deadlier whirl of blades around you',
+      description: 'A faster, deadlier whirl of blades — the whirlwind throws off your aim. -12% ranged dmg',
       rarity: 'legendary',
       tier: ItemTier.Legendary,
       cost: 150,
@@ -2123,7 +2161,8 @@ export const ITEM_CATALOG: Item[] = [
       unlocked: true,
       tags: ['melee'],
       auxMelee: true,
-      auxMeleeDamageMult: 1.8
+      auxMeleeDamageMult: 1.8,
+      rangedDamageMult: 0.88
     },
     {
       id: 'bomb_bandolier_t2',
@@ -2140,7 +2179,7 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'cluster_charges_t4',
       name: 'Cluster Charges',
-      description: 'Bombs drop twice as fast and hit far harder',
+      description: 'Bombs drop twice as fast and hit far harder — volatile payload, handle with care. -20 max HP',
       rarity: 'legendary',
       tier: ItemTier.Legendary,
       cost: 158,
@@ -2149,24 +2188,26 @@ export const ITEM_CATALOG: Item[] = [
       tags: ['elemental'],
       bombDrop: true,
       bombCooldownMult: 0.5,
-      bombDamageMult: 1.6
+      bombDamageMult: 1.6,
+      maxHealthBonus: -20
     },
     {
       id: 'nova_core_t3',
       name: 'Nova Core',
-      description: 'A shockwave ripples out from you on a timer',
+      description: 'A shockwave ripples out from you — the pulse anchor slows you. -10% speed',
       rarity: 'epic',
       tier: ItemTier.Rare,
       cost: 72,
       icon: '💠',
       unlocked: true,
       tags: ['elemental', 'utility'],
-      novaPulse: true
+      novaPulse: true,
+      speedMultiplier: 0.9
     },
     {
       id: 'pulsar_t4',
       name: 'Pulsar',
-      description: 'Novas fire relentlessly and hit like a truck',
+      description: 'Novas fire relentlessly and hit like a truck — the shockwave anchor slows you. -15% speed',
       rarity: 'legendary',
       tier: ItemTier.Legendary,
       cost: 160,
@@ -2175,7 +2216,8 @@ export const ITEM_CATALOG: Item[] = [
       tags: ['elemental'],
       novaPulse: true,
       novaCooldownMult: 0.5,
-      novaDamageMult: 1.7
+      novaDamageMult: 1.7,
+      speedMultiplier: 0.85
     },
 
     // ==================== EXPANSION: 50+ UNIQUE BUILD-DEFINING ITEMS ====================

@@ -8,6 +8,49 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-07 (night) — Balance: strong items now bite back (Brotato-style drawbacks)
+
+Felix: "a lot of items only have positive effects — shouldn't they be a bit balanced with negative
+stats too? (compare Brotato)." He's right: ~78% of items with stats were pure upside, so the shop
+went flat — every pick was a no-brainer. Brotato's whole texture is that powerful pickups cost you
+something, and it keeps ~60-70% of items with a drawback.
+
+Audited the catalog (325 items with stats, only 103 had any downside) and paired a modest,
+**thematically-inverse** drawback onto strong pure-upside items (tiers 2-4; tier-1 commons and
+achievement-reward items stay clean). The pairing is deliberate, not random:
+- raw damage / melee weapons -> **-Max HP** (glass cannon)
+- elemental / status power -> **-Max HP** (squishy mage)
+- crit -> **-Armor** (reckless)
+- fire rate -> **-% Damage** (spray, less punch)
+- multishot / pierce -> **-% Fire Rate** (heavy volley, slower cadence)
+- defense (HP/armor/thorns) -> **-% Move Speed** (turtle)
+- mobility (speed/dodge) -> **-Max HP** (fragile & fast)
+- economy (gold/luck/xp) -> **-% Damage** (greed over combat)
+- lifesteal -> **-% Ranged Dmg** (melee sustain, weak at range)
+
+Magnitudes scale with tier (a legendary bites harder than an uncommon) but stay small enough that
+each item is still net-positive and worth taking — the point is a *choice*, not a punishment. The
+drawbacks render automatically as the red chips added in the earlier stat-display pass, so no new
+description copy was needed. Items that **already** had a hand-authored drawback are left completely
+alone — the auto-pass never double-taxes an item that already bites back.
+
+Net effect: drawback coverage rises from **~32% to 66%** of statful items, right in Brotato's band.
+
+Commit `PENDING` · live deployment `PENDING`.
+
+---
+
+## 2026-07-07 (late evening) — Fix: ignite items still showing double stat text
+
+Follow-up to the earlier restatement fix. Five "ignite" items (Emberglass Visor, Plague Veil,
+Emberwalk Boots, Ember Ring, Ember Pendant) were still printing both the colored `+X% Burn` stat
+chip AND a white "+X% ignite chance" description, because `ignite → burn` was missing from the
+wording-synonym table. One-line fix: added `ignite` and `burning` to `RESTATE_SYN`.
+
+Commit `fd16344` · live deployment `dpl_4NfSJ6bqQWnj8aRa69yj6VWpoNun` (READY, PROMOTED, verified).
+
+---
+
 ## 2026-07-07 (evening) — No more double stat text on item cards
 
 Felix: "a lot of items have double stat texts — one line nice styled in color and one in white."
