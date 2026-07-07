@@ -8,6 +8,42 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-07 (evening) — Spawns breathe across the wave + randomized wave archetypes
+
+**Enemies no longer dump at the bell — they release across the whole wave.** Spawning is now
+driven by a per-wave RELEASE SCHEDULE: each moment the game checks how much of the wave's
+budget *should* be out by now and only telegraphs new formations while it's behind. So a wave
+is a steady sequence of formations/clusters/scattered pushes throughout its duration, not a
+front-loaded flood you mow down in the first few seconds and then wait out.
+
+**Every wave now rolls a spawn ARCHETYPE (randomized each run)** — the rhythm of the pushes,
+separate from the enemy-stat modifiers:
+- **Steady** — an even release across the whole wave (the default breathing feel).
+- **War** — the whole horde front-loads and charges in from ONE flank of the arena at wave
+  start (a wall of red X's down one side, then it hits at once).
+- **Surges** — enemies crash in discrete escalating pulses with lulls between them.
+- **Crescendo** — a light trickle early that builds to a heavy storm at the end.
+- **Ambush** — an uneasy quiet, then a sudden hard rush.
+
+Waves 1-2 stay Steady to teach the basics; from wave 3 on the archetype is rolled (Steady is
+still the majority, so the exotic patterns feel like a genuine change of pace). The incoming
+rhythm is shown in the wave banner. Formations, telegraphs and sub-phases from the previous
+build all still apply — the archetype governs WHEN they arrive, not what they are.
+
+**Under the hood**
+- New `WaveArchetype` type + `releaseTarget(elapsedFrac)` curve per archetype; the spawn loop
+  releases formations only while released-fraction is behind the target (War catches up ~6
+  batches/tick to front-load; others 2/tick).
+- Replaced the old aggressive `baseInterval` (0.16s floor) that drained the budget up front.
+- `arenaAnchor` confines War spawns to a 150px band on the chosen flank; War uses massed
+  frontal formations (line/vee/cluster/scatter), never player-surrounding ones.
+- Verified with `qa-wave-pacing.mjs`: steady releases 28/52/78/100% at 25/50/75/100% of wave
+  time (was front-loaded); crescendo 7/30/57/100%; war 100% by 25% confined to one flank;
+  ambush 7/37/72/100%. Flood + full smoke QA green, zero console errors.
+- Deploy: bundle `index-D0Acshwl.js`, live-verified on roguelite-game-blush.vercel.app.
+
+---
+
 ## 2026-07-07 (afternoon) — Brotato-style telegraphed formation spawning
 
 **Enemies now spawn IN the arena as telegraphed formations — not from the screen edge.**

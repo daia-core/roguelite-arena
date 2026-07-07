@@ -22,6 +22,17 @@ export type WaveModifier = 'none' | 'horde' | 'elite' | 'speed' | 'tank' | 'chao
 
 export type Formation = 'scatter' | 'line' | 'vee' | 'ring' | 'pincer' | 'cluster' | 'worm' | 'eggclutch';
 
+/**
+ * How a wave PACES its spawns over time (orthogonal to WaveModifier, which
+ * governs enemy STATS). Randomized per wave so runs don't feel identical:
+ *   • steady    — even release across the whole wave (the default breathing feel)
+ *   • war       — all enemies front-load and charge from ONE flank at wave start
+ *   • surges    — discrete escalating pulses with lulls between them
+ *   • crescendo — trickle early, builds to a heavy storm at the end
+ *   • ambush    — an uneasy quiet, then a sudden hard rush
+ */
+export type WaveArchetype = 'steady' | 'war' | 'surges' | 'crescendo' | 'ambush';
+
 /** A mid-wave phase: its own enemy budget, formation bias and announcement. */
 interface WavePhase {
   text: string;
@@ -47,6 +58,12 @@ export class WaveManager {
   bossSpawned: boolean = false;
   waveModifier: WaveModifier = 'none';
   waveModifierText: string = '';
+
+  // Spawn PACING (how enemies are released over time), randomized per wave.
+  waveArchetype: WaveArchetype = 'steady';
+  archetypeText: string = '';
+  /** For 'war': which arena flank the horde charges from (0 L, 1 R, 2 top, 3 bottom). */
+  private warSide: number = 0;
 
   // Waves-within-waves: an ordered list of phases for the current wave. Each
   // phase releases its slice of the budget then the next phase's banner fires.
@@ -115,6 +132,9 @@ export class WaveManager {
     this.isHordeWave = false;
     this.waveModifier = 'none';
     this.waveModifierText = '';
+    this.waveArchetype = 'steady';
+    this.archetypeText = '';
+    this.warSide = 0;
     this.phases = [];
     this.phaseIndex = 0;
     this.phaseJustChanged = false;
@@ -151,6 +171,35 @@ export class WaveManager {
       } else if (roll < 0.44) {
         this.waveModifier = 'chaos';
         this.waveModifierText = 'CHAOS WAVE - Mixed threats!';
+      }
+    }
+
+    // Roll a spawn PACING archetype (independent of the stat modifier above).
+    // Waves 1-2 stay 'steady' to teach the basics; from wave 3 on, every run
+    // gets a different rhythm of pushes. 'steady' stays the majority so the
+    // exotic patterns feel like a change of pace, not the norm.
+    if (!this.isBossWave && waveNumber > 2) {
+      const ar = Math.random();
+      if (ar < 0.1) {
+        this.waveArchetype = 'war';
+        this.warSide = randomInt(0, 3);
+        this.archetypeText = 'WAR - they charge from one flank!';
+      } else if (ar < 0.24) {
+        this.waveArchetype = 'surges';
+        this.archetypeText = 'SURGES - they crash in pulses!';
+      } else if (ar < 0.37) {
+        this.waveArchetype = 'crescendo';
+        this.archetypeText = 'CRESCENDO - it builds to a storm!';
+      } else if (ar < 0.48) {
+        this.waveArchetype = 'ambush';
+        this.archetypeText = 'AMBUSH - too quiet...';
+      }
+      // else 'steady' (the majority): an even release across the whole wave.
+
+      // Surface the pacing in the wave banner when no stat modifier claimed it,
+      // so the player reads the incoming rhythm (reuses existing banner plumbing).
+      if (this.waveArchetype !== 'steady' && this.waveModifierText === '') {
+        this.waveModifierText = this.archetypeText;
       }
     }
 
@@ -327,41 +376,34 @@ export class WaveManager {
       this.bossSpawned = true;
     }
 
-    // Formation-based spawning: each tick TELEGRAPHS one FORMATION (a cluster of
-    // related enemies) — red blinking X markers appear in the arena, and the
-    // enemies materialize there after SpawnTelegraph.DURATION. Each telegraphed
-    // batch is a micro-wave within the wave (Brotato-style).
+    // Formation-based spawning, paced by a RELEASE SCHEDULE across the whole
+    // wave. Each tick we compare how much of the budget has been released to how
+    // much the wave's archetype says SHOULD be out by now (releaseTarget of the
+    // elapsed fraction), and telegraph formations only while we're behind. This
+    // is what makes spawns breathe across the full duration instead of draining
+    // the budget in the first seconds — 'war' front-loads everything, 'crescendo'
+    // back-loads it, 'steady' spreads it evenly, etc. Each telegraphed batch is a
+    // micro-wave (red blinking X's that materialize after SpawnTelegraph.DURATION).
     if (this.spawnTimer <= 0 && this.waveEnemiesRemaining > 0) {
-      // Advance sub-phase if this phase's budget is spent (waves-within-waves).
-      if (!this.isBossWave && this.phaseBudgetRemaining <= 0 && this.phaseIndex < this.phases.length - 1) {
-        this.phaseIndex++;
-        this.phaseBudgetRemaining = Math.max(1, Math.round(this.totalEnemiesInWave * this.phases[this.phaseIndex].budgetFrac));
-        this.phaseText = this.phases[this.phaseIndex].text;
-        this.phaseJustChanged = true;
+      this.spawnTimer = this.isHordeWave ? 0.18 : 0.3;
+
+      const elapsedFrac = this.waveDuration > 0
+        ? Math.min(1, Math.max(0, 1 - this.waveTimer / this.waveDuration))
+        : 1;
+      const targetFrac = this.releaseTarget(elapsedFrac);
+      // 'war' catches up aggressively so its whole flank lands in the opening
+      // couple of ticks; other archetypes release at most a batch or two a tick.
+      const maxBatches = this.waveArchetype === 'war' ? 6 : 2;
+
+      let batches = 0;
+      while (
+        batches < maxBatches &&
+        this.waveEnemiesRemaining > 0 &&
+        1 - this.waveEnemiesRemaining / this.totalEnemiesInWave < targetFrac
+      ) {
+        this.releaseFormation(canvasWidth, canvasHeight, telegraphs);
+        batches++;
       }
-
-      const phase = this.phases[this.phaseIndex];
-      const formation: Formation = this.isBossWave
-        ? 'scatter'
-        : randomChoice(phase ? phase.formations : ['scatter']);
-
-      const batch = this.buildFormation(formation, canvasWidth, canvasHeight, phase?.pool);
-      for (const tg of batch) telegraphs.push(tg);
-      // Count the enemies pledged by this batch against the budget up front so
-      // pacing/phase logic stays correct even though they appear 2s later.
-      const pledged = batch.reduce((sum, tg) => sum + tg.pledged, 0);
-      this.waveEnemiesRemaining -= pledged;
-      this.phaseBudgetRemaining -= pledged;
-
-      // Flood pacing: spawn fast so the arena stays packed (Vampire-Survivors
-      // density). Formations arrive in quick succession rather than being spread
-      // thin across the whole wave — the wave clears by killing, not by waiting.
-      let baseInterval = Math.min(
-        0.55,
-        Math.max(0.16, (this.waveDuration * 0.35 * Math.max(1, pledged)) / this.totalEnemiesInWave)
-      );
-      if (this.isHordeWave) baseInterval *= 0.6;
-      this.spawnTimer = baseInterval;
     }
 
     if (this.waveTimer <= 0) {
@@ -400,6 +442,73 @@ export class WaveManager {
     }
 
     return enemies;
+  }
+
+  /**
+   * The cumulative fraction of the wave's enemy budget that SHOULD be released
+   * by the given elapsed fraction (0..1) of the wave, per its pacing archetype.
+   * The spawn loop releases formations until the actual released fraction catches
+   * up to this — so the shape of this curve IS the wave's rhythm.
+   */
+  private releaseTarget(f: number): number {
+    switch (this.waveArchetype) {
+      case 'war':
+        // Everything is due immediately: a single front-loaded charge.
+        return 1;
+      case 'crescendo':
+        // Trickle early, build to a storm — a back-loaded power curve.
+        return Math.pow(f, 1.9);
+      case 'ambush': {
+        // An uneasy quiet for the first third, then a hard, fast rush.
+        return f < 0.33 ? f * 0.12 : Math.min(1, 0.04 + (f - 0.33) * 1.6);
+      }
+      case 'surges': {
+        // Discrete escalating pulses: each 1/N slice of time makes the next
+        // (slightly larger) chunk due, giving bursts with lulls between them.
+        const pulses = 4;
+        const step = Math.ceil(f * pulses);
+        return Math.min(1, Math.pow(step / pulses, 1.3));
+      }
+      case 'steady':
+      default:
+        // Even release across the whole wave, with a small opening trickle so
+        // the arena is never empty at the bell.
+        return Math.max(0.05, f);
+    }
+  }
+
+  /**
+   * Telegraph one formation now: advance the sub-phase if this phase's budget is
+   * spent, pick a formation for the current phase (or a massed frontal one for a
+   * 'war' charge), place it, and charge the pledged enemies against the budget.
+   */
+  private releaseFormation(cw: number, ch: number, telegraphs: SpawnTelegraph[]): void {
+    // Advance sub-phase if this phase's budget is spent (waves-within-waves).
+    if (!this.isBossWave && this.phaseBudgetRemaining <= 0 && this.phaseIndex < this.phases.length - 1) {
+      this.phaseIndex++;
+      this.phaseBudgetRemaining = Math.max(1, Math.round(this.totalEnemiesInWave * this.phases[this.phaseIndex].budgetFrac));
+      this.phaseText = this.phases[this.phaseIndex].text;
+      this.phaseJustChanged = true;
+    }
+
+    const phase = this.phases[this.phaseIndex];
+    let formation: Formation;
+    if (this.isBossWave) {
+      formation = 'scatter';
+    } else if (this.waveArchetype === 'war') {
+      // A one-flank charge: massed frontal shapes, never player-surrounding ones.
+      formation = randomChoice(['line', 'vee', 'cluster', 'scatter'] as Formation[]);
+    } else {
+      formation = randomChoice(phase ? phase.formations : ['scatter']);
+    }
+
+    const batch = this.buildFormation(formation, cw, ch, phase?.pool);
+    for (const tg of batch) telegraphs.push(tg);
+    // Count the enemies pledged by this batch against the budget up front so
+    // pacing/phase logic stays correct even though they appear 2s later.
+    const pledged = batch.reduce((sum, tg) => sum + tg.pledged, 0);
+    this.waveEnemiesRemaining -= pledged;
+    this.phaseBudgetRemaining -= pledged;
   }
 
   // ---- Formations ----------------------------------------------------------
@@ -569,14 +678,39 @@ export class WaveManager {
   private arenaAnchor(cw: number, ch: number): { x: number; y: number; inx: number; iny: number } {
     const m = WaveManager.WALL_MARGIN;
     let x = 0, y = 0;
-    // Rejection-sample a point outside the player's safe radius (few tries; the
-    // final clamp guarantees a valid spot even if every sample lands too close).
-    for (let attempt = 0; attempt < 8; attempt++) {
-      x = randomInt(m, Math.max(m, cw - m));
-      y = randomInt(m, Math.max(m, ch - m));
-      const dx = x - this.playerX;
-      const dy = y - this.playerY;
-      if (dx * dx + dy * dy >= WaveManager.SAFE_RADIUS * WaveManager.SAFE_RADIUS) break;
+    if (this.waveArchetype === 'war') {
+      // Confine the anchor to a band along the chosen flank so the whole horde
+      // charges in from ONE side of the field. The final clamp still keeps each
+      // X off the player's safe bubble and inside the walls.
+      const band = 150;
+      switch (this.warSide) {
+        case 0: // left
+          x = randomInt(m, Math.min(Math.max(m, cw - m), m + band));
+          y = randomInt(m, Math.max(m, ch - m));
+          break;
+        case 1: // right
+          x = randomInt(Math.max(m, cw - m - band), Math.max(m, cw - m));
+          y = randomInt(m, Math.max(m, ch - m));
+          break;
+        case 2: // top
+          x = randomInt(m, Math.max(m, cw - m));
+          y = randomInt(m, Math.min(Math.max(m, ch - m), m + band));
+          break;
+        default: // bottom
+          x = randomInt(m, Math.max(m, cw - m));
+          y = randomInt(Math.max(m, ch - m - band), Math.max(m, ch - m));
+          break;
+      }
+    } else {
+      // Rejection-sample a point outside the player's safe radius (few tries; the
+      // final clamp guarantees a valid spot even if every sample lands too close).
+      for (let attempt = 0; attempt < 8; attempt++) {
+        x = randomInt(m, Math.max(m, cw - m));
+        y = randomInt(m, Math.max(m, ch - m));
+        const dx = x - this.playerX;
+        const dy = y - this.playerY;
+        if (dx * dx + dy * dy >= WaveManager.SAFE_RADIUS * WaveManager.SAFE_RADIUS) break;
+      }
     }
     // Direction toward arena center, so relative shape offsets face "inward".
     let inx = cw / 2 - x;
@@ -811,6 +945,9 @@ export class WaveManager {
     this.isBossWave = false;
     this.isHordeWave = false;
     this.bossSpawned = false;
+    this.waveArchetype = 'steady';
+    this.archetypeText = '';
+    this.warSide = 0;
     this.phases = [];
     this.phaseIndex = 0;
     this.phaseText = '';
