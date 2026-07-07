@@ -234,15 +234,19 @@ export class Game {
   gameOverStats: {
     wavesReached: number;
     enemiesKilled: number;
+    bossesDefeated: number;
     goldEarned: number;
     itemsCollected: number;
     soulsEarned: number;
+    personalBest: number;
   } = {
     wavesReached: 0,
     enemiesKilled: 0,
+    bossesDefeated: 0,
     goldEarned: 0,
     itemsCollected: 0,
-    soulsEarned: 0
+    soulsEarned: 0,
+    personalBest: 0
   };
 
   // Pause
@@ -2302,8 +2306,8 @@ export class Game {
       if (daggerCount > 0) this.spawnCeremonialDaggers(enemy, daggerCount);
     }
 
-    // Track boss kills
-    if (enemy.type === 'demon') {
+    // Track boss kills (use typeData.isBoss — the dedicated boss flag, not type === 'demon')
+    if (enemy.typeData.isBoss) {
       this.bossKills++;
     }
 
@@ -4078,6 +4082,9 @@ export class Game {
     this.state = 'gameover';
     this.audio.playGameOver();
 
+    // Capture personal best BEFORE updating it so the screen can compare
+    const previousBest = SaveManager.getStats().highestWave;
+
     // Calculate souls earned
     this.soulsEarnedThisRun = MetaProgression.calculateSoulsEarned(
       this.waveManager.currentWave,
@@ -4089,9 +4096,11 @@ export class Game {
     this.gameOverStats = {
       wavesReached: this.waveManager.currentWave,
       enemiesKilled: this.kills,
+      bossesDefeated: this.bossKills,
       goldEarned: this.player?.gold ?? 0,
       itemsCollected: this.playerStats.items.length,
-      soulsEarned: this.soulsEarnedThisRun
+      soulsEarned: this.soulsEarnedThisRun,
+      personalBest: previousBest
     };
 
     // Update meta stats
@@ -5770,9 +5779,9 @@ export class Game {
     });
     ctx.restore();
 
-    // Stats panel
+    // Stats panel — taller to fit Bosses stat + personal best
     const panelWidth = isMobile ? Math.min(380, this.canvas.width - 40) : 500;
-    const panelHeight = isMobile ? 380 : 320;
+    const panelHeight = isMobile ? 460 : 390;
     const panelX = (this.canvas.width - panelWidth) / 2;
     const panelY = isMobile ? 140 : 170;
 
@@ -5793,16 +5802,22 @@ export class Game {
     ctx.lineWidth = 1;
     ctx.strokeRect(panelX + 3, panelY + 3, panelWidth - 6, panelHeight - 6);
 
-    // Stats with icons
+    // Stats
     const statsY = panelY + 50;
-    const lineSpacing = isMobile ? 45 : 40;
+    const lineSpacing = isMobile ? 42 : 36;
     const statSize = isMobile ? 24 : 22;
 
-    this.renderer.drawText(`Wave: ${this.gameOverStats.wavesReached}`, this.canvas.width / 2, statsY, {
+    // Wave — with personal best comparison
+    const { wavesReached, personalBest } = this.gameOverStats;
+    const isNewBest = wavesReached > personalBest;
+    const waveText = isNewBest
+      ? `Wave: ${wavesReached}  ★ NEW BEST!`
+      : `Wave: ${wavesReached}${personalBest > 0 ? `  (Best: ${personalBest})` : ''}`;
+    this.renderer.drawText(waveText, this.canvas.width / 2, statsY, {
       size: statSize,
       bold: true,
       align: 'center',
-      color: '#4a9eff'
+      color: isNewBest ? '#fbbf24' : '#4a9eff'
     });
 
     this.renderer.drawText(`Kills: ${this.gameOverStats.enemiesKilled}`, this.canvas.width / 2, statsY + lineSpacing, {
@@ -5812,14 +5827,22 @@ export class Game {
       color: '#ef4444'
     });
 
-    this.renderer.drawText(`Gold: ${this.gameOverStats.goldEarned}`, this.canvas.width / 2, statsY + lineSpacing * 2, {
+    // Bosses defeated — was tracked but never shown; bossKills bug also fixed this session
+    this.renderer.drawText(`Bosses: ${this.gameOverStats.bossesDefeated}`, this.canvas.width / 2, statsY + lineSpacing * 2, {
+      size: statSize,
+      bold: true,
+      align: 'center',
+      color: '#f97316'
+    });
+
+    this.renderer.drawText(`Gold: ${this.gameOverStats.goldEarned}`, this.canvas.width / 2, statsY + lineSpacing * 3, {
       size: statSize,
       bold: true,
       align: 'center',
       color: '#ffd700'
     });
 
-    this.renderer.drawText(`Items: ${this.gameOverStats.itemsCollected}`, this.canvas.width / 2, statsY + lineSpacing * 3, {
+    this.renderer.drawText(`Items: ${this.gameOverStats.itemsCollected}`, this.canvas.width / 2, statsY + lineSpacing * 4, {
       size: statSize,
       bold: true,
       align: 'center',
@@ -5827,7 +5850,7 @@ export class Game {
     });
 
     // Souls earned (highlighted prominently)
-    const soulsY = statsY + lineSpacing * 4 + 20;
+    const soulsY = statsY + lineSpacing * 5 + 20;
     ctx.save();
     ctx.shadowBlur = 25;
     ctx.shadowColor = '#9370db';
