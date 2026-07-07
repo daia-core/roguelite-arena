@@ -8,6 +8,25 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-08 (night) — StatusEffectEngine wired into combat: Fragility, Exposed, Condemned now live
+
+Found and fixed a critical gap: the StatusEffectEngine was fully built but its damage-amplification
+methods were **never called from the combat loop**. Effects stacked, displayed visuals, and had
+tick DoTs — but Fragility/Exposed/Brittle/Condemned had **zero damage impact**.
+
+**What's now live:**
+- **Fragility** (+1.5%/stack all damage taken) — applied on hit from brute/cleave items
+- **Exposed** (+4%/stack direct-hit damage) — applied on hit from rend items
+- **Brittle** (+1 flat damage/stack per hit) — stacks into armor-cracking builds
+- **Condemned** (10 stacks → next crit deals ×5 bonus) — applied from execute/doom items
+- **Dazed** debuff now raises effective crit chance against the enemy
+- **Disoriented** debuff amplifies crit damage received
+- **104 Soulstone items** now carry proc chances matching their archetype (rend→Exposed, execute→Condemned, brute/cleave→Fragile, doom→Condemned)
+
+**Commit:** `7801162` — bundle `index-DkYEqUqI.js` live, TSC 0 errors, catalog CLEAN (1303 items)
+
+---
+
 ## 2026-07-08 (night) — Soulstone Expansion LIVE: 1,303 items + artifact/duo pass, duplicate fix
 
 Felix: "triple the amount of content" (Soulstone Survivors active skills as items).
