@@ -5,13 +5,13 @@
 import { TransformationTracker } from './TransformationSystem';
 import { DuoTracker, DUO_COMBOS, type DuoCombo } from './DuoSystem';
 import type { DamageType } from './Projectile';
-import { ItemTier, getItemKinds, classifyItemSlot, slotHolder, slotLabel, isTrinket, itemStatLines, descRestatesStats, type Item, type ItemTag, type ItemKind, type WeaponType, type MeleeStyle, type Weapon, type EquipSlot } from './items/types';
+import { ItemTier, getItemKinds, classifyItemSlot, slotHolder, slotLabel, isTrinket, itemStatLines, itemStatSegments, descRestatesStats, type Item, type ItemStatSegment, type ItemTag, type ItemKind, type WeaponType, type MeleeStyle, type Weapon, type EquipSlot } from './items/types';
 import { ITEM_CATALOG } from './items/catalog';
 
 // Re-export the item types from their new home so every existing importer
 // (Game.ts, Player.ts, ArtifactSystem.ts, …) keeps working unchanged.
-export { ItemTier, getItemKinds, classifyItemSlot, slotLabel, isTrinket, itemStatLines, descRestatesStats };
-export type { Item, ItemTag, ItemKind, WeaponType, Weapon, EquipSlot };
+export { ItemTier, getItemKinds, classifyItemSlot, slotLabel, isTrinket, itemStatLines, itemStatSegments, descRestatesStats };
+export type { Item, ItemStatSegment, ItemTag, ItemKind, WeaponType, Weapon, EquipSlot };
 
 export class ItemDatabase {
   // The full roster now lives in ./items/catalog.ts (pure data). ItemDatabase operates on it.
@@ -29,8 +29,17 @@ export class ItemDatabase {
     return [...this.items];
   }
 
+  // Items the player has earned-then-toggled-OFF (AchievementSystem owns this set). They stay
+  // unlocked/earned but are pulled from the shop pool so a targeted run isn't diluted by rewards
+  // you don't want. AchievementSystem.setDisabledItems keeps this in sync; default is empty.
+  private static disabledIds: Set<string> = new Set();
+
+  static setDisabledItems(ids: Set<string>): void {
+    this.disabledIds = new Set(ids);
+  }
+
   static getUnlockedItems(): Item[] {
-    return this.items.filter(item => item.unlocked);
+    return this.items.filter(item => item.unlocked && !this.disabledIds.has(item.id));
   }
 
   static getItemById(id: string): Item | undefined {

@@ -2,6 +2,7 @@
 
 import { Game } from './Game';
 import { STARTING_CLASSES } from './Classes';
+import { AchievementSystem, ACHIEVEMENTS } from './AchievementSystem';
 import { SKILL_NODES, SKILL_EDGES, neighborsOf, startNodeForClass } from './SkillTree';
 import { MeleeAttack } from './MeleeAttack';
 import { AoeZone } from './AoeZone';
@@ -43,6 +44,7 @@ app.innerHTML = `
       <button id="startBtn" class="menu-btn">New Game</button>
       <button id="continueBtn" class="menu-btn" style="display: none;">Continue</button>
       <button id="upgradesBtn" class="menu-btn">Village</button>
+      <button id="achievementsBtn" class="menu-btn">Achievements</button>
     </div>
     <div id="joystick-zone"></div>
   </div>
@@ -57,6 +59,8 @@ const game = new Game(canvas);
 (window as unknown as { __AoeZone: typeof AoeZone }).__AoeZone = AoeZone;
 // Dev/QA hook: lets tooling enumerate the starting-class roster. Not a public API.
 (window as unknown as { __STARTING_CLASSES: typeof STARTING_CLASSES }).__STARTING_CLASSES = STARTING_CLASSES;
+// Dev/QA hook: lets tooling inspect achievements + drive the unlock/disable system. Not a public API.
+(window as unknown as { __ACHIEVEMENTS: object }).__ACHIEVEMENTS = { ACHIEVEMENTS, AchievementSystem };
 // Dev/QA hook: lets tooling inspect the passive skill-web graph. Not a public API.
 (window as unknown as { __SKILL_TREE: object }).__SKILL_TREE = { SKILL_NODES, SKILL_EDGES, neighborsOf, startNodeForClass };
 // Dev/QA hook: lets tooling construct/inspect a melee swing in isolation (style hit

@@ -6,7 +6,7 @@ import { Projectile } from './Projectile';
 import { MeleeAttack } from './MeleeAttack';
 import { Particle, DamageNumber } from './Particle';
 import { WaveManager } from './WaveManager';
-import { PlayerStats, ItemDatabase, getItemKinds, classifyItemSlot, slotLabel, itemStatLines, descRestatesStats, type Item, type EquipHolderKey } from './ItemSystem';
+import { PlayerStats, ItemDatabase, getItemKinds, classifyItemSlot, slotLabel, itemStatSegments, descRestatesStats, type Item, type EquipHolderKey } from './ItemSystem';
 import { STARTING_CLASSES, type StartingClass } from './Classes';
 import { SaveManager } from './SaveManager';
 import { Input } from './Input';
@@ -18,6 +18,7 @@ import { OrbitingOrb, Bomb, Shockwave } from './Weapons';
 import { AoeZone } from './AoeZone';
 import { SpawnTelegraph } from './SpawnTelegraph';
 import { MetaProgression } from './MetaProgression';
+import { AchievementSystem, ACHIEVEMENTS, type Achievement } from './AchievementSystem';
 import { ObjectPool } from './ObjectPool';
 import { Quadtree } from './Quadtree';
 import { PerformanceMonitor } from './PerformanceMonitor';
@@ -34,7 +35,7 @@ import { ArtifactSystem, ARTIFACTS, ROLLABLE_ARTIFACTS, getArtifactById, type Ar
 import { randomEvent, EVENTS, type GameEvent, type EventEffect, type EventOption } from './EventSystem';
 import { EvolutionSystem, type Evolution } from './EvolutionSystem';
 import { VillageScene } from './VillageScene';
-import { SkillTree, SKILL_NODES, SKILL_EDGES, ARM_COLOR, getNode, type SkillNode } from './SkillTree';
+import { SkillTree, SKILL_NODES, SKILL_EDGES, ARM_COLOR, getNode, neighborsOf, type SkillNode } from './SkillTree';
 import type { Scene } from './scenes/Scene';
 import { MenuScene } from './scenes/MenuScene';
 
@@ -46,7 +47,7 @@ import { MenuScene } from './scenes/MenuScene';
 //   'skilltree' — spend banked skill points (replaces the old level-up item pick)
 export type GameState =
   | 'menu' | 'classselect' | 'playing' | 'shop' | 'paused' | 'gameover' | 'village'
-  | 'map' | 'event' | 'reward' | 'rest' | 'skilltree';
+  | 'map' | 'event' | 'reward' | 'rest' | 'skilltree' | 'achievements';
 
 export class Game {
   // Shared context read by extracted Scenes (see scenes/Scene.ts). `readonly` because
@@ -232,6 +233,8 @@ export class Game {
   kills: number = 0;
   bossKills: number = 0;
   soulsEarnedThisRun: number = 0;
+  // Achievements earned in the just-ended run, surfaced as a banner on the game-over screen.
+  private newAchievementsThisRun: Achievement[] = [];
 
   // Game over details
   gameOverStats: {
@@ -299,6 +302,9 @@ export class Game {
     (window as unknown as { __classifyItemSlot: typeof classifyItemSlot }).__classifyItemSlot = classifyItemSlot;
     (window as unknown as { __EVENTS: typeof EVENTS }).__EVENTS = EVENTS;
     (window as unknown as { __ARTIFACTS: typeof ARTIFACTS }).__ARTIFACTS = ARTIFACTS;
+    (window as unknown as { __SKILL_NODES: typeof SKILL_NODES }).__SKILL_NODES = SKILL_NODES;
+    (window as unknown as { __SKILL_EDGES: typeof SKILL_EDGES }).__SKILL_EDGES = SKILL_EDGES;
+    (window as unknown as { __skillNeighbors: typeof neighborsOf }).__skillNeighbors = neighborsOf;
     this.canvas = canvas;
     this.renderer = new Renderer(canvas);
     this.input = new Input(canvas);
@@ -306,6 +312,10 @@ export class Game {
     this.waveManager = new WaveManager();
     this.playerStats = new PlayerStats();
     this.metaProgression = new MetaProgression();
+
+    // Reflect earned achievements (unlocked reward items) + the player's disabled set into the
+    // item database before any shop pool is built, so unlocks are live from the first run.
+    AchievementSystem.load();
 
     // PERFORMANCE: Initialize object pools
     this.projectilePool = new ObjectPool(
@@ -464,6 +474,19 @@ export class Game {
         this.enterVillage();
       });
     }
+
+    // Achievements button — milestone unlocks + click-to-disable reward pool.
+    const achievementsBtn = document.getElementById('achievementsBtn');
+    if (achievementsBtn) {
+      achievementsBtn.addEventListener('click', () => {
+        this.openAchievements();
+      });
+    }
+  }
+
+  /** Open the achievements screen (milestone unlocks + click-to-disable reward gear). */
+  openAchievements(): void {
+    this.state = 'achievements';
   }
 
   /** Open the class-select screen (user-facing entry: menu button, retry, embark). */
@@ -772,6 +795,9 @@ export class Game {
         break;
       case 'classselect':
         this.updateClassSelect();
+        break;
+      case 'achievements':
+        this.updateAchievements();
         break;
     }
   }
@@ -2240,6 +2266,104 @@ export class Game {
         this.renderer.drawText(line, textX, y + s(isMobile ? 32 : 34) + li * (bodyPx + s(3)), { size: bodyPx, align: 'left', color: '#d8c9a8' });
       }
     });
+  }
+
+  // ---- Achievements screen (milestone unlocks + click-to-disable reward pool) ----
+
+  /** Shared row layout so drawAchievements visuals and updateAchievements hitboxes never drift. */
+  private achievementLayout() {
+    const { s, W, H, isMobile } = this.screenScale();
+    const rowW = Math.min(W - s(24), s(isMobile ? 360 : 520));
+    const rowH = s(isMobile ? 46 : 52);
+    const gap = s(8);
+    const x0 = (W - rowW) / 2;
+    const topY = s(isMobile ? 78 : 96);
+    const backH = s(isMobile ? 34 : 38);
+    const backW = Math.min(rowW, s(200));
+    const backY = topY + ACHIEVEMENTS.length * (rowH + gap) + s(8);
+    const back = { x: (W - backW) / 2, y: backY, width: backW, height: backH };
+    return { s, W, H, isMobile, rowW, rowH, gap, x0, topY, back };
+  }
+
+  private updateAchievements(): void {
+    if (!this.input.mouseDown) return;
+    const { rowW, rowH, gap, x0, topY, back } = this.achievementLayout();
+    const mx = this.input.mouseX, my = this.input.mouseY;
+
+    // Back to menu.
+    if (pointInRect(mx, my, back)) {
+      this.input.mouseDown = false;
+      this.state = 'menu';
+      return;
+    }
+
+    // Tapping an EARNED row toggles its reward item in/out of the shop pool.
+    for (let i = 0; i < ACHIEVEMENTS.length; i++) {
+      const y = topY + i * (rowH + gap);
+      if (pointInRect(mx, my, { x: x0, y, width: rowW, height: rowH })) {
+        this.input.mouseDown = false;
+        const ach = ACHIEVEMENTS[i];
+        if (AchievementSystem.isEarned(ach.id)) {
+          AchievementSystem.toggleItemDisabled(ach.unlocksItemId);
+        }
+        return;
+      }
+    }
+  }
+
+  private drawAchievements(): void {
+    const ctx = this.renderer.getContext();
+    const { s, W, isMobile, rowW, rowH, gap, x0, topY, back } = this.achievementLayout();
+    this.paintBackdrop();
+
+    this.renderer.drawText('ACHIEVEMENTS', W / 2, s(isMobile ? 24 : 30), { size: s(isMobile ? 15 : 20), align: 'center', color: '#ffd700' });
+    this.renderer.drawText(
+      `${AchievementSystem.earnedCount()} / ${ACHIEVEMENTS.length} earned  ·  tap an unlocked reward to enable/disable it`,
+      W / 2, s(isMobile ? 24 : 30) + s(isMobile ? 16 : 20),
+      { size: s(isMobile ? 7 : 9), align: 'center', color: '#c8b998', maxWidth: rowW }
+    );
+
+    const iconBox = s(isMobile ? 22 : 26);
+    const nameX = x0 + s(10) + iconBox + s(8);
+    // Split each row into a left column (name + desc) and a right column (status + reward name)
+    // so the two never overlap; drawText auto-shrinks anything wider than its column.
+    const rightX = x0 + rowW - s(10);
+    const leftColW = rowW * 0.52;
+    const rightColW = rowW * 0.42;
+
+    ACHIEVEMENTS.forEach((ach, i) => {
+      const y = topY + i * (rowH + gap);
+      const earned = AchievementSystem.isEarned(ach.id);
+      const disabled = earned && AchievementSystem.isItemDisabled(ach.unlocksItemId);
+      const reward = ItemDatabase.getItemById(ach.unlocksItemId);
+
+      drawPanel(ctx, x0, y, rowW, rowH, DARK_WOOD_THEME, 4, 71 + i);
+
+      // Left icon: full-colour when earned, dimmed lock when still locked.
+      this.renderer.drawText(earned ? ach.icon : '🔒', x0 + s(10) + iconBox / 2, y + rowH / 2 + s(3), { size: iconBox, align: 'center', color: '#ffffff' });
+
+      const nameColor = earned ? '#ffd700' : '#8a7f68';
+      this.renderer.drawText(ach.name, nameX, y + s(isMobile ? 13 : 15), { size: s(isMobile ? 10 : 12), align: 'left', color: nameColor, maxWidth: leftColW });
+      // On earned rows the reward name occupies the right column, so clamp the desc to end
+      // before it (with a gap); on locked rows the desc gets the full left column width.
+      const descMaxW = earned ? Math.max(s(60), rightX - rightColW - nameX - s(8)) : leftColW;
+      this.renderer.drawText(ach.desc, nameX, y + s(isMobile ? 30 : 34), { size: s(isMobile ? 7 : 8), align: 'left', color: earned ? '#d8c9a8' : '#7d735e', maxWidth: descMaxW });
+
+      // Right column: status + (when earned) the reward it grants.
+      if (earned) {
+        const status = disabled ? 'DISABLED' : 'ENABLED';
+        const statusColor = disabled ? '#ff6b6b' : '#8ce99a';
+        this.renderer.drawText(status, rightX, y + s(isMobile ? 15 : 17), { size: s(isMobile ? 8 : 9), align: 'right', color: statusColor });
+        const rewardName = reward ? `${reward.icon} ${reward.name}` : ach.unlocksItemId;
+        this.renderer.drawText(rewardName, rightX, y + s(isMobile ? 31 : 35), { size: s(isMobile ? 7 : 8), align: 'right', color: disabled ? '#8a7f68' : '#c8b998', maxWidth: rightColW });
+      } else {
+        this.renderer.drawText('LOCKED', rightX, y + rowH / 2 + s(3), { size: s(isMobile ? 8 : 9), align: 'right', color: '#6b6250' });
+      }
+    });
+
+    // Back button.
+    drawPanel(ctx, back.x, back.y, back.width, back.height, DARK_WOOD_THEME, 4, 99);
+    this.renderer.drawText('BACK', back.x + back.width / 2, back.y + back.height / 2 + s(4), { size: s(isMobile ? 11 : 13), align: 'center', color: '#ffd700' });
   }
 
   /** Arm a hit-stop freeze, taking the longer of any overlapping request and
@@ -4121,6 +4245,13 @@ export class Game {
       personalBest: previousBest
     };
 
+    // Evaluate achievements for this run (reached wave + which class) — any newly earned unlock
+    // their reward item immediately and are shown on the game-over screen.
+    this.newAchievementsThisRun = AchievementSystem.checkRun(
+      this.getSelectedClassId(),
+      this.waveManager.currentWave
+    );
+
     // Update meta stats
     SaveManager.updateMetaAfterRun(this.waveManager.currentWave, this.kills);
     SaveManager.clearRun();
@@ -4185,6 +4316,9 @@ export class Game {
         break;
       case 'classselect':
         this.drawClassSelect();
+        break;
+      case 'achievements':
+        this.drawAchievements();
         break;
     }
     }
@@ -5261,11 +5395,30 @@ export class Game {
       // the equipped-item inspect popup). Skipped when the item has no numeric stats
       // (pure-mechanic pieces) so the row never renders empty.
       const statS = Math.max(s(6), Math.round(descSize * 0.9));
-      const stats = itemStatLines(item);
-      if (stats.length > 0) {
-        this.renderer.drawText(stats.join('  ·  '), textX, ty, {
-          size: statS, align: 'left', color: '#8ce99a', maxWidth: textW,
-        });
+      const segs = itemStatSegments(item);
+      const stats = segs.map(sg => sg.text);
+      if (segs.length > 0) {
+        // Draw each segment individually so drawbacks (a stat below identity) read
+        // RED while bonuses stay green — the at-a-glance "this power has a cost" cue.
+        // Press-Start-2P advances ~1em/glyph (Renderer's own convention), so we
+        // uniform-shrink the font to fit textW and lay segments out by char count.
+        const sep = '  ·  ';
+        const totalChars = segs.reduce((n, sg) => n + sg.text.length, 0) + sep.length * Math.max(0, segs.length - 1);
+        // Press Start 2P advances ~1em (font-px) per glyph, so total line width ≈ totalChars * effS.
+        // Shrink to fit textW — no hard lower floor, or dense 4-stat drawback items would overflow
+        // the card edge. Normal 2-3 stat items still land at statS (floor(textW/chars) > statS).
+        const effS = Math.min(statS, Math.max(1, Math.floor(textW / Math.max(1, totalChars))));
+        let sx = textX;
+        for (let i = 0; i < segs.length; i++) {
+          if (i > 0) {
+            this.renderer.drawText(sep, sx, ty, { size: effS, align: 'left', color: '#6b6250' });
+            sx += sep.length * effS;
+          }
+          this.renderer.drawText(segs[i].text, sx, ty, {
+            size: effS, align: 'left', color: segs[i].neg ? '#ff6b6b' : '#8ce99a',
+          });
+          sx += segs[i].text.length * effS;
+        }
         ty += statS + s(5);
       }
 
@@ -5394,7 +5547,8 @@ export class Game {
     };
     const nameCol = rarityColor[item.rarity] ?? '#ffffff';
     const level = item.upgradeLevel ?? 1;
-    const stats = itemStatLines(item);
+    const segs = itemStatSegments(item);
+    const stats = segs.map(sg => sg.text);
 
     // Panel geometry: centred card, width bounded for phone. Height grows with the
     // number of stat lines + wrapped description lines.
@@ -5457,17 +5611,19 @@ export class Game {
     cy += headerH + s(6);
 
     // Stat lines (two-up on wide panels to stay compact; single column on mobile).
-    if (stats.length > 0) {
+    // Drawbacks (a stat below its identity value) render RED so a build-locking
+    // downside reads instantly as a cost, not another green bonus.
+    if (segs.length > 0) {
       const statCols = isMobile ? 1 : 2;
       const colW = textW / statCols;
-      for (let i = 0; i < stats.length; i++) {
+      for (let i = 0; i < segs.length; i++) {
         const col = i % statCols;
         const rowY = cy + Math.floor(i / statCols) * lineH;
-        this.renderer.drawText(stats[i], contentX + col * colW, rowY, {
-          size: bodySize, align: 'left', color: '#8ce99a',
+        this.renderer.drawText(segs[i].text, contentX + col * colW, rowY, {
+          size: bodySize, align: 'left', color: segs[i].neg ? '#ff6b6b' : '#8ce99a',
         });
       }
-      cy += Math.ceil(stats.length / statCols) * lineH + s(4);
+      cy += Math.ceil(segs.length / statCols) * lineH + s(4);
     }
 
     // Description (wrapped, capped) — omitted when it merely restates the stat rows.
@@ -5906,6 +6062,23 @@ export class Game {
       color: '#c084fc'
     });
     ctx.restore();
+
+    // Newly-earned achievements this run — a gold "unlocked" line so a milestone reward is
+    // visible the moment it's earned (the gear is already live for the next run).
+    if (this.newAchievementsThisRun.length > 0) {
+      const unlockY = soulsY + (isMobile ? 44 : 40);
+      const first = this.newAchievementsThisRun[0];
+      const extra = this.newAchievementsThisRun.length - 1;
+      const label = extra > 0
+        ? `★ UNLOCKED: ${first.name} +${extra} more`
+        : `★ UNLOCKED: ${first.name}`;
+      this.renderer.drawText(label, this.canvas.width / 2, unlockY, {
+        size: isMobile ? 18 : 20,
+        bold: true,
+        align: 'center',
+        color: '#fbbf24'
+      });
+    }
 
     // Buttons
     const buttonWidth = isMobile ? Math.min(300, this.canvas.width - 60) : 260;

@@ -222,10 +222,15 @@ const ARM_DEFS: Record<string, ArmDef> = {
 };
 
 // Which arm each non-gunner class starts adjacent to (gunner starts at the center hub).
+// One class per themed arm, so every arm is the natural opening path for exactly one
+// class and the starting pick already commits the run toward that arm's keystones.
 const CLASS_START_ARM: Record<string, string> = {
-  ranger: 'alacrity',   // speed / fire-rate skirmisher
-  brawler: 'aegis',     // armor / HP bruiser
-  arcanist: 'might',    // glass-cannon damage
+  berserker:  'might',      // raw damage / execute — heavy melee
+  arcanist:   'precision',  // crit / pierce / chain — piercing beam glass cannon
+  ranger:     'alacrity',   // fire rate / speed — mobile spread skirmisher
+  prospector: 'fortune',    // gold / xp / pickup — economy snowball
+  reaver:     'vitality',   // HP / regen / lifesteal — sustain melee
+  brawler:    'aegis',      // armor / thorns — melee fortress
 };
 
 // Relative slot template applied to every arm. (radius, angleOffset°, role).
@@ -249,13 +254,17 @@ const ARM_TEMPLATE: Slot[] = [
   { key: 'b3',   r: 460, off: 12,  role: 'p'   },
   { key: 'pA',   r: 430, off: -26, role: 'pod' },
   { key: 'pB',   r: 430, off: 26,  role: 'pod' },
-  // Ring 4 — second notables.
+  // Ring 4 — second notables + pod hangers off them.
   { key: 'nC',   r: 565, off: -13, role: 'nC'  },
   { key: 'nD',   r: 565, off: 13,  role: 'nD'  },
   { key: 'mid4', r: 565, off: 0,   role: 'pod' },
-  // Ring 5 — travel converging toward the rim.
+  { key: 'pC',   r: 540, off: -28, role: 'pod' },
+  { key: 'pD',   r: 540, off: 28,  role: 'pod' },
+  // Ring 5 — travel converging toward the rim (two rungs each lane).
   { key: 'a5',   r: 670, off: -14, role: 'p'   },
   { key: 'b5',   r: 670, off: 14,  role: 's'   },
+  { key: 'a5o',  r: 655, off: -25, role: 'pod' },
+  { key: 'b5o',  r: 655, off: 25,  role: 'pod' },
   { key: 'mid5', r: 670, off: 0,   role: 'pod' },
   // Ring 6 — rim approach.
   { key: 'a6',   r: 775, off: -18, role: 's'   },
@@ -277,8 +286,12 @@ const ARM_EDGES: [string, string][] = [
   ['mid2', 'a3'], ['mid2', 'b3'],
   ['a3', 'nC'], ['b3', 'nD'],
   ['a3', 'mid4'], ['b3', 'mid4'],
+  ['nC', 'pC'], ['nD', 'pD'],
   ['nC', 'a5'], ['nD', 'b5'],
   ['mid4', 'a5'], ['mid4', 'b5'],
+  ['pC', 'a5o'], ['pD', 'b5o'],
+  ['a5', 'a5o'], ['b5', 'b5o'],
+  ['a5o', 'a6'], ['b5o', 'b6'],
   ['a5', 'mid5'], ['b5', 'mid5'],
   ['a5', 'a6'], ['b5', 'b6'],
   ['mid5', 'a6'], ['mid5', 'b6'],
@@ -353,8 +366,8 @@ function buildTree(): { nodes: SkillNode[]; edges: [string, string][] } {
   }
 
   // Non-gunner class start nodes, each just inside its thematic arm's gateway.
-  const classIcon: Record<string, string> = { ranger: '🎯', brawler: '🗡️', arcanist: '⚡' };
-  const className: Record<string, string> = { ranger: 'Ranger', brawler: 'Brawler', arcanist: 'Arcanist' };
+  const classIcon: Record<string, string> = { berserker: '🪓', arcanist: '⚡', ranger: '🎯', prospector: '💰', reaver: '🩸', brawler: '🗡️' };
+  const className: Record<string, string> = { berserker: 'Berserker', arcanist: 'Arcanist', ranger: 'Ranger', prospector: 'Prospector', reaver: 'Reaver', brawler: 'Brawler' };
   for (const [cls, armKey] of Object.entries(CLASS_START_ARM)) {
     const ai = SKILL_ARMS.findIndex(a => a.key === armKey);
     const theta = deg2rad((360 / armCount) * ai);

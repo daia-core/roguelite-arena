@@ -120,23 +120,31 @@ export function slotLabel(item: Item): string {
 //   • flat fields are stored as 15 → shown as "+15" (may be negative, e.g. -10 Max HP)
 // Booleans render as a bare capability label. Long-tail/exotic fields are left to the
 // hand-written description so this list stays a scannable core, not an exhaustive dump.
-export function itemStatLines(item: Item): string[] {
-  const lines: string[] = [];
+// A single displayed stat, tagged so the UI can colour drawbacks distinctly.
+// `neg` is true when this line is a downside (a reduction to a higher-is-better
+// stat) — every field surfaced here is one where "more is better", so a value
+// below the identity (multiplier <1, or a negative flat/fraction) is always a
+// penalty. Powerful drawback-gated items lean on this to render their trade-off
+// in red instead of hiding it in the same green as their upside.
+export interface ItemStatSegment { text: string; neg: boolean; }
+
+export function itemStatSegments(item: Item): ItemStatSegment[] {
+  const segs: ItemStatSegment[] = [];
   const mul = (v: number | undefined, label: string) => {
     if (v === undefined) return;
     const p = Math.round((v - 1) * 100);
-    if (p !== 0) lines.push(`${p > 0 ? '+' : ''}${p}% ${label}`);
+    if (p !== 0) segs.push({ text: `${p > 0 ? '+' : ''}${p}% ${label}`, neg: p < 0 });
   };
   const frac = (v: number | undefined, label: string) => {
     if (v === undefined) return;
     const p = Math.round(v * 100);
-    if (p !== 0) lines.push(`${p > 0 ? '+' : ''}${p}% ${label}`);
+    if (p !== 0) segs.push({ text: `${p > 0 ? '+' : ''}${p}% ${label}`, neg: p < 0 });
   };
   const flat = (v: number | undefined, label: string) => {
     if (v === undefined || v === 0) return;
-    lines.push(`${v > 0 ? '+' : ''}${v} ${label}`);
+    segs.push({ text: `${v > 0 ? '+' : ''}${v} ${label}`, neg: v < 0 });
   };
-  const flag = (v: boolean | undefined, label: string) => { if (v) lines.push(label); };
+  const flag = (v: boolean | undefined, label: string) => { if (v) segs.push({ text: label, neg: false }); };
 
   // Offense
   mul(item.damageMultiplier, 'Damage');
@@ -177,7 +185,11 @@ export function itemStatLines(item: Item): string[] {
   flag(item.novaPulse, 'Nova Pulse');
   flag(item.auxMelee, 'Orbit Blade');
   flat(item.orbitOrbs, 'Orbit Orbs');
-  return lines;
+  return segs;
+}
+
+export function itemStatLines(item: Item): string[] {
+  return itemStatSegments(item).map(s => s.text);
 }
 
 // True when the hand-written description merely restates the auto-generated stat

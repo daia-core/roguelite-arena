@@ -8,6 +8,90 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-07 (evening) — Achievements-as-unlocks, build-locking drawback gear, run-defining class starts
+
+Three connected systems that make builds commit harder and give the meta a reason to grind.
+
+**Achievements now unlock signature gear.** A new Achievements screen (menu button) lists nine
+milestones — beat wave 10 as each of the seven classes for that class's tailor-made relic
+(Berserker's Totem, Arcanist's Focus, Ranger's Quiver…), plus reach wave 15 / wave 20 with any
+class for two endurance items. Earning one flips its reward from locked into the shop pool
+permanently (persisted to localStorage), and a gold "★ UNLOCKED" banner fires on the game-over
+screen the moment you earn it. Earned rows show the reward and its status; locked rows stay dimmed
+with a 🔒.
+
+**You can disable any unlock to keep the pool clean.** Tap an earned reward on the Achievements
+screen to toggle it ENABLED (green) / DISABLED (red). A disabled item stays earned but drops out of
+the shop pool — so when you're chasing a specific build, your unlocked-but-unwanted gear stops
+diluting the offers. Toggles persist across runs.
+
+**Strong items now carry real drawbacks that lock in a build.** Eight new legendary "build-lock"
+pieces pair a big upside with a genuine cost — Prism of Ruin (+140% Damage, +25% Crit, but −65 Max
+HP: glass cannon), Titan's Bulwark (+150 HP / +14 Armor / thorns, but −30% Fire Rate and −40%
+Speed: an anvil, not a dancer), Leechbound Pact (+90% Melee, +45% Lifesteal, but −50 HP / −4 Armor),
+and five more. To make the trade-off legible, **negative stats now render RED** on both the shop
+card and the equipped-item inspect popup (bonuses stay green) — the "this power has a cost" cue at a
+glance. Dense multi-stat lines now auto-shrink to fit the card instead of spilling past the edge.
+
+**Starting classes are now run-defining first choices.** Each of the seven classes starts with a
+distinct WEAPON and a different SKILL-TREE START POSITION on the passive web, so the opening minutes
+already push toward an identity: Berserker opens on the Might arm with a tier-2 hammer, Arcanist on
+Precision with a tier-3 laser, Ranger on Alacrity with a shotgun, Prospector on Fortune with an
+orbital, Reaver on Vitality with a spear, Brawler on Aegis with dual blades, Gunner stays the
+flexible hub start.
+
+QA: tsc clean; new suites pass — achievements 16/16 + persistence, class-select 30/30 (all seven
+weapons + start arms correct), shop 8-slot 29/29, stats-popup red-negatives; regressions green
+(live-smoke full playthrough, flood stress, catalog integrity 343 items). Verified live at 390px
+portrait: Achievements screen renders clean with enable/disable toggles; drawback cards show red
+negatives within the card bounds.
+
+---
+
+## 2026-07-07 (evening) — Skill tree, PoE-scale: 160 nodes, 18 keystones, real build-defining unlocks
+
+**The passive web nearly doubled (88 → 160 nodes) and got a lot deeper.** Each of the six arms
+(Might / Precision / Alacrity / Fortune / Vitality / Aegis) now fans out as TWO parallel lanes of
+travel nodes with rungs between them, punctuated by FOUR notables (each anchoring a small pod of
+extra stat nodes) and capped by THREE keystones at the rim — plus cross-arm BRIDGE edges that link
+neighbouring arms into an outer wheel. The result is a real web with many alternate routes to the
+rim, not just radial spokes: you can path between themes without returning to the hub.
+
+**Unlocks are now genuinely run-defining, not just bigger numbers.** Keystones and several notables
+grant real combat *behaviours* — the same hooks items use — mixed with stat trade-offs, PoE-style:
+- **Cull the Weak** (Might) — instantly kill enemies below 15% HP.
+- **Cataclysm** (Might) — your hits explode in an area (−15% Fire Rate).
+- **Splintering Rounds** (Precision) — projectiles pierce +3 enemies (−10% Damage).
+- **Storm Caller** (Precision) — +60% chain-lightning arcing between enemies.
+- **Saturation Fire** (Alacrity) — +2 projectiles per shot (−15% Fire Rate).
+- **Sanguine Pact** (Vitality) — +12% lifesteal, +30 Max HP (a real vampire build).
+- **Retribution** (Aegis) — +60% thorns, reflecting damage back at attackers.
+- **Immovable** (Aegis) — massive knockback that flings enemies off you.
+- Notables seed the same behaviours at smaller doses (Piercer, Arc Weaver, Volley, Bloodthirst,
+  Spiked Mail, Bracing, Executioner…) so a build ramps into its identity, then a keystone commits.
+
+18 keystones in total (was 6), including the original stat trade-offs (Overwhelm, Assassinate,
+Frenzy, Juggernaut, Bulwark, Treasure Hunter) plus new ones (Blood Money, Scavenger, Undying,
+Blitz). Every keystone is reachable by pathing outward; the tree stays one fully-connected web.
+
+Mechanically, tree behaviour grants fold into the existing PlayerStats getters (getPiercing,
+getMultishot, getLifesteal, getThorns, getChainLightningChance, getExecuteThreshold,
+hasExplosionOnHit, getKnockback) additively — so a keystone reuses the exact combat hooks an item
+would, no combat-code rewrite, and defaults (0/false) mean nothing changes until you allocate.
+
+**QA:** new `qa-skill-tree.mjs` regression asserts 160 nodes / 18 keystones, zero orphans, every
+keystone allocatable, and all eight behaviour grants actually reach the getters (pierce 4, multishot
+3, lifesteal 22%, thorns 80%, chain 80%, execute 23%, knockback 360, explosions on) with a
+fully-allocated tree. Live-smoke + flood regressions pass; skill-tree screen renders clean at mobile
+& desktop, default and zoomed-out, no console errors.
+
+**Commit/build:** bundle `index-DYvfvHMW.js`.
+**Live-verified:** https://roguelite-game-blush.vercel.app serves the new bundle; production JS
+contains the new keystones (Cull the Weak, Cataclysm, Splintering Rounds, Storm Caller, Saturation
+Fire, Sanguine Pact, Retribution, Immovable).
+
+---
+
 ## 2026-07-07 (evening) — Spawns breathe across the wave + randomized wave archetypes
 
 **Enemies no longer dump at the bell — they release across the whole wave.** Spawning is now

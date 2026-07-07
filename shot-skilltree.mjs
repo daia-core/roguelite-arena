@@ -37,7 +37,7 @@ async function shot(name, vp, classId, prep) {
     for (const id of near.slice(0, 2)) { if (st.allocate(id)) path0.push(id); const next = T.neighborsOf(id).filter(x=>{const n=T.SKILL_NODES.find(y=>y.id===x); return n && n.type!=='start' && !st.isAllocated(x);}); if (next[0]) st.allocate(next[0]); }
     st.recomputeInto(g.playerStats);
     g.state = 'skilltree';
-    if (prep === 'zoomout') { g.stApplyZoom(0.35); }
+    if (prep === 'zoomout') { g.stApplyZoom(0.28); }
     g.draw();
   }, classId, prep);
   await new Promise(r => setTimeout(r, 150));
