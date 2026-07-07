@@ -605,6 +605,10 @@ export interface OnHitProcOpts {
   fragileChance: number;
   exposedChance: number;
   condemnedChance: number;
+  // Phase 3c additions
+  brittleChance: number;
+  dazedChance: number;
+  disorientedChance: number;
   hasPoison: boolean;
   poisonSpreads: boolean;
   elementalMult: number;
@@ -648,6 +652,16 @@ export function rollOnHitProcs(opts: OnHitProcOpts): OnHitProcResult {
   }
   if (opts.roll(opts.condemnedChance)) {
     effects.push({ id: 'condemned', opts: { stacks: 1 } });
+  }
+  // Phase 3c amplifiers
+  if (opts.roll(opts.brittleChance)) {
+    effects.push({ id: 'brittle', opts: { stacks: 1 } });
+  }
+  if (opts.roll(opts.dazedChance)) {
+    effects.push({ id: 'dazed', opts: { stacks: 1 } });
+  }
+  if (opts.roll(opts.disorientedChance)) {
+    effects.push({ id: 'disoriented', opts: { stacks: 1 } });
   }
 
   return { effects };

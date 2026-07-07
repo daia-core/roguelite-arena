@@ -240,6 +240,7 @@ interface ItemAgg {
   swingArcBonus: number; swingAoe: number;
   // new-engine status-effect proc chances (additive; 0–1 range)
   fragileChance: number; exposedChance: number; condemnedChance: number;
+  brittleChance: number; dazedChance: number; disorientedChance: number;
   // conditional/triggered (additive rates; paid out at runtime by Game when the condition holds)
   waveRampDamage: number; lowHpPower: number; killStackDamage: number;
   highHpPower: number; goldScaleDamage: number;
@@ -270,6 +271,7 @@ function freshAgg(): ItemAgg {
     interestBonus: 0, luck: 0, orbitOrbs: 0, swingRangeBonus: 0,
     swingArcBonus: 0, swingAoe: 0,
     fragileChance: 0, exposedChance: 0, condemnedChance: 0,
+    brittleChance: 0, dazedChance: 0, disorientedChance: 0,
     waveRampDamage: 0, lowHpPower: 0, killStackDamage: 0,
     highHpPower: 0, goldScaleDamage: 0,
     executeThreshold: 0,
@@ -555,6 +557,9 @@ export class PlayerStats {
       if (item.fragileChance) a.fragileChance += item.fragileChance * lv;
       if (item.exposedChance) a.exposedChance += item.exposedChance * lv;
       if (item.condemnedChance) a.condemnedChance += item.condemnedChance * lv;
+      if (item.brittleChance) a.brittleChance += item.brittleChance * lv;
+      if (item.dazedChance) a.dazedChance += item.dazedChance * lv;
+      if (item.disorientedChance) a.disorientedChance += item.disorientedChance * lv;
       // Conditional/triggered (additive rates; Game pays them out per-frame)
       if (item.waveRampDamage) a.waveRampDamage += item.waveRampDamage * lv;
       if (item.lowHpPower) a.lowHpPower += item.lowHpPower * lv;
@@ -1097,6 +1102,15 @@ export class PlayerStats {
   getCondemnedChance(): number {
     return Math.min(1, this.ensureAgg().condemnedChance);
   }
+  getBrittleChance(): number {
+    return Math.min(1, this.ensureAgg().brittleChance);
+  }
+  getDazedChance(): number {
+    return Math.min(1, this.ensureAgg().dazedChance);
+  }
+  getDisorientedChance(): number {
+    return Math.min(1, this.ensureAgg().disorientedChance);
+  }
 
   getMulticastChance(): number {
     return Math.min(0.9, this.ensureAgg().multicast); // cap so it never becomes an infinite volley
@@ -1226,6 +1240,7 @@ export class PlayerStats {
     'interestBonus', 'luck', 'orbitOrbs', 'swingRangeBonus',
     'swingArcBonus', 'swingAoe',
     'fragileChance', 'exposedChance', 'condemnedChance',
+    'brittleChance', 'dazedChance', 'disorientedChance',
   ];
   private static readonly OFFER_BOOL_FIELDS: (keyof Item)[] = [
     'explosionOnHit', 'shield', 'homing', 'poison', 'poisonSpread', 'auxMelee',

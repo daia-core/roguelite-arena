@@ -1771,7 +1771,8 @@ export class Enemy {
       this.bleedTimer <= 0 && this.doomTimer <= 0 && this.woundMult <= 1 &&
       this.slowTimer <= 0 && !this.statusFX.has('fragility') &&
       !this.statusFX.has('exposed') && !this.statusFX.has('condemned') &&
-      !this.statusFX.has('brittle') && !this.statusFX.has('dazed')
+      !this.statusFX.has('brittle') && !this.statusFX.has('dazed') &&
+      !this.statusFX.has('disoriented')
     ) return;
 
     const r = this.typeData.radius;
@@ -1941,6 +1942,34 @@ export class Enemy {
         const sy2 = Math.floor(this.y + Math.sin(angle) * (r + 5));
         ctx.fillRect(sx2 - 2, sy2 - 2, 4, 4);
       }
+    }
+
+    // BRITTLE — beige/tan hairline cracks on the enemy body (+flat damage per hit)
+    const brittle = this.statusFX.get('brittle');
+    if (brittle && brittle.stacks > 0) {
+      ctx.fillStyle = '#d0c8b0';
+      ctx.globalAlpha = 0.55;
+      const crackCount = Math.min(4, brittle.stacks);
+      for (let i = 0; i < crackCount; i++) {
+        const a = seed + i * 1.57;
+        const cx3 = Math.floor(this.x + Math.cos(a) * r * 0.4);
+        const cy3 = Math.floor(this.y + Math.sin(a) * r * 0.4);
+        ctx.fillRect(cx3 - 1, cy3 - 4, 2, 8);
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    // DISORIENTED — peach rings expanding outward (crit damage amplified)
+    const disoriented = this.statusFX.get('disoriented');
+    if (disoriented && disoriented.stacks > 0) {
+      const pulse = 0.3 + 0.15 * Math.sin(performance.now() / 300 + seed);
+      ctx.strokeStyle = '#f8c090';
+      ctx.globalAlpha = pulse;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, r + 4 + disoriented.stacks * 0.5, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
     }
 
     ctx.restore();

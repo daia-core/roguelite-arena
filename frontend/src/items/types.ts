@@ -179,6 +179,9 @@ export function itemStatSegments(item: Item): ItemStatSegment[] {
   frac(item.fragileChance, 'Fragility');
   frac(item.exposedChance, 'Exposed');
   frac(item.condemnedChance, 'Condemned');
+  frac(item.brittleChance, 'Brittle');
+  frac(item.dazedChance, 'Dazed');
+  frac(item.disorientedChance, 'Disoriented');
   frac(item.multicast, 'Multicast');
   // Capability flags
   flag(item.shield, 'Shield');
@@ -237,8 +240,9 @@ const RESTATE_SYN: Record<string, string> = {
   fragility: 'fragility', fragile: 'fragility',
   exposed: 'exposed', expose: 'exposed', exposure: 'exposed',
   condemned: 'condemned', condemn: 'condemned',
-  brittle: 'brittle',
+  brittle: 'brittle', brittleness: 'brittle',
   dazed: 'dazed', daze: 'dazed',
+  disoriented: 'disoriented', disorient: 'disoriented',
 };
 function restateTokens(s: string): Set<string> {
   const raw = s.toLowerCase().replace(/[^a-z0-9%+\-]/g, ' ').split(/\s+/).filter(Boolean);
@@ -401,6 +405,10 @@ export interface Item {
   fragileChance?: number;  // on-hit chance to apply Fragility: +1.5% ALL damage taken per stack
   exposedChance?: number;  // on-hit chance to apply Exposed: +4% direct-hit damage per stack
   condemnedChance?: number; // on-hit chance to apply Condemned: at 10 stacks next crit deals +500%
+  // Phase 3c — additional StatusEffectEngine procs
+  brittleChance?: number;      // on-hit chance to apply Brittle: +1 flat damage per hit per stack (max 15)
+  dazedChance?: number;        // on-hit chance to apply Dazed: +1% crit chance received per stack (max 10)
+  disorientedChance?: number;  // on-hit chance to apply Disoriented: +1% crit damage received per stack (max 10)
   multicast?: number; // chance the ranged weapon fires a bonus volley the same frame
 
   // Brotato-inspired mechanics
