@@ -4553,6 +4553,25 @@ export class Game {
     return discovery;
   }
 
+  // Evolution hint for a shop card: if this item is the catalyst for a weapon evolution
+  // and the player already owns the base weapon (or vice versa), surface the evolution
+  // name so players can understand the chain without reading the COMBOS guide.
+  // Returns null when this item is not part of any reachable evolution pair.
+  private getCardEvolutionInfo(item: Item): { name: string } | null {
+    const ownedIds = new Set(this.playerStats.items.map(i => i.id));
+    for (const evo of this.evolutionSystem.getAllEvolutions()) {
+      // This card is the catalyst — player owns the base weapon → pair is complete, evolves at wave 8
+      if (item.id === evo.catalystItemId && ownedIds.has(evo.baseWeaponId) && !ownedIds.has(evo.evolvedWeaponId)) {
+        return { name: evo.name };
+      }
+      // This card is the base weapon — player owns the catalyst → pair is complete, evolves at wave 8
+      if (item.id === evo.baseWeaponId && ownedIds.has(evo.catalystItemId) && !ownedIds.has(evo.evolvedWeaponId)) {
+        return { name: evo.name };
+      }
+    }
+    return null;
+  }
+
   /**
    * Draw the equipment strip — the four gear slots (Weapon A, Weapon B, Offhand,
    * Amulet) as a row of labelled boxes showing each equipped item's icon (or an empty
@@ -5076,12 +5095,16 @@ export class Game {
       // Completing a duo is the game's biggest threshold moment → loudest highlight.
       const duoInfo = this.getCardDuoInfo(item);
       const completesDuo = duoInfo?.completes ?? false;
+      // Weapon evolution hint: if this item completes an evolution pair (base+catalyst),
+      // surface the evo name so the player doesn't need to read the COMBOS guide.
+      const evoInfo = this.getCardEvolutionInfo(item);
 
       // Card: wood panel with a crisp rarity/synergy-colored inner border
       // (pixel-art treatment — no glows, no gradients)
       drawPanel(ctx, x, y, itemWidth, itemHeight, DARK_WOOD_THEME, 4, i);
       let borderColor = rarityColor;
       if (completesDuo) borderColor = '#ffd43b';
+      else if (evoInfo) borderColor = '#ff9f43';
       else if (isDuplicate) borderColor = '#4a9eff';
       else if (hasTagMatch || hasSynergy) borderColor = '#7bd94a';
       ctx.save();
@@ -5193,11 +5216,12 @@ export class Game {
       );
 
       // Synergy / combo indicator — NAME the combo so it's legible, right-aligned on
-      // the badge row. Priority: completes a named duo > teaches a pairing > tag fit.
-      if (completesDuo || duoInfo || hasTagMatch || hasSynergy) {
+      // the badge row. Priority: completes a duo > evolution pair > teaches a pairing > tag fit.
+      if (completesDuo || evoInfo || duoInfo || hasTagMatch || hasSynergy) {
         let indicatorText = '';
         let indicatorColor = '#7bd94a';
         if (completesDuo && duoInfo) { indicatorText = duoInfo.name.toUpperCase(); indicatorColor = '#ffd43b'; }
+        else if (evoInfo) { indicatorText = `EVO: ${evoInfo.name.toUpperCase()}`; indicatorColor = '#ff9f43'; }
         else if (duoInfo) { indicatorText = `+ ${duoInfo.partner}`; indicatorColor = '#74c0fc'; }
         else if (hasTagMatch) { indicatorText = `${matchingTags.map(t => t.toUpperCase()).join('/')} FIT`; indicatorColor = '#7bd94a'; }
         else if (hasSynergy) { indicatorText = 'GOOD FIT'; indicatorColor = '#7bd94a'; }

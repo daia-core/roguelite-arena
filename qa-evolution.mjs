@@ -133,6 +133,45 @@ const result = await page.evaluate(() => {
     ok('e2e: announcement banner fired', g.evolutionBannerTimer > 0 && /EVOLVED/.test(g.evolutionBannerText), `text="${g.evolutionBannerText}" t=${g.evolutionBannerTimer}`);
   }
 
+  // ---- D) Shop card evolution hint (getCardEvolutionInfo) ----
+  // Verifies the discovery logic so players see "EVO: NAME" on the catalyst card
+  // when they own the base weapon (and vice versa), making evolutions discoverable
+  // without reading the COMBOS guide.
+  {
+    const e = EVOS[0]; // shotgun_evolution: base=shotgun_weapon_t2, catalyst=explosive_t3
+    const bw = DB.getItemById(e.baseWeaponId);
+    const cat = DB.getItemById(e.catalystItemId);
+
+    g.startNewGame();
+    const s = g.playerStats;
+
+    // No items → neither card should show an evo hint
+    const noHintForCat = g.getCardEvolutionInfo(cat);
+    const noHintForBase = g.getCardEvolutionInfo(bw);
+    ok('hint: no evo hint when player owns neither item', noHintForCat === null && noHintForBase === null,
+      `cat=${JSON.stringify(noHintForCat)} base=${JSON.stringify(noHintForBase)}`);
+
+    // Player owns base weapon → catalyst card should show the evo hint
+    s.addItem(bw);
+    const hintOnCat = g.getCardEvolutionInfo(cat);
+    ok('hint: catalyst card shows evo name when base is owned', hintOnCat?.name === e.name,
+      `hint=${JSON.stringify(hintOnCat)} expected=${e.name}`);
+
+    // Player owns catalyst → base weapon card should show the evo hint
+    s.removeItem(e.baseWeaponId);
+    s.addItem(cat);
+    const hintOnBase = g.getCardEvolutionInfo(bw);
+    ok('hint: base weapon card shows evo name when catalyst is owned', hintOnBase?.name === e.name,
+      `hint=${JSON.stringify(hintOnBase)} expected=${e.name}`);
+
+    // Once evolved, no hint (evolution already happened)
+    s.addItem(bw);
+    s.addItem(DB.getItemById(e.evolvedWeaponId));
+    const noHintAfterEvo = g.getCardEvolutionInfo(cat);
+    ok('hint: no evo hint once evolved weapon is already owned', noHintAfterEvo === null,
+      `hint=${JSON.stringify(noHintAfterEvo)}`);
+  }
+
   return { checks };
 });
 
