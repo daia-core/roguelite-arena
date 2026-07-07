@@ -8,6 +8,51 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-07 (evening) — No more double stat text on item cards
+
+Felix: "a lot of items have double stat texts — one line nice styled in color and one in white."
+Item cards draw a colored stat row from the item's real numbers, then draw the hand-written
+description underneath *unless* it just restates those stats. That restatement check only caught an
+**exact** normalized match, so ~132 items whose description merely reworded the same numbers
+("+15 max health" vs the "+15 Max HP" chip, "+45% melee/swing damage, -8% fire rate" vs
+"+45% Melee Dmg · -8% Fire Rate") slipped through and printed the numbers twice — colored chip plus
+a redundant white line.
+
+The suppressor is now **token-based**: a description is treated as a restatement when every
+meaningful word in it is already covered by the stat row, after dropping filler words and folding
+wording synonyms (health→hp, "move speed"→speed, projectile→multishot, and "+15%"/"15%" together).
+That lifts the suppressed count from 33 to **206** with zero genuine-flavor descriptions wrongly
+hidden (checked every suppressed line by hand).
+
+Also in this pass:
+- **Knockback now shows on the card.** Thirteen items carried a knockback punch that never appeared
+  in the stat row — it only lived in their description text. It's now a proper stat chip, so those
+  descriptions stop being the only place the mechanic is mentioned.
+- **Three descriptions rewritten to flavor-only** so their numbers live once, in the chip row:
+  Berserker Rage → "Fury over safety.", Bullet Hose → "Volume over precision.", Blood Pact → "Power
+  paid in blood." — the last also corrects a stale number (its text said −25% max HP; the item is
+  −35).
+
+QA: tsc clean; qa-catalog-integrity CLEAN (343 items); qa-shop-8slot 29/29; a 390px shop screenshot
+confirms a single colored stat row per card, flavor-only description lines, red negatives, and the
+new Knockback chip. Commits `7d02261` (fix) · live bundle `index-blJTVwDM.js` (verified 200).
+
+---
+
+## 2026-07-07 (evening) — Four global trade-off keystones anchor the skill tree's core
+
+Follow-up to the keystone review: the inner ring now holds **four build-defining global keystones**
+any class can reach in a single spend — **Glass Cannon** (+60% Damage, −90 Max HP), **Iron Will**
+(+20% Damage, +6 HP/s, −25% Move Speed), **Echo Strike** (+2 projectiles, −15% Fire Rate, −10%
+Damage), and **Wanderlust** (+30% Speed, +20% Fire Rate, −30 Max HP). Each is a hard commitment, not
+a free stat. The three per-arm rim keystones were also isolated into terminal nodes (removed the
+kL↔kM and kM↔kR edges) so reaching the rim no longer lets you sweep up all three — you commit to one.
+
+QA: qa-skilltree 36/36, qa-skill-tree (connectivity + grants-live) pass, qa-skilltree-pinch 7/7.
+Commit `60573f5` · live bundle `index-DLaiNjEB.js` (verified 200).
+
+---
+
 ## 2026-07-07 (evening) — Skill-tree review: every keystone is now a real trade-off
 
 Review pass on the 160-node tree (Felix: "make sure it's incredible"). The web itself is solid —
