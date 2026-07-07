@@ -8,6 +8,23 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-08 — Elite loot cascade + confirmed duo synergy hints (commit `9fa6d21`, bundle `index-Bfhf3Iqp.js`)
+
+**Elite loot cascade** — clearing an elite or boss wave now injects a free tier-appropriate item as
+a 4th shop slot. The slot shows **FREE!** in green; buying it costs 0 gold. Tiers scale with wave:
+Uncommon (waves 1–5), Rare (waves 6–10), Legendary (wave 11+). This makes elite battles feel
+materially rewarding beyond the +40 gold + artifact pick they already granted.
+
+**Duo synergy hints confirmed live** — shop cards already surface named duo info:
+- Gold border + duo name when buying the item *completes* a duo (e.g. "STORM SURGE")
+- Blue "+ partner name" indicator when you own one half (e.g. "+ Chain Lightning t3")
+- These pre-existed; no change needed.
+
+Shop grid now dynamically sizes (3 columns → 2 rows when a cascade item is present).
+Bundle `index-Bfhf3Iqp.js` verified live at mobile portrait viewport.
+
+---
+
 ## 2026-07-08 — Phase 3c: Brittle / Dazed / Disoriented amp debuffs (commit `3d626a1`, bundle `index-CcZFH2_8.js`)
 
 **StatusEffectEngine completion** — three amp-debuff effects (fully wired in the damage pipeline
