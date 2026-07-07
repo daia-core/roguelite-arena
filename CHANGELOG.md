@@ -8,6 +8,27 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-08 — Phase 3c: Brittle / Dazed / Disoriented amp debuffs (commit `3d626a1`, bundle `index-CcZFH2_8.js`)
+
+**StatusEffectEngine completion** — three amp-debuff effects (fully wired in the damage pipeline
+since Phase 3b) are now accessible through items. No items could apply them before; every crit
+bonus and flat-damage bonus call in Game.ts was live but receiving 0.
+
+**New build archetypes (22 items across t1–t4):**
+- **Brittle** — each on-hit stack adds +1 flat bonus damage per hit (up to +15). Scales with
+  attack speed; excels vs high-HP enemies where percent-amp falls off. Tan crack visuals on enemy.
+- **Dazed** — each stack raises the enemy's effective crit chance by +1% (up to +10%). Pairs
+  naturally with any crit build: more crits for free. Yellow spinning-star visuals.
+- **Disoriented** — each stack amplifies incoming crit damage by +1% (up to +10%). Synergises
+  with Dazed for cascading crit damage. Pulsing peach ring visual on enemy.
+- **Hybrid combos**: Confusion Engine (Dazed+Disoriented), Total Debilitation
+  (all four amps together), Overwhelming Precision (massive crit-amp keystone), Vertigo Engine
+  (Disoriented+Condemned detonation), Glass Hammer, Shattering Gaze.
+
+1335 items total (was 1313). Bundle verified live on mobile portrait.
+
+---
+
 ## 2026-07-08 — Early-bite balance pass (commit `dbbc4e6`, bundle `index-DZwchLsH.js`)
 
 Three targeted fixes from the Option B recommendation in `BALANCE-enemy-scaling-review.md`:
