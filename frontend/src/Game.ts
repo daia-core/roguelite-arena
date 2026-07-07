@@ -1297,11 +1297,24 @@ export class Game {
           if (proj.hasHit(enemy.id)) continue; // Already hit (piercing)
 
           if (segmentCircleHit(px0, py0, proj.x, proj.y, enemy.x, enemy.y, enemy.typeData.radius + proj.radius)) {
-            const isCrit = this.player.rollCrit();
+            // Dazed debuff raises effective crit chance against this enemy
+            const sfxBonusCrit = enemy.statusFX.getBonusCritChanceReceived();
+            const isCrit = this.player.rollCrit() || (sfxBonusCrit > 0 && Math.random() < sfxBonusCrit);
             let damage = isCrit ? this.player.getCritDamage(proj.damage) : proj.damage;
+            // Disoriented debuff amplifies crit damage received
+            if (isCrit) {
+              const bonusCritDmg = enemy.statusFX.getBonusCritDamageReceived();
+              if (bonusCritDmg > 0) damage *= (1 + bonusCritDmg);
+            }
             if (enemy.typeData.isBoss) {
               damage *= this.metaProgression.getBossDamageMultiplier();
             }
+            // Status-effect damage amplifiers: Fragility (+%all dmg), Exposed (+%direct-hit), Brittle (+flat)
+            damage = damage * enemy.statusFX.getIncomingDamageMult() * enemy.statusFX.getDirectHitMult()
+                     + enemy.statusFX.getFlatHitBonus();
+            // Condemned: 10-stack threshold detonates on next crit for a massive multiplier
+            const condemnedBonus = enemy.statusFX.checkCondemned(isCrit);
+            if (condemnedBonus > 0) damage *= condemnedBonus;
 
             const splits = enemy.takeDamage(damage);
             if (splits && splits.length > 0) {
@@ -1405,11 +1418,21 @@ export class Game {
         if (melee.hasHit(enemy.id)) continue; // Already hit
 
         if (melee.isPointInArc(enemy.x, enemy.y)) {
-          const isCrit = this.player.rollCrit();
+          const sfxBonusCritM = enemy.statusFX.getBonusCritChanceReceived();
+          const isCrit = this.player.rollCrit() || (sfxBonusCritM > 0 && Math.random() < sfxBonusCritM);
           let damage = isCrit ? this.player.getCritDamage(melee.damage) : melee.damage;
+          if (isCrit) {
+            const bonusCritDmgM = enemy.statusFX.getBonusCritDamageReceived();
+            if (bonusCritDmgM > 0) damage *= (1 + bonusCritDmgM);
+          }
           if (enemy.typeData.isBoss) {
             damage *= this.metaProgression.getBossDamageMultiplier();
           }
+          // Status-effect amplifiers: Fragility, Exposed, Brittle, Condemned
+          damage = damage * enemy.statusFX.getIncomingDamageMult() * enemy.statusFX.getDirectHitMult()
+                   + enemy.statusFX.getFlatHitBonus();
+          const condemnedBonusM = enemy.statusFX.checkCondemned(isCrit);
+          if (condemnedBonusM > 0) damage *= condemnedBonusM;
 
           const splits = enemy.takeDamage(damage);
           if (splits && splits.length > 0) {
