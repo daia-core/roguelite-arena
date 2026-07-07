@@ -296,7 +296,10 @@ const ARM_EDGES: [string, string][] = [
   ['a5', 'a6'], ['b5', 'b6'],
   ['mid5', 'a6'], ['mid5', 'b6'],
   ['a6', 'kL'], ['a6', 'mid6'], ['b6', 'kR'], ['b6', 'mid6'],
-  ['mid6', 'kM'], ['kL', 'kM'], ['kM', 'kR'],
+  ['mid6', 'kM'],
+  // kL / kM / kR are isolated terminal nodes — taking one forecloses the others.
+  // Removing the kL↔kM and kM↔kR edges prevents a player from trivially collecting
+  // all three keystones after reaching the rim. You must commit to ONE.
 ];
 
 function deg2rad(d: number): number { return (d * Math.PI) / 180; }
@@ -363,6 +366,42 @@ function buildTree(): { nodes: SkillNode[]; edges: [string, string][] } {
     const b = SKILL_ARMS[(i + 1) % armCount].key;
     edges.push([`${a}_b5`, `${b}_a5`]);   // mid-outer ring bridge
     edges.push([`${a}_b3`, `${b}_a3`]);   // mid ring bridge
+  }
+
+  // Global keystones — extreme trade-off nodes at the inner ring (r=120), each placed
+  // between two adjacent arm gateways. Any class can reach one in a single spend from
+  // the hub or their class start. They are build-defining: take one and you play
+  // differently for the whole run. Only 4 of the 6 inter-arm gaps have one (intentional
+  // scarcity — your starting class influences which are nearby).
+  type GKDef = { id: string; name: string; icon: string; desc: string; deltas: SkillDelta[]; angle: number };
+  const GLOBAL_KS: GKDef[] = [
+    { id: 'gk_glass_cannon', name: 'Glass Cannon', icon: '💀', angle: 30,
+      desc: '+60% Damage, but -90 Max HP — you shatter on contact.',
+      deltas: [{ field: 'damageMult', mul: 1.60 }, { field: 'maxHealthBonus', add: -90 }] },
+    { id: 'gk_iron_will', name: 'Iron Will', icon: '⚖️', angle: 90,
+      desc: '+20% Damage, +6 HP/s, but -25% Move Speed — stand firm and outlast them.',
+      deltas: [{ field: 'damageMult', mul: 1.20 }, { field: 'regenBonus', add: 6 }, { field: 'speedMult', mul: 0.75 }] },
+    { id: 'gk_echo_strike', name: 'Echo Strike', icon: '📡', angle: 150,
+      desc: '+2 extra projectiles per shot, but -15% Fire Rate and -10% Damage.',
+      deltas: [{ field: 'multishotAdd', add: 2 }, { field: 'fireRateMult', mul: 0.85 }, { field: 'damageMult', mul: 0.90 }] },
+    { id: 'gk_wanderlust', name: 'Wanderlust', icon: '🌪️', angle: 210,
+      desc: '+30% Move Speed, +20% Fire Rate, but -30 Max HP — never stop moving.',
+      deltas: [{ field: 'speedMult', mul: 1.30 }, { field: 'fireRateMult', mul: 1.20 }, { field: 'maxHealthBonus', add: -30 }] },
+  ];
+  // Gate ids in arm order (same index as SKILL_ARMS — arm 0 = might at 0°, etc.).
+  const gateIds = SKILL_ARMS.map(a => `${a.key}_gate`);
+  for (const gk of GLOBAL_KS) {
+    const theta = deg2rad(gk.angle);
+    const x = Math.round(Math.cos(theta) * 120);
+    const y = Math.round(Math.sin(theta) * 120);
+    nodes.push({ id: gk.id, name: gk.name, type: 'keystone', arm: 'core', x, y,
+      icon: gk.icon, deltas: gk.deltas, desc: gk.desc });
+    // Connect to the gunner hub + both flanking arm gateways so any class can reach it.
+    edges.push(['start_gunner', gk.id]);
+    const leftArmIdx = Math.floor(gk.angle / 60) % armCount;    // arm at angle < gk.angle
+    const rightArmIdx = (leftArmIdx + 1) % armCount;              // arm at angle > gk.angle
+    edges.push([gk.id, gateIds[leftArmIdx]]);
+    edges.push([gk.id, gateIds[rightArmIdx]]);
   }
 
   // Non-gunner class start nodes, each just inside its thematic arm's gateway.
