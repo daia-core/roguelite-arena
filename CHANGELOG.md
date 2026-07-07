@@ -36,7 +36,10 @@ alone — the auto-pass never double-taxes an item that already bites back.
 
 Net effect: drawback coverage rises from **~32% to 66%** of statful items, right in Brotato's band.
 
-Commit `PENDING` · live deployment `PENDING`.
+Commit `54279c8` · live deployment `dpl_GMmzt66AdUjSCxyRW3zyyUSt4CAH` (READY, PROMOTED). Verified
+live: patched items report their drawback values at runtime (e.g. Brawler's Cleaver -8 Max HP,
+Precision Scope -2 Armor, Lucky Coin -5% Damage) and already-balanced items keep their single
+hand-authored drawback (Vampiric Embrace -15 Max HP, not double-taxed), console clean.
 
 ---
 
