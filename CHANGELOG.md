@@ -36,6 +36,8 @@ Active skills tripled from 10 → **26 spell scrolls**, spanning all 4 shop tier
 - ⚜️ **Divine Wrath** — 3 holy waves hit all enemies + 2s invincibility (8×/wave, 16s CD)
 - 💥 **Armageddon** — 12 targeted meteors rain over 3 seconds (6× each, 20s CD)
 
+**Deploy:** commit b6395c1, bundle `index-Cf0PVyLG.js`, live at https://roguelite-game-blush.vercel.app
+
 ---
 
 ## 2026-07-08 — Active Skill System: 10 Soulstone-inspired spell scrolls
