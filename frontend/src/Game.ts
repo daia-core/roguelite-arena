@@ -7,7 +7,7 @@ import { Projectile } from './Projectile';
 import { MeleeAttack } from './MeleeAttack';
 import { Particle, DamageNumber } from './Particle';
 import { WaveManager } from './WaveManager';
-import { PlayerStats, ItemDatabase, getItemKinds, classifyItemSlot, slotLabel, itemStatSegments, descRestatesStats, type Item, type EquipHolderKey } from './ItemSystem';
+import { PlayerStats, ItemDatabase, ItemTier, getItemKinds, classifyItemSlot, slotLabel, itemStatSegments, descRestatesStats, type Item, type EquipHolderKey } from './ItemSystem';
 import { STARTING_CLASSES, type StartingClass } from './Classes';
 import { SaveManager } from './SaveManager';
 import { Input } from './Input';
@@ -187,6 +187,7 @@ export class Game {
   private stPinchDist: number = 0;             // finger spread on the previous pinch frame (0 = not pinching)
   private stSelected: string | null = null;    // last-tapped node (for the info panel)
   private pendingWaveArtifact: boolean = false;   // elite/boss wave grants spoils on clear
+  private pendingEliteCascade: boolean = false;   // elite/boss wave grants a free bonus item in the shop
   restResolved: boolean = false;             // rest node: an option has been taken
   restResultText: string = '';               // rest node outcome line
   // Momentum artifact: seconds the player has been continuously moving.
@@ -612,6 +613,7 @@ export class Game {
 
     this.refreshMaxHealth();
     this.pendingWaveArtifact = false;
+    this.pendingEliteCascade = false;
 
     this.state = 'map';
   }
@@ -3267,6 +3269,21 @@ export class Game {
       }
     }
 
+    // ELITE CASCADE: after clearing an elite/boss wave, inject one free tier-appropriate
+    // item as a 4th shop slot so the battle reward feels materially bigger than gold alone.
+    if (this.pendingEliteCascade) {
+      this.pendingEliteCascade = false;
+      const cascadeTier = currentWave < 6 ? ItemTier.Uncommon : currentWave < 11 ? ItemTier.Rare : ItemTier.Legendary;
+      const existing = new Set(this.shopItems.filter(Boolean).map(it => it!.id));
+      const pool = ItemDatabase.getItemsByTier(cascadeTier).filter(it => !existing.has(it.id));
+      if (pool.length > 0) {
+        const pick = pool[Math.floor(Math.random() * pool.length)];
+        const cascadeItem = JSON.parse(JSON.stringify(pick)) as Item;
+        (cascadeItem as any)._cascade = true;
+        this.shopItems.push(cascadeItem);
+      }
+    }
+
     this.selectedShopItem = -1;
 
     // BROTATO-LEVEL REROLL COST: wave-scaled base + meta policy + item discount
@@ -3531,7 +3548,8 @@ export class Game {
     const isMobile = cssW < 800;
     const s = (v: number) => Math.round(v * zoom);
 
-    const SLOTS = 3; // v2 rework: offer just 3 items at a time (tighter, deeper choices).
+    // v2 rework: 3 items normally; an elite cascade adds a 4th (free bonus slot).
+    const SLOTS = Math.max(3, this.shopItems.length);
     // Column count is driven by width, NOT the mobile flag: a wide LANDSCAPE phone
     // uses the 3-wide grid, only a narrow PORTRAIT screen stacks in one column.
     const cols = isPortrait ? 1 : 3;
@@ -3823,8 +3841,10 @@ export class Game {
     if (!item) return false;
 
     // DYNAMIC PRICING: wave-scaled price with shop discount.
-    const finalPrice = this.playerStats.getItemPrice(item, this.waveManager.currentWave);
-    if (this.player.gold < finalPrice) return false;
+    // Elite-cascade items are free — the reward for clearing a hard wave.
+    const isCascade = (item as any)._cascade === true;
+    const finalPrice = isCascade ? 0 : this.playerStats.getItemPrice(item, this.waveManager.currentWave);
+    if (!isCascade && this.player.gold < finalPrice) return false;
 
     this.player.gold -= finalPrice;
     // UPGRADE SYSTEM (v2): items carry instance state (upgradeLevel) once owned, so a
@@ -4017,10 +4037,12 @@ export class Game {
         break;
       case 'elite':
         this.pendingWaveArtifact = true;
+        this.pendingEliteCascade = true;
         this.startNextWave({ elite: true });
         break;
       case 'boss':
         this.pendingWaveArtifact = true;
+        this.pendingEliteCascade = true;
         this.startNextWave({ boss: true });
         break;
       case 'event':
@@ -5988,14 +6010,15 @@ export class Game {
         );
       }
 
-      // Price — bottom-right, prominent (gold if affordable, red if not).
-      const finalPrice = this.playerStats.getItemPrice(item, this.waveManager.currentWave);
-      const canAfford = this.player.gold >= finalPrice;
-      const priceLabel = `${finalPrice} G`;
+      // Price — bottom-right, prominent. Elite-cascade items are free (shown in green).
+      const isCascade = (item as any)._cascade === true;
+      const finalPrice = isCascade ? 0 : this.playerStats.getItemPrice(item, this.waveManager.currentWave);
+      const canAfford = isCascade || this.player.gold >= finalPrice;
+      const priceLabel = isCascade ? 'FREE!' : `${finalPrice} G`;
       const priceW = Math.round(priceLabel.length * costSize) + s(4);
       this.renderer.drawText(priceLabel, textRight, footerY - s(1), {
         size: costSize, align: 'right',
-        color: canAfford ? '#ffd700' : '#ef4444',
+        color: isCascade ? '#69db7c' : (canAfford ? '#ffd700' : '#ef4444'),
       });
 
       // Category + tags footer, left — muted so the badge stays the loud label.
