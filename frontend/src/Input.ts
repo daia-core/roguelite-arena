@@ -292,6 +292,11 @@ export class Input {
     return pressed;
   }
 
+  /** Active Skill trigger — same binding as blast (Q/E keys + skill button). */
+  consumeSkill(): boolean {
+    return this.consumeBlast();
+  }
+
   private triggerHaptic(duration: number): void {
     if (navigator.vibrate) {
       navigator.vibrate(duration);

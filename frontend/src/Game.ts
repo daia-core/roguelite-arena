@@ -37,6 +37,7 @@ import { randomEvent, EVENTS, type GameEvent, type EventEffect, type EventOption
 import { EvolutionSystem, type Evolution } from './EvolutionSystem';
 import { VillageScene } from './VillageScene';
 import { SkillTree, SKILL_NODES, SKILL_EDGES, ARM_COLOR, getNode, neighborsOf, type SkillNode } from './SkillTree';
+import { getActiveSkillById } from './ActiveSkillSystem';
 import type { Scene } from './scenes/Scene';
 import { MenuScene } from './scenes/MenuScene';
 
@@ -229,6 +230,9 @@ export class Game {
   // unavoidable contact hits pierce less. (Felix, 2026-07-05: ranged felt like 1 HP.)
   private static readonly RANGED_ARMOR_PEN = 0.5;
   private static readonly CONTACT_ARMOR_PEN = 0.25;
+
+  // Active Skill System — tracks the cooldown for the player's equipped spell scroll.
+  private activeSkillCooldown: number = 0;
 
   // Stats
   kills: number = 0;
@@ -582,6 +586,7 @@ export class Game {
     this.soulTitheKills = 0;
     this.soulTitheStacks = 0;
     this.shotsFired = 0;
+    this.activeSkillCooldown = 0;
 
     this.waveManager.reset();
     // The map layer drives wave numbers now: the first battle node starts wave
@@ -898,21 +903,11 @@ export class Game {
       this.audio.playShoot();
     }
 
-    // Abilities
-    // Dash/Blast abilities removed - shop upgrading is the core loop
-    // if (this.input.consumeDash()) {
-    //   if (this.player.tryDash()) {
-    //     this.audio.playDash();
-    //   }
-    // }
-
-    // if (this.input.consumeBlast()) {
-    //   const blast = this.player.tryBlast();
-    //   if (blast.success) {
-    //     this.audio.playBlast();
-    //     this.handleBlastDamage(blast.damage, blast.radius);
-    //   }
-    // }
+    // Active Skill — Q/E keys or mobile SKILL button triggers the equipped spell scroll.
+    if (this.activeSkillCooldown > 0) this.activeSkillCooldown = Math.max(0, this.activeSkillCooldown - dt);
+    if (this.input.consumeSkill()) {
+      this.useActiveSkill();
+    }
 
     // Wave manager — enemies now spawn via telegraphed in-arena formations (red blinking X).
     this.enemies = this.waveManager.update(
@@ -1764,6 +1759,163 @@ export class Game {
       }));
     }
     if (enemy.dead) this.handleEnemyKill(enemy);
+  }
+
+  /**
+   * Fire the player's currently equipped active skill (from a Spell Scroll).
+   * Effects use existing AoeZone / Projectile / Enemy systems — no new infrastructure.
+   * Called by Q/E key or the mobile SKILL button when the cooldown has expired.
+   */
+  private useActiveSkill(): void {
+    if (!this.player || this.activeSkillCooldown > 0) return;
+    const skillId = this.playerStats.getEquippedSkillId();
+    if (!skillId) return;
+    const skill = getActiveSkillById(skillId);
+    if (!skill) return;
+
+    this.activeSkillCooldown = skill.cooldown;
+    const baseDmg = this.playerStats.getDamage() * skill.baseDamageMultiplier;
+    const px = this.player.x;
+    const py = this.player.y;
+
+    switch (skill.effect) {
+      case 'meteor': {
+        // Telegraphed AoE fire drop — 0.8s warning ring, then large impact burst.
+        const r = skill.radius ?? 120;
+        this.spawnAoeZone(new AoeZone(px, py, r, baseDmg, 0.8, {
+          color: '#ff6b00', activeTime: 0.5, singleHit: false,
+        }));
+        break;
+      }
+      case 'frost_nova': {
+        // Instant ring — damages + slows all enemies in radius for 3s.
+        const r = skill.radius ?? 150;
+        for (const e of this.enemies) {
+          if (e.dead) continue;
+          const d = Math.hypot(e.x - px, e.y - py);
+          if (d <= r) {
+            this.dealAuxDamage(e, baseDmg, '#74c0fc');
+            e.frozenTimer = Math.max(e.frozenTimer, 3.0);
+          }
+        }
+        // Visual flash
+        this.spawnAoeZone(new AoeZone(px, py, r, 0, 0.0, {
+          color: '#74c0fc', activeTime: 0.5, singleHit: true,
+        }));
+        break;
+      }
+      case 'chain_lightning': {
+        // Bounce between the 6 nearest enemies.
+        const targets = [...this.enemies]
+          .filter(e => !e.dead)
+          .sort((a, b) => Math.hypot(a.x - px, a.y - py) - Math.hypot(b.x - px, b.y - py))
+          .slice(0, 6);
+        for (const t of targets) this.dealAuxDamage(t, baseDmg, '#ffd43b');
+        break;
+      }
+      case 'blood_nova': {
+        // AoE burst + lifesteal heal.
+        const r = skill.radius ?? 130;
+        let totalDmg = 0;
+        for (const e of this.enemies) {
+          if (e.dead) continue;
+          if (Math.hypot(e.x - px, e.y - py) <= r) {
+            this.dealAuxDamage(e, baseDmg, '#c92a2a');
+            totalDmg += baseDmg;
+          }
+        }
+        if (totalDmg > 0) this.player.heal(totalDmg * 0.20);
+        this.spawnAoeZone(new AoeZone(px, py, r, 0, 0.0, {
+          color: '#9b2335', activeTime: 0.5, singleHit: true,
+        }));
+        break;
+      }
+      case 'orbital_strike': {
+        // 6 staggered telegraphed impacts spread around the player.
+        const r = skill.radius ?? 160;
+        for (let i = 0; i < 6; i++) {
+          const angle = (i / 6) * Math.PI * 2;
+          const ix = px + Math.cos(angle) * r * 0.6;
+          const iy = py + Math.sin(angle) * r * 0.6;
+          this.spawnAoeZone(new AoeZone(ix, iy, 55, baseDmg, 0.3 + i * 0.15, {
+            color: '#b197fc', activeTime: 0.35, singleHit: true,
+          }));
+        }
+        break;
+      }
+      case 'poison_cloud': {
+        // Persistent AoE DoT zone — ticks per frame for 5 seconds.
+        const r = skill.radius ?? 110;
+        this.spawnAoeZone(new AoeZone(px, py, r, baseDmg / 10, 0.0, {
+          color: '#40c057', activeTime: 5.0, singleHit: false,
+        }));
+        break;
+      }
+      case 'phoenix_beam': {
+        // 3 piercing fire bolts in a tight fan toward the nearest enemy.
+        const alive = this.enemies.filter(e => !e.dead);
+        if (alive.length === 0) break;
+        const nearest = alive.reduce((n, e) =>
+          Math.hypot(e.x - px, e.y - py) < Math.hypot(n.x - px, n.y - py) ? e : n
+        );
+        const angle = Math.atan2(nearest.y - py, nearest.x - px);
+        for (let i = -1; i <= 1; i++) {
+          const p = new Projectile(px, py, angle + i * 0.14, baseDmg, 520, true, true);
+          p.maxPierceCount = 999;
+          p.color = '#ff6b00';
+          p.radius = 8;
+          this.projectiles.push(p);
+        }
+        break;
+      }
+      case 'earthquake': {
+        // Damage + slow ALL enemies on screen; big visual pulse.
+        const count = this.enemies.filter(e => !e.dead).length;
+        const perEnemy = count > 0 ? baseDmg / Math.max(1, count) * 2 : baseDmg;
+        for (const e of this.enemies) {
+          if (e.dead) continue;
+          this.dealAuxDamage(e, perEnemy, '#c5aa6a');
+          e.frozenTimer = Math.max(e.frozenTimer, 2.0);
+        }
+        this.spawnAoeZone(new AoeZone(px, py, 900, 0, 0.0, {
+          color: '#c5aa6a', activeTime: 0.35, singleHit: true,
+        }));
+        break;
+      }
+      case 'shadow_step': {
+        // Teleport through the nearest enemy then burst-nova.
+        const alive = this.enemies.filter(e => !e.dead);
+        if (alive.length === 0) break;
+        const near = alive.reduce((n, e) =>
+          Math.hypot(e.x - px, e.y - py) < Math.hypot(n.x - px, n.y - py) ? e : n
+        );
+        const dx = near.x - px, dy = near.y - py;
+        const dist = Math.hypot(dx, dy);
+        if (dist > 5) {
+          this.player.x = Math.max(20, Math.min(this.worldWidth - 20, near.x + (dx / dist) * 35));
+          this.player.y = Math.max(20, Math.min(this.worldHeight - 20, near.y + (dy / dist) * 35));
+          this.player.invincibilityTimer = Math.max(this.player.invincibilityTimer, 0.4);
+        }
+        const r = skill.radius ?? 90;
+        for (const e of this.enemies) {
+          if (e.dead) continue;
+          if (Math.hypot(e.x - this.player.x, e.y - this.player.y) <= r) {
+            this.dealAuxDamage(e, baseDmg, '#845ef7');
+          }
+        }
+        this.spawnAoeZone(new AoeZone(this.player.x, this.player.y, r, 0, 0.0, {
+          color: '#845ef7', activeTime: 0.4, singleHit: true,
+        }));
+        break;
+      }
+      case 'circle_power': {
+        // Persistent ring zone — damages enemies inside it for 5 seconds.
+        this.spawnAoeZone(new AoeZone(px, py, skill.radius ?? 90, baseDmg / 8, 0.0, {
+          color: '#ffd43b', activeTime: 5.0, singleHit: false, shape: 'ring',
+        }));
+        break;
+      }
+    }
   }
 
   private updateAuxWeapons(dt: number): void {
@@ -4751,8 +4903,50 @@ export class Game {
       drawBar(bx, by, bw, bh, boss.health / boss.maxHealth, '#e03131', '#3c0000');
     }
 
+    // --- Active Skill indicator (bottom-left, below the status panel) ---
+    const activeSkillId = this.playerStats.getEquippedSkillId();
+    if (activeSkillId) {
+      const sk = getActiveSkillById(activeSkillId);
+      if (sk) {
+        const skX = s(6);
+        const skY = topY + panelH + s(12);
+        const skSize = s(28);
+        // Background pill
+        ctx.fillStyle = '#241407';
+        ctx.fillRect(skX - s(2), skY - s(2), skSize + s(68), skSize + s(4));
+        // Cooldown fill (purple = ready, dark = on cooldown)
+        const cdFrac = this.activeSkillCooldown > 0 ? this.activeSkillCooldown / sk.cooldown : 0;
+        const bgCol = cdFrac > 0 ? '#3a1a5c' : '#5a2d82';
+        ctx.fillStyle = bgCol;
+        ctx.fillRect(skX, skY, skSize + s(64), skSize);
+        // Cooldown progress bar (drains as skill cools down)
+        if (cdFrac > 0) {
+          ctx.fillStyle = '#9b59b6';
+          ctx.fillRect(skX, skY, Math.round((skSize + s(64)) * (1 - cdFrac)), skSize);
+        }
+        // Icon
+        ctx.font = `${s(14)}px serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(sk.icon, skX + s(14), skY + skSize / 2);
+        // Label + cooldown text
+        ctx.font = `bold ${s(7)}px monospace`;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#ffffff';
+        const label = cdFrac > 0 ? `${Math.ceil(this.activeSkillCooldown)}s` : '[Q] READY';
+        ctx.fillText(`${sk.name}`, skX + s(30), skY + s(9));
+        ctx.font = `${s(7)}px monospace`;
+        ctx.fillStyle = cdFrac > 0 ? '#cc99ff' : '#a0ffa0';
+        ctx.fillText(label, skX + s(30), skY + s(20));
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'alphabetic';
+      }
+    }
+
     // --- Status callouts under the left panel ---
-    let statusY = topY + panelH + s(8);
+    const skillBarH = activeSkillId ? s(40) : 0;
+    let statusY = topY + panelH + s(8) + skillBarH;
     if (this.player.shield) {
       this.renderer.drawText('SHIELD ACTIVE', s(10), statusY, { size: s(8), color: '#4a9eff' });
       statusY += s(14);

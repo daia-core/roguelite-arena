@@ -1052,6 +1052,19 @@ export class PlayerStats {
     return best;
   }
 
+  /**
+   * Returns the active skill ID equipped by the player, or undefined if none.
+   * The LAST scroll purchased wins — buying a new Spell Scroll replaces the
+   * previous one's effect without removing the old item from the owned list.
+   */
+  getEquippedSkillId(): string | undefined {
+    for (let i = this.items.length - 1; i >= 0; i--) {
+      const skill = this.items[i].activatesSkill;
+      if (skill) return skill;
+    }
+    return undefined;
+  }
+
   getBleedChance(): number {
     return Math.min(1, this.ensureAgg().bleed);
   }

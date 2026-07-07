@@ -463,6 +463,14 @@ export interface Item {
   // (OR'd across copies): a second copy can't roll three times. Does NOT touch crit
   // or dodge (core stats), only the status ecosystem this item is built around.
   fourleafCharm?: boolean;
+
+  // ---- ACTIVE SKILL SCROLL ----
+  // When set, buying this item equips the named active skill (from ActiveSkillSystem).
+  // Only one active skill can be equipped at a time; the most recently purchased
+  // scroll wins. Items with this field have no stat effects — the skill IS the effect.
+  // They are classified as trinkets (no slot override) but never re-offered once owned
+  // (itemStacks() returns false since there are no numeric additive/multiplicative fields).
+  activatesSkill?: string;
 }
 
 export interface Weapon {
