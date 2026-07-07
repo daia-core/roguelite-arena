@@ -8,6 +8,50 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-07 (afternoon) — Brotato-style telegraphed formation spawning
+
+**Enemies now spawn IN the arena as telegraphed formations — not from the screen edge.**
+Every spawn is now announced: a **blinking red X** marks each landing spot for 2 seconds,
+then the enemy drops in exactly there (Brotato-style spawn warning). No more sliding in
+from off-screen edges — the fight comes to where you're looking, and you get a beat to
+reposition before it lands.
+
+**Micro-waves within the wave.** Each spawn tick now telegraphs a whole FORMATION at once —
+a line abreast, a V, a ring, a two-sided pincer around you, a tight cluster, a linked worm
+chain, or an egg clutch — so a wave reads as a sequence of distinct little pushes rather
+than a random trickle. The existing sub-phase system ("The ground splits — WORMS!") drives
+which formations appear when.
+
+**Placement is player-fair.** Telegraphs are kept inside the arena walls (70px margin) and
+out of a 150px safe bubble around the player, so nothing ever materializes on top of you or
+under a wall. Pincers deliberately telegraph on opposite sides of the player to squeeze you.
+
+**Under the hood**
+- New `SpawnTelegraph` class: chunky-pixel red X, blink ramps 2.2→7 Hz as the timer runs
+  out, faint danger footprint underneath so the spot reads between blinks. Draws as a floor
+  marker under enemies (alongside the AoE zones). Timer ticks on sim-time, so it correctly
+  freezes during hit-stop.
+- `WaveManager` reworked: formations now emit telegraphs (via `buildFormation` +
+  `arenaAnchor`/`clampToArena`), the budget is charged up front by pledged enemy count so
+  pacing/phase logic stays correct despite the 2s delay, un-fired telegraphs are cancelled
+  on wave timeout, and wave-complete waits for pending telegraphs to resolve. Worm chains
+  build their whole linked segment train in one telegraph to preserve `wormLeader` linkage.
+- Bosses/minibosses keep their dramatic top-of-screen entrance (unchanged) — this is about
+  the wave fodder.
+
+**QA:** tsc clean. `qa-flood` peak 46 concurrent @ wave 1, 0 errors. Telegraph-lifecycle
+probe: X's appear with 0 enemies during the 2s window, 0 land inside the player safe radius,
+none off-arena, all materialize after, array culls clean, 0 errors. Live smoke test on the
+deployed build: wave-4 telegraphs → 15 enemies, 0 console errors. Mobile (390×844) + desktop
+(1280×800) screenshots reviewed — V-formation and cluster telegraphs read clearly.
+
+- Bundle: `index-By1ODELY.js`
+- Deploy: `roguelite-game-6ekaqi50b-daiacore.vercel.app` · state READY · aliased to blush
+- Live-verified: HTTP 200 at roguelite-game-blush.vercel.app, live bundle contains telegraph
+  code, live smoke test spawns via telegraph path ✅
+
+---
+
 ## 2026-07-07 (early morning) — Boss kills bug fix + game-over screen
 
 **Bug fix — bossKills never actually counted bosses (all runs to date)**

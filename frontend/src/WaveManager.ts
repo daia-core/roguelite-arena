@@ -8,7 +8,15 @@
 // minibosses are scaled, styled and carry the telegraphed-AoE patterns.
 
 import { Enemy, type EnemyType } from './Enemy';
+import { SpawnTelegraph } from './SpawnTelegraph';
 import { randomChoice, randomInt } from './utils';
+
+/** A position + enemy type resolved by a formation, before it becomes a telegraph. */
+interface SpawnSpot {
+  x: number;
+  y: number;
+  type: EnemyType;
+}
 
 export type WaveModifier = 'none' | 'horde' | 'elite' | 'speed' | 'tank' | 'chaos' | 'reward' | 'challenge' | 'miniboss';
 
@@ -50,7 +58,16 @@ export class WaveManager {
   /** The current sub-phase banner text (Game reads this to announce it). */
   phaseText: string = '';
 
+  /** Latest player position, threaded through update() for player-safe placement. */
+  private playerX: number = 0;
+  private playerY: number = 0;
+
   static readonly BOSS_GRACE_SEC = 45;
+
+  /** Keep telegraphed spawns at least this far (world units) from the player. */
+  static readonly SAFE_RADIUS = 150;
+  /** Keep telegraphed spawns at least this far in from the arena walls. */
+  static readonly WALL_MARGIN = 70;
 
   /**
    * Base HP-only survivability multiplier applied to every regular spawned enemy
@@ -273,7 +290,27 @@ export class WaveManager {
     return `Wave ${wave} - ${bands[wave % bands.length]}`;
   }
 
-  update(dt: number, enemies: Enemy[], canvasWidth: number, canvasHeight: number): Enemy[] {
+  update(
+    dt: number,
+    enemies: Enemy[],
+    canvasWidth: number,
+    canvasHeight: number,
+    telegraphs: SpawnTelegraph[] = [],
+    playerX: number = canvasWidth / 2,
+    playerY: number = canvasHeight / 2
+  ): Enemy[] {
+    this.playerX = playerX;
+    this.playerY = playerY;
+
+    // Resolve any telegraphs whose countdown finished: drop their enemies in NOW.
+    // (Runs even when the wave is over so a mid-flight telegraph still delivers.)
+    for (const t of telegraphs) {
+      if (t.ready && !t.dead) {
+        for (const e of t.spawn()) enemies.push(e);
+        t.dead = true;
+      }
+    }
+
     if (!this.waveActive) return enemies;
 
     this.phaseJustChanged = false;
@@ -290,8 +327,10 @@ export class WaveManager {
       this.bossSpawned = true;
     }
 
-    // Formation-based spawning: each tick releases one FORMATION (a cluster of
-    // related enemies placed together) drawn from the current phase.
+    // Formation-based spawning: each tick TELEGRAPHS one FORMATION (a cluster of
+    // related enemies) — red blinking X markers appear in the arena, and the
+    // enemies materialize there after SpawnTelegraph.DURATION. Each telegraphed
+    // batch is a micro-wave within the wave (Brotato-style).
     if (this.spawnTimer <= 0 && this.waveEnemiesRemaining > 0) {
       // Advance sub-phase if this phase's budget is spent (waves-within-waves).
       if (!this.isBossWave && this.phaseBudgetRemaining <= 0 && this.phaseIndex < this.phases.length - 1) {
@@ -306,17 +345,20 @@ export class WaveManager {
         ? 'scatter'
         : randomChoice(phase ? phase.formations : ['scatter']);
 
-      const spawned = this.spawnFormation(formation, canvasWidth, canvasHeight, phase?.pool);
-      for (const e of spawned) enemies.push(e);
-      this.waveEnemiesRemaining -= spawned.length;
-      this.phaseBudgetRemaining -= spawned.length;
+      const batch = this.buildFormation(formation, canvasWidth, canvasHeight, phase?.pool);
+      for (const tg of batch) telegraphs.push(tg);
+      // Count the enemies pledged by this batch against the budget up front so
+      // pacing/phase logic stays correct even though they appear 2s later.
+      const pledged = batch.reduce((sum, tg) => sum + tg.pledged, 0);
+      this.waveEnemiesRemaining -= pledged;
+      this.phaseBudgetRemaining -= pledged;
 
       // Flood pacing: spawn fast so the arena stays packed (Vampire-Survivors
       // density). Formations arrive in quick succession rather than being spread
       // thin across the whole wave — the wave clears by killing, not by waiting.
       let baseInterval = Math.min(
         0.55,
-        Math.max(0.16, (this.waveDuration * 0.35 * spawned.length) / this.totalEnemiesInWave)
+        Math.max(0.16, (this.waveDuration * 0.35 * Math.max(1, pledged)) / this.totalEnemiesInWave)
       );
       if (this.isHordeWave) baseInterval *= 0.6;
       this.spawnTimer = baseInterval;
@@ -327,6 +369,8 @@ export class WaveManager {
         if (!enemy.typeData.isBoss) enemy.dead = true;
         else enemy.enraged = true;
       }
+      // Cancel any un-fired telegraphs — no stragglers appear after time is up.
+      for (const t of telegraphs) t.dead = true;
       this.waveEnemiesRemaining = 0;
       if (!this.isBossWave) {
         this.waveActive = false;
@@ -341,13 +385,16 @@ export class WaveManager {
       }
     }
 
-    if (this.waveEnemiesRemaining <= 0 && enemies.length <= 3) {
+    // Pending (un-fired) telegraphs still owe enemies — treat them as "not clear".
+    const pendingTelegraphs = telegraphs.some((t) => !t.dead);
+
+    if (this.waveEnemiesRemaining <= 0 && !pendingTelegraphs && enemies.length <= 3) {
       for (const enemy of enemies) {
         if (!enemy.typeData.isBoss) enemy.enraged = true;
       }
     }
 
-    if (this.waveEnemiesRemaining <= 0 && enemies.length === 0) {
+    if (this.waveEnemiesRemaining <= 0 && !pendingTelegraphs && enemies.length === 0) {
       this.waveActive = false;
       this.waveComplete = true;
     }
@@ -358,152 +405,204 @@ export class WaveManager {
   // ---- Formations ----------------------------------------------------------
 
   /**
-   * Build one formation of enemies placed together. Returns the list to push.
-   * Placement uses a spawn anchor just off a random edge and lays enemies out
-   * relative to it, so groups arrive as a shape (a line abreast, a V, a ring,
-   * a two-sided pincer, a tight cluster, a linked worm, or an egg clutch).
+   * Build one formation as a set of TELEGRAPHS placed INSIDE the arena. Each
+   * telegraph shows a red blinking X, then materializes its enemy(s) at that spot
+   * after SpawnTelegraph.DURATION. Placement picks an in-field anchor clear of the
+   * player and lays enemies out relative to it, so a group appears as a shape
+   * (line abreast, V, ring, two-sided pincer, tight cluster, linked worm, egg
+   * clutch). Worm chains build all their segments in one telegraph to keep the
+   * `wormLeader` linkage intact.
    */
-  private spawnFormation(
+  private buildFormation(
     formation: Formation,
     cw: number,
     ch: number,
     poolOverride?: EnemyType[]
-  ): Enemy[] {
+  ): SpawnTelegraph[] {
     const remaining = this.waveEnemiesRemaining;
 
     switch (formation) {
-      case 'worm':
-        return this.spawnWorm(cw, ch, Math.min(remaining, 1));
+      case 'worm': {
+        // One telegraph that spawns the whole linked chain (head + body segments).
+        const { x, y, inx, iny } = this.arenaAnchor(cw, ch);
+        const segments = randomInt(4, 6);
+        const gap = 26;
+        const spawn = (): Enemy[] => {
+          const out: Enemy[] = [];
+          let leader: Enemy | null = null;
+          for (let i = 0; i < segments; i++) {
+            const sx = x - inx * gap * i;
+            const sy = y - iny * gap * i;
+            const type: EnemyType = i === 0 ? 'wormhead' : 'wormbody';
+            const seg = this.makeEnemy(type, sx, sy);
+            seg.wormLeader = leader;
+            seg.wormIsHead = i === 0;
+            seg.wormFollowGap = gap;
+            leader = seg;
+            out.push(seg);
+          }
+          return out;
+        };
+        return [new SpawnTelegraph(x, y, spawn, segments, 30)];
+      }
       case 'eggclutch': {
         const n = Math.min(remaining, randomInt(2, 3));
-        const { x, y } = this.edgeAnchor(cw, ch);
-        const out: Enemy[] = [];
+        const { x, y } = this.arenaAnchor(cw, ch);
+        const spots: SpawnSpot[] = [];
         for (let i = 0; i < n; i++) {
-          const ex = x + (Math.random() - 0.5) * 90;
-          const ey = y + (Math.random() - 0.5) * 90;
-          out.push(this.makeEnemy('eggsac', ex, ey, poolOverride));
+          spots.push({
+            type: 'eggsac',
+            x: x + (Math.random() - 0.5) * 90,
+            y: y + (Math.random() - 0.5) * 90,
+          });
         }
-        return out;
+        return this.telegraphSpots(spots, cw, ch, poolOverride, 26);
       }
       case 'line': {
         const n = Math.min(remaining, this.isHordeWave ? 10 : 7);
-        const { x, y, inx, iny } = this.edgeAnchor(cw, ch);
-        // Perpendicular spread so they arrive abreast.
-        const px = -iny, py = inx;
-        const out: Enemy[] = [];
+        const { x, y, inx, iny } = this.arenaAnchor(cw, ch);
+        const px = -iny, py = inx; // perpendicular spread so they arrive abreast
+        const spots: SpawnSpot[] = [];
         for (let i = 0; i < n; i++) {
           const off = (i - (n - 1) / 2) * 46;
-          out.push(this.makeEnemy(this.pick(poolOverride), x + px * off, y + py * off, poolOverride));
+          spots.push({ type: this.pick(poolOverride), x: x + px * off, y: y + py * off });
         }
-        return out;
+        return this.telegraphSpots(spots, cw, ch, poolOverride);
       }
       case 'vee': {
         const n = Math.min(remaining, 8);
-        const { x, y, inx, iny } = this.edgeAnchor(cw, ch);
+        const { x, y, inx, iny } = this.arenaAnchor(cw, ch);
         const px = -iny, py = inx;
-        const out: Enemy[] = [];
+        const spots: SpawnSpot[] = [];
         for (let i = 0; i < n; i++) {
           const rank = i - Math.floor(n / 2);
           const along = -Math.abs(rank) * 40; // point leads, wings trail
           const across = rank * 40;
-          out.push(this.makeEnemy(
-            this.pick(poolOverride),
-            x + inx * along + px * across,
-            y + iny * along + py * across,
-            poolOverride
-          ));
+          spots.push({
+            type: this.pick(poolOverride),
+            x: x + inx * along + px * across,
+            y: y + iny * along + py * across,
+          });
         }
-        return out;
+        return this.telegraphSpots(spots, cw, ch, poolOverride);
       }
       case 'ring': {
         const n = Math.min(remaining, 9);
-        const { x, y } = this.edgeAnchor(cw, ch);
-        const out: Enemy[] = [];
+        const { x, y } = this.arenaAnchor(cw, ch);
+        const spots: SpawnSpot[] = [];
         const r = 60;
         for (let i = 0; i < n; i++) {
           const a = (Math.PI * 2 * i) / n;
-          out.push(this.makeEnemy(this.pick(poolOverride), x + Math.cos(a) * r, y + Math.sin(a) * r, poolOverride));
+          spots.push({ type: this.pick(poolOverride), x: x + Math.cos(a) * r, y: y + Math.sin(a) * r });
         }
-        return out;
+        return this.telegraphSpots(spots, cw, ch, poolOverride);
       }
       case 'pincer': {
-        // Two groups from OPPOSITE edges to squeeze the player.
+        // Two groups on OPPOSITE sides of the player to squeeze them.
         const n = Math.min(remaining, 10);
         const half = Math.ceil(n / 2);
-        const out: Enemy[] = [];
-        const edge = randomInt(0, 1); // 0 = left/right, 1 = top/bottom
-        const spots = edge === 0
-          ? [{ x: -20, y: ch / 2 }, { x: cw + 20, y: ch / 2 }]
-          : [{ x: cw / 2, y: -20 }, { x: cw / 2, y: ch + 20 }];
+        const spots: SpawnSpot[] = [];
+        const horizontal = randomInt(0, 1) === 0;
+        const reach = 260;
+        const centers = horizontal
+          ? [{ x: this.playerX - reach, y: this.playerY }, { x: this.playerX + reach, y: this.playerY }]
+          : [{ x: this.playerX, y: this.playerY - reach }, { x: this.playerX, y: this.playerY + reach }];
         for (let s = 0; s < 2; s++) {
           const count = s === 0 ? half : n - half;
           for (let i = 0; i < count; i++) {
             const jx = (Math.random() - 0.5) * 70;
             const jy = (Math.random() - 0.5) * 70;
-            out.push(this.makeEnemy(this.pick(poolOverride), spots[s].x + jx, spots[s].y + jy, poolOverride));
+            spots.push({ type: this.pick(poolOverride), x: centers[s].x + jx, y: centers[s].y + jy });
           }
         }
-        return out;
+        return this.telegraphSpots(spots, cw, ch, poolOverride);
       }
       case 'cluster': {
         const n = Math.min(remaining, this.isHordeWave ? 10 : 7);
-        const { x, y } = this.edgeAnchor(cw, ch);
-        const out: Enemy[] = [];
+        const { x, y } = this.arenaAnchor(cw, ch);
+        const spots: SpawnSpot[] = [];
         for (let i = 0; i < n; i++) {
           const jx = (Math.random() - 0.5) * 60;
           const jy = (Math.random() - 0.5) * 60;
-          out.push(this.makeEnemy(this.pick(poolOverride), x + jx, y + jy, poolOverride));
+          spots.push({ type: this.pick(poolOverride), x: x + jx, y: y + jy });
         }
-        return out;
+        return this.telegraphSpots(spots, cw, ch, poolOverride);
       }
       case 'scatter':
       default: {
         const n = Math.min(remaining, this.isHordeWave ? 10 : 7);
-        const out: Enemy[] = [];
+        const spots: SpawnSpot[] = [];
         for (let i = 0; i < n; i++) {
-          const { x, y } = this.edgeAnchor(cw, ch);
-          out.push(this.makeEnemy(this.pick(poolOverride), x, y, poolOverride));
+          const { x, y } = this.arenaAnchor(cw, ch);
+          spots.push({ type: this.pick(poolOverride), x, y });
         }
-        return out;
+        return this.telegraphSpots(spots, cw, ch, poolOverride);
       }
     }
   }
 
   /**
-   * Spawn a single segmented worm: a head + a run of body segments, each linking
-   * to the one ahead via `wormLeader`. Killing a body segment splits the chain
-   * (handled in Game.splitWorm).
+   * Turn resolved spawn spots into individual telegraphs, clamping each into the
+   * arena's safe interior first so no X lands under a wall or on the player.
    */
-  private spawnWorm(cw: number, ch: number, _budget: number): Enemy[] {
-    const { x, y, inx, iny } = this.edgeAnchor(cw, ch);
-    const segments = randomInt(4, 6);
-    const gap = 26;
-    const out: Enemy[] = [];
-    let leader: Enemy | null = null;
-    for (let i = 0; i < segments; i++) {
-      // Lay segments back along the entry direction so the tail is off-screen.
-      const sx = x - inx * gap * i;
-      const sy = y - iny * gap * i;
-      const type: EnemyType = i === 0 ? 'wormhead' : 'wormbody';
-      const seg = this.makeEnemy(type, sx, sy);
-      seg.wormLeader = leader;
-      seg.wormIsHead = i === 0;
-      seg.wormFollowGap = gap;
-      leader = seg;
-      out.push(seg);
+  private telegraphSpots(
+    spots: SpawnSpot[],
+    cw: number,
+    ch: number,
+    poolOverride: EnemyType[] | undefined,
+    size = 20
+  ): SpawnTelegraph[] {
+    const out: SpawnTelegraph[] = [];
+    for (const s of spots) {
+      const p = this.clampToArena(s.x, s.y, cw, ch);
+      const type = s.type;
+      out.push(new SpawnTelegraph(p.x, p.y, () => [this.makeEnemy(type, p.x, p.y, poolOverride)], 1, size));
     }
     return out;
   }
 
-  /** A random spawn anchor just off one edge, plus the inward unit direction. */
-  private edgeAnchor(cw: number, ch: number): { x: number; y: number; inx: number; iny: number } {
-    const edge = randomInt(0, 3);
-    switch (edge) {
-      case 0: return { x: randomInt(0, cw), y: -20, inx: 0, iny: 1 };
-      case 1: return { x: cw + 20, y: randomInt(0, ch), inx: -1, iny: 0 };
-      case 2: return { x: randomInt(0, cw), y: ch + 20, inx: 0, iny: -1 };
-      default: return { x: -20, y: randomInt(0, ch), inx: 1, iny: 0 };
+  /**
+   * A random in-arena anchor kept clear of the walls AND the player, plus an
+   * inward-ish unit direction (toward arena center) reused by shape math that
+   * used to lean on the edge-approach vector.
+   */
+  private arenaAnchor(cw: number, ch: number): { x: number; y: number; inx: number; iny: number } {
+    const m = WaveManager.WALL_MARGIN;
+    let x = 0, y = 0;
+    // Rejection-sample a point outside the player's safe radius (few tries; the
+    // final clamp guarantees a valid spot even if every sample lands too close).
+    for (let attempt = 0; attempt < 8; attempt++) {
+      x = randomInt(m, Math.max(m, cw - m));
+      y = randomInt(m, Math.max(m, ch - m));
+      const dx = x - this.playerX;
+      const dy = y - this.playerY;
+      if (dx * dx + dy * dy >= WaveManager.SAFE_RADIUS * WaveManager.SAFE_RADIUS) break;
     }
+    // Direction toward arena center, so relative shape offsets face "inward".
+    let inx = cw / 2 - x;
+    let iny = ch / 2 - y;
+    const len = Math.hypot(inx, iny) || 1;
+    inx /= len; iny /= len;
+    return { x, y, inx, iny };
+  }
+
+  /** Clamp a world point into the arena interior and out of the player's safe bubble. */
+  private clampToArena(x: number, y: number, cw: number, ch: number): { x: number; y: number } {
+    const m = WaveManager.WALL_MARGIN;
+    let cx = Math.max(m, Math.min(cw - m, x));
+    let cy = Math.max(m, Math.min(ch - m, y));
+    // Push out of the player's safe radius along the player→spot direction.
+    const dx = cx - this.playerX;
+    const dy = cy - this.playerY;
+    const d = Math.hypot(dx, dy);
+    const safe = WaveManager.SAFE_RADIUS;
+    if (d < safe) {
+      const ux = d > 0.0001 ? dx / d : 1;
+      const uy = d > 0.0001 ? dy / d : 0;
+      cx = Math.max(m, Math.min(cw - m, this.playerX + ux * safe));
+      cy = Math.max(m, Math.min(ch - m, this.playerY + uy * safe));
+    }
+    return { x: cx, y: cy };
   }
 
   /** Pick an enemy type from the override pool or the current wave theme. */

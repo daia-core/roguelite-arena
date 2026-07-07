@@ -16,6 +16,7 @@ import { pointInRect, formatShort, segmentCircleHit } from './utils';
 import { HealthOrb, XPOrb, CoinPickup, mergeOrbs } from './Pickup';
 import { OrbitingOrb, Bomb, Shockwave } from './Weapons';
 import { AoeZone } from './AoeZone';
+import { SpawnTelegraph } from './SpawnTelegraph';
 import { MetaProgression } from './MetaProgression';
 import { ObjectPool } from './ObjectPool';
 import { Quadtree } from './Quadtree';
@@ -90,6 +91,8 @@ export class Game {
 
   // Telegraphed enemy AoE attacks (red ground markers -> delayed hit).
   aoeZones: AoeZone[] = [];
+  // Telegraphed enemy spawns (red blinking X -> enemy materializes after 2s).
+  spawnTelegraphs: SpawnTelegraph[] = [];
   private bombTimer: number = 0;
   private novaTimer: number = 0;
   private auxMeleeTimer: number = 0;
@@ -535,6 +538,7 @@ export class Game {
     if (this.metaProgression.hasPermanentShield()) this.player.shield = true;
 
     this.enemies = [];
+    this.spawnTelegraphs = [];
     this.projectiles = [];
     this.meleeAttacks = [];
     this.particles = [];
@@ -678,6 +682,7 @@ export class Game {
     if (save.health !== undefined) this.player.health = save.health;
 
     this.enemies = [];
+    this.spawnTelegraphs = [];
     this.projectiles = [];
     this.meleeAttacks = [];
     this.particles = [];
@@ -882,8 +887,21 @@ export class Game {
     //   }
     // }
 
-    // Wave manager
-    this.enemies = this.waveManager.update(dt, this.enemies, this.worldWidth, this.worldHeight);
+    // Wave manager — enemies now spawn via telegraphed in-arena formations (red blinking X).
+    this.enemies = this.waveManager.update(
+      dt,
+      this.enemies,
+      this.worldWidth,
+      this.worldHeight,
+      this.spawnTelegraphs,
+      this.player.x,
+      this.player.y
+    );
+
+    // Tick spawn telegraphs (red blinking X countdown) and cull spent/cancelled ones.
+    // WaveManager consumes `ready` telegraphs into real enemies before we prune here.
+    for (const tg of this.spawnTelegraphs) tg.update(dt);
+    this.removeDeadEntities(this.spawnTelegraphs);
 
     // Waves-within-waves: flash the new sub-phase banner when a phase begins.
     if (this.waveManager.phaseJustChanged) {
@@ -4251,6 +4269,9 @@ export class Game {
     // Telegraphed enemy AoE markers: on the ground, under enemies, so the red
     // danger zones read as floor markings the player can step out of.
     for (const zone of this.aoeZones) zone.draw(ctx);
+
+    // Spawn telegraphs: blinking red X where enemies are about to drop in (Brotato-style).
+    for (const tg of this.spawnTelegraphs) tg.draw(ctx);
 
     for (const enemy of this.enemies) {
       if (this.entityCuller.isVisible(enemy)) {
