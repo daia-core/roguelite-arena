@@ -8,6 +8,28 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-07 (night) — Architecture: StatusEffectEngine (composable status system)
+
+Felix: "you may need new stats, buffs, debuffs and status effects to implement all items —
+be sure to create a clean architecture that can be reused."
+
+Built `StatusEffectEngine.ts` — data-driven, composable status effect system that enables
+all the Soulstone Survivors-inspired content without modifying Game.ts per effect:
+
+**New effects available (ready for items):** Fragility (+1.5% all damage taken/stack) ·
+Exposed (+4% direct-hit damage/stack) · Condemned (10-stack → next crit = +500%) · Brittle
+(+1 flat damage/hit/stack) · Shattered (−1 armor/stack) · Dazed (+1% crit chance received) ·
+Disoriented (+1% crit damage received) · Debilitated (−1% enemy damage/stack) · Crippled
+
+**Synergy chain:** Bleed→Poison→Doom→Burn→Slow (one-level cascade on each apply).
+
+**How to add a new item:** declare `fragileChance: 0.20` on your item — the engine handles
+proc roll, stacking, visual (purple glow ring), and damage calculation. Zero Game.ts surgery.
+
+Commit: `b507702` · Bundle: `index-BOceh0MG.js` · Live: https://roguelite-game-blush.vercel.app · Verified 200 ✓
+
+---
+
 ## 2026-07-07 (night) — Balance: strong items now bite back (Brotato-style drawbacks)
 
 Felix: "a lot of items only have positive effects — shouldn't they be a bit balanced with negative
