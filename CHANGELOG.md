@@ -8,6 +8,23 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-08 — Early-bite balance pass (commit `dbbc4e6`, bundle `index-DZwchLsH.js`)
+
+Three targeted fixes from the Option B recommendation in `BALANCE-enemy-scaling-review.md`:
+
+- **DODGE_CAP lowered 0.75 → 0.65**: defensive builds no longer grant near-immunity. 35% of
+  enemy hits now land (vs 25% before) — enemy damage pressure actually bites, especially with the
+  miniboss health pool and elite damage modifiers.
+- **Miniboss at wave % 6 (was % 7)**: first skill check arrives at wave 6 instead of wave 7.
+  Schedule: wave 6, 12, 18, 24… (wave 10 / 20 remain boss waves, take priority via isBossWave).
+- **Elite / tank modifier enabled from wave 4 (was wave 6)**: waves 4–5 can now roll the
+  tougher enemy variant pools, closing the "trivially easy waves 1-6" gap the sim identified.
+
+Verified: tsc clean, vite build clean, qa-catalog-integrity 1313 items CLEAN, live bundle
+confirmed `index-DZwchLsH.js` at HTTP 200 on roguelite-game-blush.vercel.app.
+
+---
+
 ## 2026-07-08 — Active Skill System expansion: 26 spells across 4 tiers
 
 Active skills tripled from 10 → **26 spell scrolls**, spanning all 4 shop tiers. New additions:
