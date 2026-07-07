@@ -346,7 +346,7 @@ export class PlayerStats {
   // tunable constant.
   static readonly GOLD_MULT_CAP = 4;      // ×4 total gold earned (=300%); was ×10, which let income lap the whole shop every wave
   static readonly XP_MAGNET_CAP = 10;     // ×10 pickup radius (base 95 → ~950px, ~full screen)
-  static readonly DODGE_CAP = 0.75;       // 75% (already enforced; named here for the offer filter)
+  static readonly DODGE_CAP = 0.65;       // 65% — lowered from 0.75 so enemy damage actually bites (Option B)
   // Purely a numerical-safety ceiling, NOT a balance cap: unbounded multiplicative
   // stacking on a very deep run overflowed to literal Infinity (the player's "Melee
   // Dmg: Infinityx"), which breaks the UI and risks NaN. 1e15 is astronomically

@@ -149,7 +149,8 @@ export class WaveManager {
       if (waveNumber % 5 === 0) {
         this.waveModifier = 'reward';
         this.waveModifierText = 'REWARD WAVE - Extra gold & XP!';
-      } else if (waveNumber % 7 === 0) {
+      } else if (waveNumber % 6 === 0) {
+        // Miniboss every 6 waves (not 7) — brings first check to wave 6, adding early bite
         this.waveModifier = 'miniboss';
         this.waveModifierText = 'MINIBOSS WAVE - Elite enemy incoming!';
       } else if (roll < 0.05) {
@@ -159,13 +160,15 @@ export class WaveManager {
         this.waveModifier = 'horde';
         this.waveModifierText = 'HORDE WAVE - Swarm incoming!';
         this.isHordeWave = true;
-      } else if (roll < 0.25 && waveNumber >= 6) {
+      } else if (roll < 0.25 && waveNumber >= 4) {
+        // Elite available from wave 4 (was 6) — adds skill checks to early waves
         this.waveModifier = 'elite';
         this.waveModifierText = 'ELITE WAVE - Tougher enemies!';
       } else if (roll < 0.33) {
         this.waveModifier = 'speed';
         this.waveModifierText = 'SPEED WAVE - Fast enemies!';
-      } else if (roll < 0.4 && waveNumber >= 6) {
+      } else if (roll < 0.4 && waveNumber >= 4) {
+        // Tank available from wave 4 (was 6)
         this.waveModifier = 'tank';
         this.waveModifierText = 'TANK WAVE - Heavily armored!';
       } else if (roll < 0.44) {
