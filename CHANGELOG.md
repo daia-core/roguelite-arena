@@ -8,6 +8,31 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-07 (evening) — Skill-tree review: every keystone is now a real trade-off
+
+Review pass on the 160-node tree (Felix: "make sure it's incredible"). The web itself is solid —
+seven class starts each committing to a themed arm, 18 keystones giving each arm three distinct
+sub-builds, and every behaviour grant (pierce / multishot / lifesteal / thorns / chain / execute /
+explosions / knockback) confirmed wired into live combat getters, so there are no dead nodes.
+
+The one real weakness: **five keystones were pure upside** — free picks, not commitments — which
+clashed with the other 13 and with the game's own "power has a cost" identity (the drawback items).
+Fixed so all 18 keystones are genuine choices you commit to:
+- **Cull the Weak** — −10% Damage (you rely on the execute, not raw DPS).
+- **Storm Caller** — −10% Damage (chain trades single-target for spread).
+- **Sanguine Pact** — −4 Armor (you sustain by leeching, not turtling).
+- **Retribution** — −10% Move Speed (plant yourself and reflect).
+- **Scavenger** — −10% Damage (greed over combat).
+
+Also fixed a stale QA harness (`qa-skilltree.mjs`): its class-start expectation map predated the
+seven-class rework and wrongly failed berserker/prospector/reaver — now 36/36.
+
+QA: tsc clean; qa-skilltree 36/36, qa-skill-tree (connectivity + grants-live) pass; tree verified
+rendering as a connected web at desktop + 390px mobile. Commit `f48c13a` · live bundle
+`index-OcGoOZTg.js` (verified 200).
+
+---
+
 ## 2026-07-07 (evening) — Achievements-as-unlocks, build-locking drawback gear, run-defining class starts
 
 Three connected systems that make builds commit harder and give the meta a reason to grind.
