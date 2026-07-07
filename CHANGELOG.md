@@ -8,6 +8,26 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-08 (night) — Soulstone Expansion LIVE: 1,303 items + artifact/duo pass, duplicate fix
+
+Felix: "triple the amount of content" (Soulstone Survivors active skills as items).
+
+**What shipped:**
+- **1,303 items total** (3.8× from 343 baseline) — Soulstone-inspired archetypes across every tier
+- **20 new artifacts** (Totem of Might, Bloodlust Idol, Volcanic Heart, Phoenix Feather, etc.)
+- **16 new duo combos** (Deep Freeze, Plague Storm, Wildfire Spread, Storm Lord, Doomsayer, etc.)
+- **15 duplicate names fixed** — clean QA: 0 dup IDs, 0 dup names across 1,303 items
+
+**Item categories added:** orbital/summon trinkets, AoE burst, status build enablers, melee/swing
+tree, ranged/crit tree, economy/utility tree, ring slot expansion, chest/leg/head/feet gear depth.
+
+QA: `qa-catalog-integrity` CLEAN · `qa-shop-8slot` 29/29 · `check-duos` 66/0 missing · TSC 0 errors
+
+Commits: `1b6c05e` (expansion) + `2349327` (dup fix) · Bundle: `index-DH2_qhbx.js`
+Live: https://roguelite-game-blush.vercel.app · Verified 200 + new bundle confirmed ✓
+
+---
+
 ## 2026-07-07 (night) — Architecture: StatusEffectEngine (composable status system)
 
 Felix: "you may need new stats, buffs, debuffs and status effects to implement all items —
