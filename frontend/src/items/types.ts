@@ -180,6 +180,7 @@ export function itemStatSegments(item: Item): ItemStatSegment[] {
   flag(item.shield, 'Shield');
   flag(item.homing, 'Homing');
   flag(item.poison, 'Poison');
+  flag(!!item.knockback, 'Knockback');
   flag(item.explosionOnHit, 'Explode on Hit');
   flag(item.bombDrop, 'Bomb Drop');
   flag(item.novaPulse, 'Nova Pulse');
@@ -195,14 +196,60 @@ export function itemStatLines(item: Item): string[] {
 // True when the hand-written description merely restates the auto-generated stat
 // lines (e.g. description "+8% damage" vs stat row "+8% Damage") — pure redundancy
 // that shows the same numbers twice on a card, so the shop card + inspect popup skip
-// drawing the description entirely and let the green stat row stand alone. Conservative
-// by design: only an EXACT match after normalising case/punctuation is suppressed, so
-// any flavour or extra-mechanic text is always kept. (30/275 catalog items restate
-// their stats verbatim; the other 227 carry genuinely different description text.)
+// drawing the description entirely and let the green stat row stand alone.
+//
+// Token-subsumption, not exact match: a description is a restatement when every
+// meaningful token in it is already accounted for by the stat row (after dropping
+// filler words and mapping wording synonyms — "health"→"hp", "move speed"→"speed",
+// "projectile"→"multishot", etc.). This suppresses the ~165 catalog items whose
+// description just rewords the numbers ("+15 max health" vs "+15 Max HP",
+// "+45% melee/swing damage, -8% fire rate" vs "+45% Melee Dmg · -8% Fire Rate") while
+// keeping any description that introduces genuinely new words (flavour or extra
+// mechanics not in the stat row).
+const RESTATE_STOP = new Set([
+  'a', 'an', 'the', 'and', 'or', 'but', 'with', 'to', 'of', 'per', 'on', 'in', 'at',
+  'hit', 'hits', 'your', 'you', 'all', 'each', 'every', 'then', 'plus', 'also', 'for',
+  'gain', 'gains', 'grant', 'grants', 'more', 'less', 'extra', 'is', 'are', 'by', 'up',
+  'enemies', 'enemy', 'foes', 'foe', 'chance', 'shots', 'shot', 'bullets', 'bullet',
+  'attack', 'attacks', 'earned', 'heal', 'heals', 'massive', 'nearby', 'that', 'from',
+  'strong', 'weak', 'slight', 'huge', 'minor', 'major', 'high', 'low', 'small', 'big',
+]);
+// Wording synonyms → canonical stat vocabulary. Empty string = drop (noise word).
+const RESTATE_SYN: Record<string, string> = {
+  health: 'hp', hp: 'hp', hps: 'hps', hpsec: 'hps', sec: 's', s: 's',
+  move: '', movement: '', movespeed: 'speed', speed: 'speed',
+  dmg: 'damage', damage: 'damage', melee: 'melee', swing: 'melee', ranged: 'ranged',
+  elemental: 'elemental', fire: 'fire', rate: 'rate', firerate: 'fire',
+  crit: 'crit', critical: 'crit', dodge: 'dodge', armor: 'armor', armour: 'armor',
+  projectile: 'multishot', projectiles: 'multishot', multishot: 'multishot',
+  pierce: 'pierce', piercing: 'pierce',
+  lifesteal: 'lifesteal', leech: 'lifesteal', thorns: 'thorns', reflect: 'thorns',
+  explode: 'explode', explodes: 'explode', explosion: 'explode', explosions: 'explode',
+  explosive: 'explode',
+  gold: 'gold', luck: 'luck', xp: 'xp', exp: 'xp', experience: 'xp', pickup: 'xp',
+  range: 'xp', homing: 'homing', knockback: 'knockback', max: 'max', regen: '',
+  lightning: 'chain', chain: 'chain',
+};
+function restateTokens(s: string): Set<string> {
+  const raw = s.toLowerCase().replace(/[^a-z0-9%+\-]/g, ' ').split(/\s+/).filter(Boolean);
+  const out = new Set<string>();
+  for (let t of raw) {
+    // fold "+15%" and "15%" together (a description dropping the leading + still
+    // restates the same number); keep "-" so negatives stay distinct.
+    t = t.replace(/^\+/, '');
+    if (RESTATE_STOP.has(t)) continue;
+    const mapped = t in RESTATE_SYN ? RESTATE_SYN[t] : t;
+    if (mapped) out.add(mapped);
+  }
+  return out;
+}
 export function descRestatesStats(description: string, stats: string[]): boolean {
   if (stats.length === 0) return false;
-  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9%+\-]/g, '');
-  return norm(description) === norm(stats.join(' '));
+  const descTokens = restateTokens(description);
+  if (descTokens.size === 0) return true; // nothing but filler beyond the stats
+  const statTokens = restateTokens(stats.join(' '));
+  for (const t of descTokens) if (!statTokens.has(t)) return false;
+  return true;
 }
 
 // Weapon attack patterns (Brotato-inspired)

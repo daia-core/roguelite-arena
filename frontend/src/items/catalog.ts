@@ -459,7 +459,7 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'berserker_rage_t4',
       name: 'Berserker Rage',
-      description: '+75% damage & +15% fire rate, but -25 max HP (fury over safety)',
+      description: 'Fury over safety.',
       rarity: 'legendary',
       tier: ItemTier.Legendary,
       cost: 140,
@@ -473,7 +473,7 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'rapid_fire_t4',
       name: 'Bullet Hose',
-      description: '+70% fire rate & +2 projectiles, but -15% damage (bullet hose)',
+      description: 'Volume over precision.',
       rarity: 'legendary',
       tier: ItemTier.Legendary,
       cost: 135,
@@ -1737,7 +1737,7 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'blood_pact_t3',
       name: 'Blood Pact',
-      description: '+50% dmg, -25% max HP',
+      description: 'Power paid in blood.',
       rarity: 'epic',
       tier: ItemTier.Rare,
       cost: 58,
