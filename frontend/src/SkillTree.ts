@@ -33,6 +33,15 @@ export interface SkillBonuses {
   xpMult: number;
   pickupMult: number;
   goldMult: number;
+  // ---- BEHAVIOR grants (build-defining) — accumulate additively; 0 = off. ----
+  piercingAdd: number;      // extra projectile pierces
+  multishotAdd: number;     // extra projectiles per shot
+  lifestealAdd: number;     // fraction of damage healed
+  thornsAdd: number;        // reflect fraction
+  chainAdd: number;         // chain-lightning chance
+  executeAdd: number;       // execute-below-HP-fraction threshold
+  knockbackAdd: number;     // knockback force
+  explosionOnHit: number;   // >0 → grant on-hit/on-kill explosions
 }
 
 type BonusField = keyof SkillBonuses;
@@ -67,6 +76,8 @@ function identityBonuses(): SkillBonuses {
     damageMult: 1, fireRateMult: 1, critChanceBonus: 0, critMultMult: 1,
     maxHealthBonus: 0, armorBonus: 0, speedMult: 1, regenBonus: 0,
     xpMult: 1, pickupMult: 1, goldMult: 1,
+    piercingAdd: 0, multishotAdd: 0, lifestealAdd: 0, thornsAdd: 0,
+    chainAdd: 0, executeAdd: 0, knockbackAdd: 0, explosionOnHit: 0,
   };
 }
 
@@ -108,63 +119,105 @@ const MINOR_KIND: Record<string, { name: string; delta: SkillDelta; label: strin
   pick:  { name: 'Pickup',    delta: { field: 'pickupMult',      mul: 1.08 }, label: '+8% Pickup',    icon: '🧲' },
 };
 
-// Per-arm flavour: which minor kinds fill its primary / secondary slots, its two
-// notables, and its build-defining keystone (with a genuine trade-off).
+// Per-arm flavour. Each arm now has a WIDE and DEEP layout: two parallel lanes of
+// travel minors (its primary + secondary kind), FOUR notables (each anchoring a
+// small pod of extra minors), and THREE build-defining keystones at the rim — a mix
+// of stat trade-offs and genuine behaviour grants (pierce, multishot, lifesteal,
+// thorns, chain, execute, explosions). This is the PoE "way way larger" pass.
+interface NotableDef { name: string; icon: string; deltas: SkillDelta[]; desc: string }
+interface KeystoneDef { name: string; icon: string; deltas: SkillDelta[]; desc: string }
 interface ArmDef {
-  primary: string;
-  secondary: string;
-  notables: { name: string; icon: string; deltas: SkillDelta[]; desc: string }[];
-  keystone: { name: string; icon: string; deltas: SkillDelta[]; desc: string };
+  primary: string;            // kind filling lane A minors
+  secondary: string;          // kind filling lane B minors
+  pod: string;                // kind filling the little pods hung off notables
+  notables: NotableDef[];     // exactly 4 (nA..nD)
+  keystones: KeystoneDef[];   // exactly 3 (kL, kM, kR)
 }
 
 const ARM_DEFS: Record<string, ArmDef> = {
   might: {
-    primary: 'dmg', secondary: 'cmul',
+    primary: 'dmg', secondary: 'cmul', pod: 'dmg',
     notables: [
-      { name: 'Brutality', icon: '🪓', deltas: [{ field: 'damageMult', mul: 1.15 }], desc: '+15% Damage' },
-      { name: 'Overpower', icon: '👊', deltas: [{ field: 'damageMult', mul: 1.10 }, { field: 'critMultMult', mul: 1.15 }], desc: '+10% Damage, +15% Crit Dmg' },
+      { name: 'Brutality',   icon: '🪓', deltas: [{ field: 'damageMult', mul: 1.15 }], desc: '+15% Damage' },
+      { name: 'Overpower',   icon: '👊', deltas: [{ field: 'damageMult', mul: 1.10 }, { field: 'critMultMult', mul: 1.15 }], desc: '+10% Damage, +15% Crit Dmg' },
+      { name: 'War Cry',     icon: '📣', deltas: [{ field: 'damageMult', mul: 1.12 }, { field: 'knockbackAdd', add: 60 }], desc: '+12% Damage, +60 Knockback' },
+      { name: 'Executioner', icon: '🔨', deltas: [{ field: 'executeAdd', add: 0.08 }, { field: 'damageMult', mul: 1.08 }], desc: 'Execute enemies below 8% HP, +8% Damage' },
     ],
-    keystone: { name: 'Overwhelm', icon: '💥', deltas: [{ field: 'damageMult', mul: 1.45 }, { field: 'fireRateMult', mul: 0.80 }], desc: '+45% Damage, but -20% Fire Rate' },
+    keystones: [
+      { name: 'Overwhelm', icon: '💥', deltas: [{ field: 'damageMult', mul: 1.45 }, { field: 'fireRateMult', mul: 0.80 }], desc: '+45% Damage, but -20% Fire Rate' },
+      { name: 'Cull the Weak', icon: '☠️', deltas: [{ field: 'executeAdd', add: 0.15 }, { field: 'critMultMult', mul: 1.20 }], desc: 'Instantly kill enemies below 15% HP, +20% Crit Dmg' },
+      { name: 'Cataclysm', icon: '🌋', deltas: [{ field: 'explosionOnHit', add: 1 }, { field: 'fireRateMult', mul: 0.85 }], desc: 'Hits explode in an area, but -15% Fire Rate' },
+    ],
   },
   precision: {
-    primary: 'crit', secondary: 'cmul',
+    primary: 'crit', secondary: 'cmul', pod: 'crit',
     notables: [
-      { name: 'Deadeye', icon: '🎯', deltas: [{ field: 'critChanceBonus', add: 0.06 }], desc: '+6% Crit Chance' },
-      { name: 'Bloodletting', icon: '🩸', deltas: [{ field: 'critMultMult', mul: 1.30 }], desc: '+30% Crit Damage' },
+      { name: 'Deadeye',     icon: '🎯', deltas: [{ field: 'critChanceBonus', add: 0.06 }], desc: '+6% Crit Chance' },
+      { name: 'Bloodletting',icon: '🩸', deltas: [{ field: 'critMultMult', mul: 1.30 }], desc: '+30% Crit Damage' },
+      { name: 'Piercer',     icon: '➹', deltas: [{ field: 'piercingAdd', add: 1 }, { field: 'critChanceBonus', add: 0.03 }], desc: 'Projectiles pierce +1, +3% Crit' },
+      { name: 'Arc Weaver',  icon: '🌩️', deltas: [{ field: 'chainAdd', add: 0.20 }, { field: 'critChanceBonus', add: 0.03 }], desc: '+20% Chain Lightning, +3% Crit' },
     ],
-    keystone: { name: 'Assassinate', icon: '🗡️', deltas: [{ field: 'critMultMult', mul: 2.0 }, { field: 'fireRateMult', mul: 0.75 }], desc: '+100% Crit Damage, but -25% Fire Rate' },
+    keystones: [
+      { name: 'Assassinate', icon: '🗡️', deltas: [{ field: 'critMultMult', mul: 2.0 }, { field: 'fireRateMult', mul: 0.75 }], desc: '+100% Crit Damage, but -25% Fire Rate' },
+      { name: 'Splintering Rounds', icon: '🏹', deltas: [{ field: 'piercingAdd', add: 3 }, { field: 'damageMult', mul: 0.90 }], desc: 'Projectiles pierce +3 enemies, but -10% Damage' },
+      { name: 'Storm Caller', icon: '⛈️', deltas: [{ field: 'chainAdd', add: 0.60 }, { field: 'critChanceBonus', add: 0.05 }], desc: '+60% Chain Lightning, +5% Crit Chance' },
+    ],
   },
   alacrity: {
-    primary: 'rate', secondary: 'spd',
+    primary: 'rate', secondary: 'spd', pod: 'rate',
     notables: [
-      { name: 'Rapid Fire', icon: '🔥', deltas: [{ field: 'fireRateMult', mul: 1.15 }], desc: '+15% Fire Rate' },
-      { name: 'Fleet Foot', icon: '🏃', deltas: [{ field: 'speedMult', mul: 1.10 }, { field: 'fireRateMult', mul: 1.06 }], desc: '+10% Move Speed, +6% Fire Rate' },
+      { name: 'Rapid Fire',  icon: '🔥', deltas: [{ field: 'fireRateMult', mul: 1.15 }], desc: '+15% Fire Rate' },
+      { name: 'Fleet Foot',  icon: '🏃', deltas: [{ field: 'speedMult', mul: 1.10 }, { field: 'fireRateMult', mul: 1.06 }], desc: '+10% Move Speed, +6% Fire Rate' },
+      { name: 'Volley',      icon: '🎇', deltas: [{ field: 'multishotAdd', add: 1 }, { field: 'damageMult', mul: 0.96 }], desc: '+1 Projectile, -4% Damage' },
+      { name: 'Momentum',    icon: '🌀', deltas: [{ field: 'speedMult', mul: 1.08 }, { field: 'fireRateMult', mul: 1.08 }], desc: '+8% Move Speed, +8% Fire Rate' },
     ],
-    keystone: { name: 'Frenzy', icon: '⚡', deltas: [{ field: 'fireRateMult', mul: 1.50 }, { field: 'damageMult', mul: 0.80 }], desc: '+50% Fire Rate, but -20% Damage' },
+    keystones: [
+      { name: 'Frenzy', icon: '⚡', deltas: [{ field: 'fireRateMult', mul: 1.50 }, { field: 'damageMult', mul: 0.80 }], desc: '+50% Fire Rate, but -20% Damage' },
+      { name: 'Saturation Fire', icon: '🎆', deltas: [{ field: 'multishotAdd', add: 2 }, { field: 'fireRateMult', mul: 0.85 }], desc: '+2 Projectiles, but -15% Fire Rate' },
+      { name: 'Blitz', icon: '💨', deltas: [{ field: 'speedMult', mul: 1.30 }, { field: 'fireRateMult', mul: 1.15 }, { field: 'maxHealthBonus', add: -30 }], desc: '+30% Move Speed, +15% Fire Rate, but -30 Max HP' },
+    ],
   },
   fortune: {
-    primary: 'gold', secondary: 'xp',
+    primary: 'gold', secondary: 'xp', pod: 'pick',
     notables: [
-      { name: 'Prospector', icon: '💰', deltas: [{ field: 'goldMult', mul: 1.20 }], desc: '+20% Gold' },
-      { name: 'Scholar', icon: '📚', deltas: [{ field: 'xpMult', mul: 1.15 }, { field: 'pickupMult', mul: 1.15 }], desc: '+15% XP, +15% Pickup' },
+      { name: 'Prospector',  icon: '💰', deltas: [{ field: 'goldMult', mul: 1.20 }], desc: '+20% Gold' },
+      { name: 'Scholar',     icon: '📚', deltas: [{ field: 'xpMult', mul: 1.15 }, { field: 'pickupMult', mul: 1.15 }], desc: '+15% XP, +15% Pickup' },
+      { name: 'Magnetist',   icon: '🧲', deltas: [{ field: 'pickupMult', mul: 1.30 }], desc: '+30% Pickup Radius' },
+      { name: 'Windfall',    icon: '🍀', deltas: [{ field: 'goldMult', mul: 1.15 }, { field: 'xpMult', mul: 1.10 }], desc: '+15% Gold, +10% XP' },
     ],
-    keystone: { name: 'Treasure Hunter', icon: '🏆', deltas: [{ field: 'goldMult', mul: 1.40 }, { field: 'xpMult', mul: 1.30 }, { field: 'damageMult', mul: 0.85 }], desc: '+40% Gold, +30% XP, but -15% Damage' },
+    keystones: [
+      { name: 'Treasure Hunter', icon: '🏆', deltas: [{ field: 'goldMult', mul: 1.40 }, { field: 'xpMult', mul: 1.30 }, { field: 'damageMult', mul: 0.85 }], desc: '+40% Gold, +30% XP, but -15% Damage' },
+      { name: 'Blood Money', icon: '🪙', deltas: [{ field: 'goldMult', mul: 1.60 }, { field: 'lifestealAdd', add: 0.05 }, { field: 'maxHealthBonus', add: -25 }], desc: '+60% Gold, +5% Lifesteal, but -25 Max HP' },
+      { name: 'Scavenger', icon: '🦅', deltas: [{ field: 'pickupMult', mul: 1.60 }, { field: 'xpMult', mul: 1.25 }, { field: 'regenBonus', add: 1.5 }], desc: '+60% Pickup, +25% XP, +1.5 HP/s' },
+    ],
   },
   vitality: {
-    primary: 'hp', secondary: 'regen',
+    primary: 'hp', secondary: 'regen', pod: 'hp',
     notables: [
-      { name: 'Constitution', icon: '❤️', deltas: [{ field: 'maxHealthBonus', add: 40 }], desc: '+40 Max HP' },
-      { name: 'Recovery', icon: '💚', deltas: [{ field: 'regenBonus', add: 1.2 }, { field: 'maxHealthBonus', add: 20 }], desc: '+1.2 HP/s, +20 Max HP' },
+      { name: 'Constitution',icon: '❤️', deltas: [{ field: 'maxHealthBonus', add: 40 }], desc: '+40 Max HP' },
+      { name: 'Recovery',    icon: '💚', deltas: [{ field: 'regenBonus', add: 1.2 }, { field: 'maxHealthBonus', add: 20 }], desc: '+1.2 HP/s, +20 Max HP' },
+      { name: 'Bloodthirst', icon: '🧛', deltas: [{ field: 'lifestealAdd', add: 0.05 }, { field: 'maxHealthBonus', add: 15 }], desc: '+5% Lifesteal, +15 Max HP' },
+      { name: 'Vigor',       icon: '🌿', deltas: [{ field: 'regenBonus', add: 2.0 }], desc: '+2.0 HP/s' },
     ],
-    keystone: { name: 'Juggernaut', icon: '🐘', deltas: [{ field: 'maxHealthBonus', add: 90 }, { field: 'speedMult', mul: 0.85 }], desc: '+90 Max HP, but -15% Move Speed' },
+    keystones: [
+      { name: 'Juggernaut', icon: '🐘', deltas: [{ field: 'maxHealthBonus', add: 90 }, { field: 'speedMult', mul: 0.85 }], desc: '+90 Max HP, but -15% Move Speed' },
+      { name: 'Sanguine Pact', icon: '🩸', deltas: [{ field: 'lifestealAdd', add: 0.12 }, { field: 'maxHealthBonus', add: 30 }], desc: '+12% Lifesteal, +30 Max HP' },
+      { name: 'Undying', icon: '♾️', deltas: [{ field: 'regenBonus', add: 6 }, { field: 'maxHealthBonus', add: 40 }, { field: 'damageMult', mul: 0.85 }], desc: '+6 HP/s, +40 Max HP, but -15% Damage' },
+    ],
   },
   aegis: {
-    primary: 'arm', secondary: 'hp',
+    primary: 'arm', secondary: 'hp', pod: 'arm',
     notables: [
-      { name: 'Ironhide', icon: '🛡️', deltas: [{ field: 'armorBonus', add: 6 }], desc: '+6 Armor' },
-      { name: 'Fortress', icon: '🏰', deltas: [{ field: 'armorBonus', add: 4 }, { field: 'maxHealthBonus', add: 25 }], desc: '+4 Armor, +25 Max HP' },
+      { name: 'Ironhide',    icon: '🛡️', deltas: [{ field: 'armorBonus', add: 6 }], desc: '+6 Armor' },
+      { name: 'Fortress',    icon: '🏰', deltas: [{ field: 'armorBonus', add: 4 }, { field: 'maxHealthBonus', add: 25 }], desc: '+4 Armor, +25 Max HP' },
+      { name: 'Spiked Mail', icon: '🦔', deltas: [{ field: 'thornsAdd', add: 0.20 }, { field: 'armorBonus', add: 3 }], desc: '+20% Thorns, +3 Armor' },
+      { name: 'Bracing',     icon: '💪', deltas: [{ field: 'knockbackAdd', add: 80 }, { field: 'armorBonus', add: 3 }], desc: '+80 Knockback, +3 Armor' },
     ],
-    keystone: { name: 'Bulwark', icon: '🐢', deltas: [{ field: 'armorBonus', add: 12 }, { field: 'regenBonus', add: 3 }, { field: 'speedMult', mul: 0.75 }], desc: '+12 Armor, +3 HP/s, but -25% Move Speed' },
+    keystones: [
+      { name: 'Bulwark', icon: '🐢', deltas: [{ field: 'armorBonus', add: 12 }, { field: 'regenBonus', add: 3 }, { field: 'speedMult', mul: 0.75 }], desc: '+12 Armor, +3 HP/s, but -25% Move Speed' },
+      { name: 'Retribution', icon: '🔥', deltas: [{ field: 'thornsAdd', add: 0.60 }, { field: 'armorBonus', add: 6 }], desc: '+60% Thorns (reflect damage), +6 Armor' },
+      { name: 'Immovable', icon: '🗿', deltas: [{ field: 'knockbackAdd', add: 220 }, { field: 'armorBonus', add: 8 }, { field: 'fireRateMult', mul: 0.90 }], desc: 'Massive knockback, +8 Armor, but -10% Fire Rate' },
+    ],
   },
 };
 
@@ -176,36 +229,61 @@ const CLASS_START_ARM: Record<string, string> = {
 };
 
 // Relative slot template applied to every arm. (radius, angleOffset°, role).
-// role: 'p' = primary minor, 's' = secondary minor, 'nA'/'nB' = notables, 'key' = keystone.
+// role: 'p' = primary(laneA) minor, 's' = secondary(laneB) minor, 'pod' = pod minor,
+//       'nA'..'nD' = the four notables, 'kL'/'kM'/'kR' = the three rim keystones.
+// The arm fans out as TWO parallel lanes (A left, B right) climbing eight rings,
+// with notables punctuating each lane and small pods hung off the mid notables —
+// giving many alternate routes to the rim (the "more paths" ask).
 interface Slot { key: string; r: number; off: number; role: string; }
 const ARM_TEMPLATE: Slot[] = [
   { key: 'gate', r: 150, off: 0,   role: 'p'   },
-  { key: 't1a',  r: 250, off: -9,  role: 'p'   },
-  { key: 't1b',  r: 250, off: 9,   role: 's'   },
-  { key: 'nA',   r: 355, off: 0,   role: 'nA'  },
-  { key: 't2a',  r: 355, off: -17, role: 's'   },
-  { key: 't2b',  r: 355, off: 17,  role: 'p'   },
-  { key: 't3a',  r: 460, off: -9,  role: 'p'   },
-  { key: 't3b',  r: 460, off: 9,   role: 's'   },
-  { key: 't4',   r: 565, off: -11, role: 'p'   },
-  { key: 'nB',   r: 565, off: 11,  role: 'nB'  },
-  { key: 't5',   r: 670, off: 0,   role: 's'   },
-  { key: 't6a',  r: 670, off: -18, role: 's'   },
-  { key: 't6b',  r: 670, off: 18,  role: 'p'   },
-  { key: 'key',  r: 780, off: 0,   role: 'key' },
+  // Ring 1 — lanes split.
+  { key: 'a1',   r: 250, off: -12, role: 'p'   },
+  { key: 'b1',   r: 250, off: 12,  role: 's'   },
+  // Ring 2 — first notables anchor each lane.
+  { key: 'nA',   r: 355, off: -14, role: 'nA'  },
+  { key: 'nB',   r: 355, off: 14,  role: 'nB'  },
+  { key: 'mid2', r: 355, off: 0,   role: 'pod' },
+  // Ring 3 — travel + pod hangers off the notables.
+  { key: 'a3',   r: 460, off: -12, role: 's'   },
+  { key: 'b3',   r: 460, off: 12,  role: 'p'   },
+  { key: 'pA',   r: 430, off: -26, role: 'pod' },
+  { key: 'pB',   r: 430, off: 26,  role: 'pod' },
+  // Ring 4 — second notables.
+  { key: 'nC',   r: 565, off: -13, role: 'nC'  },
+  { key: 'nD',   r: 565, off: 13,  role: 'nD'  },
+  { key: 'mid4', r: 565, off: 0,   role: 'pod' },
+  // Ring 5 — travel converging toward the rim.
+  { key: 'a5',   r: 670, off: -14, role: 'p'   },
+  { key: 'b5',   r: 670, off: 14,  role: 's'   },
+  { key: 'mid5', r: 670, off: 0,   role: 'pod' },
+  // Ring 6 — rim approach.
+  { key: 'a6',   r: 775, off: -18, role: 's'   },
+  { key: 'b6',   r: 775, off: 18,  role: 'p'   },
+  { key: 'mid6', r: 775, off: 0,   role: 'pod' },
+  // Ring 7 — the three keystones at the outer rim.
+  { key: 'kL',   r: 885, off: -22, role: 'kL'  },
+  { key: 'kM',   r: 900, off: 0,   role: 'kM'  },
+  { key: 'kR',   r: 885, off: 22,  role: 'kR'  },
 ];
 
-// Intra-arm edges by slot key.
+// Intra-arm edges by slot key. Two lanes with rungs between them = a real web.
 const ARM_EDGES: [string, string][] = [
-  ['gate', 't1a'], ['gate', 't1b'],
-  ['t1a', 'nA'], ['t1b', 'nA'],
-  ['t1a', 't2a'], ['t1b', 't2b'],
-  ['nA', 't3a'], ['nA', 't3b'],
-  ['t2a', 't3a'], ['t2b', 't3b'],
-  ['t3a', 't4'], ['t3b', 'nB'],
-  ['t4', 't5'], ['nB', 't5'],
-  ['t5', 't6a'], ['t5', 't6b'],
-  ['t6a', 'key'], ['t6b', 'key'],
+  ['gate', 'a1'], ['gate', 'b1'],
+  ['a1', 'nA'], ['b1', 'nB'],
+  ['a1', 'mid2'], ['b1', 'mid2'],
+  ['nA', 'a3'], ['nB', 'b3'],
+  ['nA', 'pA'], ['nB', 'pB'],
+  ['mid2', 'a3'], ['mid2', 'b3'],
+  ['a3', 'nC'], ['b3', 'nD'],
+  ['a3', 'mid4'], ['b3', 'mid4'],
+  ['nC', 'a5'], ['nD', 'b5'],
+  ['mid4', 'a5'], ['mid4', 'b5'],
+  ['a5', 'mid5'], ['b5', 'mid5'],
+  ['a5', 'a6'], ['b5', 'b6'],
+  ['mid5', 'a6'], ['mid5', 'b6'],
+  ['a6', 'kL'], ['a6', 'mid6'], ['b6', 'kR'], ['b6', 'mid6'],
+  ['mid6', 'kM'], ['kL', 'kM'], ['kM', 'kR'],
 ];
 
 function deg2rad(d: number): number { return (d * Math.PI) / 180; }
@@ -234,14 +312,19 @@ function buildTree(): { nodes: SkillNode[]; edges: [string, string][] } {
       const y = Math.round(Math.sin(theta) * slot.r);
       const id = slotId(slot.key);
 
+      const NOTABLE_IDX: Record<string, number> = { nA: 0, nB: 1, nC: 2, nD: 3 };
+      const KEYSTONE_IDX: Record<string, number> = { kL: 0, kM: 1, kR: 2 };
+
       let node: SkillNode;
-      if (slot.role === 'key') {
-        node = { id, name: def.keystone.name, type: 'keystone', arm: arm.key, x, y, icon: def.keystone.icon, deltas: def.keystone.deltas, desc: def.keystone.desc };
-      } else if (slot.role === 'nA' || slot.role === 'nB') {
-        const n = def.notables[slot.role === 'nA' ? 0 : 1];
+      if (slot.role in KEYSTONE_IDX) {
+        const k = def.keystones[KEYSTONE_IDX[slot.role]];
+        node = { id, name: k.name, type: 'keystone', arm: arm.key, x, y, icon: k.icon, deltas: k.deltas, desc: k.desc };
+      } else if (slot.role in NOTABLE_IDX) {
+        const n = def.notables[NOTABLE_IDX[slot.role]];
         node = { id, name: n.name, type: 'notable', arm: arm.key, x, y, icon: n.icon, deltas: n.deltas, desc: n.desc };
       } else {
-        const kind = MINOR_KIND[slot.role === 'p' ? def.primary : def.secondary];
+        const kindKey = slot.role === 'p' ? def.primary : slot.role === 's' ? def.secondary : def.pod;
+        const kind = MINOR_KIND[kindKey];
         node = { id, name: kind.name, type: 'minor', arm: arm.key, x, y, icon: kind.icon, deltas: [kind.delta], desc: kind.label };
       }
       nodes.push(node);
@@ -254,9 +337,19 @@ function buildTree(): { nodes: SkillNode[]; edges: [string, string][] } {
     gatewayIds.push(slotId('gate'));
   });
 
-  // Ring edges linking adjacent gateways into one web.
+  // Ring edges linking adjacent gateways into one web (inner loop).
   for (let i = 0; i < gatewayIds.length; i++) {
     edges.push([gatewayIds[i], gatewayIds[(i + 1) % gatewayIds.length]]);
+  }
+
+  // Cross-arm BRIDGE edges — link each arm's outer travel to the next arm's, so the
+  // rim forms a loop and you can path between neighbouring themes without returning
+  // to the hub (the PoE "wheel" feel + more routes to distant keystones).
+  for (let i = 0; i < armCount; i++) {
+    const a = SKILL_ARMS[i].key;
+    const b = SKILL_ARMS[(i + 1) % armCount].key;
+    edges.push([`${a}_b5`, `${b}_a5`]);   // mid-outer ring bridge
+    edges.push([`${a}_b3`, `${b}_a3`]);   // mid ring bridge
   }
 
   // Non-gunner class start nodes, each just inside its thematic arm's gateway.
@@ -378,6 +471,15 @@ export class SkillTree {
     stats.skillXpMult = b.xpMult;
     stats.skillPickupMult = b.pickupMult;
     stats.skillGoldMult = b.goldMult;
+    // Behavior grants (build-defining keystones/notables).
+    stats.skillPiercingAdd = Math.round(b.piercingAdd);
+    stats.skillMultishotAdd = Math.round(b.multishotAdd);
+    stats.skillLifestealAdd = b.lifestealAdd;
+    stats.skillThornsAdd = b.thornsAdd;
+    stats.skillChainAdd = b.chainAdd;
+    stats.skillExecuteAdd = b.executeAdd;
+    stats.skillKnockbackAdd = b.knockbackAdd;
+    stats.skillExplosionOnHit = b.explosionOnHit > 0;
   }
 
   /** Count of allocated non-start nodes (for display). */

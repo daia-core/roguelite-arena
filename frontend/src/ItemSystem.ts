@@ -452,6 +452,20 @@ export class PlayerStats {
   skillPickupMult: number = 1;
   skillGoldMult: number = 1;
 
+  // ---- SKILL TREE *behavior* grants (build-defining keystones/notables) ----
+  // These let the passive web grant real combat behaviors (pierce, multishot,
+  // lifesteal, thorns, chain, execute, on-hit explosions), not just stat scalars.
+  // They fold into the existing item getters below, so a keystone reuses the same
+  // combat hooks an item would. Defaults are 0/false → no effect until allocated.
+  skillPiercingAdd: number = 0;
+  skillMultishotAdd: number = 0;
+  skillLifestealAdd: number = 0;
+  skillThornsAdd: number = 0;
+  skillChainAdd: number = 0;
+  skillExecuteAdd: number = 0;
+  skillKnockbackAdd: number = 0;
+  skillExplosionOnHit: boolean = false;
+
   // ---- MEMOIZED ITEM AGGREGATION ----
   // Every getter used to re-loop the whole item list on EVERY call, every frame
   // (getDamage/getFireRate/… are read many times per frame). The item list only
@@ -916,6 +930,8 @@ export class PlayerStats {
     let lifesteal = this.ensureAgg().lifesteal;
     // DUO COMBO BONUS
     lifesteal += this.duos.getTotalBonuses().lifesteal;
+    // SKILL TREE contribution (Sanguine Pact keystone / vitality vampire nodes)
+    lifesteal += this.skillLifestealAdd;
     // Cap at 100% — a dedicated vampire build can fully convert damage to healing,
     // but overheal beyond that is wasted (heal() clamps to maxHP anyway) and an
     // uncapped value made a heavy-lifesteal build trivially unkillable.
@@ -923,7 +939,8 @@ export class PlayerStats {
   }
 
   getThorns(): number {
-    return this.ensureAgg().thorns;
+    // SKILL TREE contribution (Retribution keystone / aegis reflect nodes)
+    return this.ensureAgg().thorns + this.skillThornsAdd;
   }
 
   getProjectileSpeed(): number {
@@ -931,13 +948,16 @@ export class PlayerStats {
   }
 
   getKnockback(): number {
-    return this.ensureAgg().knockback;
+    // SKILL TREE contribution (Immovable keystone / aegis force nodes)
+    return this.ensureAgg().knockback + this.skillKnockbackAdd;
   }
 
   getPiercing(): number {
     let pierce = this.ensureAgg().piercing;
     // DUO COMBO BONUS
     pierce += this.duos.getTotalBonuses().piercing;
+    // SKILL TREE contribution (Splintering Rounds keystone / precision pierce nodes)
+    pierce += this.skillPiercingAdd;
     return pierce;
   }
 
@@ -969,6 +989,8 @@ export class PlayerStats {
     let chance = this.ensureAgg().chainLightning;
     // DUO COMBO BONUS
     chance += this.duos.getTotalBonuses().chainLightning;
+    // SKILL TREE contribution (Arc Weaver notable / precision chain nodes)
+    chance += this.skillChainAdd;
     return Math.min(1, chance);
   }
 
@@ -1097,18 +1119,23 @@ export class PlayerStats {
   getKillStackDamage(): number { return this.ensureAgg().killStackDamage; }
   getHighHpPower(): number { return this.ensureAgg().highHpPower; }
   getGoldScaleDamage(): number { return this.ensureAgg().goldScaleDamage; }
-  getExecuteThreshold(): number { return this.ensureAgg().executeThreshold; }
+  getExecuteThreshold(): number {
+    // SKILL TREE contribution (Cull the Weak keystone) — max-stacks with items.
+    return Math.max(this.ensureAgg().executeThreshold, this.skillExecuteAdd);
+  }
 
   hasPiercing(): boolean {
     return this.getPiercing() > 0;
   }
 
   hasExplosionOnKill(): boolean {
-    return this.ensureAgg().explosionOnHit;
+    // SKILL TREE contribution (Cataclysm keystone)
+    return this.ensureAgg().explosionOnHit || this.skillExplosionOnHit;
   }
 
   hasExplosionOnHit(): boolean {
-    return this.ensureAgg().explosionOnHit;
+    // SKILL TREE contribution (Cataclysm keystone)
+    return this.ensureAgg().explosionOnHit || this.skillExplosionOnHit;
   }
 
   hasShield(): boolean {
@@ -1124,7 +1151,8 @@ export class PlayerStats {
   }
 
   getMultishot(): number {
-    return this.ensureAgg().multishot;
+    // SKILL TREE contribution (Saturation Fire keystone / alacrity volley nodes)
+    return this.ensureAgg().multishot + this.skillMultishotAdd;
   }
 
   // ---- OFFER-FILTER: hide items whose every effect is an already-maxed stat ----
