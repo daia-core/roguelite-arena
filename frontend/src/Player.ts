@@ -378,6 +378,22 @@ export class Player {
       ctx.stroke();
     }
 
+    // I-frame ring: white dashed arc during invincibility so the player can read
+    // when they're safe. Blinks at 8Hz in sync with the sprite blink. The radius
+    // sits just outside the shield ring so both are legible when stacked.
+    if (this.invincibilityTimer > 0) {
+      const blinkPhase = Math.floor(this.invincibilityTimer * 8) % 2;
+      if (blinkPhase === 1) {
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([6, 4]);
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius + (this.shield ? 16 : 6), 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+
     // Draw player sprite with effects
     if (sprite) {
       // Dash effect: draw with 70% dithered pattern

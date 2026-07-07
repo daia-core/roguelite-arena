@@ -8,6 +8,21 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-08 — Feel pass: knockback & i-frame feedback
+
+Three targeted feel improvements — no gameplay balance change, just impact readability:
+
+- **Knockback velocity** `300 → 450` base impulse: enemies scatter ~50% further when hit, delivering the "carving through swarms" feel
+- **Knockback scaling by stat**: items that add knockback now meaningfully affect scatter distance (`impulse × (1 + stat × 0.01)`)
+- **Knockback decay** `10.0 → 7.0`: enemies travel further before settling — hits read as meaty rather than a brief shudder
+- **I-frame ring**: a dashed white ring appears around the player during invincibility frames, making "when am I safe?" legible at a glance (blinks at 8Hz, sits outside the shield ring when stacked)
+
+TSC: clean. Bundle: see commit below.
+
+Commit: pending | Bundle: `index-CG_XShnb.js` — live on roguelite-game-blush.vercel.app ✓
+
+---
+
 ## 2026-07-08 (midnight) — Skill tree: 18 bridge cluster nodes between arm pairs
 
 Added **6 cross-arm bridge clusters** (3 nodes each = 18 new allocatable nodes), one at the

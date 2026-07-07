@@ -843,8 +843,10 @@ export class Enemy {
       this.x += this.knockbackVelocityX * dt;
       this.y += this.knockbackVelocityY * dt;
 
-      // Exponential decay (lerp toward zero)
-      const decayFactor = 10.0;
+      // Exponential decay (lerp toward zero).
+      // 7.0 vs the old 10.0: enemies travel ~40% further on hit, which
+      // reads as the "carving through swarms" impact Vampire Survivors delivers.
+      const decayFactor = 7.0;
       this.knockbackVelocityX -= this.knockbackVelocityX * decayFactor * dt;
       this.knockbackVelocityY -= this.knockbackVelocityY * decayFactor * dt;
 

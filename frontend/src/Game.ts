@@ -1322,13 +1322,14 @@ export class Game {
             }
             proj.markHit(enemy.id);
 
-            // GAME FEEL: Enhanced knockback physics
+            // GAME FEEL: Enhanced knockback physics.
+            // Base 450 (up from 300) + 1% per knockback stat point — items that add
+            // knockback now meaningfully affect how far enemies scatter.
             const knockback = this.playerStats.getKnockback();
-            // Golem is immune to knockback
             if (knockback > 0 && enemy.type !== 'golem') {
               const angle = Math.atan2(enemy.y - proj.y, enemy.x - proj.x);
-              // Apply knockback as velocity (Enemy.ts will handle decay)
-              enemy.applyKnockback(Math.cos(angle) * 300, Math.sin(angle) * 300);
+              const impulse = 450 * (1 + knockback * 0.01);
+              enemy.applyKnockback(Math.cos(angle) * impulse, Math.sin(angle) * impulse);
             }
 
             // Lifesteal
