@@ -8,6 +8,49 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-07 (early morning) — Boss kills bug fix + game-over screen
+
+**Bug fix — bossKills never actually counted bosses (all runs to date)**
+The kill-tracking code was incrementing `bossKills` on `enemy.type === 'demon'` (a regular
+mob), not on `enemy.typeData.isBoss`. All 5 actual bosses (Necrolord, Flamefiend, Voidbeast,
+Stormking, Ancientgolem) were silently never counted. This also meant the Souls calculation
+(which uses `bossKills`) slightly undervalued boss-heavy runs. Fixed to `typeData.isBoss` —
+consistent with the freeze-frame hit-pause logic 7 lines below.
+
+**Game-over screen: Bosses stat added**
+`bossKills` was tracked but never shown. Now displayed in orange between Kills and Gold.
+Panel height increased 70px (desktop 320→390, mobile 380→460) to fit the new line.
+
+**Game-over screen: Personal best comparison on Wave**
+Wave line now reads "Wave: X  ★ NEW BEST!" (amber) on a record run, or
+"Wave: X  (Best: Y)" (blue) when below your record. Best is read *before*
+`updateMetaAfterRun` so it reflects the *previous* record, not the current run.
+
+- Commit: `053a633`
+- Bundle: `index-D0kZ0W8s.js`
+- Deploy: `dpl_CprtFQHfFqeQvRP3z3qAMzXTbVPe` · state READY · readySubstate PROMOTED
+- Live-verified: HTTP 200 at roguelite-game-blush.vercel.app ✅
+
+---
+
+## 2026-07-07 (night) — all 5 equipment slots filled to 20 items each
+
+**Deeper item pool across every slot.** Each equipment slot now has at least 20 items to
+offer (was as low as 7), adding 51 new catalog entries spanning all five gaps:
+head (+13), legs (+13), feet (+10), ring (+9), torso (+6).
+
+The new items are spread across all rarities (common → legendary) and archetypes —
+defensive, ranged, melee, elemental, economic, utility — to broaden build variety and
+keep the shop fresh across long runs. Highlights: Martyr's Halo (+28% dmg / -15 max HP
+glass-cannon crown), War-March Plates (per-wave ramp damage stack), Seven-League Boots
+(+26% speed), Plague Veil (+15% ignite + wound DoT stacker).
+
+Commit `0e1d362`; live-verified bundle **`index-Cm35q1cX.js`** on
+roguelite-game-blush.vercel.app (all 5 new item IDs confirmed in bundle). Pre-validated
+via `qa-catalog-integrity.mjs` (326/0-dup), tsc clean, `qa-shop-8slot 29/29 PASS`.
+
+---
+
 ## 2026-07-06 (evening) — shop cards no longer print the same stat twice
 
 **Cleaner shop cards.** 30 items showed their stat line twice: the green at-a-glance
