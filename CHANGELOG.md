@@ -8,6 +8,36 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-08 — Active Skill System expansion: 26 spells across 4 tiers
+
+Active skills tripled from 10 → **26 spell scrolls**, spanning all 4 shop tiers. New additions:
+
+**Tier 1 (Common):**
+- 🔮 **Arcane Barrage** — 5 homing bolts at nearest enemies (3×, 4s CD)
+- 🌟 **Inferno Aura** — fire ring burns all nearby + applies burnTimer (2.5×, 7s CD)
+- 💎 **Crystal Burst** — hard-freeze 4 nearest enemies for 2s + damage (4×, 6s CD)
+
+**Tier 2 (Uncommon):**
+- 🌀 **Blade Storm** — 8 piercing blades in all directions simultaneously (4×, 5s CD)
+- 🌩️ **Lightning Storm** — 5 random strikes on enemies over 1.5s (6× each, 8s CD)
+- 🌑 **Void Pulse** — 3 expanding shockwave rings (3× per ring, 6s CD)
+- 🌨️ **Blizzard** — 6 frost shards scatter wide, each slows on hit (3.5×, 7s CD)
+- 🕳️ **Gravity Pull** — yank ALL enemies toward you then 55% slow (1.5×, 10s CD)
+
+**Tier 3 (Rare):**
+- ⏱️ **Time Warp** — freeze all for 1s + 75% slow for 5s (utility, 15s CD)
+- 🧛 **Vampire Burst** — drain 10 nearest + heal 30% of damage (5×, 8s CD)
+- 💨 **Spectral Dash** — phase through 5 enemies in rapid sequence + i-frames (6×, 9s CD)
+- 🧪 **Plague Bomb** — massive 8s DoT zone + immediate poison (1.5×/tick, 8s CD)
+
+**Tier 4 (Legendary):**
+- 🌌 **Black Hole** — 2s gravity sink pulls enemies in, then detonates (15×, 18s CD)
+- 💀 **Curse Wave** — apply Fragility×5 + Exposed×3 to ALL enemies (14s CD)
+- ⚜️ **Divine Wrath** — 3 holy waves hit all enemies + 2s invincibility (8×/wave, 16s CD)
+- 💥 **Armageddon** — 12 targeted meteors rain over 3 seconds (6× each, 20s CD)
+
+---
+
 ## 2026-07-08 — Active Skill System: 10 Soulstone-inspired spell scrolls
 
 Players can now equip an **active skill** by buying a Spell Scroll from the shop, then trigger it

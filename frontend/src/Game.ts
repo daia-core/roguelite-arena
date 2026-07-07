@@ -1915,6 +1915,267 @@ export class Game {
         }));
         break;
       }
+
+      // ── TIER 1 ADDITIONS ─────────────────────────────────────────────────
+      case 'arcane_barrage': {
+        // 5 homing projectiles fired toward the 5 nearest enemies.
+        const targetsAB = [...this.enemies]
+          .filter(e => !e.dead)
+          .sort((a, b) => Math.hypot(a.x - px, a.y - py) - Math.hypot(b.x - px, b.y - py))
+          .slice(0, 5);
+        for (const t of targetsAB) {
+          const angle = Math.atan2(t.y - py, t.x - px);
+          const p = new Projectile(px, py, angle, baseDmg, 480, false, true);
+          p.color = '#cc5de8';
+          p.radius = 7;
+          this.projectiles.push(p);
+        }
+        break;
+      }
+      case 'inferno_aura': {
+        // Brief fire ring — damages and applies burnTimer to all nearby.
+        const rIA = skill.radius ?? 140;
+        for (const e of this.enemies) {
+          if (e.dead) continue;
+          if (Math.hypot(e.x - px, e.y - py) <= rIA) {
+            this.dealAuxDamage(e, baseDmg, '#ff8c00');
+            e.burnTimer = Math.max(e.burnTimer, 3.0);
+          }
+        }
+        this.spawnAoeZone(new AoeZone(px, py, rIA, 0, 0.0, {
+          color: '#ff6b00', activeTime: 0.6, singleHit: true,
+        }));
+        break;
+      }
+      case 'crystal_burst': {
+        // Hard-freeze 4 nearest enemies (2s), plus damage.
+        const targetsCB = [...this.enemies]
+          .filter(e => !e.dead)
+          .sort((a, b) => Math.hypot(a.x - px, a.y - py) - Math.hypot(b.x - px, b.y - py))
+          .slice(0, 4);
+        for (const t of targetsCB) {
+          this.dealAuxDamage(t, baseDmg, '#a5d8ff');
+          t.frozenTimer = Math.max(t.frozenTimer, 2.0);
+          this.spawnAoeZone(new AoeZone(t.x, t.y, 40, 0, 0.0, {
+            color: '#a5d8ff', activeTime: 0.4, singleHit: true,
+          }));
+        }
+        break;
+      }
+
+      // ── TIER 2 ADDITIONS ─────────────────────────────────────────────────
+      case 'blade_storm': {
+        // 8 piercing blades fired in all directions simultaneously.
+        for (let i = 0; i < 8; i++) {
+          const angle = (i / 8) * Math.PI * 2;
+          const p = new Projectile(px, py, angle, baseDmg, 400, true, false);
+          p.maxPierceCount = 999;
+          p.color = '#e9ecef';
+          p.radius = 10;
+          this.projectiles.push(p);
+        }
+        break;
+      }
+      case 'lightning_storm': {
+        // 5 lightning strikes on random enemies, staggered over 1.5 seconds.
+        const aliveLS = this.enemies.filter(e => !e.dead);
+        if (aliveLS.length === 0) break;
+        for (let i = 0; i < 5; i++) {
+          const t = aliveLS[Math.floor(Math.random() * aliveLS.length)];
+          this.spawnAoeZone(new AoeZone(t.x, t.y, 45, baseDmg, i * 0.3, {
+            color: '#ffd43b', activeTime: 0.25, singleHit: true,
+          }));
+        }
+        break;
+      }
+      case 'void_pulse': {
+        // 3 expanding rings of damage — each larger and delayed.
+        const rVP = skill.radius ?? 180;
+        for (let i = 0; i < 3; i++) {
+          this.spawnAoeZone(new AoeZone(px, py, rVP * (0.5 + i * 0.3), baseDmg, i * 0.25, {
+            color: '#7950f2', activeTime: 0.3, singleHit: false,
+          }));
+        }
+        break;
+      }
+      case 'blizzard': {
+        // 6 frost shards scattered in large area — each slows on contact.
+        const rBZ = skill.radius ?? 200;
+        for (let i = 0; i < 6; i++) {
+          const ang = Math.random() * Math.PI * 2;
+          const dist = Math.random() * rBZ;
+          const ix = px + Math.cos(ang) * dist;
+          const iy = py + Math.sin(ang) * dist;
+          this.spawnAoeZone(new AoeZone(ix, iy, 60, baseDmg, i * 0.2, {
+            color: '#74c0fc', activeTime: 0.3, singleHit: true,
+          }));
+          for (const e of this.enemies) {
+            if (e.dead) continue;
+            if (Math.hypot(e.x - ix, e.y - iy) <= 60) {
+              e.slowTimer = Math.max(e.slowTimer, 2.5);
+              e.slowFactor = Math.min(e.slowFactor, 0.55);
+            }
+          }
+        }
+        break;
+      }
+      case 'gravity_pull': {
+        // Yank ALL enemies toward the player, deal damage, then slow.
+        const pullSnap = 180;
+        for (const e of this.enemies) {
+          if (e.dead) continue;
+          const dx = px - e.x, dy = py - e.y;
+          const distGP = Math.hypot(dx, dy);
+          if (distGP > 5) {
+            const snap = Math.min(pullSnap, distGP * 0.6);
+            e.x += (dx / distGP) * snap;
+            e.y += (dy / distGP) * snap;
+          }
+          this.dealAuxDamage(e, baseDmg, '#845ef7');
+          e.slowTimer = Math.max(e.slowTimer, 3.0);
+          e.slowFactor = Math.min(e.slowFactor, 0.45);
+        }
+        this.spawnAoeZone(new AoeZone(px, py, 900, 0, 0.0, {
+          color: '#7950f2', activeTime: 0.3, singleHit: true,
+        }));
+        break;
+      }
+
+      // ── TIER 3 ADDITIONS ─────────────────────────────────────────────────
+      case 'time_warp': {
+        // Freeze ALL for 1s, then extend a heavy slow for 5s afterward.
+        for (const e of this.enemies) {
+          if (e.dead) continue;
+          e.frozenTimer = Math.max(e.frozenTimer, 1.0);
+          e.slowTimer = Math.max(e.slowTimer, 6.0);
+          e.slowFactor = Math.min(e.slowFactor, 0.25);
+        }
+        this.spawnAoeZone(new AoeZone(px, py, 900, 0, 0.0, {
+          color: '#74c0fc', activeTime: 0.5, singleHit: true,
+        }));
+        break;
+      }
+      case 'vampire_burst': {
+        // Drain 10 nearest enemies — heal 30% of total damage dealt.
+        const targetsVB = [...this.enemies]
+          .filter(e => !e.dead)
+          .sort((a, b) => Math.hypot(a.x - px, a.y - py) - Math.hypot(b.x - px, b.y - py))
+          .slice(0, 10);
+        let totalDmgVB = 0;
+        for (const t of targetsVB) {
+          this.dealAuxDamage(t, baseDmg, '#c92a2a');
+          totalDmgVB += baseDmg;
+        }
+        if (totalDmgVB > 0 && this.player) this.player.heal(totalDmgVB * 0.30);
+        this.spawnAoeZone(new AoeZone(px, py, 280, 0, 0.0, {
+          color: '#9b2335', activeTime: 0.4, singleHit: true,
+        }));
+        break;
+      }
+      case 'spectral_dash': {
+        // 5× rapid dash — teleport to each of 5 nearest enemies and nova-burst.
+        const targetsSP = [...this.enemies]
+          .filter(e => !e.dead)
+          .sort((a, b) => Math.hypot(a.x - px, a.y - py) - Math.hypot(b.x - px, b.y - py))
+          .slice(0, 5);
+        if (targetsSP.length === 0) break;
+        const rSD = skill.radius ?? 60;
+        let lastX = px, lastY = py;
+        for (let i = 0; i < targetsSP.length; i++) {
+          const t = targetsSP[i];
+          this.spawnAoeZone(new AoeZone(t.x, t.y, rSD, baseDmg, i * 0.08, {
+            color: '#845ef7', activeTime: 0.25, singleHit: true,
+          }));
+          lastX = t.x; lastY = t.y;
+        }
+        if (this.player) {
+          this.player.x = Math.max(20, Math.min(this.worldWidth - 20, lastX));
+          this.player.y = Math.max(20, Math.min(this.worldHeight - 20, lastY));
+          this.player.invincibilityTimer = Math.max(this.player.invincibilityTimer, 0.6);
+        }
+        break;
+      }
+      case 'plague_bomb': {
+        // Massive persistent poison zone (8s) + immediate poisonTimer on enemies inside.
+        const rPB = skill.radius ?? 140;
+        this.spawnAoeZone(new AoeZone(px, py, rPB, baseDmg / 5, 0.0, {
+          color: '#40c057', activeTime: 8.0, singleHit: false,
+        }));
+        for (const e of this.enemies) {
+          if (e.dead) continue;
+          if (Math.hypot(e.x - px, e.y - py) <= rPB) {
+            e.poisonTimer = Math.max(e.poisonTimer, 6.0);
+          }
+        }
+        break;
+      }
+
+      // ── TIER 4 ADDITIONS ─────────────────────────────────────────────────
+      case 'black_hole': {
+        // 2s gravity sink pulls enemies in, then detonates for massive damage.
+        const rBH = skill.radius ?? 250;
+        for (const e of this.enemies) {
+          if (e.dead) continue;
+          const distBH = Math.hypot(e.x - px, e.y - py);
+          if (distBH <= rBH && distBH > 5) {
+            const dx = px - e.x, dy = py - e.y;
+            e.x += (dx / distBH) * 150;
+            e.y += (dy / distBH) * 150;
+          }
+        }
+        this.spawnAoeZone(new AoeZone(px, py, rBH * 0.35, 0, 0.0, {
+          color: '#212529', activeTime: 2.0, singleHit: false,
+        }));
+        this.spawnAoeZone(new AoeZone(px, py, rBH, baseDmg, 2.0, {
+          color: '#7950f2', activeTime: 0.6, singleHit: false,
+        }));
+        break;
+      }
+      case 'curse_wave': {
+        // Apply fragility + exposed stacks to every enemy on screen + minor damage.
+        for (const e of this.enemies) {
+          if (e.dead) continue;
+          e.statusFX.apply('fragility', { stacks: 5 });
+          e.statusFX.apply('exposed', { stacks: 3 });
+          this.dealAuxDamage(e, baseDmg, '#f03e3e');
+        }
+        this.spawnAoeZone(new AoeZone(px, py, 900, 0, 0.0, {
+          color: '#f03e3e', activeTime: 0.5, singleHit: true,
+        }));
+        break;
+      }
+      case 'divine_wrath': {
+        // 3 holy waves hit ALL enemies — massive damage + extended i-frames.
+        if (this.player) this.player.invincibilityTimer = Math.max(this.player.invincibilityTimer, 2.0);
+        for (let wave = 0; wave < 3; wave++) {
+          this.spawnAoeZone(new AoeZone(px, py, 900, baseDmg / 3, wave * 0.4, {
+            color: '#ffd43b', activeTime: 0.3, singleHit: false,
+          }));
+        }
+        break;
+      }
+      case 'armageddon': {
+        // 12 meteors rain over 3 seconds — aims at living enemies.
+        const rAG = skill.radius ?? 100;
+        const aliveAG = this.enemies.filter(e => !e.dead);
+        for (let i = 0; i < 12; i++) {
+          let ix: number, iy: number;
+          if (aliveAG.length > 0) {
+            const t = aliveAG[Math.floor(Math.random() * aliveAG.length)];
+            ix = t.x + (Math.random() - 0.5) * 60;
+            iy = t.y + (Math.random() - 0.5) * 60;
+          } else {
+            const a = Math.random() * Math.PI * 2;
+            const d = Math.random() * 300;
+            ix = px + Math.cos(a) * d;
+            iy = py + Math.sin(a) * d;
+          }
+          this.spawnAoeZone(new AoeZone(ix, iy, rAG, baseDmg, i * 0.25, {
+            color: '#ff6b00', activeTime: 0.45, singleHit: true,
+          }));
+        }
+        break;
+      }
     }
   }
 
