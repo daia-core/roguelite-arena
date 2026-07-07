@@ -54,7 +54,10 @@ const out = await pg.evaluate(() => {
   ok('graph fully connected from hub', seen.size === SKILL_NODES.length, `${seen.size}/${SKILL_NODES.length}`);
 
   // 3. Class start nodes.
-  const expect = { gunner: 'start_gunner', ranger: 'start_ranger', brawler: 'start_brawler', arcanist: 'start_arcanist' };
+  const expect = {
+    gunner: 'start_gunner', ranger: 'start_ranger', brawler: 'start_brawler', arcanist: 'start_arcanist',
+    berserker: 'start_berserker', prospector: 'start_prospector', reaver: 'start_reaver',
+  };
   for (const [cls, id] of Object.entries(expect)) {
     ok(`startNodeForClass(${cls})=${id}`, startNodeForClass(cls) === id && !!byId[id]);
   }

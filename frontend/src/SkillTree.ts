@@ -145,7 +145,7 @@ const ARM_DEFS: Record<string, ArmDef> = {
     ],
     keystones: [
       { name: 'Overwhelm', icon: '💥', deltas: [{ field: 'damageMult', mul: 1.45 }, { field: 'fireRateMult', mul: 0.80 }], desc: '+45% Damage, but -20% Fire Rate' },
-      { name: 'Cull the Weak', icon: '☠️', deltas: [{ field: 'executeAdd', add: 0.15 }, { field: 'critMultMult', mul: 1.20 }], desc: 'Instantly kill enemies below 15% HP, +20% Crit Dmg' },
+      { name: 'Cull the Weak', icon: '☠️', deltas: [{ field: 'executeAdd', add: 0.15 }, { field: 'critMultMult', mul: 1.20 }, { field: 'damageMult', mul: 0.90 }], desc: 'Instantly kill enemies below 15% HP, +20% Crit Dmg, but -10% Damage' },
       { name: 'Cataclysm', icon: '🌋', deltas: [{ field: 'explosionOnHit', add: 1 }, { field: 'fireRateMult', mul: 0.85 }], desc: 'Hits explode in an area, but -15% Fire Rate' },
     ],
   },
@@ -160,7 +160,7 @@ const ARM_DEFS: Record<string, ArmDef> = {
     keystones: [
       { name: 'Assassinate', icon: '🗡️', deltas: [{ field: 'critMultMult', mul: 2.0 }, { field: 'fireRateMult', mul: 0.75 }], desc: '+100% Crit Damage, but -25% Fire Rate' },
       { name: 'Splintering Rounds', icon: '🏹', deltas: [{ field: 'piercingAdd', add: 3 }, { field: 'damageMult', mul: 0.90 }], desc: 'Projectiles pierce +3 enemies, but -10% Damage' },
-      { name: 'Storm Caller', icon: '⛈️', deltas: [{ field: 'chainAdd', add: 0.60 }, { field: 'critChanceBonus', add: 0.05 }], desc: '+60% Chain Lightning, +5% Crit Chance' },
+      { name: 'Storm Caller', icon: '⛈️', deltas: [{ field: 'chainAdd', add: 0.60 }, { field: 'critChanceBonus', add: 0.05 }, { field: 'damageMult', mul: 0.90 }], desc: '+60% Chain Lightning, +5% Crit Chance, but -10% Damage' },
     ],
   },
   alacrity: {
@@ -188,7 +188,7 @@ const ARM_DEFS: Record<string, ArmDef> = {
     keystones: [
       { name: 'Treasure Hunter', icon: '🏆', deltas: [{ field: 'goldMult', mul: 1.40 }, { field: 'xpMult', mul: 1.30 }, { field: 'damageMult', mul: 0.85 }], desc: '+40% Gold, +30% XP, but -15% Damage' },
       { name: 'Blood Money', icon: '🪙', deltas: [{ field: 'goldMult', mul: 1.60 }, { field: 'lifestealAdd', add: 0.05 }, { field: 'maxHealthBonus', add: -25 }], desc: '+60% Gold, +5% Lifesteal, but -25 Max HP' },
-      { name: 'Scavenger', icon: '🦅', deltas: [{ field: 'pickupMult', mul: 1.60 }, { field: 'xpMult', mul: 1.25 }, { field: 'regenBonus', add: 1.5 }], desc: '+60% Pickup, +25% XP, +1.5 HP/s' },
+      { name: 'Scavenger', icon: '🦅', deltas: [{ field: 'pickupMult', mul: 1.60 }, { field: 'xpMult', mul: 1.25 }, { field: 'regenBonus', add: 1.5 }, { field: 'damageMult', mul: 0.90 }], desc: '+60% Pickup, +25% XP, +1.5 HP/s, but -10% Damage' },
     ],
   },
   vitality: {
@@ -201,7 +201,7 @@ const ARM_DEFS: Record<string, ArmDef> = {
     ],
     keystones: [
       { name: 'Juggernaut', icon: '🐘', deltas: [{ field: 'maxHealthBonus', add: 90 }, { field: 'speedMult', mul: 0.85 }], desc: '+90 Max HP, but -15% Move Speed' },
-      { name: 'Sanguine Pact', icon: '🩸', deltas: [{ field: 'lifestealAdd', add: 0.12 }, { field: 'maxHealthBonus', add: 30 }], desc: '+12% Lifesteal, +30 Max HP' },
+      { name: 'Sanguine Pact', icon: '🩸', deltas: [{ field: 'lifestealAdd', add: 0.12 }, { field: 'maxHealthBonus', add: 30 }, { field: 'armorBonus', add: -4 }], desc: '+12% Lifesteal, +30 Max HP, but -4 Armor (sustain by leeching, not turtling)' },
       { name: 'Undying', icon: '♾️', deltas: [{ field: 'regenBonus', add: 6 }, { field: 'maxHealthBonus', add: 40 }, { field: 'damageMult', mul: 0.85 }], desc: '+6 HP/s, +40 Max HP, but -15% Damage' },
     ],
   },
@@ -215,7 +215,7 @@ const ARM_DEFS: Record<string, ArmDef> = {
     ],
     keystones: [
       { name: 'Bulwark', icon: '🐢', deltas: [{ field: 'armorBonus', add: 12 }, { field: 'regenBonus', add: 3 }, { field: 'speedMult', mul: 0.75 }], desc: '+12 Armor, +3 HP/s, but -25% Move Speed' },
-      { name: 'Retribution', icon: '🔥', deltas: [{ field: 'thornsAdd', add: 0.60 }, { field: 'armorBonus', add: 6 }], desc: '+60% Thorns (reflect damage), +6 Armor' },
+      { name: 'Retribution', icon: '🔥', deltas: [{ field: 'thornsAdd', add: 0.60 }, { field: 'armorBonus', add: 6 }, { field: 'speedMult', mul: 0.90 }], desc: '+60% Thorns (reflect damage), +6 Armor, but -10% Move Speed' },
       { name: 'Immovable', icon: '🗿', deltas: [{ field: 'knockbackAdd', add: 220 }, { field: 'armorBonus', add: 8 }, { field: 'fireRateMult', mul: 0.90 }], desc: 'Massive knockback, +8 Armor, but -10% Fire Rate' },
     ],
   },
