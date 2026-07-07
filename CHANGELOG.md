@@ -8,6 +8,36 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-08 — Active Skill System: 10 Soulstone-inspired spell scrolls
+
+Players can now equip an **active skill** by buying a Spell Scroll from the shop, then trigger it
+with **[Q] / [E]** (keyboard) or the **SKILL button** on mobile. Only one skill can be equipped at
+a time — the most recently purchased scroll wins. Skills have their own cooldown (shown in the HUD
+bottom-left: icon, name, and a purple cooldown bar that fills back to "READY").
+
+**10 skills available as shop items (Rare tier):**
+
+- ☄️ **Meteor Strike** — telegraphed AoE impact (8× dmg, r=120, 8s CD)
+- ❄️ **Frost Nova** — instant freeze ring (2× dmg + slow, r=150, 5s CD)
+- ⚡ **Chain Lightning** — bounces to 5 nearest enemies (5× dmg each, 4s CD)
+- 🩸 **Blood Nova** — AoE burst + heals 20% of damage dealt (6×, r=130, 6s CD)
+- 🛸 **Orbital Strike** — 6 staggered impacts around the player (4× each, r=160, 7s CD)
+- ☠️ **Poison Cloud** — persistent DoT zone (1.2×/tick for 4s, r=100, 5s CD)
+- 🔥 **Phoenix Beam** — 3 piercing fire projectiles toward nearest enemy (6× each, 6s CD)
+- 🌋 **Earthquake** — damages + slows all enemies on screen (10× spread, 12s CD)
+- 👁️ **Shadow Step** — teleport to far side of nearest enemy + nova burst (5×, r=80, 8s CD)
+- ✨ **Circle of Power** — spawns a spinning damage ring for 5s (2×/tick, r=80, 10s CD)
+
+Architecture: `ActiveSkillSystem.ts` holds skill definitions; `Item.activatesSkill` field links
+scrolls to effects; `PlayerStats.getEquippedSkillId()` finds the equipped skill; `useActiveSkill()`
+in Game.ts implements all 10 using `dealAuxDamage()` / `spawnAoeZone()` / projectiles.
+
+TSC: clean. Bundle: `index-h5M12LC5.js` (788 kB gzip 163 kB).
+
+Commit: `dd87782` | Bundle: `index-h5M12LC5.js` — live on roguelite-game-blush.vercel.app ✓
+
+---
+
 ## 2026-07-08 — Feel pass: knockback & i-frame feedback
 
 Three targeted feel improvements — no gameplay balance change, just impact readability:
