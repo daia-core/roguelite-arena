@@ -19,7 +19,7 @@ Three targeted feel improvements — no gameplay balance change, just impact rea
 
 TSC: clean. Bundle: see commit below.
 
-Commit: pending | Bundle: `index-CG_XShnb.js` — live on roguelite-game-blush.vercel.app ✓
+Commit: `b3ab73c` | Bundle: `index-CG_XShnb.js` — live on roguelite-game-blush.vercel.app ✓
 
 ---
 
