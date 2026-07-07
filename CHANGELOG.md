@@ -27,7 +27,7 @@ through Berserker's Insight without committing to either pure arm first. Tree: ~
 QA: `qa-skill-tree.mjs` ✅ (22 keystones reachable, web connected, all behavior grants live).
 TSC: clean. Bundle: see commit below.
 
-*Commit: TBD | Bundle: TBD*
+Commit: `5af0387` | Bundle: `index-Bjb1ggxs.js` — live on roguelite-game-blush.vercel.app ✓
 
 ---
 
