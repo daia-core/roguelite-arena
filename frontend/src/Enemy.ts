@@ -4,6 +4,7 @@ import { circleCollision } from './utils';
 import { SpriteSheet } from './sprites';
 import { tintSilhouette, drawDithered } from './pixel/sprite';
 import { PathfindingSystem, type PathNode } from './PathfindingSystem';
+import { StatusEffectManager } from './StatusEffectEngine';
 
 export type EnemyType = 'slime' | 'goblin' | 'skeleton' | 'imp' | 'orc' | 'wraith' | 'necromancer' | 'troll' | 'banshee' | 'demon' | 'bat' | 'wizard' | 'mimic' | 'spider' | 'golem' | 'ghost' | 'mushroom' | 'gargoyle' | 'blob' | 'necroegg' | 'cyclops' | 'phantom' | 'druid' | 'construct' | 'swarm' | 'dasher' | 'evader' | 'orbiter' | 'spiraler' | 'spinner' | 'shielder' | 'exploder' | 'healer' | 'summoner' | 'phaser' | 'wormhead' | 'wormbody' | 'eggsac' | 'bombardier' | 'boss_necrolord' | 'boss_flamefiend' | 'boss_voidbeast' | 'boss_stormking' | 'boss_ancientgolem';
 
@@ -567,6 +568,10 @@ export class Enemy {
   contactCooldown: number = 0;
   /** Frozen: no movement while > 0 (Frost Orb etc., ticked by Game). */
   frozenTimer: number = 0;
+  /** Chilled/Slowed: movement scaled by slowFactor while > 0 (Chill/Slow builds, ticked by Game). */
+  slowTimer: number = 0;
+  /** How much movement is scaled while slowTimer > 0 (0.6 = 40% slow). Strongest (lowest) wins. */
+  slowFactor: number = 1;
   /** Poison DoT remaining seconds (Toxic Vial etc., ticked by Game). */
   poisonTimer: number = 0;
   /** Burn (Ignite) DoT remaining seconds — fast fire ticks, ticked by Game. */
@@ -591,6 +596,13 @@ export class Enemy {
   /** Last position, used to measure movement for Bleed (punishes rushers). */
   lastX: number = 0;
   lastY: number = 0;
+  /**
+   * Composable status-effect engine — manages new-architecture effects (Fragility, Exposed,
+   * Condemned, Brittle, Dazed, Disoriented, Debilitated, Crippled, synergy chains, stacks).
+   * Legacy DoTs (burn/bleed/poison/doom) still use flat timer fields for backward compat;
+   * they migrate here incrementally.  New items and skills target this engine exclusively.
+   */
+  statusFX: StatusEffectManager = new StatusEffectManager();
   health: number;
   maxHealth: number;
   dead: boolean = false;
@@ -873,6 +885,9 @@ export class Enemy {
       // Frozen enemies can't move
       if (this.frozenTimer > 0) {
         moveSpeed = 0;
+      } else if (this.slowTimer > 0) {
+        // Chill/Slow: scale movement for every movement branch below (all read moveSpeed).
+        moveSpeed *= this.slowFactor;
       }
 
       // Type-specific movement
@@ -1751,7 +1766,10 @@ export class Enemy {
     // Fast reject when nothing is active (the common case).
     if (
       this.frozenTimer <= 0 && this.burnTimer <= 0 && this.poisonTimer <= 0 &&
-      this.bleedTimer <= 0 && this.doomTimer <= 0 && this.woundMult <= 1
+      this.bleedTimer <= 0 && this.doomTimer <= 0 && this.woundMult <= 1 &&
+      this.slowTimer <= 0 && !this.statusFX.has('fragility') &&
+      !this.statusFX.has('exposed') && !this.statusFX.has('condemned') &&
+      !this.statusFX.has('brittle') && !this.statusFX.has('dazed')
     ) return;
 
     const r = this.typeData.radius;
@@ -1778,6 +1796,21 @@ export class Enemy {
         ctx.fillRect(sx - 1, sy - 4, 3, 8);
         ctx.fillRect(sx - 3, sy - 1, 7, 3);
       }
+    }
+
+    // CHILL/SLOW — faint drifting frost motes (lighter than the solid Frozen disc, and only
+    // shown when NOT frozen so the two don't stack visually).
+    if (this.slowTimer > 0 && this.frozenTimer <= 0) {
+      ctx.globalAlpha = 0.28;
+      ctx.fillStyle = '#bfeaff';
+      for (let i = 0; i < 4; i++) {
+        const ph = t / 700 + seed + i * 1.9;
+        const drift = (ph % 1);
+        const cx = Math.floor(this.x + Math.cos(seed + i * 1.6) * r * 0.7);
+        const cy = Math.floor(this.y - r * 0.6 + drift * r * 1.2);
+        ctx.fillRect(cx - 1, cy - 1, 2, 2);
+      }
+      ctx.globalAlpha = 1;
     }
 
     // BURN — flickering flame pixels rising off the top of the enemy.
@@ -1853,6 +1886,59 @@ export class Enemy {
         }
       }
       ctx.globalAlpha = 1;
+    }
+
+    // ── New-engine effects (statusFX) ───────────────────────────────────────
+    // FRAGILITY — glowing magenta ring (all damage amplified)
+    const fragility = this.statusFX.get('fragility');
+    if (fragility && fragility.stacks > 0) {
+      ctx.globalAlpha = 0.15 + Math.min(0.4, fragility.stacks * 0.02);
+      ctx.fillStyle = '#c080ff';
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, r + 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
+    // EXPOSED — orange cracks (direct hits deal more)
+    const exposed = this.statusFX.get('exposed');
+    if (exposed && exposed.stacks > 0) {
+      ctx.fillStyle = '#ff8c1a';
+      ctx.globalAlpha = 0.6;
+      const crackCount = Math.min(3, exposed.stacks);
+      for (let i = 0; i < crackCount; i++) {
+        const a = seed + i * 2.1 + Math.PI / 4;
+        const cx2 = Math.floor(this.x + Math.cos(a) * r * 0.5);
+        const cy2 = Math.floor(this.y + Math.sin(a) * r * 0.5);
+        ctx.fillRect(cx2 - 1, cy2 - 3, 2, 6);
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    // CONDEMNED — purple charge-bar above head (detonates on next crit at 10 stacks)
+    const condemned = this.statusFX.get('condemned');
+    if (condemned && condemned.stacks > 0) {
+      const barW = r * 2;
+      const barX = this.x - barW / 2;
+      const barY2 = this.y - r - 20;
+      const pct = condemned.stacks / 10;
+      ctx.fillStyle = '#2a0040';
+      ctx.fillRect(barX - 1, barY2 - 1, barW + 2, 5);
+      ctx.fillStyle = pct >= 1 ? '#ff40ff' : '#8040c0';
+      ctx.fillRect(barX, barY2, barW * Math.min(1, pct), 3);
+    }
+
+    // DAZED — yellow stars spinning around the enemy
+    const dazed = this.statusFX.get('dazed');
+    if (dazed && dazed.stacks > 0) {
+      ctx.fillStyle = '#ffd43b';
+      const count = Math.min(3, dazed.stacks);
+      for (let i = 0; i < count; i++) {
+        const angle = (performance.now() / 600 + (i * Math.PI * 2) / count) + seed;
+        const sx2 = Math.floor(this.x + Math.cos(angle) * (r + 5));
+        const sy2 = Math.floor(this.y + Math.sin(angle) * (r + 5));
+        ctx.fillRect(sx2 - 2, sy2 - 2, 4, 4);
+      }
     }
 
     ctx.restore();

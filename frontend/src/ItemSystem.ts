@@ -234,9 +234,12 @@ interface ItemAgg {
   critChance: number; maxHealthBonus: number; healthRegen: number; armor: number; lifesteal: number;
   thorns: number; knockback: number; piercing: number; multishot: number; dodge: number;
   chainLightning: number; freeze: number; burn: number; bleed: number; doom: number; wound: number;
+  slow: number;
   multicast: number; rerollDiscount: number; shopDiscount: number;
   interestBonus: number; luck: number; orbitOrbs: number; swingRangeBonus: number;
   swingArcBonus: number; swingAoe: number;
+  // new-engine status-effect proc chances (additive; 0–1 range)
+  fragileChance: number; exposedChance: number; condemnedChance: number;
   // conditional/triggered (additive rates; paid out at runtime by Game when the condition holds)
   waveRampDamage: number; lowHpPower: number; killStackDamage: number;
   highHpPower: number; goldScaleDamage: number;
@@ -262,9 +265,11 @@ function freshAgg(): ItemAgg {
     critChance: 0, maxHealthBonus: 0, healthRegen: 0, armor: 0, lifesteal: 0,
     thorns: 0, knockback: 0, piercing: 0, multishot: 0, dodge: 0,
     chainLightning: 0, freeze: 0, burn: 0, bleed: 0, doom: 0, wound: 0,
+    slow: 0,
     multicast: 0, rerollDiscount: 0, shopDiscount: 0,
     interestBonus: 0, luck: 0, orbitOrbs: 0, swingRangeBonus: 0,
     swingArcBonus: 0, swingAoe: 0,
+    fragileChance: 0, exposedChance: 0, condemnedChance: 0,
     waveRampDamage: 0, lowHpPower: 0, killStackDamage: 0,
     highHpPower: 0, goldScaleDamage: 0,
     executeThreshold: 0,
@@ -534,6 +539,7 @@ export class PlayerStats {
       if (item.freeze) a.freeze += item.freeze * lv;
       if (item.burn) a.burn += item.burn * lv;
       if (item.bleed) a.bleed += item.bleed * lv;
+      if (item.slow) a.slow += item.slow * lv;
       if (item.doom) a.doom += item.doom * lv;
       if (item.wound) a.wound += item.wound * lv;
       if (item.multicast) a.multicast += item.multicast * lv;
@@ -545,6 +551,10 @@ export class PlayerStats {
       if (item.swingRangeBonus) a.swingRangeBonus += item.swingRangeBonus * lv;
       if (item.swingArcBonus) a.swingArcBonus += item.swingArcBonus * lv;
       if (item.swingAoe) a.swingAoe += item.swingAoe * lv;
+      // New-engine status-effect procs
+      if (item.fragileChance) a.fragileChance += item.fragileChance * lv;
+      if (item.exposedChance) a.exposedChance += item.exposedChance * lv;
+      if (item.condemnedChance) a.condemnedChance += item.condemnedChance * lv;
       // Conditional/triggered (additive rates; Game pays them out per-frame)
       if (item.waveRampDamage) a.waveRampDamage += item.waveRampDamage * lv;
       if (item.lowHpPower) a.lowHpPower += item.lowHpPower * lv;
@@ -1030,7 +1040,7 @@ export class PlayerStats {
   getShotElement(): DamageType {
     const scored: Array<[DamageType, number]> = [
       ['fire', this.getBurnChance()],
-      ['ice', this.getFreezeChance()],
+      ['ice', Math.max(this.getFreezeChance(), this.getSlowStrength())],
       ['lightning', this.getChainLightningChance()],
       ['poison', this.hasPoison() ? 0.5 : 0],
     ];
@@ -1046,6 +1056,12 @@ export class PlayerStats {
     return Math.min(1, this.ensureAgg().bleed);
   }
 
+  /** Chill/Slow strength (0..0.65). Sum of all slow sources; the enemy loop applies it as a
+   *  movement-speed reduction. Not a proc — a steady control layer, capped at 65%. */
+  getSlowStrength(): number {
+    return Math.min(0.65, this.ensureAgg().slow);
+  }
+
   hasPoisonSpread(): boolean {
     return this.ensureAgg().poisonSpread;
   }
@@ -1056,6 +1072,17 @@ export class PlayerStats {
 
   getWoundChance(): number {
     return Math.min(1, this.ensureAgg().wound);
+  }
+
+  // ---- New-engine status-effect proc chances ----
+  getFragileChance(): number {
+    return Math.min(1, this.ensureAgg().fragileChance);
+  }
+  getExposedChance(): number {
+    return Math.min(1, this.ensureAgg().exposedChance);
+  }
+  getCondemnedChance(): number {
+    return Math.min(1, this.ensureAgg().condemnedChance);
   }
 
   getMulticastChance(): number {
@@ -1182,9 +1209,10 @@ export class PlayerStats {
   private static readonly OFFER_ADD_FIELDS: (keyof Item)[] = [
     'critChance', 'maxHealthBonus', 'healthRegen', 'armor', 'lifesteal', 'thorns',
     'knockback', 'piercing', 'multishot', 'dodge', 'chainLightning', 'freeze', 'burn',
-    'bleed', 'doom', 'wound', 'multicast', 'rerollDiscount', 'shopDiscount',
+    'bleed', 'slow', 'doom', 'wound', 'multicast', 'rerollDiscount', 'shopDiscount',
     'interestBonus', 'luck', 'orbitOrbs', 'swingRangeBonus',
     'swingArcBonus', 'swingAoe',
+    'fragileChance', 'exposedChance', 'condemnedChance',
   ];
   private static readonly OFFER_BOOL_FIELDS: (keyof Item)[] = [
     'explosionOnHit', 'shield', 'homing', 'poison', 'poisonSpread', 'auxMelee',
@@ -1208,6 +1236,7 @@ export class PlayerStats {
       freeze: this.getFreezeChance() >= 1,
       burn: this.getBurnChance() >= 1,
       bleed: this.getBleedChance() >= 1,
+      slow: this.getSlowStrength() >= 0.65,
       doom: this.getDoomChance() >= 1,
       wound: this.getWoundChance() >= 1,
       multicast: this.getMulticastChance() >= 0.9,

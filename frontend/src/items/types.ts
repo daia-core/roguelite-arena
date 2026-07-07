@@ -173,8 +173,12 @@ export function itemStatSegments(item: Item): ItemStatSegment[] {
   frac(item.freeze, 'Freeze');
   frac(item.burn, 'Burn');
   frac(item.bleed, 'Bleed');
+  frac(item.slow, 'Slow');
   frac(item.doom, 'Doom');
   frac(item.wound, 'Wound');
+  frac(item.fragileChance, 'Fragility');
+  frac(item.exposedChance, 'Exposed');
+  frac(item.condemnedChance, 'Condemned');
   frac(item.multicast, 'Multicast');
   // Capability flags
   flag(item.shield, 'Shield');
@@ -230,6 +234,11 @@ const RESTATE_SYN: Record<string, string> = {
   range: 'xp', homing: 'homing', knockback: 'knockback', max: 'max', regen: '',
   lightning: 'chain', chain: 'chain',
   ignite: 'burn', burning: 'burn',
+  fragility: 'fragility', fragile: 'fragility',
+  exposed: 'exposed', expose: 'exposed', exposure: 'exposed',
+  condemned: 'condemned', condemn: 'condemned',
+  brittle: 'brittle',
+  dazed: 'dazed', daze: 'dazed',
 };
 function restateTokens(s: string): Set<string> {
   const raw = s.toLowerCase().replace(/[^a-z0-9%+\-]/g, ' ').split(/\s+/).filter(Boolean);
@@ -384,9 +393,14 @@ export interface Item {
   // and are mechanically distinct from raw damage. All apply from BOTH ranged and melee.
   burn?: number; // chance to Ignite: fast, short fire DoT (bigger ticks than poison)
   bleed?: number; // chance to Bleed: DoT that hits harder while the enemy is moving (punishes rushers)
+  slow?: number; // Chill/Slow strength (0..0.65): reduces enemy movement speed on hit (steady control, not a proc)
   poisonSpread?: boolean; // a poisoned enemy that dies infects the nearest enemy (chain plague)
   doom?: number; // chance to mark with Doom: stores a share of damage, then detonates — executes if stored >= current HP
   wound?: number; // chance on-hit to Wound: amplifies ALL damage-over-time already on that enemy (DoT multiplier)
+  // New-architecture status-effect procs (StatusEffectEngine)
+  fragileChance?: number;  // on-hit chance to apply Fragility: +1.5% ALL damage taken per stack
+  exposedChance?: number;  // on-hit chance to apply Exposed: +4% direct-hit damage per stack
+  condemnedChance?: number; // on-hit chance to apply Condemned: at 10 stacks next crit deals +500%
   multicast?: number; // chance the ranged weapon fires a bonus volley the same frame
 
   // Brotato-inspired mechanics

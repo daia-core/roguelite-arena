@@ -2,6 +2,7 @@
 
 import { Player } from './Player';
 import { Enemy } from './Enemy';
+import { rollOnHitProcs } from './StatusEffectEngine';
 import { Projectile } from './Projectile';
 import { MeleeAttack } from './MeleeAttack';
 import { Particle, DamageNumber } from './Particle';
@@ -951,6 +952,7 @@ export class Game {
       // All DoTs run through tickDoT so Wound (woundMult) amplifies every one uniformly and
       // a DoT kill routes through killByDot (which handles poison-spread).
       if (enemy.frozenTimer > 0) enemy.frozenTimer -= dt;
+      if (enemy.slowTimer > 0) { enemy.slowTimer -= dt; if (enemy.slowTimer <= 0) enemy.slowFactor = 1; }
       let dotDamage = 0;
       if (enemy.poisonTimer > 0) { enemy.poisonTimer -= dt; dotDamage += 7 * dt; }
       if (enemy.burnTimer > 0) { enemy.burnTimer -= dt; dotDamage += 16 * dt; } // Ignite: hurts fast, burns out fast
@@ -981,6 +983,28 @@ export class Game {
             enemy.health -= payload;
             this.damageNumbers.push(this.createDamageNumber(enemy.x, enemy.y - 20, payload, false, '#b06bff'));
             if (enemy.health <= 0 && !enemy.dead) { this.killByDot(enemy); continue; }
+          }
+        }
+      }
+
+      // ── New-engine statusFX tick (Fragility, Exposed, Condemned, Brittle, etc.) ──
+      {
+        const enemyMovedDist = Math.hypot(enemy.x - enemy.lastX, enemy.y - enemy.lastY);
+        const fxResult = enemy.statusFX.tick(dt, enemyMovedDist);
+        if (fxResult.dotDamage > 0 && !enemy.dead) {
+          enemy.health -= fxResult.dotDamage;
+          if (enemy.health <= 0) { this.killByDot(enemy); continue; }
+        }
+        if (fxResult.doomDetonation && !enemy.dead) {
+          const { payload } = fxResult.doomDetonation;
+          this.renderer.addImpactFlash(enemy.x, enemy.y);
+          if (payload >= enemy.health) {
+            enemy.health = 0;
+            this.damageNumbers.push(this.createDamageNumber(enemy.x, enemy.y - 20, payload, true, '#b06bff'));
+            this.killByDot(enemy); continue;
+          } else {
+            enemy.health -= payload;
+            this.damageNumbers.push(this.createDamageNumber(enemy.x, enemy.y - 20, payload, false, '#b06bff'));
           }
         }
       }
@@ -2901,6 +2925,15 @@ export class Game {
       enemy.frozenTimer = 1.0;
     }
 
+    // Chill/Slow: reduce movement for 2.5s. Unlike Freeze (a proc), Slow always applies while
+    // the build has any slow — it's a steady control layer. Strongest (lowest factor) wins.
+    const slowStr = this.playerStats.getSlowStrength();
+    if (slowStr > 0) {
+      enemy.slowTimer = Math.max(enemy.slowTimer, 2.5);
+      const factor = Math.max(0.35, 1 - slowStr); // cap at 65% slow
+      enemy.slowFactor = Math.min(enemy.slowFactor, factor);
+    }
+
     // Poison: DoT for 3s (ticked in the enemy loop)
     if (this.playerStats.hasPoison()) {
       enemy.poisonTimer = 3.0;
@@ -2944,6 +2977,29 @@ export class Game {
         }
       }
       this.renderer.addImpactFlash(enemy.x, enemy.y);
+    }
+
+    // ── New-architecture status effects via StatusEffectEngine ──────────────
+    // Roll all new-engine procs in one pass, then apply + resolve synergy chains.
+    const newProcs = rollOnHitProcs({
+      roll: (c) => this.playerStats.rollProc(c),
+      burnChance: 0,    // legacy path handles burn/bleed/poison/doom above
+      bleedChance: 0,
+      freezeChance: 0,
+      doomChance: 0,
+      woundChance: 0,
+      fragileChance: this.playerStats.getFragileChance(),
+      exposedChance: this.playerStats.getExposedChance(),
+      condemnedChance: this.playerStats.getCondemnedChance(),
+      hasPoison: false,
+      poisonSpreads: false,
+      elementalMult: elem,
+      damage,
+      fromDagger,
+    });
+    for (const { id, opts } of newProcs.effects) {
+      const synergies = enemy.statusFX.apply(id, opts);
+      enemy.statusFX.applySynergyChain(synergies, elem, fromDagger);
     }
   }
 
