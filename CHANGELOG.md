@@ -46,6 +46,8 @@ weapons + start arms correct), shop 8-slot 29/29, stats-popup red-negatives; reg
 portrait: Achievements screen renders clean with enable/disable toggles; drawback cards show red
 negatives within the card bounds.
 
+Commit `7bb2ce8` · live bundle `index-TaMQaQ5D.js` (verified 200, achievements code present).
+
 ---
 
 ## 2026-07-07 (evening) — Skill tree, PoE-scale: 160 nodes, 18 keystones, real build-defining unlocks
