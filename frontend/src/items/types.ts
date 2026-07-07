@@ -229,6 +229,7 @@ const RESTATE_SYN: Record<string, string> = {
   gold: 'gold', luck: 'luck', xp: 'xp', exp: 'xp', experience: 'xp', pickup: 'xp',
   range: 'xp', homing: 'homing', knockback: 'knockback', max: 'max', regen: '',
   lightning: 'chain', chain: 'chain',
+  ignite: 'burn', burning: 'burn',
 };
 function restateTokens(s: string): Set<string> {
   const raw = s.toLowerCase().replace(/[^a-z0-9%+\-]/g, ' ').split(/\s+/).filter(Boolean);
