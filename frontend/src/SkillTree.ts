@@ -404,6 +404,94 @@ function buildTree(): { nodes: SkillNode[]; edges: [string, string][] } {
     edges.push([gk.id, gateIds[rightArmIdx]]);
   }
 
+  // BRIDGE CLUSTER NODES — 6 cross-arm clusters, one between each adjacent arm pair.
+  // Each cluster has 3 allocatable nodes at the midpoint angle between the two arms:
+  //   • minorA — small bump of arm A's primary stat
+  //   • minorB — small bump of arm B's primary stat
+  //   • notable — a genuine cross-arm combo effect, the highlight of the cluster
+  // Wired to the ring-3 b3/a3 cross-arm nodes so you can path through a bridge without
+  // returning to the hub. This is the PoE "hybrid zone" feel — Might→Precision gives you
+  // a "Berserker's Insight" notable you can't reach down a pure arm.
+  {
+    // arm order: might=0° prec=60° ala=120° fort=180° vit=240° aeg=300°
+    const BRIDGES: Array<{
+      idA: string; idB: string; idN: string;        // node ids: minorA, minorB, notable
+      name: string; icon: string; angle: number;    // notable name + midpoint angle
+      armA: string; armB: string;                   // adjacent arm keys
+      kindA: string; kindB: string;                 // minor node stat kinds (MINOR_KIND keys)
+      deltas: SkillDelta[]; desc: string;           // notable effect
+    }> = [
+      { idA: 'bri_mp_A', idB: 'bri_mp_B', idN: 'bri_mp_N',
+        name: "Berserker's Insight", icon: '🪓', angle: 30, armA: 'might', armB: 'precision',
+        kindA: 'dmg', kindB: 'crit',
+        deltas: [{ field: 'damageMult', mul: 1.08 }, { field: 'critChanceBonus', add: 0.04 }],
+        desc: '+8% Damage, +4% Crit Chance' },
+      { idA: 'bri_pa_A', idB: 'bri_pa_B', idN: 'bri_pa_N',
+        name: 'Rapid Precision', icon: '⚡', angle: 90, armA: 'precision', armB: 'alacrity',
+        kindA: 'crit', kindB: 'rate',
+        deltas: [{ field: 'critChanceBonus', add: 0.04 }, { field: 'fireRateMult', mul: 1.08 }],
+        desc: '+4% Crit Chance, +8% Fire Rate' },
+      { idA: 'bri_af_A', idB: 'bri_af_B', idN: 'bri_af_N',
+        name: 'Opportunist', icon: '🍀', angle: 150, armA: 'alacrity', armB: 'fortune',
+        kindA: 'rate', kindB: 'gold',
+        deltas: [{ field: 'fireRateMult', mul: 1.08 }, { field: 'goldMult', mul: 1.15 }],
+        desc: '+8% Fire Rate, +15% Gold' },
+      { idA: 'bri_fv_A', idB: 'bri_fv_B', idN: 'bri_fv_N',
+        name: 'Prosperous Health', icon: '💎', angle: 210, armA: 'fortune', armB: 'vitality',
+        kindA: 'gold', kindB: 'hp',
+        deltas: [{ field: 'goldMult', mul: 1.10 }, { field: 'maxHealthBonus', add: 25 }],
+        desc: '+10% Gold, +25 Max HP' },
+      { idA: 'bri_va_A', idB: 'bri_va_B', idN: 'bri_va_N',
+        name: 'Iron Constitution', icon: '🛡️', angle: 270, armA: 'vitality', armB: 'aegis',
+        kindA: 'hp', kindB: 'arm',
+        deltas: [{ field: 'maxHealthBonus', add: 20 }, { field: 'armorBonus', add: 4 }],
+        desc: '+20 Max HP, +4 Armor' },
+      { idA: 'bri_am_A', idB: 'bri_am_B', idN: 'bri_am_N',
+        name: "Warlord's Guard", icon: '⚔️', angle: 330, armA: 'aegis', armB: 'might',
+        kindA: 'arm', kindB: 'dmg',
+        deltas: [{ field: 'armorBonus', add: 4 }, { field: 'damageMult', mul: 1.10 }],
+        desc: '+4 Armor, +10% Damage' },
+    ];
+
+    for (const br of BRIDGES) {
+      const midRad = deg2rad(br.angle);
+      const offRad = deg2rad(8);
+      // minorA — 8° left of midpoint, r=370
+      const axA = Math.round(Math.cos(midRad - offRad) * 370);
+      const ayA = Math.round(Math.sin(midRad - offRad) * 370);
+      // minorB — 8° right of midpoint, r=370
+      const axB = Math.round(Math.cos(midRad + offRad) * 370);
+      const ayB = Math.round(Math.sin(midRad + offRad) * 370);
+      // notable — midpoint, r=430
+      const axN = Math.round(Math.cos(midRad) * 430);
+      const ayN = Math.round(Math.sin(midRad) * 430);
+
+      const kA = MINOR_KIND[br.kindA];
+      const kB = MINOR_KIND[br.kindB];
+
+      nodes.push({
+        id: br.idA, name: kA.name, type: 'minor', arm: br.armA,
+        x: axA, y: ayA, icon: kA.icon, deltas: [kA.delta], desc: kA.label,
+      });
+      nodes.push({
+        id: br.idB, name: kB.name, type: 'minor', arm: br.armB,
+        x: axB, y: ayB, icon: kB.icon, deltas: [kB.delta], desc: kB.label,
+      });
+      nodes.push({
+        id: br.idN, name: br.name, type: 'notable', arm: 'core',
+        x: axN, y: ayN, icon: br.icon, deltas: br.deltas, desc: br.desc,
+      });
+
+      // Wire: armA_b3 → minorA → notable ← minorB ← armB_a3
+      //       minorA ↔ minorB (side-by-side, reachable from either lane)
+      edges.push([`${br.armA}_b3`, br.idA]);
+      edges.push([`${br.armB}_a3`, br.idB]);
+      edges.push([br.idA, br.idN]);
+      edges.push([br.idB, br.idN]);
+      edges.push([br.idA, br.idB]);
+    }
+  }
+
   // Non-gunner class start nodes, each just inside its thematic arm's gateway.
   const classIcon: Record<string, string> = { berserker: '🪓', arcanist: '⚡', ranger: '🎯', prospector: '💰', reaver: '🩸', brawler: '🗡️' };
   const className: Record<string, string> = { berserker: 'Berserker', arcanist: 'Arcanist', ranger: 'Ranger', prospector: 'Prospector', reaver: 'Reaver', brawler: 'Brawler' };

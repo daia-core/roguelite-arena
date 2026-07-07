@@ -8,6 +8,29 @@ Live: https://roguelite-game-blush.vercel.app
 
 ---
 
+## 2026-07-08 (midnight) — Skill tree: 18 bridge cluster nodes between arm pairs
+
+Added **6 cross-arm bridge clusters** (3 nodes each = 18 new allocatable nodes), one at the
+midpoint angle between every adjacent arm pair. Each cluster gives players a genuine off-axis
+path through the tree without backtracking to the hub:
+
+- **Might↔Precision bridge** — "Berserker's Insight" notable: +8% Damage, +4% Crit Chance
+- **Precision↔Alacrity bridge** — "Rapid Precision" notable: +4% Crit Chance, +8% Fire Rate
+- **Alacrity↔Fortune bridge** — "Opportunist" notable: +8% Fire Rate, +15% Gold
+- **Fortune↔Vitality bridge** — "Prosperous Health" notable: +10% Gold, +25 Max HP
+- **Vitality↔Aegis bridge** — "Iron Constitution" notable: +20 Max HP, +4 Armor
+- **Aegis↔Might bridge** — "Warlord's Guard" notable: +4 Armor, +10% Damage
+
+Closes the PoE "hybrid zone" design gap — you can now build a Damage+Crit hybrid by pathing
+through Berserker's Insight without committing to either pure arm first. Tree: ~185 nodes total.
+
+QA: `qa-skill-tree.mjs` ✅ (22 keystones reachable, web connected, all behavior grants live).
+TSC: clean. Bundle: see commit below.
+
+*Commit: TBD | Bundle: TBD*
+
+---
+
 ## 2026-07-08 (night) — StatusEffectEngine wired into combat: Fragility, Exposed, Condemned now live
 
 Found and fixed a critical gap: the StatusEffectEngine was fully built but its damage-amplification
