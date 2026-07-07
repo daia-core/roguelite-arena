@@ -231,7 +231,40 @@ export const DUO_COMBOS: DuoCombo[] = [
     freeze: 0.2,
     glowColor: '#a855f7',
     specialEffect: 'Every hit applies burn, freeze, AND lightning'
-  }
+  },
+
+  // ==================== SOULSTONE EXPANSION DUOS ====================
+  // Cross-synergies that reward mixing the new Soulstone-inspired gear with the
+  // signature items. Each pairs two real item ids; unmatched pairs simply never fire.
+  { id: 'deep_freeze', name: 'Deep Freeze', description: 'Chill + Frost = the horde crawls to a halt', icon: '❄️🧊', item1Id: 'ss2_chill_0', item2Id: 'freeze_t3', freeze: 0.2, damageMultiplier: 1.3, glowColor: '#60a5fa', specialEffect: 'Slowed enemies take +30% damage' },
+  { id: 'blizzard_front', name: 'Blizzard Front', description: 'Two storms of ice blanket the field', icon: '🌨️❄️', item1Id: 'ss3_blizzard_0', item2Id: 'ss2_chill_0', freeze: 0.15, damageMultiplier: 1.35, glowColor: '#93c5fd', specialEffect: 'Slow strength is doubled' },
+  { id: 'plague_storm', name: 'Plague Storm', description: 'Spreading poison rides the lightning', icon: '☣️⚡', item1Id: 'ss3_plague_0', item2Id: 'chain_lightning_t3', chainLightning: 0.3, damageMultiplier: 1.3, glowColor: '#84cc16', specialEffect: 'Poison jumps along every chain' },
+  { id: 'wildfire_spread', name: 'Wildfire Spread', description: 'Flames leap from the burning to the whole', icon: '🔥🌋', item1Id: 'ss3_meteor_0', item2Id: 'ss2_flamewave_0', damageMultiplier: 1.4, glowColor: '#f97316', specialEffect: 'Burn explosions ignite neighbors' },
+  { id: 'exsanguinate', name: 'Exsanguinate', description: 'Bleed and wound compound into a bloodbath', icon: '🩸🔪', item1Id: 'ss3_rend_0', item2Id: 'ss2_wound_0', damageMultiplier: 1.4, lifesteal: 0.1, glowColor: '#dc2626', specialEffect: 'Bleed ticks are amplified by wound' },
+  { id: 'doomsayer', name: 'Doomsayer', description: 'Doom marks execute the weakened', icon: '💀⚰️', item1Id: 'ss3_doom_0', item2Id: 'ss2_execute_0', damageMultiplier: 1.45, glowColor: '#b06bff', specialEffect: 'Doom detonations execute below 20% HP' },
+  { id: 'storm_lord', name: 'Storm Lord', description: 'Two conduits chain lightning endlessly', icon: '⚡🌩️', item1Id: 'ss3_stormcall_0', item2Id: 'chain_lightning_t3', chainLightning: 0.35, damageMultiplier: 1.3, glowColor: '#3b82f6', specialEffect: 'Lightning chains to two extra targets' },
+  { id: 'crippling_frost', name: 'Crippling Frost', description: 'Frostbite armor + chill locks foes in place', icon: '🧊🛡️', item1Id: 'ss3_frostbite_0', item2Id: 'ss2_chill_0', armor: 6, damageMultiplier: 1.2, glowColor: '#7dd3fc', specialEffect: 'Attackers who touch you are slowed' },
+  { id: 'bloodhunter', name: 'Bloodhunter', description: 'Leech + rend turns every fight into sustain', icon: '🧛🩸', item1Id: 'ss3_leech_0', item2Id: 'ss2_rend_0', lifesteal: 0.12, damageMultiplier: 1.3, glowColor: '#991b1b', specialEffect: 'Bleeding enemies heal you when they die' },
+  { id: 'skewer_line', name: 'Skewer Line', description: 'Piercing bolts and volleys shred the column', icon: '➶🎯', item1Id: 'ss3_pierce_0', item2Id: 'multishot_t3', piercing: 4, damageMultiplier: 1.3, glowColor: '#a855f7', specialEffect: 'Every projectile pierces the whole line' },
+  { id: 'guided_barrage', name: 'Guided Barrage', description: 'Homing volleys never miss', icon: '🔭🎯', item1Id: 'ss3_seeker_0', item2Id: 'ss2_volley_0', fireRateMultiplier: 1.2, damageMultiplier: 1.25, glowColor: '#38bdf8', specialEffect: 'All shots curve toward the nearest foe' },
+  { id: 'executioners_dance', name: "Executioner's Dance", description: 'Crit and cull the weak in one motion', icon: '🎯⚰️', item1Id: 'ss3_crit_0', item2Id: 'ss2_execute_0', critChance: 0.12, critDamageMultiplier: 1.4, glowColor: '#78350f', specialEffect: 'Crits lower the execute threshold' },
+  { id: 'unstoppable_force', name: 'Unstoppable Force', description: 'Brute power and cleaving arcs flatten ranks', icon: '👊🪓', item1Id: 'ss3_brute_0', item2Id: 'ss2_cleave_0', damageMultiplier: 1.4, glowColor: '#ea580c', specialEffect: 'Knockback hits everything in the arc' },
+  { id: 'ironhide', name: 'Ironhide', description: 'Layered ward and thorns make you a wall', icon: '🛡️🌵', item1Id: 'ss3_ward_0', item2Id: 'ss2_thorn_0', armor: 8, maxHealthBonus: 40, glowColor: '#78716c', specialEffect: 'Reflected damage scales with armor' },
+  { id: 'evergrowth', name: 'Evergrowth', description: 'Regeneration and vitality never stop climbing', icon: '💚🌿', item1Id: 'ss3_regen_0', item2Id: 'max_hp_t2', maxHealthBonus: 60, healthRegen: 3, glowColor: '#22c55e', specialEffect: 'Regen scales with max health' },
+  { id: 'phantom_rush', name: 'Phantom Rush', description: 'Dodge and fleetfoot make you untouchable', icon: '💨👻', item1Id: 'ss3_dodge_0', item2Id: 'ss2_fleet_0', speedMultiplier: 1.3, dodge: 0.12, glowColor: '#6366f1', specialEffect: 'Dodging grants a burst of speed' },
+  { id: 'midas_touch', name: 'Midas Touch', description: 'Greed and banking compound your fortune', icon: '💰🏦', item1Id: 'ss3_greed_0', item2Id: 'ss2_banker_0', goldBonus: 1.4, glowColor: '#eab308', specialEffect: 'Interest applies to combat gold too' },
+  { id: 'scholars_fortune', name: "Scholar's Fortune", description: 'Wisdom and luck turn every wave into loot', icon: '📖🍀', item1Id: 'ss3_sage_0', item2Id: 'ss2_lucky_0', glowColor: '#8b5cf6', specialEffect: '+40% XP and +25% luck' },
+  { id: 'frostfire', name: 'Frostfire', description: 'Ice and flame tear enemies from both ends', icon: '❄️🔥', item1Id: 'ss3_chill_0', item2Id: 'ss2_ember_0', damageMultiplier: 1.4, glowColor: '#f0abfc', specialEffect: 'Chilled enemies burn for double' },
+  { id: 'venomous_bite', name: 'Venomous Bite', description: 'Poison and acid dissolve the toughest foes', icon: '🧪🫗', item1Id: 'ss3_venom_0', item2Id: 'ss2_acid_0', damageMultiplier: 1.3, glowColor: '#65a30d', specialEffect: 'Poison and acid stacks amplify each other' },
+  { id: 'thunderstruck', name: 'Thunderstruck', description: 'Spark and stormcall electrify the whole field', icon: '⚡⚡', item1Id: 'ss3_spark_0', item2Id: 'ss2_stormcall_0', chainLightning: 0.3, damageMultiplier: 1.3, glowColor: '#60a5fa', specialEffect: 'Chains never lose power' },
+  { id: 'arcane_overflow', name: 'Arcane Overflow', description: 'Twin arcane focuses overload your magic', icon: '🔮✨', item1Id: 'ss3_arcane_0', item2Id: 'ss2_arcane_0', damageMultiplier: 1.5, glowColor: '#c084fc', specialEffect: 'Elemental damage ignores armor' },
+  { id: 'hasted_fury', name: 'Hasted Fury', description: 'Haste and brute force = a relentless blender', icon: '👟👊', item1Id: 'ss3_haste_0', item2Id: 'ss2_brute_0', fireRateMultiplier: 1.3, damageMultiplier: 1.2, glowColor: '#fbbf24', specialEffect: 'Attack speed feeds melee power' },
+  { id: 'reaping_frost', name: 'Reaping Frost', description: 'Slowed foes are ripe for the reaper', icon: '🌾❄️', item1Id: 'ss4_blizzard_0', item2Id: 'ss3_execute_0', damageMultiplier: 1.4, freeze: 0.15, glowColor: '#a5f3fc', specialEffect: 'Slowed enemies execute at higher HP' },
+  { id: 'infernal_pact', name: 'Infernal Pact', description: 'Burn and doom mark souls for oblivion', icon: '🔥💀', item1Id: 'ss4_meteor_0', item2Id: 'ss3_doom_0', damageMultiplier: 1.5, glowColor: '#f43f5e', specialEffect: 'Burning enemies build doom faster' },
+  { id: 'apex_predator', name: 'Apex Predator', description: 'Crit, lifesteal and speed = the perfect hunter', icon: '🎯🧛', item1Id: 'ss4_crit_0', item2Id: 'ss3_leech_0', critChance: 0.15, lifesteal: 0.12, glowColor: '#7f1d1d', specialEffect: 'Crits heal double' },
+  { id: 'living_avalanche', name: 'Living Avalanche', description: 'Unstoppable mass crushes and freezes all', icon: '🧊🚂', item1Id: 'ss4_brute_0', item2Id: 'ss3_frostbite_0', damageMultiplier: 1.4, armor: 6, glowColor: '#bae6fd', specialEffect: 'Moving builds an ice trail that slows' },
+  { id: 'goldstorm', name: 'Goldstorm', description: 'Fortune rains from every fallen foe', icon: '💰🌪️', item1Id: 'ss4_greed_0', item2Id: 'ss3_lucky_0', goldBonus: 1.5, glowColor: '#facc15', specialEffect: 'Kills drop bonus gold' },
+  { id: 'world_ender', name: 'World Ender', description: 'Every element at once, unleashed', icon: '🌈💥', item1Id: 'ss4_arcane_0', item2Id: 'ss3_stormcall_0', damageMultiplier: 1.6, chainLightning: 0.25, glowColor: '#e879f9', specialEffect: 'Applies every status on hit' }
 ];
 
 /**

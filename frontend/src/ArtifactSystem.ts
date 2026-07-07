@@ -162,12 +162,43 @@ export const ARTIFACTS: Artifact[] = [
     desc: '+25% damage, +15% crit chance and +80% crit damage.',
     damageMult: 1.25, critChanceBonus: 0.15, critMultMult: 1.8,
   },
+  // ---- SOULSTONE EXPANSION: support-skill boons (Might / Bloodlust / Empower / Frenzy) ----
+  // Big run-long stat swings adapting Soulstone's support actives. Pure-stat so they fold
+  // through the existing static path; a mix of rarities keeps the reward pool varied.
+  { id: 'might_totem', name: 'Totem of Might', icon: '💪', rarity: 'epic', desc: '+55% damage.', damageMult: 1.55 },
+  { id: 'bloodlust_idol', name: 'Bloodlust Idol', icon: '🩸', rarity: 'epic', desc: '+30% fire rate and +20% move speed.', fireRateMult: 1.3, speedMult: 1.2 },
+  { id: 'empower_sigil', name: 'Empowerment Sigil', icon: '✨', rarity: 'rare', desc: '+30% damage and +10% crit chance.', damageMult: 1.3, critChanceBonus: 0.1 },
+  { id: 'frenzy_core', name: 'Frenzy Core', icon: '🌀', rarity: 'epic', desc: '+50% fire rate.', fireRateMult: 1.5 },
+  { id: 'ancestral_boon', name: 'Ancestral Boon', icon: '🗿', rarity: 'rare', desc: '+40% XP and +25 max health.', xpMult: 1.4, maxHealthBonus: 25 },
+  { id: 'warcry_pendant', name: 'Warcry Pendant', icon: '📢', rarity: 'rare', desc: '+35% damage, but -8% move speed.', damageMult: 1.35, speedMult: 0.92 },
+  { id: 'zealots_fervor', name: "Zealot's Fervor", icon: '🔥', rarity: 'epic', desc: '+25% fire rate and +30% crit damage.', fireRateMult: 1.25, critMultMult: 1.3 },
+  { id: 'giants_vigor', name: "Giant's Vigor", icon: '🧌', rarity: 'rare', desc: '+70 max health.', maxHealthBonus: 70 },
+  { id: 'hunters_mark_relic', name: "Hunter's Mark", icon: '🏹', rarity: 'rare', desc: '+15% crit chance.', critChanceBonus: 0.15 },
+  { id: 'berserkers_roar', name: "Berserker's Roar", icon: '🦁', rarity: 'legendary', desc: '+60% damage, but -20 max health.', damageMult: 1.6, maxHealthBonus: -20 },
+  { id: 'sages_wisdom', name: "Sage's Wisdom", icon: '🧠', rarity: 'epic', desc: '+90% XP gained.', xpMult: 1.9 },
+  { id: 'phoenix_feather', name: 'Phoenix Feather', icon: '🪶', rarity: 'legendary', desc: 'Survive the first lethal hit each wave, and +20% damage.', flags: ['secondWind'], damageMult: 1.2 },
+  { id: 'bloodpact_relic', name: 'Bloodpact Relic', icon: '🧛', rarity: 'epic', desc: 'Every kill heals 3 HP, and +15% damage.', flags: ['vampiric'], vampHeal: 3, damageMult: 1.15 },
+  { id: 'juggernaut_core', name: 'Juggernaut Core', icon: '🚂', rarity: 'legendary', desc: 'Damage ramps up to +65% while moving.', flags: ['momentum'], momentumBonus: 0.65 },
+  { id: 'deaths_wager', name: "Death's Wager", icon: '☠️', rarity: 'legendary', desc: 'Fire rate climbs up to +100% as HP falls.', flags: ['berserk'], berserkBonus: 1.0 },
+  { id: 'reactive_carapace', name: 'Reactive Carapace', icon: '🐢', rarity: 'epic', desc: 'Reflect 55% of contact damage, and +30 max health.', flags: ['thorns'], thornsFrac: 0.55, maxHealthBonus: 30 },
+  { id: 'overcharge_battery', name: 'Overcharge Battery', icon: '🔋', rarity: 'epic', desc: 'Every 6th shot fires a free nova.', flags: ['overcharge'], overchargeEvery: 6 },
+  { id: 'gale_talisman', name: 'Gale Talisman', icon: '🌬️', rarity: 'rare', desc: '+28% move speed.', speedMult: 1.28 },
+  { id: 'ironclad_crest', name: 'Ironclad Crest', icon: '⚙️', rarity: 'rare', desc: '+55 max health and +10% damage.', maxHealthBonus: 55, damageMult: 1.1 },
+  { id: 'volcanic_heart', name: 'Volcanic Heart', icon: '🌋', rarity: 'legendary', desc: '+70% damage, but take +25% damage.', damageMult: 1.7, flags: ['glassCannon'], glassTakenMult: 1.25 },
+  { id: 'twin_moons', name: 'Twin Moons', icon: '🌙', rarity: 'epic', desc: '+20% crit chance and +60% crit damage.', critChanceBonus: 0.2, critMultMult: 1.6 },
+  { id: 'oracles_eye', name: "Oracle's Eye", icon: '🔮', rarity: 'rare', desc: '+50% XP and +12% fire rate.', xpMult: 1.5, fireRateMult: 1.12 },
+  { id: 'titanforged_aegis', name: 'Titanforged Aegis', icon: '🛡️', rarity: 'legendary', desc: '+120 max health, but -15% fire rate.', maxHealthBonus: 120, fireRateMult: 0.85 },
+  { id: 'reapers_harvest', name: "Reaper's Harvest", icon: '🌾', rarity: 'legendary', desc: 'Kills heal 4 HP, and +25% move speed.', flags: ['vampiric'], vampHeal: 4, speedMult: 1.25 },
+
   // ---- CURSES (devil-deal downsides — never in the random pool) ----
   {
     id: 'curse_frailty', name: 'Curse of Frailty', icon: '💔', rarity: 'legendary',
     desc: 'Take +50% damage from everything, permanently.',
     curse: true, flags: ['glassCannon'], glassTakenMult: 1.5,
   },
+  { id: 'curse_glass_bones', name: 'Curse of Glass Bones', icon: '🦴', rarity: 'legendary', desc: '-45 max health, permanently.', curse: true, maxHealthBonus: -45 },
+  { id: 'curse_myopia', name: 'Curse of Myopia', icon: '👓', rarity: 'legendary', desc: '-12% crit chance, permanently.', curse: true, critChanceBonus: -0.12 },
+  { id: 'curse_famine', name: 'Curse of Famine', icon: '🍂', rarity: 'legendary', desc: '-40% XP gained, permanently.', curse: true, xpMult: 0.6 },
   {
     id: 'curse_sloth', name: 'Curse of Sloth', icon: '🐢', rarity: 'legendary',
     desc: '-30% move speed, permanently.',
