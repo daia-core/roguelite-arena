@@ -6,6 +6,18 @@ portrait viewport).
 
 ---
 
+## 2026-07-08 (morning, heartbeat ~09:15) — VillageScene architecture extraction
+
+**Internal/architecture (no player-visible change)**
+- VillageScene now implements the `Scene` interface (same pattern as MenuScene from step 1).
+  Pre-constructed in the Game constructor; `enterVillage()` simplified to a 2-line delegate.
+  Removed `villageScene` property, `updateVillage()`, and `drawVillage()` stubs from `Game.ts`.
+  Village state dispatches through the shared scene registry — no behavior change.
+
+**Commit:** `e10eb97` + prebuilt update — **live `index-Buqsi9XZ.js` ✓**
+
+---
+
 ## 2026-07-08 (morning, heartbeat #2) — Game-over button fix + View Achievements
 
 **Player-visible**
