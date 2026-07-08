@@ -6,6 +6,16 @@ portrait viewport).
 
 ---
 
+## 2026-07-08 (early morning) — Feel: Colored DoT damage numbers + doom explosion
+
+**Game feel**
+- **Burn / Bleed / Poison** damage now shows **colored floating numbers** — orange for burn, dark red for bleed, green for poison. Numbers are throttled (one burst per ~0.45s per enemy) so they inform without spamming. Previously these ticked silently.
+- **Doom detonation** now spawns 18 purple/magenta particles in a radial burst plus a brief purple screen flash on both trigger paths (legacy timer + new-engine StatusEffectEngine). The *moment* of detonation now punches through visually.
+
+Commit: eb16dce · Bundle: index-aiUC8QUz.js · Live ✓ (roguelite-game-blush.vercel.app, 823KB confirmed)
+
+---
+
 ## 2026-07-08 (afternoon) — Balance: Bone Spear cooldown nerf
 
 **Balance**
