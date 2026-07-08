@@ -6,6 +6,18 @@ portrait viewport).
 
 ---
 
+## 2026-07-08 (night) — Step 16: `drawPlaying()` → `PlayingRenderer` · `cfa58aa` · `index-VAtDyVod.js` ✓
+
+**No player-visible change.** Pure rendering domain extracted from Game.ts:
+
+- New `PlayingRenderer.ts` (~195 lines): `PlayingRendererDeps` interface (14 stable refs,
+  14 array getters, 3 scalar getters) + `PlayingRenderer` class with `draw()` method
+- Game.ts 3,749 → 3,613 lines (−136 net, after constructor wiring)
+- Both call sites updated: main draw loop + PauseScene frozen-arena underlay
+- TypeScript clean, 8 QA scripts PASS
+
+---
+
 ## 2026-07-08 (night) — QA script drift fix (post-ShopScene extraction) · `b5de4a8` · `index-DAsowQVb.js` ✓
 
 **No player-visible change.** QA scripts broken silently since step 6 (ShopScene extraction):

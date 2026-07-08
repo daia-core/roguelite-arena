@@ -1,6 +1,6 @@
 # Roguelite Arena — Architecture Overview
 
-> **Last updated: 2026-07-08** — Step 16 extraction plan written: `drawPlaying()` → `PlayingRenderer` (deps interface, 5-step extraction order, safety rules). Execution ready next dw-roguelite pull. updatePlaying decomposition complete (step 15); Game.ts 3,749 lines. Full QA suite verified: 6/6 PASS. 34 active skills, 1894 items.
+> **Last updated: 2026-07-08** — Step 16 SHIPPED: `drawPlaying()` → `PlayingRenderer.ts` extracted. Game.ts 3,749 → 3,613 lines (−136 net). Commit `cfa58aa`, live `index-VAtDyVod.js` ✓. 8 QA scripts PASS. Next: step 17 — `drawEvolutionBanner()` → `EvolutionBannerRenderer` or identify next largest cohesive domain.
 
 ---
 
@@ -721,7 +721,7 @@ Safest to riskiest — build stays green after each step:
 
 ## Step 16 Extraction Plan — `drawPlaying()` → `PlayingRenderer`
 
-> **Status: PLANNED (2026-07-08)** — ready to execute next dw-roguelite pull when content budget is available.
+> **Status: DONE (2026-07-08)** — Executed. `PlayingRenderer.ts` live, commit `cfa58aa`, bundle `index-VAtDyVod.js`. Game.ts −136 lines (3,749→3,613). 8 QA scripts PASS.
 
 ### Why `drawPlaying` is the right next extraction
 
