@@ -6,6 +6,32 @@ portrait viewport).
 
 ---
 
+## 2026-07-08 (night) — 8 new Soulstone-inspired active skills (34 total)
+
+**Player-visible**
+- 8 new active skills added, covering mechanics that were entirely missing from the catalog:
+  - **Thunder Clap** (T1): Explosive repel — blasts all nearby enemies outward + stuns 1s (3× dmg, 6s cd)
+  - **Bone Spear** (T2): Massive single piercing bone lance through every enemy in its path (10× dmg, 5s cd)
+  - **Spectral Shield** (T2): 5s invincibility bubble + burst nova on cast (4× dmg, 12s cd)
+  - **Rune Field** (T2): Drop 6 delayed rune detonations at enemy positions, 0.5s fuse (5× dmg each, 7s cd)
+  - **Soul Shatter** (T3): Stack Condemned×12 + Fragility×10 + Exposed×5 on 8 nearest, then detonate (8× dmg, 10s cd)
+  - **Mirror Strike** (T3): 3 simultaneous strikes hit every enemy on screen at once (4× per wave, 12s cd)
+  - **Doom Comet** (T4): 1.5s warning comet — 18× damage, huge radius, applies ALL debuffs to every enemy hit (22s cd)
+  - **Hellfire Rain** (T4): 20 hellfire bolts rain down targeting all living enemies over 4 seconds (7× each, 24s cd)
+- 8 matching Spell Scroll shop items added (one per skill, tier-appropriate costs)
+- Total active skills: 26 → 34; total scroll items: 26 → 34
+
+**New gameplay categories now covered:** repel/knockback, defensive invincibility, trap placement, debuff-nuke, screen-wide simultaneous strikes, saturation hellfire
+
+**Under the hood**
+- `ActiveSkillSystem.ts`: 8 new `ActiveSkillEffect` types + 8 `ActiveSkill` data entries
+- `Game.ts`: 8 new switch cases in `useActiveSkill()`, all using existing AoE/Projectile infrastructure
+- `catalog.ts`: 8 new `activatesSkill` scroll items across tiers
+
+**Commit** `cbbe14c` — bundle `index-CXt2INih.js` verified live at roguelite-game-blush.vercel.app (both `thunder_clap` and `doom_comet` confirmed in production bundle)
+
+---
+
 ## 2026-07-08 (night) — All 26 active skills now reachable in the shop
 
 **Player-visible**
