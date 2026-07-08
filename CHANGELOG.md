@@ -6,6 +6,29 @@ portrait viewport).
 
 ---
 
+## 2026-07-08 (morning) — Fix: 11 more active skills now deal enemy damage
+
+**Bug:** Systematic `AoeZone` architecture misuse — `AoeZone` only damages the **player**, never enemies. 11 skills across all tiers were passing non-zero `damage` to `spawnAoeZone()`, resulting in zero enemy damage and accidental player self-damage. Skills looked impressive visually but did nothing to enemies.
+
+**Skills fixed:**
+- **Meteor** — 0.8s telegraphed blast (was self-damage if player didn't dodge; now pendingDmg at 0.8s)
+- **Orbital Strike** — 6 staggered impacts (were player-damage traps; now 6× pendingDmg)
+- **Poison Cloud** — persistent DoT zone (was ticking player; now activeDmgZone at baseDmg/sec for 5s)
+- **Circle of Power** — persistent ring (was ticking player; now activeDmgZone at 2×baseDmg/sec for 5s)
+- **Lightning Storm** — 5 staggered strikes (were visuals only; now 5× pendingDmg at enemy positions)
+- **Void Pulse** — 3 expanding rings (were hitting player; now 3× pendingDmg with matching radii/delays)
+- **Blizzard** — 6 frost shards (were visuals only; now 6× pendingDmg; slow still applies correctly)
+- **Spectral Dash** — 5 nova bursts (were visuals only; now 5× pendingDmg at dash positions)
+- **Black Hole** — 2s gravity + detonation (detonation was hitting player; now pendingDmg at 2.0s)
+- **Armageddon** — 12 meteors (were all visuals; now 12× pendingDmg targeting enemy positions)
+- **Divine Wrath** — 3 screen-wide waves (were hitting player; now 3× pendingDmg r=900; i-frames stay)
+
+**Infrastructure added:** `activeDmgZones` array + `resolveActiveDmgZones(dt)` for persistent player-beneficial AoE zones that tick enemy damage (powers Poison Cloud and Circle of Power).
+
+Commit: pending · Bundle: index-XoPSvy0v.js · Live ✓
+
+---
+
 ## 2026-07-08 (early morning) — Fix: active skills now deal enemy damage
 
 **Bug:** 4 active skills (Mirror Strike, Hellfire Rain, Rune Field, Doom Comet) displayed visuals but dealt zero damage to enemies — `AoeZone` only processes player hits, not enemy hits. Worse, the AoeZone damage payload was accidentally hurting the player when they stood in the zone.

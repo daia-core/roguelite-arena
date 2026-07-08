@@ -97,6 +97,8 @@ export class Game {
   // Deferred area damage for player skills whose visual delay ≠ instant resolve.
   // Each entry resolves after `delay` seconds — finds enemies in `r` px of (x, y).
   private pendingDmg: Array<{x: number; y: number; r: number; dmg: number; delay: number; color: string}> = [];
+  // Persistent player-AoE zones that tick enemy damage while active (poison cloud, circle of power).
+  private activeDmgZones: Array<{x: number; y: number; r: number; dmgPerSec: number; remaining: number; color: string}> = [];
   // Telegraphed enemy spawns (red blinking X -> enemy materializes after 2s).
   spawnTelegraphs: SpawnTelegraph[] = [];
   private bombTimer: number = 0;
@@ -1652,6 +1654,7 @@ export class Game {
     this.updateAoeZones(dt);
     this.removeDeadEntities(this.aoeZones);
     this.resolvePendingDmg(dt);
+    this.resolveActiveDmgZones(dt);
 
     // Check wave completion
     if (this.waveManager.isWaveComplete()) {
@@ -1722,6 +1725,7 @@ export class Game {
     this.shockwaves = [];
     this.aoeZones = [];
     this.pendingDmg = [];
+    this.activeDmgZones = [];
     this.bombTimer = 0;
     this.novaTimer = 0;
     this.auxMeleeTimer = 0;
@@ -1816,9 +1820,12 @@ export class Game {
       case 'meteor': {
         // Telegraphed AoE fire drop — 0.8s warning ring, then large impact burst.
         const r = skill.radius ?? 120;
-        this.spawnAoeZone(new AoeZone(px, py, r, baseDmg, 0.8, {
+        // Visual telegraph (damage=0 — AoeZone only hits the player).
+        this.spawnAoeZone(new AoeZone(px, py, r, 0, 0.8, {
           color: '#ff6b00', activeTime: 0.5, singleHit: false,
         }));
+        // Deferred enemy damage at impact time.
+        this.pendingDmg.push({ x: px, y: py, r, dmg: baseDmg, delay: 0.8, color: '#ff6b00' });
         break;
       }
       case 'frost_nova': {
@@ -1871,18 +1878,24 @@ export class Game {
           const angle = (i / 6) * Math.PI * 2;
           const ix = px + Math.cos(angle) * r * 0.6;
           const iy = py + Math.sin(angle) * r * 0.6;
-          this.spawnAoeZone(new AoeZone(ix, iy, 55, baseDmg, 0.3 + i * 0.15, {
+          // Visual only (damage=0 — AoeZone only hits the player).
+          this.spawnAoeZone(new AoeZone(ix, iy, 55, 0, 0.3 + i * 0.15, {
             color: '#b197fc', activeTime: 0.35, singleHit: true,
           }));
+          // Deferred enemy damage at each impact.
+          this.pendingDmg.push({ x: ix, y: iy, r: 55, dmg: baseDmg, delay: 0.3 + i * 0.15, color: '#b197fc' });
         }
         break;
       }
       case 'poison_cloud': {
-        // Persistent AoE DoT zone — ticks per frame for 5 seconds.
+        // Persistent AoE DoT zone — ticks enemy damage for 5 seconds.
         const r = skill.radius ?? 110;
-        this.spawnAoeZone(new AoeZone(px, py, r, baseDmg / 10, 0.0, {
+        // Visual zone (damage=0 — AoeZone only hits the player).
+        this.spawnAoeZone(new AoeZone(px, py, r, 0, 0.0, {
           color: '#40c057', activeTime: 5.0, singleHit: false,
         }));
+        // Persistent enemy damage tick (baseDmg per second for 5s).
+        this.activeDmgZones.push({ x: px, y: py, r, dmgPerSec: baseDmg, remaining: 5.0, color: '#40c057' });
         break;
       }
       case 'phoenix_beam': {
@@ -1944,9 +1957,13 @@ export class Game {
       }
       case 'circle_power': {
         // Persistent ring zone — damages enemies inside it for 5 seconds.
-        this.spawnAoeZone(new AoeZone(px, py, skill.radius ?? 90, baseDmg / 8, 0.0, {
+        const rCP = skill.radius ?? 90;
+        // Visual ring (damage=0 — AoeZone only hits the player).
+        this.spawnAoeZone(new AoeZone(px, py, rCP, 0, 0.0, {
           color: '#ffd43b', activeTime: 5.0, singleHit: false, shape: 'ring',
         }));
+        // Persistent enemy damage tick (2× baseDmg per second for 5s).
+        this.activeDmgZones.push({ x: px, y: py, r: rCP, dmgPerSec: baseDmg * 2, remaining: 5.0, color: '#ffd43b' });
         break;
       }
 
@@ -2016,9 +2033,12 @@ export class Game {
         if (aliveLS.length === 0) break;
         for (let i = 0; i < 5; i++) {
           const t = aliveLS[Math.floor(Math.random() * aliveLS.length)];
-          this.spawnAoeZone(new AoeZone(t.x, t.y, 45, baseDmg, i * 0.3, {
+          // Visual telegraph (damage=0 — AoeZone only hits the player).
+          this.spawnAoeZone(new AoeZone(t.x, t.y, 45, 0, i * 0.3, {
             color: '#ffd43b', activeTime: 0.25, singleHit: true,
           }));
+          // Deferred enemy damage at impact point.
+          this.pendingDmg.push({ x: t.x, y: t.y, r: 45, dmg: baseDmg, delay: i * 0.3, color: '#ffd43b' });
         }
         break;
       }
@@ -2026,23 +2046,30 @@ export class Game {
         // 3 expanding rings of damage — each larger and delayed.
         const rVP = skill.radius ?? 180;
         for (let i = 0; i < 3; i++) {
-          this.spawnAoeZone(new AoeZone(px, py, rVP * (0.5 + i * 0.3), baseDmg, i * 0.25, {
-            color: '#7950f2', activeTime: 0.3, singleHit: false,
+          const ringR = rVP * (0.5 + i * 0.3);
+          // Visual ring (damage=0 — AoeZone only hits the player).
+          this.spawnAoeZone(new AoeZone(px, py, ringR, 0, i * 0.25, {
+            color: '#7950f2', activeTime: 0.3, singleHit: true,
           }));
+          // Deferred enemy damage at ring resolution.
+          this.pendingDmg.push({ x: px, y: py, r: ringR, dmg: baseDmg, delay: i * 0.25, color: '#7950f2' });
         }
         break;
       }
       case 'blizzard': {
-        // 6 frost shards scattered in large area — each slows on contact.
+        // 6 frost shards scattered in large area — each slows and damages.
         const rBZ = skill.radius ?? 200;
         for (let i = 0; i < 6; i++) {
           const ang = Math.random() * Math.PI * 2;
           const dist = Math.random() * rBZ;
           const ix = px + Math.cos(ang) * dist;
           const iy = py + Math.sin(ang) * dist;
-          this.spawnAoeZone(new AoeZone(ix, iy, 60, baseDmg, i * 0.2, {
+          // Visual shard (damage=0 — AoeZone only hits the player).
+          this.spawnAoeZone(new AoeZone(ix, iy, 60, 0, i * 0.2, {
             color: '#74c0fc', activeTime: 0.3, singleHit: true,
           }));
+          // Deferred enemy damage + slow at impact.
+          this.pendingDmg.push({ x: ix, y: iy, r: 60, dmg: baseDmg, delay: i * 0.2, color: '#74c0fc' });
           for (const e of this.enemies) {
             if (e.dead) continue;
             if (Math.hypot(e.x - ix, e.y - iy) <= 60) {
@@ -2117,9 +2144,12 @@ export class Game {
         let lastX = px, lastY = py;
         for (let i = 0; i < targetsSP.length; i++) {
           const t = targetsSP[i];
-          this.spawnAoeZone(new AoeZone(t.x, t.y, rSD, baseDmg, i * 0.08, {
+          // Visual burst (damage=0 — AoeZone only hits the player).
+          this.spawnAoeZone(new AoeZone(t.x, t.y, rSD, 0, i * 0.08, {
             color: '#845ef7', activeTime: 0.25, singleHit: true,
           }));
+          // Deferred enemy damage at each dash position.
+          this.pendingDmg.push({ x: t.x, y: t.y, r: rSD, dmg: baseDmg, delay: i * 0.08, color: '#845ef7' });
           lastX = t.x; lastY = t.y;
         }
         if (this.player) {
@@ -2160,9 +2190,12 @@ export class Game {
         this.spawnAoeZone(new AoeZone(px, py, rBH * 0.35, 0, 0.0, {
           color: '#212529', activeTime: 2.0, singleHit: false,
         }));
-        this.spawnAoeZone(new AoeZone(px, py, rBH, baseDmg, 2.0, {
+        // Visual detonation flash (damage=0 — AoeZone only hits the player).
+        this.spawnAoeZone(new AoeZone(px, py, rBH, 0, 2.0, {
           color: '#7950f2', activeTime: 0.6, singleHit: false,
         }));
+        // Deferred enemy damage at detonation.
+        this.pendingDmg.push({ x: px, y: py, r: rBH, dmg: baseDmg, delay: 2.0, color: '#7950f2' });
         break;
       }
       case 'curse_wave': {
@@ -2182,9 +2215,12 @@ export class Game {
         // 3 holy waves hit ALL enemies — massive damage + extended i-frames.
         if (this.player) this.player.invincibilityTimer = Math.max(this.player.invincibilityTimer, 2.0);
         for (let wave = 0; wave < 3; wave++) {
-          this.spawnAoeZone(new AoeZone(px, py, 900, baseDmg / 3, wave * 0.4, {
-            color: '#ffd43b', activeTime: 0.3, singleHit: false,
+          // Visual wave (damage=0 — AoeZone only hits the player; player has i-frames anyway).
+          this.spawnAoeZone(new AoeZone(px, py, 900, 0, wave * 0.4, {
+            color: '#ffd43b', activeTime: 0.3, singleHit: true,
           }));
+          // Deferred enemy damage — hits every enemy on screen at wave time.
+          this.pendingDmg.push({ x: px, y: py, r: 900, dmg: baseDmg, delay: wave * 0.4, color: '#ffd43b' });
         }
         break;
       }
@@ -2204,9 +2240,12 @@ export class Game {
             ix = px + Math.cos(a) * d;
             iy = py + Math.sin(a) * d;
           }
-          this.spawnAoeZone(new AoeZone(ix, iy, rAG, baseDmg, i * 0.25, {
+          // Visual meteor telegraph (damage=0 — AoeZone only hits the player).
+          this.spawnAoeZone(new AoeZone(ix, iy, rAG, 0, i * 0.25, {
             color: '#ff6b00', activeTime: 0.45, singleHit: true,
           }));
+          // Deferred enemy damage at each impact.
+          this.pendingDmg.push({ x: ix, y: iy, r: rAG, dmg: baseDmg, delay: i * 0.25, color: '#ff6b00' });
         }
         break;
       }
@@ -2561,6 +2600,21 @@ export class Game {
           }
         }
         this.pendingDmg.splice(i, 1);
+      }
+    }
+  }
+
+  /** Tick persistent player-AoE zones (poison_cloud, circle_power) — deals damage to enemies inside per second. */
+  private resolveActiveDmgZones(dt: number): void {
+    for (let i = this.activeDmgZones.length - 1; i >= 0; i--) {
+      const z = this.activeDmgZones[i];
+      z.remaining -= dt;
+      if (z.remaining <= 0) { this.activeDmgZones.splice(i, 1); continue; }
+      const nearby = this.enemyQuadtree.retrieve({ x: z.x, y: z.y, radius: z.r + 20 });
+      for (const e of nearby) {
+        if (!e.dead && Math.hypot(e.x - z.x, e.y - z.y) <= z.r) {
+          this.dealAuxDamage(e, z.dmgPerSec * dt, z.color);
+        }
       }
     }
   }
