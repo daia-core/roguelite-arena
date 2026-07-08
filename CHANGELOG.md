@@ -6,6 +6,20 @@ portrait viewport).
 
 ---
 
+## 2026-07-09 (night) — Village QA fix · `928924d` · `index-C5EV32u_.js` ✓
+
+**No player-visible change.** `qa-village.mjs` was crashing with `TypeError: Cannot read
+properties of undefined (reading 'camX')`:
+
+- Added `get villageScene()` public getter to `Game.ts` (scene was only in the `scenes` dict)
+- Made `enterVillage()` public (QA script needs to call it directly)
+- Made `VillageScene.camX` / `camY` public (QA reads scroll position to verify camera movement)
+
+`qa-village.mjs` now: PASS (state=village, camScrolled=true, bought=true, 0 errors).
+All other QA: roguelite, synergy, stats-parity all PASS.
+
+---
+
 ## 2026-07-08 (night) — Step 16: `drawPlaying()` → `PlayingRenderer` · `cfa58aa` · `index-VAtDyVod.js` ✓
 
 **No player-visible change.** Pure rendering domain extracted from Game.ts:

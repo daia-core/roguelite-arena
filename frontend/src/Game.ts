@@ -2334,6 +2334,13 @@ export class Game {
     this.skillTreeScene!.open(fromShop);
     this.state = 'skilltree';
   }
+
+  /** Exit the skill-tree back to playing. Used by simulate-balance.mjs to resume the run
+   *  after the bot allocates all available skill points. */
+  finishSkillTree(): void {
+    this.state = 'playing';
+  }
+
   private triggerHitPause(seconds: number): void {
     if (seconds > this.hitPauseTimer) this.hitPauseTimer = seconds;
     if (this.hitPauseTimer > Game.HIT_PAUSE_MAX) this.hitPauseTimer = Game.HIT_PAUSE_MAX;
