@@ -6,6 +6,19 @@ portrait viewport).
 
 ---
 
+## 2026-07-08 (evening) — RewardScene extracted (step 10 de-god-classing)
+
+**Player-visible**
+- No gameplay change. Artifact reward screen behavior is identical.
+
+**Internal**
+- `RewardScene.ts` (171 lines) extracted from `Game.ts`: owns `drawReward`, `updateReward`, inlined `screenScale`/`columnRects` geometry helpers.
+- Removed now-unused `wrapText()` helper from `Game.ts` (was a thin delegation wrapper around `renderer.wrapLines`).
+- `Game.ts`: 4,961 → 4,899 lines (−62). 10 of 12 game states now have dedicated scene files.
+- Commit: `54f071c` · Bundle: `index-BWKBP5Po.js` · Live ✓
+
+---
+
 ## 2026-07-08 (evening) — ClassSelectScene extracted (step 9 de-god-classing)
 
 **Player-visible**
