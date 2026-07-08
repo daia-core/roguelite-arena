@@ -6,6 +6,22 @@ portrait viewport).
 
 ---
 
+## 2026-07-08 (night) — QA script drift fix (post-ShopScene extraction) · `b5de4a8` · `index-DAsowQVb.js` ✓
+
+**No player-visible change.** QA scripts broken silently since step 6 (ShopScene extraction):
+`getShopLayout()` moved from Game.ts to ShopScene.ts, but 5 QA scripts still called it via
+`window.__game.getShopLayout()`. Fixed:
+
+- Made `ShopScene.getShopLayout()` public
+- Updated `verify-live.mjs`, `qa-shop-inputguard.mjs`, `qa-shop-layout.mjs`,
+  `qa-xp-coin-shop.mjs`, `qa-textbox.mjs` to route via `window.__shopScene.getShopLayout()`
+- All 5 scripts now pass; verify-live.mjs no longer throws on headless shop layout test
+
+This is the third QA drift point documented in ARCHITECTURE.md (alongside the Scene extraction
+window.__game pattern and the stats-parity cap-mirror rule).
+
+---
+
 ## 2026-07-08 (evening) — useActiveSkill extracted (step 14) · `3ba40f5` · `index-cRH2V7ES.js` ✓
 
 **Architecture (no player-visible change):** Moved the 34-case active-skill dispatch switch

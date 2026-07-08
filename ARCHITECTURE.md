@@ -38,10 +38,10 @@ ctx.spawnAoeZone(new AoeZone(x, y, r, baseDmg, delay, { color }));
 
 ---
 
-## ⚠️ QA Script Maintenance — Two Known Drift Points
+## ⚠️ QA Script Maintenance — Three Known Drift Points
 
-Run `node qa-*.mjs` from the repo root after any significant refactor. Two drift points caught
-2026-07-08 (post-extraction QA pass) that can cause false failures:
+Run `node qa-*.mjs` from the repo root after any significant refactor. Three drift points
+caught 2026-07-08 (post-extraction QA passes) that can cause false failures:
 
 ### 1. Scene extraction breaks `window.__game.*` access in QA scripts
 
@@ -52,7 +52,10 @@ When a method moves from Game.ts to a Scene (e.g., ShopScene), QA scripts that a
   in Game.ts after the Scene is created.
 - Update the QA script to route through `window.__shopScene.methodName()` for that case.
 
-**Affected QA script:** `qa-synergy.mjs` (cases D+E use ShopScene methods — now via `window.__shopScene`).
+**Affected scripts (fixed 2026-07-08 night):** `qa-synergy.mjs` (cases D+E — ShopScene DuoSystem
+methods); `qa-shop-inputguard.mjs`, `qa-shop-layout.mjs`, `qa-xp-coin-shop.mjs`, `qa-textbox.mjs`,
+and `tools/qa/verify-live.mjs` (all used `g.getShopLayout()` which moved to ShopScene in step 6).
+Pattern: `const ss = window.__shopScene; const L = ss ? ss.getShopLayout() : g.getShopLayout?.();`
 
 ### 2. Cap/constant changes in ItemSystem.ts must be mirrored in `qa-stats-parity.mjs`
 
