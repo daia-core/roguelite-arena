@@ -5076,31 +5076,34 @@ export class Game {
   private updateGameOver(): void {
     const mouseX = this.input.mouseX;
     const mouseY = this.input.mouseY;
+    const isMobile = this.canvas.width < 800;
+    const hasNewAch = this.newAchievementsThisRun.length > 0;
 
-    const buttonWidth = 200;
-    const buttonHeight = 50;
-    const spacing = 20;
-    const startY = this.canvas.height - 200;
+    // Match drawGameOver() layout exactly so click zones align with the drawn buttons.
+    const buttonWidth = isMobile ? Math.min(300, this.canvas.width - 60) : 260;
+    const buttonHeight = isMobile ? 70 : 60;
+    const spacing = 18;
+    // On desktop, shift all buttons up one slot to make room for the 4th "View Achievements" button.
+    const extraSlot = (!isMobile && hasNewAch) ? buttonHeight + spacing : 0;
+    const startY = this.canvas.height - (isMobile ? 240 : 220) - extraSlot;
+    const bx = this.canvas.width / 2 - buttonWidth / 2;
 
-    // Try again button
-    const retryBtn = { x: this.canvas.width / 2 - buttonWidth / 2, y: startY, width: buttonWidth, height: buttonHeight };
-    // Upgrades button
-    const upgradesBtn = { x: this.canvas.width / 2 - buttonWidth / 2, y: startY + buttonHeight + spacing, width: buttonWidth, height: buttonHeight };
-    // Main menu button
-    const menuBtn = { x: this.canvas.width / 2 - buttonWidth / 2, y: startY + (buttonHeight + spacing) * 2, width: buttonWidth, height: buttonHeight };
+    const retryBtn    = { x: bx, y: startY,                                width: buttonWidth, height: buttonHeight };
+    const upgradesBtn = { x: bx, y: startY + (buttonHeight + spacing),     width: buttonWidth, height: buttonHeight };
+    const menuBtn     = { x: bx, y: startY + (buttonHeight + spacing) * 2, width: buttonWidth, height: buttonHeight };
+    const achBtn      = { x: bx, y: startY + (buttonHeight + spacing) * 3, width: buttonWidth, height: buttonHeight };
 
     if (pointInRect(mouseX, mouseY, retryBtn) && this.input.mouseDown) {
       this.openClassSelect();
       this.input.mouseDown = false;
-    }
-
-    if (pointInRect(mouseX, mouseY, upgradesBtn) && this.input.mouseDown) {
+    } else if (pointInRect(mouseX, mouseY, upgradesBtn) && this.input.mouseDown) {
       this.enterVillage();
       this.input.mouseDown = false;
-    }
-
-    if (pointInRect(mouseX, mouseY, menuBtn) && this.input.mouseDown) {
+    } else if (pointInRect(mouseX, mouseY, menuBtn) && this.input.mouseDown) {
       this.state = 'menu';
+      this.input.mouseDown = false;
+    } else if (!isMobile && hasNewAch && pointInRect(mouseX, mouseY, achBtn) && this.input.mouseDown) {
+      this.state = 'achievements';
       this.input.mouseDown = false;
     }
   }
@@ -7081,39 +7084,19 @@ export class Game {
     const buttonWidth = isMobile ? Math.min(300, this.canvas.width - 60) : 260;
     const buttonHeight = isMobile ? 70 : 60;
     const spacing = 18;
-    const startY = this.canvas.height - (isMobile ? 240 : 220);
+    const hasNewAch = this.newAchievementsThisRun.length > 0;
+    // On desktop, shift all buttons up one slot to make room for "View Achievements".
+    const extraSlot = (!isMobile && hasNewAch) ? buttonHeight + spacing : 0;
+    const startY = this.canvas.height - (isMobile ? 240 : 220) - extraSlot;
+    const bx = this.canvas.width / 2 - buttonWidth / 2;
 
-    this.renderer.drawButton(
-      this.canvas.width / 2 - buttonWidth / 2,
-      startY,
-      buttonWidth,
-      buttonHeight,
-      'Try Again',
-      false,
-      true,
-      isMobile
-    );
+    this.renderer.drawButton(bx, startY, buttonWidth, buttonHeight, 'Try Again', false, true, isMobile);
+    this.renderer.drawButton(bx, startY + (buttonHeight + spacing), buttonWidth, buttonHeight, 'View Upgrades', false, true, isMobile);
+    this.renderer.drawButton(bx, startY + (buttonHeight + spacing) * 2, buttonWidth, buttonHeight, 'Main Menu', false, true, isMobile);
 
-    this.renderer.drawButton(
-      this.canvas.width / 2 - buttonWidth / 2,
-      startY + buttonHeight + spacing,
-      buttonWidth,
-      buttonHeight,
-      'View Upgrades',
-      false,
-      true,
-      isMobile
-    );
-
-    this.renderer.drawButton(
-      this.canvas.width / 2 - buttonWidth / 2,
-      startY + (buttonHeight + spacing) * 2,
-      buttonWidth,
-      buttonHeight,
-      'Main Menu',
-      false,
-      true,
-      isMobile
-    );
+    // Desktop only: "View Achievements" button when a new achievement was earned this run.
+    if (!isMobile && hasNewAch) {
+      this.renderer.drawButton(bx, startY + (buttonHeight + spacing) * 3, buttonWidth, buttonHeight, '🏆 View Achievements', false, true, isMobile);
+    }
   }
 }
