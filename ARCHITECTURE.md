@@ -637,6 +637,83 @@ as a method called from `Game.ts` update loop or hit resolution.
 
 ---
 
+## Step 15 Planning Guide — updatePlaying() Sub-method Decomposition
+
+> Written 2026-07-08 (post step-14 QA pass) as the pre-planned guide for the next extraction.
+> Game.ts is 3,695 lines; `updatePlaying()` occupies lines **908–1845** (937 lines).
+
+### Why NOT a CombatSystem class
+
+The tempting move is to push `updatePlaying()` into a `CombatSystem.ts`. Don't do it.
+A CombatSystem class would need **20+ injected Game references** to compile:
+`player`, `enemies`, `particles`, `damageNumbers`, `projectiles`, `meleeAttacks`,
+`healthOrbs`, `xpOrbs`, `coins`, `audio`, `renderer`, `screenEffects`, `playerStats`,
+`artifacts`, `metaProgression`, `waveManager`, `spawnTelegraphs`, `enemyQuadtree`,
+`projectileQuadtree`, `projectilePool`, `particlePool`, `damageNumberPool`, and
+every private helper method (`handleEnemyKill`, `applyOnHitEffects`, `killByDot`, …).
+The result is a class that IS essentially Game with a different name — not an improvement.
+
+### Recommended approach: Sub-method extraction within Game.ts (step 15)
+
+Break `updatePlaying()` into **7 named `private` methods** in the same file.
+`updatePlaying()` becomes an ~80-line orchestrator that calls them in order.
+
+- Zero new files, zero import changes
+- TypeScript stays clean the whole time (all methods still use `this.*`)
+- No QA script changes (methods are still on the same class, same `window.__game`)
+- Pure readability win — each phase is testable by reading one 100–200 line method
+
+### The 7 phases and their approximate line ranges
+
+| # | Method name | Lines (approx) | What it does |
+|---|------------|-----------------|--------------|
+| 1 | `updatePlayerTick(dt)` | 911–1033 (~123 ln) | Gear-button guard, wave timers, movement input, runtimeModifiers, player.update(), regen, dodge popups, shooting + multicast + overcharge, active skills, dash |
+| 2 | `updateWaveAndEnemySpawn(dt)` | 1035–1056 (~22 ln) | waveManager.update(), spawnTelegraphs tick, phase banner |
+| 3 | `updateEnemyStatuses(dt)` | 1057–1181 (~125 ln) | Per-enemy loop: pathfinding, DoT ticking (burn/bleed/poison/doom), new-engine statusFX.tick(), DoT-kill routing |
+| 4 | `updateEnemyBehaviors(dt)` | 1183–1410 (~228 ln) | Per-enemy enemy.update(), shooting, golem stomp, poison trail, spore cloud, druid healing, necro minion spawn, AoE attacks, boss phase banners, egg hatch, wall collision, contact collision with player |
+| 5 | `rebuildQuadtrees()` | 1412–1427 (~16 ln) | Clear + batch-insert enemies and projectiles into quadtrees |
+| 6 | `updateProjectileCollisions(dt)` | 1429–1593 (~165 ln) | Homing steering, projectile.update(), player-projectile→enemy collision (crit, amps, execute, on-hit), enemy-projectile→player collision |
+| 7 | `updateMeleeCollisions(dt)` | 1596–1671 (~76 ln) | melee.update(), arc-overlap enemy collision (crit, amps, on-hit) |
+| 8 | `updatePickupsAndCleanup(dt)` | 1673–1845 (~173 ln) | Particle update, damage numbers, health orbs (magnet+pickup), XP orbs, coins, aux weapons, swap-and-pop cleanup for all arrays, mergeOrbs, AoE zone tick, pending/active dmg zones, wave-completion check, game-over check, autoSave |
+
+> Phases 3 + 4 can both be split off the same enemy-loop pass or kept separate — they share
+> no mutable intermediate state other than `enemy.dead`, which is checked at the boundary.
+
+### Extraction order (least-coupled first)
+
+Safest to riskiest — build stays green after each step:
+
+1. **`rebuildQuadtrees()`** — 16 lines, pure array work, no conditional logic, trivial to verify
+2. **`updatePickupsAndCleanup(dt)`** — self-contained; touches only array cleanup and pickup logic; no deps on the other 6 phases
+3. **`updatePlayerTick(dt)`** — player/input only; no enemy deps; keep the gear-button guard at the top (it does an early return that must stay in `updatePlaying()` OR be the first call)
+4. **`updateWaveAndEnemySpawn(dt)`** — delegates to `waveManager.update()` + telegraphs, short
+5. **`updateMeleeCollisions(dt)`** — uses `this.meleeAttacks` and the quadtree, self-contained
+6. **`updateProjectileCollisions(dt)`** — larger but self-contained; uses quadtree (extracted already in step 5)
+7. **`updateEnemyStatuses(dt)` + `updateEnemyBehaviors(dt)`** — these two share the outer `for (const enemy of this.enemies)` loop; easiest to keep as ONE extracted method `updateEnemies(dt)` unless you want two separate passes (second pass requires iterating enemies again)
+
+> **Alternative to step 7:** keep the full enemy loop as a single `updateEnemies(dt)` method
+> (lines 1057–1410) rather than splitting DoT vs. behavior. Either works — splitting is cleaner
+> architecturally but requires a second iteration over `this.enemies`.
+
+### Safety rules for step 15
+
+1. **One sub-method per commit.** Build after every extraction: `cd frontend && npm run build`.
+2. **No logic changes** — pure cut-and-paste only. If a line needs to change to extract cleanly, stop and document why.
+3. **No visibility changes needed** — all sub-methods are `private` on the same class, so `this.*` access is unchanged.
+4. **QA suite after all 7** — run `node qa-*.mjs` from repo root (6 scripts). No interface changes are made, so they should all pass without modification. (If a method you extracted was accessed via `window.__game.methodName`, it still is — same class.)
+5. **Line ranges above are approximate** — use your editor's `extractMethod` or manual cut-paste; verify TypeScript stays clean before committing.
+
+### What step 15 does NOT do
+
+- Does not reduce Game.ts's line count (same code, just reorganized into named private methods)
+- Does not move any logic to a new file
+- Does not change the QA surface or require QA script updates
+- Does not unblock a future CombatSystem (that remains a > day-long refactor not worth the risk)
+
+**Estimated Game.ts after step 15:** still ~3,695 lines, but `updatePlaying()` shrinks from 937 to ~80 lines — readable as a high-level orchestrator.
+
+---
+
 ## Deployment
 
 ```
