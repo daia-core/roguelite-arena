@@ -43,6 +43,7 @@ import { getActiveSkillById } from './ActiveSkillSystem';
 import type { Scene } from './scenes/Scene';
 import { MenuScene } from './scenes/MenuScene';
 import { ShopScene } from './ShopScene';
+import { GameOverScene, type GameOverStats } from './GameOverScene';
 
 // The map/node meta-layer adds three between-wave screens on top of the core loop:
 //   'map'    — the Slay-the-Spire-style branching node picker (route your run)
@@ -248,16 +249,8 @@ export class Game {
   // Achievements earned in the just-ended run, surfaced as a banner on the game-over screen.
   private newAchievementsThisRun: Achievement[] = [];
 
-  // Game over details
-  gameOverStats: {
-    wavesReached: number;
-    enemiesKilled: number;
-    bossesDefeated: number;
-    goldEarned: number;
-    itemsCollected: number;
-    soulsEarned: number;
-    personalBest: number;
-  } = {
+  // Game over details (type shared with GameOverScene via exported GameOverStats)
+  gameOverStats: GameOverStats = {
     wavesReached: 0,
     enemiesKilled: 0,
     bossesDefeated: 0,
@@ -426,6 +419,19 @@ export class Game {
       input: this.input,
       onChoose: (choice) => this.applyRestChoice(choice),
       onDone: () => { this.state = 'map'; },
+    });
+
+    // Step 7: GameOverScene.
+    this.scenes.gameover = new GameOverScene({
+      canvas: this.canvas,
+      renderer: this.renderer,
+      input: this.input,
+      getStats: () => this.gameOverStats,
+      getNewAchievements: () => this.newAchievementsThisRun,
+      onRetry: () => this.openClassSelect(),
+      onViewUpgrades: () => this.enterVillage(),
+      onMenu: () => { this.state = 'menu'; },
+      onViewAchievements: () => { this.state = 'achievements'; },
     });
 
     // Step 6: ShopScene.
@@ -830,9 +836,6 @@ export class Game {
       }
       case 'paused':
         this.updatePaused();
-        break;
-      case 'gameover':
-        this.updateGameOver();
         break;
       case 'reward':
         this.updateReward();
@@ -4505,41 +4508,6 @@ export class Game {
     this.state = 'village';
   }
 
-  private updateGameOver(): void {
-    const mouseX = this.input.mouseX;
-    const mouseY = this.input.mouseY;
-    const isMobile = this.canvas.width < 800;
-    const hasNewAch = this.newAchievementsThisRun.length > 0;
-
-    // Match drawGameOver() layout exactly so click zones align with the drawn buttons.
-    const buttonWidth = isMobile ? Math.min(300, this.canvas.width - 60) : 260;
-    const buttonHeight = isMobile ? 70 : 60;
-    const spacing = 18;
-    // On desktop, shift all buttons up one slot to make room for the 4th "View Achievements" button.
-    const extraSlot = (!isMobile && hasNewAch) ? buttonHeight + spacing : 0;
-    const startY = this.canvas.height - (isMobile ? 240 : 220) - extraSlot;
-    const bx = this.canvas.width / 2 - buttonWidth / 2;
-
-    const retryBtn    = { x: bx, y: startY,                                width: buttonWidth, height: buttonHeight };
-    const upgradesBtn = { x: bx, y: startY + (buttonHeight + spacing),     width: buttonWidth, height: buttonHeight };
-    const menuBtn     = { x: bx, y: startY + (buttonHeight + spacing) * 2, width: buttonWidth, height: buttonHeight };
-    const achBtn      = { x: bx, y: startY + (buttonHeight + spacing) * 3, width: buttonWidth, height: buttonHeight };
-
-    if (pointInRect(mouseX, mouseY, retryBtn) && this.input.mouseDown) {
-      this.openClassSelect();
-      this.input.mouseDown = false;
-    } else if (pointInRect(mouseX, mouseY, upgradesBtn) && this.input.mouseDown) {
-      this.enterVillage();
-      this.input.mouseDown = false;
-    } else if (pointInRect(mouseX, mouseY, menuBtn) && this.input.mouseDown) {
-      this.state = 'menu';
-      this.input.mouseDown = false;
-    } else if (!isMobile && hasNewAch && pointInRect(mouseX, mouseY, achBtn) && this.input.mouseDown) {
-      this.state = 'achievements';
-      this.input.mouseDown = false;
-    }
-  }
-
   private gameOver(): void {
     this.state = 'gameover';
     this.audio.playGameOver();
@@ -4616,9 +4584,6 @@ export class Game {
         break;
       case 'paused':
         this.drawPaused();
-        break;
-      case 'gameover':
-        this.drawGameOver();
         break;
       case 'reward':
         this.drawReward();
@@ -5143,147 +5108,4 @@ export class Game {
     }
   }
 
-  private drawGameOver(): void {
-    const ctx = this.renderer.getContext();
-    const isMobile = this.canvas.width < 800;
-
-    // Dramatic dark overlay
-    ctx.save();
-    ctx.globalAlpha = 0.85;
-    ctx.fillStyle = '#000000';
-    ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-    ctx.restore();
-
-    // Title with pulsing effect
-    const pulseScale = 1 + Math.sin(Date.now() / 300) * 0.05;
-    ctx.save();
-    ctx.translate(this.canvas.width / 2, isMobile ? 60 : 80);
-    ctx.scale(pulseScale, pulseScale);
-    this.renderer.drawText('GAME OVER', 0, 0, {
-      size: isMobile ? 56 : 72,
-      bold: true,
-      align: 'center',
-      color: '#ef4444'
-    });
-    ctx.restore();
-
-    // Stats panel — taller to fit Bosses stat + personal best
-    const panelWidth = isMobile ? Math.min(380, this.canvas.width - 40) : 500;
-    const panelHeight = isMobile ? 460 : 390;
-    const panelX = (this.canvas.width - panelWidth) / 2;
-    const panelY = isMobile ? 140 : 170;
-
-    // Panel background with gradient
-    const gradient = ctx.createLinearGradient(panelX, panelY, panelX, panelY + panelHeight);
-    gradient.addColorStop(0, '#2a2a2a');
-    gradient.addColorStop(1, '#1a1a1a');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(panelX, panelY, panelWidth, panelHeight);
-
-    // Panel border
-    ctx.strokeStyle = '#ef4444';
-    ctx.lineWidth = 4;
-    ctx.strokeRect(panelX, panelY, panelWidth, panelHeight);
-
-    // Inner border
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(panelX + 3, panelY + 3, panelWidth - 6, panelHeight - 6);
-
-    // Stats
-    const statsY = panelY + 50;
-    const lineSpacing = isMobile ? 42 : 36;
-    const statSize = isMobile ? 24 : 22;
-
-    // Wave — with personal best comparison
-    const { wavesReached, personalBest } = this.gameOverStats;
-    const isNewBest = wavesReached > personalBest;
-    const waveText = isNewBest
-      ? `Wave: ${wavesReached}  ★ NEW BEST!`
-      : `Wave: ${wavesReached}${personalBest > 0 ? `  (Best: ${personalBest})` : ''}`;
-    this.renderer.drawText(waveText, this.canvas.width / 2, statsY, {
-      size: statSize,
-      bold: true,
-      align: 'center',
-      color: isNewBest ? '#fbbf24' : '#4a9eff'
-    });
-
-    this.renderer.drawText(`Kills: ${this.gameOverStats.enemiesKilled}`, this.canvas.width / 2, statsY + lineSpacing, {
-      size: statSize,
-      bold: true,
-      align: 'center',
-      color: '#ef4444'
-    });
-
-    // Bosses defeated — was tracked but never shown; bossKills bug also fixed this session
-    this.renderer.drawText(`Bosses: ${this.gameOverStats.bossesDefeated}`, this.canvas.width / 2, statsY + lineSpacing * 2, {
-      size: statSize,
-      bold: true,
-      align: 'center',
-      color: '#f97316'
-    });
-
-    this.renderer.drawText(`Gold: ${this.gameOverStats.goldEarned}`, this.canvas.width / 2, statsY + lineSpacing * 3, {
-      size: statSize,
-      bold: true,
-      align: 'center',
-      color: '#ffd700'
-    });
-
-    this.renderer.drawText(`Items: ${this.gameOverStats.itemsCollected}`, this.canvas.width / 2, statsY + lineSpacing * 4, {
-      size: statSize,
-      bold: true,
-      align: 'center',
-      color: '#a855f7'
-    });
-
-    // Souls earned (highlighted prominently)
-    const soulsY = statsY + lineSpacing * 5 + 20;
-    ctx.save();
-    ctx.shadowBlur = 25;
-    ctx.shadowColor = '#9370db';
-    this.renderer.drawText(`Souls Earned: ${this.gameOverStats.soulsEarned}`, this.canvas.width / 2, soulsY, {
-      size: isMobile ? 32 : 36,
-      bold: true,
-      align: 'center',
-      color: '#c084fc'
-    });
-    ctx.restore();
-
-    // Newly-earned achievements this run — a gold "unlocked" line so a milestone reward is
-    // visible the moment it's earned (the gear is already live for the next run).
-    if (this.newAchievementsThisRun.length > 0) {
-      const unlockY = soulsY + (isMobile ? 44 : 40);
-      const first = this.newAchievementsThisRun[0];
-      const extra = this.newAchievementsThisRun.length - 1;
-      const label = extra > 0
-        ? `★ UNLOCKED: ${first.name} +${extra} more`
-        : `★ UNLOCKED: ${first.name}`;
-      this.renderer.drawText(label, this.canvas.width / 2, unlockY, {
-        size: isMobile ? 18 : 20,
-        bold: true,
-        align: 'center',
-        color: '#fbbf24'
-      });
-    }
-
-    // Buttons
-    const buttonWidth = isMobile ? Math.min(300, this.canvas.width - 60) : 260;
-    const buttonHeight = isMobile ? 70 : 60;
-    const spacing = 18;
-    const hasNewAch = this.newAchievementsThisRun.length > 0;
-    // On desktop, shift all buttons up one slot to make room for "View Achievements".
-    const extraSlot = (!isMobile && hasNewAch) ? buttonHeight + spacing : 0;
-    const startY = this.canvas.height - (isMobile ? 240 : 220) - extraSlot;
-    const bx = this.canvas.width / 2 - buttonWidth / 2;
-
-    this.renderer.drawButton(bx, startY, buttonWidth, buttonHeight, 'Try Again', false, true, isMobile);
-    this.renderer.drawButton(bx, startY + (buttonHeight + spacing), buttonWidth, buttonHeight, 'View Upgrades', false, true, isMobile);
-    this.renderer.drawButton(bx, startY + (buttonHeight + spacing) * 2, buttonWidth, buttonHeight, 'Main Menu', false, true, isMobile);
-
-    // Desktop only: "View Achievements" button when a new achievement was earned this run.
-    if (!isMobile && hasNewAch) {
-      this.renderer.drawButton(bx, startY + (buttonHeight + spacing) * 3, buttonWidth, buttonHeight, '🏆 View Achievements', false, true, isMobile);
-    }
-  }
 }
