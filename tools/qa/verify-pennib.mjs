@@ -70,9 +70,11 @@ rec('loadedShot flag set', present?.loadedShot === true, `loadedShot=${present?.
 const reach = await page.evaluate(() => {
   const DB = window.__ItemDatabase;
   let seen = 0, rolls = 0;
-  // roll a big shop many times across a few waves; count Pen Nib appearances
+  // roll a big shop many times across a few waves; count Pen Nib appearances.
+  // With ~600 Rare items, pen_nib_t3's expected count = ~1.1 per 480 rolls (P(0)≈33%) — too flaky.
+  // Use 200 rolls per wave = 2400 total → λ≈5.5, P(zero)≈0.4%.
   for (let wave = 1; wave <= 12; wave++) {
-    for (let n = 0; n < 40; n++) {
+    for (let n = 0; n < 200; n++) {
       const items = DB.getWeightedShopItems(6, wave, [], 0);
       rolls++;
       if (items.some((i) => i.id === 'pen_nib_t3')) seen++;

@@ -114,12 +114,14 @@ const r2 = await page.evaluate(() => {
 });
 
 // --- Test 3: non-stacking items are hidden from the shop once owned ---
-// homing_t3 (Seeking Rune) is pure `homing:true` → a 2nd copy does nothing (hasHoming uses
+// homing_chip_t1 (Tracking Chip) is pure `homing:true` → a 2nd copy does nothing (hasHoming uses
 // .some()), so once owned it must never be offered. damage_t1 (Iron Ring) stacks → stays offered.
+// Note: homing_t3 (Seeking Rune) has fireRateMultiplier: 0.85 so it DOES stack — not a valid
+// non-stacking test case anymore. homing_chip_t1 has only the boolean flag, no numeric modifiers.
 const r3 = await page.evaluate(() => {
   const DB = window.__ItemDatabase;
-  const homing = DB.getItemById('homing_t3');   // non-stacking (boolean flag only)
-  const iron = DB.getItemById('damage_t1');      // stacking (damageMultiplier)
+  const homing = DB.getItemById('homing_chip_t1'); // non-stacking (boolean flag only, no numerics)
+  const iron = DB.getItemById('damage_t1');         // stacking (damageMultiplier)
   const stacksHoming = DB.itemStacks(homing);
   const stacksIron = DB.itemStacks(iron);
   // Own BOTH; roll a big sample of end-game shops (all tiers unlocked at wave 11).
@@ -128,7 +130,7 @@ const r3 = await page.evaluate(() => {
   for (let n = 0; n < 400; n++) {
     const shop = DB.getWeightedShopItems(6, 11, owned, 0);
     for (const it of shop) {
-      if (it.id === 'homing_t3') homingOffered++;
+      if (it.id === 'homing_chip_t1') homingOffered++;
       if (it.id === 'damage_t1') ironOffered++;
     }
   }
@@ -138,17 +140,18 @@ const r3 = await page.evaluate(() => {
 // --- Test 4: synergies are legible — the card knows the named combo + partner + effect ---
 const r4 = await page.evaluate(() => {
   const g = window.__game;
+  const shop = window.__shopScene; // getCardDuoInfo moved to ShopScene (step 6)
   const DB = window.__ItemDatabase;
   const storm = DB.getItemById('chain_lightning_t3'); // Storm Essence, half of Storm Surge
   const iron = DB.getItemById('damage_t1');            // not in any duo
   // (a) partner NOT owned → discovery info (teaches the pairing), completes=false
   g.playerStats.items = [];
-  const discovery = g.getCardDuoInfo(storm);
+  const discovery = shop.getCardDuoInfo(storm);
   // (b) own the partner (Seeking Rune) → completing the combo now
   g.playerStats.items = [DB.getItemById('homing_t3')];
-  const completing = g.getCardDuoInfo(storm);
+  const completing = shop.getCardDuoInfo(storm);
   // (c) item in no duo → null
-  const none = g.getCardDuoInfo(iron);
+  const none = shop.getCardDuoInfo(iron);
   return {
     discovery: { name: discovery?.name, partner: discovery?.partner, completes: discovery?.completes, hasEffect: !!discovery?.effect },
     completing: { name: completing?.name, partner: completing?.partner, completes: completing?.completes },
@@ -239,7 +242,7 @@ const result = {
   test2_statLogic: { ...r2, pass: r2.dmgWentUp && r2.armorWentDown && r2.hpWentDown && Math.abs(r2.interestBonus - 0.08) < 1e-9 },
   test3_nonStackingExcluded: {
     ...r3,
-    // homing is non-stacking (never re-offered when owned); iron stacks (still shows up).
+    // homing_chip_t1 is non-stacking (boolean only, no numerics → never re-offered when owned); iron stacks (still shows up).
     pass: r3.stacksHoming === false && r3.stacksIron === true && r3.homingOffered === 0 && r3.ironOffered > 0,
   },
   test4_synergyLegible: {
