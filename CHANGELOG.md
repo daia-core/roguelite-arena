@@ -6,6 +6,24 @@ portrait viewport).
 
 ---
 
+## 2026-07-08 (early morning, heartbeat) — Achievement System: RunStats + 5 milestone achievements
+
+**Meta-progression**
+- **5 new milestone achievements** with richer triggers (beyond wave+class checks):
+  - 🏆 **Boss Slayer** — defeat your first boss → unlocks *Warlord's Trophy* (head: +8 armor, +30 HP, +5% dmg)
+  - 🩸 **Blood Bath** — kill 1000 enemies total across all runs → unlocks *Reaper's Sigil* (ring: execute at 8% HP, +5% crit, +8% dmg)
+  - ⚡ **Sprint** — reach wave 5 in under 3:30 → unlocks *Mercury's Boots* (feet: +22% speed, +6% fire rate)
+  - 🎒 **Hoarder** — own 10+ items at run end → unlocks *Treasure Map* (head: +25% gold, +10% luck)
+  - 👑 **Renaissance** — reach wave 5 with all 7 classes → unlocks *Crown of Crowns* (head: +6% dmg/speed/crit)
+- **RunStats tracking** added — every run records duration, boss kills, item count, and gold; passed to achievement checks at game-over
+- **Cumulative stats** persisted in localStorage — Blood Bath tracks kills across runs; Renaissance tracks which classes cleared wave 5
+- **14 achievements total** (9 original wave-based + 5 new milestone) + 14 locked reward items
+- QA: `qa-achievements.mjs` 16/16 ✓ (backward compat via legacy `checkRun()`)
+
+Commit: c5df103 · Bundle: index-ee_9Bq9B.js · Live ✓ (roguelite-game-blush.vercel.app, 827KB)
+
+---
+
 ## 2026-07-08 (early morning) — Feel: Colored DoT damage numbers + doom explosion
 
 **Game feel**
