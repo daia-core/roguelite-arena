@@ -916,123 +916,9 @@ export class Game {
       return;
     }
 
-    // Wave modifier announcement timer
-    if (this.waveModifierTimer > 0) {
-      this.waveModifierTimer -= dt; // UI timers not affected by time scale
-    }
-    if (this.phaseBannerTimer > 0) {
-      this.phaseBannerTimer -= dt;
-    }
+    this.updatePlayerTick(dt);
 
-    // Input
-    const movement = this.input.getMovementVector();
-
-    // ARTIFACT runtime hooks (momentum ramps damage while moving; berserk ramps
-    // fire rate as HP drops). Recomputed every frame; identity when not held.
-    this.updateRuntimeModifiers(dt, movement.x !== 0 || movement.y !== 0);
-
-    // Player update
-    this.player.update(dt, movement.x, movement.y, this.worldWidth, this.worldHeight);
-
-    // Health regen (items + meta) — previously sold but never ticked.
-    // BALANCE 2026-07-03: regen was UNBOUNDED and enemies don't scale against it, so a
-    // heavy stack out-healed most enemy DPS (immortality, same class as the armor/economy
-    // runaways). Cap it at 5% of max HP per second — generous enough to feel impactful,
-    // never enough to tank a scaled wave passively. Scaling with maxHealth keeps the cap
-    // relevant deep into a run instead of a flat number that goes irrelevant late.
-    const rawRegen = this.playerStats.getHealthRegen() + this.metaProgression.getStartingRegenBonus();
-    const regen = Math.min(rawRegen, this.player.maxHealth * 0.05);
-    if (regen > 0 && this.player.health < this.player.maxHealth) {
-      this.player.heal(regen * dt);
-    }
-
-    // Dodge popups so Evasion items visibly do something
-    if (this.player.pendingDodges > 0) this.audio.playDodge();
-    while (this.player.pendingDodges > 0) {
-      this.player.pendingDodges--;
-      this.damageNumbers.push(
-        this.createDamageNumber(this.player.x, this.player.y - 24, 'DODGE', false, '#66d9e8')
-      );
-    }
-
-    // Player shooting — the ranged weapon ALWAYS fires. Melee is a separate
-    // stacking swing (see updatePlayerSwing in updateAuxWeapons), so a melee build
-    // still shoots a weak gun instead of losing projectiles entirely.
-    const newProjectiles = this.player.tryShoot(this.enemies);
-    if (newProjectiles.length > 0) {
-      // Pen Nib (Loaded Shot): count primary volleys and make every Nth a loaded shot —
-      // triple damage + pierces every enemy. Bonus multicast volleys pass loaded=false.
-      let loaded = false;
-      if (this.playerStats.hasLoadedShot()) {
-        this.shotsFired++;
-        if (this.shotsFired % Game.LOADED_SHOT_EVERY === 0) loaded = true;
-      }
-      const spawnVolley = (volley: typeof newProjectiles, isLoaded: boolean = false) => {
-        // PERFORMANCE: Use pooled projectiles instead of new ones
-        for (const proj of volley) {
-          const pooled = this.projectilePool.acquire();
-          pooled.init(
-            proj.x, proj.y, Math.atan2(proj.vy, proj.vx),
-            isLoaded ? proj.damage * Game.LOADED_SHOT_MULT : proj.damage,
-            proj.speed, proj.fromPlayer, isLoaded ? true : proj.piercing
-          );
-          pooled.maxPierceCount = isLoaded ? 999 : proj.maxPierceCount;
-          pooled.homing = proj.homing;
-          pooled.turnSpeed = proj.turnSpeed;
-          pooled.noTrail = proj.noTrail; // carry the laser's trail-suppression through the pool
-          if (isLoaded) { pooled.color = '#ffd43b'; pooled.radius = 13; } // fat golden loaded round
-          this.projectiles.push(pooled);
-        }
-      };
-      spawnVolley(newProjectiles, loaded);
-      // Multicast: a chance to instantly fire a bonus volley (re-aimed at live enemies).
-      // Rolls repeatedly so stacked multicast can chain more than one extra volley.
-      // Only the FIRST roll gets Fourleaf's roll-twice luck (rollProc); the subsequent
-      // decaying rolls stay plain so the charm can't compound into an infinite volley.
-      let mc = this.playerStats.getMulticastChance();
-      let guard = 0;
-      let firstRoll = true;
-      while (mc > 0 && (firstRoll ? this.playerStats.rollProc(mc) : Math.random() < mc) && guard++ < 4) {
-        firstRoll = false;
-        spawnVolley(this.player.tryShoot(this.enemies, true));
-        mc -= 0.15; // each extra volley is a little less likely, keeps it bounded
-      }
-      this.audio.playShoot();
-
-      // Overcharge Battery: every Nth primary volley fires a free nova burst around the player.
-      const ocEvery = this.artifacts.overchargeEvery();
-      if (ocEvery > 0 && this.player) {
-        this.overchargeShotCount++;
-        if (this.overchargeShotCount % ocEvery === 0) {
-          const ocDmg = this.playerStats.getDamage() * 3;
-          this.spawnAoeZone(new AoeZone(this.player.x, this.player.y, 130, ocDmg, 0.0, {
-            color: '#ffd43b', activeTime: 0.2, singleHit: true,
-          }));
-          this.audio.playHit();
-        }
-      }
-    }
-
-    // Active Skill — Q/mobile blastBtn = slot 1 (primary), E/mobile skillEBtn = slot 2 (secondary).
-    if (this.activeSkillCooldown > 0) this.activeSkillCooldown = Math.max(0, this.activeSkillCooldown - dt);
-    if (this.activeSkillCooldownE > 0) this.activeSkillCooldownE = Math.max(0, this.activeSkillCooldownE - dt);
-    if (this.input.consumeSkill()) {
-      this.useActiveSkill('q');
-    }
-    if (this.input.consumeSkillE()) {
-      this.useActiveSkill('e');
-    }
-
-    // Dash — 💨 mobile button / Space / Shift. i-frame dodge in the current move
-    // direction (or last-faced direction when standing still), 3s cooldown.
-    if (this.input.consumeDash()) {
-      const mv = this.input.getMovementVector();
-      if (this.player.tryDash(mv.x, mv.y)) {
-        this.audio.playDash();
-      }
-    }
-
-    this.updateWaveAndEnemySpawn(dt);
+        this.updateWaveAndEnemySpawn(dt);
 
     // Enemies
     for (const enemy of this.enemies) {
@@ -1636,6 +1522,128 @@ export class Game {
     }
 
     this.updatePickupsAndCleanup(dt);
+  }
+
+  /** Step 15d — player input, movement, regen, shooting (incl. multicast + overcharge),
+   *  active skills, and dash. The gear-button guard stays in updatePlaying() because
+   *  it does an early return from the caller; this method runs only after that guard. */
+  private updatePlayerTick(dt: number): void {
+    if (!this.player) return;
+    // Wave modifier announcement timer
+    if (this.waveModifierTimer > 0) {
+      this.waveModifierTimer -= dt; // UI timers not affected by time scale
+    }
+    if (this.phaseBannerTimer > 0) {
+      this.phaseBannerTimer -= dt;
+    }
+
+    // Input
+    const movement = this.input.getMovementVector();
+
+    // ARTIFACT runtime hooks (momentum ramps damage while moving; berserk ramps
+    // fire rate as HP drops). Recomputed every frame; identity when not held.
+    this.updateRuntimeModifiers(dt, movement.x !== 0 || movement.y !== 0);
+
+    // Player update
+    this.player.update(dt, movement.x, movement.y, this.worldWidth, this.worldHeight);
+
+    // Health regen (items + meta) — previously sold but never ticked.
+    // BALANCE 2026-07-03: regen was UNBOUNDED and enemies don't scale against it, so a
+    // heavy stack out-healed most enemy DPS (immortality, same class as the armor/economy
+    // runaways). Cap it at 5% of max HP per second — generous enough to feel impactful,
+    // never enough to tank a scaled wave passively. Scaling with maxHealth keeps the cap
+    // relevant deep into a run instead of a flat number that goes irrelevant late.
+    const rawRegen = this.playerStats.getHealthRegen() + this.metaProgression.getStartingRegenBonus();
+    const regen = Math.min(rawRegen, this.player.maxHealth * 0.05);
+    if (regen > 0 && this.player.health < this.player.maxHealth) {
+      this.player.heal(regen * dt);
+    }
+
+    // Dodge popups so Evasion items visibly do something
+    if (this.player.pendingDodges > 0) this.audio.playDodge();
+    while (this.player.pendingDodges > 0) {
+      this.player.pendingDodges--;
+      this.damageNumbers.push(
+        this.createDamageNumber(this.player.x, this.player.y - 24, 'DODGE', false, '#66d9e8')
+      );
+    }
+
+    // Player shooting — the ranged weapon ALWAYS fires. Melee is a separate
+    // stacking swing (see updatePlayerSwing in updateAuxWeapons), so a melee build
+    // still shoots a weak gun instead of losing projectiles entirely.
+    const newProjectiles = this.player.tryShoot(this.enemies);
+    if (newProjectiles.length > 0) {
+      // Pen Nib (Loaded Shot): count primary volleys and make every Nth a loaded shot —
+      // triple damage + pierces every enemy. Bonus multicast volleys pass loaded=false.
+      let loaded = false;
+      if (this.playerStats.hasLoadedShot()) {
+        this.shotsFired++;
+        if (this.shotsFired % Game.LOADED_SHOT_EVERY === 0) loaded = true;
+      }
+      const spawnVolley = (volley: typeof newProjectiles, isLoaded: boolean = false) => {
+        // PERFORMANCE: Use pooled projectiles instead of new ones
+        for (const proj of volley) {
+          const pooled = this.projectilePool.acquire();
+          pooled.init(
+            proj.x, proj.y, Math.atan2(proj.vy, proj.vx),
+            isLoaded ? proj.damage * Game.LOADED_SHOT_MULT : proj.damage,
+            proj.speed, proj.fromPlayer, isLoaded ? true : proj.piercing
+          );
+          pooled.maxPierceCount = isLoaded ? 999 : proj.maxPierceCount;
+          pooled.homing = proj.homing;
+          pooled.turnSpeed = proj.turnSpeed;
+          pooled.noTrail = proj.noTrail; // carry the laser's trail-suppression through the pool
+          if (isLoaded) { pooled.color = '#ffd43b'; pooled.radius = 13; } // fat golden loaded round
+          this.projectiles.push(pooled);
+        }
+      };
+      spawnVolley(newProjectiles, loaded);
+      // Multicast: a chance to instantly fire a bonus volley (re-aimed at live enemies).
+      // Rolls repeatedly so stacked multicast can chain more than one extra volley.
+      // Only the FIRST roll gets Fourleaf's roll-twice luck (rollProc); the subsequent
+      // decaying rolls stay plain so the charm can't compound into an infinite volley.
+      let mc = this.playerStats.getMulticastChance();
+      let guard = 0;
+      let firstRoll = true;
+      while (mc > 0 && (firstRoll ? this.playerStats.rollProc(mc) : Math.random() < mc) && guard++ < 4) {
+        firstRoll = false;
+        spawnVolley(this.player.tryShoot(this.enemies, true));
+        mc -= 0.15; // each extra volley is a little less likely, keeps it bounded
+      }
+      this.audio.playShoot();
+
+      // Overcharge Battery: every Nth primary volley fires a free nova burst around the player.
+      const ocEvery = this.artifacts.overchargeEvery();
+      if (ocEvery > 0 && this.player) {
+        this.overchargeShotCount++;
+        if (this.overchargeShotCount % ocEvery === 0) {
+          const ocDmg = this.playerStats.getDamage() * 3;
+          this.spawnAoeZone(new AoeZone(this.player.x, this.player.y, 130, ocDmg, 0.0, {
+            color: '#ffd43b', activeTime: 0.2, singleHit: true,
+          }));
+          this.audio.playHit();
+        }
+      }
+    }
+
+    // Active Skill — Q/mobile blastBtn = slot 1 (primary), E/mobile skillEBtn = slot 2 (secondary).
+    if (this.activeSkillCooldown > 0) this.activeSkillCooldown = Math.max(0, this.activeSkillCooldown - dt);
+    if (this.activeSkillCooldownE > 0) this.activeSkillCooldownE = Math.max(0, this.activeSkillCooldownE - dt);
+    if (this.input.consumeSkill()) {
+      this.useActiveSkill('q');
+    }
+    if (this.input.consumeSkillE()) {
+      this.useActiveSkill('e');
+    }
+
+    // Dash — 💨 mobile button / Space / Shift. i-frame dodge in the current move
+    // direction (or last-faced direction when standing still), 3s cooldown.
+    if (this.input.consumeDash()) {
+      const mv = this.input.getMovementVector();
+      if (this.player.tryDash(mv.x, mv.y)) {
+        this.audio.playDash();
+      }
+    }
   }
 
   /** Step 15c — wave manager update + spawn telegraphs + phase banner tick. Factored
