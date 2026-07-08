@@ -48,6 +48,7 @@ import { RewardScene } from './RewardScene';
 import { SkillTreeScene } from './SkillTreeScene';
 import { PauseScene } from './PauseScene';
 import { HUDRenderer } from './HUDRenderer';
+import { PlayingRenderer } from './PlayingRenderer';
 
 // The map/node meta-layer adds three between-wave screens on top of the core loop:
 //   'map'    — the Slay-the-Spire-style branching node picker (route your run)
@@ -76,6 +77,7 @@ export class Game {
   private skillTreeScene: SkillTreeScene | null = null;
   /** HUD render/DOM layer — extracted from Game.ts (step 13). */
   private hudRenderer!: HUDRenderer;
+  private playingRenderer!: PlayingRenderer;
   private audio: AudioManager;
 
   // Hidden probe that reads the device safe-area insets (notch / status bar) so the
@@ -508,7 +510,7 @@ export class Game {
       renderer: this.renderer,
       input: this.input,
       audio: this.audio,
-      drawPlayingUnderlay: () => this.drawPlaying(),
+      drawPlayingUnderlay: () => this.playingRenderer.draw(),
       getCurrentWave: () => this.waveManager.currentWave,
       getBossKills: () => this.bossKills,
       onResume: () => { this.state = 'playing'; },
@@ -528,6 +530,38 @@ export class Game {
       getActiveSkillCooldownE: () => this.activeSkillCooldownE,
       getGearButtonRect: () => this.gearButtonRect(),
       getSafeAreaTop: (zoom) => this.safeAreaTop(zoom),
+    });
+
+    this.playingRenderer = new PlayingRenderer({
+      canvas: this.canvas,
+      renderer: this.renderer,
+      entityCuller: this.entityCuller,
+      particleBatchRenderer: this.particleBatchRenderer,
+      performanceMonitor: this.performanceMonitor,
+      qualityManager: this.qualityManager,
+      screenEffects: this.screenEffects,
+      input: this.input,
+      hudRenderer: this.hudRenderer,
+      waveManager: this.waveManager,
+      enemyQuadtree: this.enemyQuadtree,
+      WORLD_SCALE: this.WORLD_SCALE,
+      getParticles: () => this.particles,
+      getProjectiles: () => this.projectiles,
+      getMeleeAttacks: () => this.meleeAttacks,
+      getShockwaves: () => this.shockwaves,
+      getBombs: () => this.bombs,
+      getAoeZones: () => this.aoeZones,
+      getSpawnTelegraphs: () => this.spawnTelegraphs,
+      getEnemies: () => this.enemies,
+      getHealthOrbs: () => this.healthOrbs,
+      getXpOrbs: () => this.xpOrbs,
+      getCoins: () => this.coins,
+      getOrbitingOrbs: () => this.orbitingOrbs,
+      getDamageNumbers: () => this.damageNumbers,
+      getPlayer: () => this.player,
+      getWaveModifierTimer: () => this.waveModifierTimer,
+      getPhaseBannerTimer: () => this.phaseBannerTimer,
+      getPhaseBannerText: () => this.phaseBannerText,
     });
 
     this.setupUI();
@@ -3505,7 +3539,7 @@ export class Game {
     } else {
     switch (this.state) {
       case 'playing':
-        this.drawPlaying();
+        this.playingRenderer.draw();
         break;
     }
     }
@@ -3542,176 +3576,6 @@ export class Game {
       maxWidth: this.canvas.width - 40
     });
     ctx.restore();
-  }
-
-  private drawPlaying(): void {
-    if (!this.player) return;
-
-    const ctx = this.renderer.getContext();
-
-    ctx.save();
-
-    // PERFORMANCE: Update entity culler viewport
-    this.entityCuller.updateViewport(0, 0, this.worldWidth, this.worldHeight, 100);
-
-    // ZOOM-OUT: render the world at 1/scale so the 2x-larger arena fits the screen
-    // (player/monsters read smaller, more battlefield visible). GUI is drawn after
-    // this transform is restored, so it stays full-size in screen space.
-    ctx.save();
-    ctx.scale(1 / this.WORLD_SCALE, 1 / this.WORLD_SCALE);
-
-    // PERFORMANCE: Batch render particles (40-60% faster than individual draws)
-    const isMobile = this.canvas.width < this.canvas.height;
-    this.particleBatchRenderer.clear();
-    for (const particle of this.particles) {
-      if (this.entityCuller.isVisible(particle)) {
-        this.particleBatchRenderer.addParticle(particle, isMobile);
-      }
-    }
-    this.particleBatchRenderer.drawAll(ctx);
-
-    for (const projectile of this.projectiles) {
-      if (this.entityCuller.isVisible(projectile)) {
-        projectile.draw(ctx);
-      }
-    }
-
-    // Draw melee attacks
-    for (const melee of this.meleeAttacks) {
-      if (this.entityCuller.isVisible(melee)) {
-        melee.draw(ctx);
-      }
-    }
-
-    // Ground-level aux weapons (under enemies): nova rings + armed bombs.
-    for (const wave of this.shockwaves) wave.draw(ctx);
-    for (const bomb of this.bombs) bomb.draw(ctx);
-
-    // Telegraphed enemy AoE markers: on the ground, under enemies, so the red
-    // danger zones read as floor markings the player can step out of.
-    for (const zone of this.aoeZones) zone.draw(ctx);
-
-    // Spawn telegraphs: blinking red X where enemies are about to drop in (Brotato-style).
-    for (const tg of this.spawnTelegraphs) tg.draw(ctx);
-
-    for (const enemy of this.enemies) {
-      if (this.entityCuller.isVisible(enemy)) {
-        enemy.draw(ctx);
-      }
-    }
-
-    for (const orb of this.healthOrbs) {
-      if (this.entityCuller.isVisible(orb)) {
-        orb.draw(ctx);
-      }
-    }
-
-    for (const orb of this.xpOrbs) {
-      if (this.entityCuller.isVisible(orb)) {
-        orb.draw(ctx);
-      }
-    }
-
-    for (const coin of this.coins) {
-      if (this.entityCuller.isVisible(coin)) {
-        coin.draw(ctx);
-      }
-    }
-
-    this.player.draw(ctx);
-
-    // Orbiting orbs draw over the player so the ring reads clearly.
-    for (const orb of this.orbitingOrbs) orb.draw(ctx);
-
-    for (const num of this.damageNumbers) {
-      num.draw(ctx);
-    }
-
-    // ZOOM-OUT: end the world transform — everything below is screen-space GUI.
-    ctx.restore();
-
-    // Draw joystick
-    this.input.drawJoystick(ctx);
-
-    // Draw UI
-    this.hudRenderer.drawHUD();
-
-    // Draw wave modifier announcement
-    if (this.waveModifierTimer > 0 && this.waveManager.waveModifierText) {
-      const alpha = Math.min(1, this.waveModifierTimer);
-      const ctx = this.renderer.getContext();
-      ctx.save();
-      ctx.globalAlpha = alpha;
-
-      const modifierColor = this.waveManager.waveModifier === 'horde' ? '#ff6600' :
-                           this.waveManager.waveModifier === 'elite' ? '#ff00ff' :
-                           this.waveManager.waveModifier === 'speed' ? '#00ffff' :
-                           this.waveManager.waveModifier === 'tank' ? '#888888' :
-                           this.waveManager.waveModifier === 'chaos' ? '#ff0000' :
-                           this.waveManager.isBossWave ? '#ff0000' : '#ffff00';
-
-      this.renderer.drawText(this.waveManager.waveModifierText, this.canvas.width / 2, this.canvas.height / 2 - 50, {
-        size: 32,
-        bold: true,
-        align: 'center',
-        color: modifierColor
-      });
-
-      ctx.restore();
-    }
-
-    // Mid-wave sub-phase banner (waves-within-waves) — smaller, lower, and it
-    // does not fight the main wave banner for the same screen real estate.
-    if (this.phaseBannerTimer > 0 && this.phaseBannerText) {
-      const alpha = Math.min(1, this.phaseBannerTimer / 0.8);
-      const ctx = this.renderer.getContext();
-      ctx.save();
-      ctx.globalAlpha = alpha;
-      this.renderer.drawText(this.phaseBannerText, this.canvas.width / 2, this.canvas.height / 2 + 10, {
-        size: 24,
-        bold: true,
-        align: 'center',
-        color: '#ffd24d'
-      });
-      ctx.restore();
-    }
-
-    // PERFORMANCE: Draw performance monitor (F2 to toggle)
-    const quadtreeStats = this.enemyQuadtree.getStats();
-    // Calculate culling stats (all entities except player)
-    const allEntities = [
-      ...this.enemies,
-      ...this.projectiles,
-      ...this.particles,
-      ...this.meleeAttacks,
-      ...this.healthOrbs,
-      ...this.xpOrbs,
-      ...this.coins
-    ];
-    const visibleCount = allEntities.filter(e => this.entityCuller.isVisible(e)).length;
-    const culledCount = allEntities.length - visibleCount;
-
-    this.performanceMonitor.draw(ctx, {
-      enemies: this.enemies.length,
-      projectiles: this.projectiles.length,
-      particles: this.particles.length,
-      damageNumbers: this.damageNumbers.length,
-      meleeAttacks: this.meleeAttacks.length,
-      healthOrbs: this.healthOrbs.length,
-      xpOrbs: this.xpOrbs.length + this.coins.length,
-      quadtreeNodes: quadtreeStats.nodeCount,
-      quadtreeDepth: quadtreeStats.maxDepth,
-      quadtreeObjects: quadtreeStats.totalObjects,
-      qualityLevel: this.qualityManager.getLevel(),
-      visibleEntities: visibleCount,
-      culledEntities: culledCount
-    });
-
-    // GAME FEEL: Restore context after screen effects
-    ctx.restore();
-
-    // GAME FEEL: Render flash effect (must be after ctx.restore to cover whole screen)
-    this.screenEffects.renderFlash(ctx, this.canvas.width, this.canvas.height);
   }
 
   // Reads the device's top safe-area inset (notch / status bar) in *canvas* pixels.
