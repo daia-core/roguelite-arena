@@ -168,6 +168,32 @@ export const EVENTS: GameEvent[] = [
         result: 'Some hearts are best left unbeaten. You walk on.' },
     ],
   },
+  {
+    id: 'devil_brittle_crown',
+    title: 'The Brittle Crown',
+    text: 'A crown of paper-thin gold amplifies every strike. The catch: it leeches density from your bones.',
+    options: [
+      { label: 'Wear the crown', effects: [{ kind: 'artifact' }, { kind: 'curse', id: 'curse_glass_bones' }],
+        result: 'Power surges — and your frame grows dangerously light. (+artifact, -45 max HP forever)' },
+      { label: 'Sell it for coin', effects: [{ kind: 'gold', amount: 60 }],
+        result: 'Sixty gold and no regrets. Some crowns are better left unearned.' },
+      { label: 'Leave it', effects: [{ kind: 'nothing' }],
+        result: 'The crown remains. Another fool will find it.' },
+    ],
+  },
+  {
+    id: 'devil_starving_god',
+    title: 'The Starving God',
+    text: 'A gaunt deity offers its last reserves of power in exchange for your capacity to grow.',
+    options: [
+      { label: 'Accept the offering', effects: [{ kind: 'artifact' }, { kind: 'maxHp', amount: 50 }, { kind: 'curse', id: 'curse_famine' }],
+        result: 'Vitality and power flood in — but hard-won lessons drain away faster now. (+artifact, +50 max HP, -40% XP forever)' },
+      { label: 'Offer gold in prayer (40g)', effects: [{ kind: 'gold', amount: -40 }, { kind: 'heal', frac: 0.6 }],
+        result: 'You feed the god in coin. It restores your wounds and asks nothing more.' },
+      { label: 'Turn away', effects: [{ kind: 'nothing' }],
+        result: 'The god watches you leave. Hungry.' },
+    ],
+  },
 ];
 
 export function randomEvent(): GameEvent {

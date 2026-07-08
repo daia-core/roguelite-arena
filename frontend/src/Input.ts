@@ -55,6 +55,7 @@ export class Input {
   private canvas: HTMLCanvasElement;
   private dashButton: HTMLButtonElement | null = null;
   private blastButton: HTMLButtonElement | null = null;
+  private skillEButton: HTMLButtonElement | null = null;
   private gameStateGetter: (() => string) | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
@@ -223,6 +224,7 @@ export class Input {
     // Create ability buttons for mobile
     this.dashButton = document.getElementById('dashBtn') as HTMLButtonElement;
     this.blastButton = document.getElementById('blastBtn') as HTMLButtonElement;
+    this.skillEButton = document.getElementById('skillEBtn') as HTMLButtonElement;
 
     if (this.dashButton) {
       this.dashButton.addEventListener('touchstart', (e) => {
@@ -235,6 +237,13 @@ export class Input {
       this.blastButton.addEventListener('touchstart', (e) => {
         e.preventDefault();
         this.blastPressed = true;
+      });
+    }
+
+    if (this.skillEButton) {
+      this.skillEButton.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        this.skillEPressed = true;
       });
     }
   }
@@ -302,7 +311,7 @@ export class Input {
     return this.consumeBlast();
   }
 
-  /** Active Skill slot 2 trigger — E key only. */
+  /** Active Skill slot 2 trigger — E key or mobile skillEBtn button. */
   consumeSkillE(): boolean {
     const pressed = this.skillEPressed;
     this.skillEPressed = false;

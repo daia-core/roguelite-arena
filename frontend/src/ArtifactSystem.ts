@@ -305,4 +305,10 @@ export class ArtifactSystem {
   hasSecondWind(): boolean {
     return this.hasFlag('secondWind');
   }
+
+  /** Shot interval for the free nova (overcharge). 0 if not held. */
+  overchargeEvery(): number {
+    const a = this.withFlag('overcharge');
+    return a?.overchargeEvery ?? 0;
+  }
 }

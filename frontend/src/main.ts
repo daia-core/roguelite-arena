@@ -47,6 +47,11 @@ app.innerHTML = `
       <button id="achievementsBtn" class="menu-btn">Achievements</button>
     </div>
     <div id="joystick-zone"></div>
+    <div id="touch-controls">
+      <button id="dashBtn" class="ability-btn">💨<span>DASH</span></button>
+      <button id="skillEBtn" class="ability-btn">✨<span>E</span></button>
+      <button id="blastBtn" class="ability-btn">🔮<span>Q</span></button>
+    </div>
   </div>
 `;
 
@@ -82,6 +87,12 @@ function gameLoop(currentTime: number): void {
   if (game.state !== lastState) {
     const menuUI = document.querySelector<HTMLDivElement>('#menu-ui')!;
     menuUI.style.display = game.state === 'menu' ? 'flex' : 'none';
+    // Show touch controls only during active gameplay (touch devices only)
+    const touchControls = document.querySelector<HTMLDivElement>('#touch-controls');
+    if (touchControls) {
+      const isTouchDevice = navigator.maxTouchPoints > 0 || 'ontouchstart' in window;
+      touchControls.style.display = (game.state === 'playing' && isTouchDevice) ? 'flex' : 'none';
+    }
     lastState = game.state;
   }
 

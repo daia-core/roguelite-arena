@@ -225,6 +225,7 @@ export class Game {
   private shotsFired: number = 0;                  // primary volleys fired while Pen Nib held
   private static readonly LOADED_SHOT_EVERY = 10;  // every Nth shot is loaded
   private static readonly LOADED_SHOT_MULT = 3;    // loaded shot damage multiplier
+  private overchargeShotCount: number = 0;          // primary volleys fired for overcharge nova tracking
 
   // Enemy armor penetration (see Player.takeDamage). Dodgeable ranged/AoE threats
   // pierce half the player's armor so an armor-stack build can't chip them to ~1 HP;
@@ -588,6 +589,7 @@ export class Game {
     this.soulTitheKills = 0;
     this.soulTitheStacks = 0;
     this.shotsFired = 0;
+    this.overchargeShotCount = 0;
     this.activeSkillCooldown = 0;
     this.activeSkillCooldownE = 0;
 
@@ -905,9 +907,22 @@ export class Game {
         mc -= 0.15; // each extra volley is a little less likely, keeps it bounded
       }
       this.audio.playShoot();
+
+      // Overcharge Battery: every Nth primary volley fires a free nova burst around the player.
+      const ocEvery = this.artifacts.overchargeEvery();
+      if (ocEvery > 0 && this.player) {
+        this.overchargeShotCount++;
+        if (this.overchargeShotCount % ocEvery === 0) {
+          const ocDmg = this.playerStats.getDamage() * 3;
+          this.spawnAoeZone(new AoeZone(this.player.x, this.player.y, 130, ocDmg, 0.0, {
+            color: '#ffd43b', activeTime: 0.2, singleHit: true,
+          }));
+          this.audio.playHit();
+        }
+      }
     }
 
-    // Active Skill — Q/mobile = slot 1 (primary), E = slot 2 (secondary).
+    // Active Skill — Q/mobile blastBtn = slot 1 (primary), E/mobile skillEBtn = slot 2 (secondary).
     if (this.activeSkillCooldown > 0) this.activeSkillCooldown = Math.max(0, this.activeSkillCooldown - dt);
     if (this.activeSkillCooldownE > 0) this.activeSkillCooldownE = Math.max(0, this.activeSkillCooldownE - dt);
     if (this.input.consumeSkill()) {
@@ -1771,8 +1786,8 @@ export class Game {
 
   /**
    * Fire the player's equipped active skill for the given slot.
-   *   slot 'q' → primary skill (Q key / mobile button), uses activeSkillCooldown
-   *   slot 'e' → secondary skill (E key only), uses activeSkillCooldownE
+   *   slot 'q' → primary skill (Q key / mobile blastBtn button), uses activeSkillCooldown
+   *   slot 'e' → secondary skill (E key / mobile skillEBtn button), uses activeSkillCooldownE
    * Effects use existing AoeZone / Projectile / Enemy systems — no new infrastructure.
    */
   private useActiveSkill(slot: 'q' | 'e' = 'q'): void {
@@ -5210,6 +5225,7 @@ export class Game {
     const skBarW = skSize + s(64);
     let skillBarH = 0;
 
+    const isTouchDevice = navigator.maxTouchPoints > 0 || 'ontouchstart' in window;
     const drawSkillBar = (skillId: string, cdFrac: number, cdSecs: number, keyLabel: string, yPos: number) => {
       const sk = getActiveSkillById(skillId);
       if (!sk) return;
@@ -5229,8 +5245,9 @@ export class Game {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(sk.icon, skX + s(14), yPos + skSize / 2);
-      // Name + status label
-      const label = cdFrac > 0 ? `${cdSecs}s` : `[${keyLabel}] READY`;
+      // Name + status label (show TAP on touch devices, [KEY] on keyboard)
+      const readyLabel = isTouchDevice ? 'TAP READY' : `[${keyLabel}] READY`;
+      const label = cdFrac > 0 ? `${cdSecs}s` : readyLabel;
       ctx.font = `bold ${s(7)}px monospace`;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
