@@ -119,7 +119,6 @@ export class Game {
   playerStats: PlayerStats;
   metaProgression: MetaProgression;
   mapSystem: MapSystem = new MapSystem();
-  private villageScene: VillageScene | null = null;
   artifacts: ArtifactSystem = new ArtifactSystem();
 
   // PERFORMANCE: Object pools
@@ -412,8 +411,19 @@ export class Game {
       }
     });
 
-    // Register extracted per-screen scenes (menu is the pilot; more to follow).
+    // Register extracted per-screen scenes. MenuScene was the pilot (step 1);
+    // VillageScene is step 2. Both are pre-constructed here so the state machine
+    // can dispatch to them without lazy init.
     this.scenes.menu = new MenuScene(this);
+    this.scenes.village = new VillageScene({
+      canvas: this.canvas,
+      renderer: this.renderer,
+      input: this.input,
+      audio: this.audio,
+      meta: this.metaProgression,
+      onEmbark: () => this.openClassSelect(),
+      onBack: () => { this.state = 'menu'; },
+    });
 
     this.setupUI();
   }
@@ -799,9 +809,6 @@ export class Game {
         break;
       case 'gameover':
         this.updateGameOver();
-        break;
-      case 'village':
-        this.updateVillage(dt);
         break;
       case 'map':
         this.updateMap();
@@ -5052,25 +5059,10 @@ export class Game {
     }
   }
 
-  /** Lazily build the walkable village and enter it (replaces the old grid). */
+  /** Transition to the walkable village base. */
   private enterVillage(): void {
-    if (!this.villageScene) {
-      this.villageScene = new VillageScene({
-        canvas: this.canvas,
-        renderer: this.renderer,
-        input: this.input,
-        audio: this.audio,
-        meta: this.metaProgression,
-        onEmbark: () => this.openClassSelect(),
-        onBack: () => { this.state = 'menu'; },
-      });
-    }
-    this.villageScene.enter();
+    this.scenes.village?.enter?.(this.state);
     this.state = 'village';
-  }
-
-  private updateVillage(dt: number): void {
-    this.villageScene?.update(dt);
   }
 
   private updateGameOver(): void {
@@ -5190,9 +5182,6 @@ export class Game {
         break;
       case 'gameover':
         this.drawGameOver();
-        break;
-      case 'village':
-        this.drawVillage();
         break;
       case 'map':
         this.drawMap();
@@ -6950,10 +6939,6 @@ export class Game {
       const r = rects[i];
       this.renderer.drawButton(r.x, r.y, r.width, r.height, labels[i], false, true, isMobile);
     }
-  }
-
-  private drawVillage(): void {
-    this.villageScene?.draw();
   }
 
   private drawGameOver(): void {

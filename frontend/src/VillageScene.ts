@@ -10,6 +10,7 @@
  * building (or the central Shrine) to interact; the Shrine embarks on a run.
  */
 
+import type { Scene } from './scenes/Scene';
 import type { Renderer } from './Renderer';
 import type { Input } from './Input';
 import type { AudioManager } from './AudioManager';
@@ -98,7 +99,7 @@ const BUILDINGS: BuildingDef[] = [
 const SHRINE_FX = 0.50;
 const SHRINE_FY = 0.54;
 
-export class VillageScene {
+export class VillageScene implements Scene {
   private d: VillageDeps;
 
   // World / camera (all in canvas px, recomputed each frame from canvas size)
@@ -142,7 +143,7 @@ export class VillageScene {
   }
 
   /** Called whenever the scene becomes active, to (re)spawn the avatar. */
-  enter(): void {
+  enter(_prev?: string): void {
     this.recomputeWorld();
     if (!this.spawned) {
       this.px = SHRINE_FX * this.worldW;
