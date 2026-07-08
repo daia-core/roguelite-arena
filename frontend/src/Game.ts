@@ -1277,6 +1277,18 @@ export class Game {
 
     this.rebuildQuadtrees();
 
+    this.updateProjectileCollisions(dt);
+
+        this.updateMeleeCollisions(dt);
+
+        this.updatePickupsAndCleanup(dt);
+  }
+
+  /** Step 15f — homing steering, projectile.update(), player-projectile→enemy collision
+   *  (crit, amps, execute, on-hit), and enemy-projectile→player collision.
+   *  Player null guard mirrors updatePlaying() caller guard. */
+  private updateProjectileCollisions(dt: number): void {
+    if (!this.player) return;
     // Projectiles
     for (const proj of this.projectiles) {
       // Homing shots curve toward their target (capped turn rate):
@@ -1443,10 +1455,6 @@ export class Game {
         }
       }
     }
-
-    this.updateMeleeCollisions(dt);
-
-        this.updatePickupsAndCleanup(dt);
   }
 
   /** Step 15e — melee attack updates + arc-overlap enemy collision (crit, amps, on-hit).
