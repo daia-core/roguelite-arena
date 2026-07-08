@@ -33,7 +33,8 @@ import { DUO_COMBOS } from './DuoSystem';
 import { UISprites } from './UISprites';
 import { MapSystem, serializeMap, deserializeMap } from './MapSystem';
 import { ArtifactSystem, ARTIFACTS, ROLLABLE_ARTIFACTS, getArtifactById, type Artifact } from './ArtifactSystem';
-import { randomEvent, EVENTS, type GameEvent, type EventEffect, type EventOption } from './EventSystem';
+import { EVENTS, type EventEffect, type EventOption } from './EventSystem';
+import { EventScene, type EventReward } from './EventScene';
 import { EvolutionSystem, type Evolution } from './EvolutionSystem';
 import { VillageScene } from './VillageScene';
 import { MapScene } from './MapScene';
@@ -166,11 +167,6 @@ export class Game {
   private statsPanelRect: { x: number; y: number; width: number; height: number } = { x: 0, y: 0, width: 0, height: 0 };
 
   // ---- MAP / NODE META-LAYER state ----
-  currentEvent: GameEvent | null = null;    // active `?` event, or null
-  eventResultText: string | null = null;    // outcome shown after picking an option
-  // The concrete item/artifact an event granted, so the result screen can show a
-  // proper card (name + rarity + what it does) instead of just a line of text.
-  private eventReward: { name: string; rarity: string; desc: string; icon: string; artifactId?: string } | null = null;
   rewardChoices: Artifact[] = [];            // the 1-of-3 artifact offer
   rewardTitle: string = '';                  // header for the reward screen
   rewardSkippable: boolean = false;          // show a Skip button (elite/treasure/boss)
@@ -431,6 +427,13 @@ export class Game {
       input: this.input,
       mapSystem: this.mapSystem,
       onNodePicked: (id) => this.onMapNodePicked(id),
+    });
+    this.scenes.event = new EventScene({
+      canvas: this.canvas,
+      renderer: this.renderer,
+      input: this.input,
+      onOptionPicked: (opt) => this.applyEventOption(opt),
+      onDone: () => { this.state = 'map'; },
     });
 
     this.setupUI();
@@ -817,9 +820,6 @@ export class Game {
         break;
       case 'gameover':
         this.updateGameOver();
-        break;
-      case 'event':
-        this.updateEvent();
         break;
       case 'reward':
         this.updateReward();
@@ -4442,9 +4442,8 @@ export class Game {
         this.startNextWave({ boss: true });
         break;
       case 'event':
-        this.currentEvent = randomEvent();
-        this.eventResultText = null;
-        this.eventReward = null;
+        // EventScene.enter() initialises the random event + disarms input.
+        this.scenes.event?.enter?.(this.state);
         this.state = 'event';
         break;
       case 'treasure':
@@ -4618,197 +4617,73 @@ export class Game {
     ctx.restore();
   }
 
-  // ---- EVENT screen ----
+  // ---- EVENT screen — moved to EventScene (step 4 of Game.ts de-god-classing) ----
 
-  /** Shared rarity → colour for reward/event cards. */
-  private static readonly RARITY_COLOR: Record<string, string> = {
-    common: '#cbd5e1', rare: '#74c0fc', epic: '#b06bd9', legendary: '#f2b04e',
-  };
-
-  /** Height of the event-result reward card (0 if the event granted no item). */
-  private eventRewardCardHeight(cardW: number, s: (v: number) => number, isMobile: boolean): number {
-    if (!this.eventReward) return 0;
-    const bodyPx = s(isMobile ? 8 : 9);
-    const descLines = this.wrapText(this.eventReward.desc, cardW - s(24), bodyPx).length;
-    return s(isMobile ? 32 : 34) + descLines * (bodyPx + s(3)) + s(10);
-  }
-
-  /** Draw the card showing exactly which item/artifact an event just granted. */
-  private drawEventRewardCard(x0: number, y: number, cardW: number, s: (v: number) => number, isMobile: boolean): void {
-    if (!this.eventReward) return;
-    const ctx = this.renderer.getContext();
-    const h = this.eventRewardCardHeight(cardW, s, isMobile);
-    drawPanel(ctx, x0, y, cardW, h, DARK_WOOD_THEME, 23, 67);
-    const color = Game.RARITY_COLOR[this.eventReward.rarity] || '#ffffff';
-    const iconBox = s(isMobile ? 26 : 28);
-    const textX = x0 + s(12) + iconBox + s(8);
-    const textW = cardW - (textX - x0) - s(12);
-    if (this.eventReward.artifactId) {
-      this.renderer.drawArtifactIcon(this.eventReward.artifactId, x0 + s(12), y + (h - iconBox) / 2, iconBox, 'left');
-    } else {
-      this.renderer.drawItemIcon(this.eventReward.icon, x0 + s(12), y + (h - iconBox) / 2, iconBox, 'left');
-    }
-    this.renderer.drawText(this.eventReward.name, textX, y + s(isMobile ? 15 : 17), { size: s(isMobile ? 11 : 13), align: 'left', color });
-    this.renderer.drawText(this.eventReward.rarity.toUpperCase(), x0 + cardW - s(12), y + s(isMobile ? 15 : 17), { size: s(7), align: 'right', color });
-    const bodyPx = s(isMobile ? 8 : 9);
-    for (const [li, line] of this.wrapText(this.eventReward.desc, textW, bodyPx).entries()) {
-      this.renderer.drawText(line, textX, y + s(isMobile ? 32 : 34) + li * (bodyPx + s(3)), { size: bodyPx, align: 'left', color: '#d8c9a8' });
-    }
-  }
-
-  private drawEvent(): void {
-    const ctx = this.renderer.getContext();
-    const { s, W, H, isMobile } = this.screenScale();
-    this.paintBackdrop();
-    const ev = this.currentEvent;
-    if (!ev) return;
-
-    const contentW = Math.min(W - s(24), s(isMobile ? 372 : 560));
-    const x0 = (W - contentW) / 2;
-    drawPanel(ctx, x0 - s(8), s(12), contentW + s(16), H - s(24), DARK_WOOD_THEME, 7, 31);
-
-    let y = s(isMobile ? 26 : 34);
-    const titlePx = s(isMobile ? 14 : 18);
-    for (const line of this.wrapText(ev.title, contentW - s(24), titlePx)) {
-      this.renderer.drawText(line, W / 2, y, { size: titlePx, align: 'center', color: '#ffd700' });
-      y += titlePx + s(4);
-    }
-    y += s(isMobile ? 6 : 8);
-
-    const bodyPx = s(isMobile ? 9 : 11);
-    for (const line of this.wrapText(ev.text, contentW - s(24), bodyPx)) {
-      this.renderer.drawText(line, W / 2, y, { size: bodyPx, align: 'center', color: '#d8c9a8' });
-      y += bodyPx + s(5);
-    }
-    y += s(10);
-
-    if (this.eventResultText === null) {
-      const rects = this.columnRects(ev.options.length, y, s, W, isMobile);
-      ev.options.forEach((opt, i) => {
-        const r = rects[i];
-        this.renderer.drawButton(r.x, r.y, r.width, r.height, opt.label, false, true, isMobile);
-      });
-    } else {
-      for (const line of this.wrapText(this.eventResultText, contentW - s(24), bodyPx)) {
-        this.renderer.drawText(line, W / 2, y, { size: bodyPx, align: 'center', color: '#8ce99a' });
-        y += bodyPx + s(5);
-      }
-      y += s(10);
-      const cardW = contentW - s(16);
-      if (this.eventReward) {
-        this.drawEventRewardCard((W - cardW) / 2, y, cardW, s, isMobile);
-        y += this.eventRewardCardHeight(cardW, s, isMobile);
-      }
-      y += s(12);
-      const r = this.columnRects(1, y, s, W, isMobile)[0];
-      this.renderer.drawButton(r.x, r.y, r.width, r.height, 'Continue', true, true, isMobile);
-    }
-  }
-
-  private updateEvent(): void {
-    if (!this.input.mouseDown) return;
-    const ev = this.currentEvent;
-    if (!ev) return;
-    const { s, W, H, isMobile } = this.screenScale();
-    const mx = this.input.mouseX;
-    const my = this.input.mouseY;
-
-    // Recompute the same vertical anchor the draw pass uses.
-    const contentW = Math.min(W - s(24), s(isMobile ? 372 : 560));
-    const titlePx = s(isMobile ? 14 : 18);
-    const titleLines = this.wrapText(ev.title, contentW - s(24), titlePx).length;
-    let y = s(isMobile ? 26 : 34) + titleLines * (titlePx + s(4)) + s(isMobile ? 6 : 8);
-    const bodyPx = s(isMobile ? 9 : 11);
-    y += this.wrapText(ev.text, contentW - s(24), bodyPx).length * (bodyPx + s(5));
-    y += s(10);
-
-    if (this.eventResultText === null) {
-      const rects = this.columnRects(ev.options.length, y, s, W, isMobile);
-      for (let i = 0; i < ev.options.length; i++) {
-        if (pointInRect(mx, my, rects[i])) {
-          this.input.mouseDown = false;
-          this.applyEventOption(ev.options[i]);
-          return;
-        }
-      }
-    } else {
-      y += this.wrapText(this.eventResultText, contentW - s(24), bodyPx).length * (bodyPx + s(5)) + s(10);
-      const cardW = contentW - s(16);
-      if (this.eventReward) y += this.eventRewardCardHeight(cardW, s, isMobile);
-      y += s(12);
-      const r = this.columnRects(1, y, s, W, isMobile)[0];
-      if (pointInRect(mx, my, r)) {
-        this.input.mouseDown = false;
-        this.currentEvent = null;
-        this.eventResultText = null;
-        this.eventReward = null;
-        this.state = 'map';
-      }
-    }
-    void H;
-  }
-
-  /** Apply a chosen event option's effects and set the result text.
+  /** Apply a chosen event option's effects; return outcome text + optional reward card data.
+   *  Returned to EventScene so the scene owns the screen state (resultText / reward).
    *  Devil-deal integrity: a pact's boon is PRICED by a permanent curse. If the player
    *  already bears that curse (a recurring devil event drawn again), the price is already
    *  paid — handing out the boon a second time for free would let a run farm boons and gut
    *  the "permanent price" risk axis. So an already-held-curse pact grants nothing. */
-  private applyEventOption(opt: EventOption): void {
+  private applyEventOption(opt: EventOption): { resultText: string; reward: EventReward | null } {
     const curseEff = opt.effects.find(e => e.kind === 'curse');
     if (curseEff && curseEff.kind === 'curse' && this.artifacts.has(curseEff.id)) {
-      this.eventReward = null;
-      this.eventResultText = 'You already bear this mark. The devil has nothing left to sell you.';
-      return;
+      return { resultText: 'You already bear this mark. The devil has nothing left to sell you.', reward: null };
     }
-    for (const eff of opt.effects) this.applyEventEffect(eff);
-    this.eventResultText = opt.result;
+    let reward: EventReward | null = null;
+    for (const eff of opt.effects) {
+      const r = this.applyEventEffect(eff);
+      if (r) reward = r;
+    }
+    return { resultText: opt.result, reward };
   }
 
-  private applyEventEffect(effect: EventEffect): void {
-    if (!this.player) return;
+  /** Apply a single event effect; return reward card data if an item/artifact was granted. */
+  private applyEventEffect(effect: EventEffect): EventReward | null {
+    if (!this.player) return null;
     switch (effect.kind) {
       case 'gold':
         this.player.gold = Math.max(0, this.player.gold + effect.amount);
-        break;
+        return null;
       case 'heal':
         this.player.health = Math.min(this.player.maxHealth, this.player.health + Math.round(effect.frac * this.player.maxHealth));
-        break;
+        return null;
       case 'hurt': {
         const dmg = Math.round(effect.frac * this.player.maxHealth);
         this.player.health = Math.max(1, this.player.health - dmg); // event damage never kills
-        break;
+        return null;
       }
       case 'maxHp':
         this.playerStats.baseMaxHealth += effect.amount;
         this.refreshMaxHealth();
-        break;
+        return null;
       case 'artifact': {
         const pool = ROLLABLE_ARTIFACTS.filter(a => !this.artifacts.has(a.id));
         if (pool.length) {
           const picked = pool[Math.floor(Math.random() * pool.length)];
           this.grantArtifact(picked);
-          this.eventReward = { name: picked.name, rarity: picked.rarity, desc: picked.desc, icon: picked.icon, artifactId: picked.id };
+          return { name: picked.name, rarity: picked.rarity, desc: picked.desc, icon: picked.icon, artifactId: picked.id };
         }
-        break;
+        return null;
       }
       case 'curse': {
         // Devil-deal price: grant a SPECIFIC named curse artifact. Idempotent — if the
         // player already carries it, grantArtifact's dedupe simply no-ops.
         const curse = getArtifactById(effect.id);
         if (curse) this.grantArtifact(curse);
-        break;
+        return null;
       }
       case 'item': {
         const items = ItemDatabase.getWeightedShopItems(1, this.waveManager.currentWave, this.playerStats.items, this.playerStats.getLuck(), this.playerStats);
         if (items[0]) {
           this.playerStats.addItem(items[0]);
           this.refreshMaxHealth();
-          this.eventReward = { name: items[0].name, rarity: items[0].rarity, desc: items[0].description, icon: items[0].icon };
+          return { name: items[0].name, rarity: items[0].rarity, desc: items[0].description, icon: items[0].icon };
         }
-        break;
+        return null;
       }
       case 'nothing':
-        break;
+        return null;
     }
   }
 
@@ -5118,9 +4993,6 @@ export class Game {
         break;
       case 'gameover':
         this.drawGameOver();
-        break;
-      case 'event':
-        this.drawEvent();
         break;
       case 'reward':
         this.drawReward();
