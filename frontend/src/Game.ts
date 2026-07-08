@@ -2205,6 +2205,173 @@ export class Game {
         }
         break;
       }
+
+      // ── TIER 1 NEW ───────────────────────────────────────────────────────
+      case 'thunder_clap': {
+        // Explosive repel — blast all nearby enemies outward, stun 1s, AoE damage.
+        const rTC = skill.radius ?? 200;
+        for (const e of this.enemies) {
+          if (e.dead) continue;
+          const dx = e.x - px, dy = e.y - py;
+          const dist = Math.hypot(dx, dy);
+          if (dist <= rTC) {
+            // Push enemy outward (stronger when closer)
+            const pushMag = (1 - dist / rTC) * 220 + 60;
+            if (dist > 5) {
+              e.x = Math.max(20, Math.min(this.worldWidth - 20, e.x + (dx / dist) * pushMag));
+              e.y = Math.max(20, Math.min(this.worldHeight - 20, e.y + (dy / dist) * pushMag));
+            }
+            e.frozenTimer = Math.max(e.frozenTimer, 1.0); // stun via freeze
+            this.dealAuxDamage(e, baseDmg, '#ffd43b');
+          }
+        }
+        this.spawnAoeZone(new AoeZone(px, py, rTC, 0, 0.0, {
+          color: '#ffd43b', activeTime: 0.35, singleHit: true,
+        }));
+        break;
+      }
+
+      // ── TIER 2 NEW ───────────────────────────────────────────────────────
+      case 'bone_spear': {
+        // Massive single piercing bone lance — fired toward the nearest enemy.
+        const aliveBS = this.enemies.filter(e => !e.dead);
+        if (aliveBS.length === 0) break;
+        const nearBS = aliveBS.reduce((n, e) =>
+          Math.hypot(e.x - px, e.y - py) < Math.hypot(n.x - px, n.y - py) ? e : n
+        );
+        const angleBS = Math.atan2(nearBS.y - py, nearBS.x - px);
+        const p = new Projectile(px, py, angleBS, baseDmg, 320, true, false);
+        p.maxPierceCount = 999;
+        p.color = '#e8d5b7';
+        p.radius = 18; // visually large
+        this.projectiles.push(p);
+        break;
+      }
+      case 'spectral_shield': {
+        // 5s invincibility bubble + immediate burst nova around the player.
+        if (this.player) this.player.invincibilityTimer = Math.max(this.player.invincibilityTimer, 5.0);
+        const rSS = skill.radius ?? 160;
+        for (const e of this.enemies) {
+          if (e.dead) continue;
+          if (Math.hypot(e.x - px, e.y - py) <= rSS) {
+            this.dealAuxDamage(e, baseDmg, '#74c0fc');
+          }
+        }
+        this.spawnAoeZone(new AoeZone(px, py, rSS, 0, 0.0, {
+          color: '#a5d8ff', activeTime: 5.0, singleHit: true, shape: 'ring',
+        }));
+        break;
+      }
+      case 'rune_field': {
+        // Drop 6 rune detonations at nearest enemy positions, each with 0.5s fuse.
+        const alivRF = [...this.enemies]
+          .filter(e => !e.dead)
+          .sort((a, b) => Math.hypot(a.x - px, a.y - py) - Math.hypot(b.x - px, b.y - py))
+          .slice(0, 6);
+        const rRF = skill.radius ?? 70;
+        for (let i = 0; i < alivRF.length; i++) {
+          const t = alivRF[i];
+          this.spawnAoeZone(new AoeZone(t.x, t.y, rRF, baseDmg, 0.5 + i * 0.1, {
+            color: '#ff6b6b', activeTime: 0.4, singleHit: true,
+          }));
+        }
+        // If fewer than 6 enemies, fill with random positions around player
+        for (let i = alivRF.length; i < 6; i++) {
+          const ang = (i / 6) * Math.PI * 2;
+          const d = 100 + Math.random() * 80;
+          this.spawnAoeZone(new AoeZone(px + Math.cos(ang) * d, py + Math.sin(ang) * d, rRF, baseDmg, 0.5 + i * 0.1, {
+            color: '#ff6b6b', activeTime: 0.4, singleHit: true,
+          }));
+        }
+        break;
+      }
+
+      // ── TIER 3 NEW ───────────────────────────────────────────────────────
+      case 'soul_shatter': {
+        // Stack Condemned×12 + Fragility×10 on 8 nearest, then detonation burst.
+        const targsSH = [...this.enemies]
+          .filter(e => !e.dead)
+          .sort((a, b) => Math.hypot(a.x - px, a.y - py) - Math.hypot(b.x - px, b.y - py))
+          .slice(0, 8);
+        for (const t of targsSH) {
+          t.statusFX.apply('condemned', { stacks: 12 });
+          t.statusFX.apply('fragility', { stacks: 10 });
+          t.statusFX.apply('exposed', { stacks: 5 });
+        }
+        // Detonation burst — hits all 8 and visual flash
+        for (const t of targsSH) {
+          this.dealAuxDamage(t, baseDmg, '#c92a2a');
+          this.spawnAoeZone(new AoeZone(t.x, t.y, 45, 0, 0.0, {
+            color: '#9b2335', activeTime: 0.35, singleHit: true,
+          }));
+        }
+        break;
+      }
+      case 'mirror_strike': {
+        // 3 simultaneous strikes hit EVERY enemy on screen.
+        const alivMS = this.enemies.filter(e => !e.dead);
+        for (let wave = 0; wave < 3; wave++) {
+          this.spawnAoeZone(new AoeZone(px, py, 900, baseDmg / 3, wave * 0.3, {
+            color: '#e599f7', activeTime: 0.25, singleHit: false,
+          }));
+        }
+        // Extra visual on each enemy
+        for (const e of alivMS) {
+          if (!e.dead) this.spawnAoeZone(new AoeZone(e.x, e.y, 30, 0, 0.0, {
+            color: '#cc5de8', activeTime: 0.2, singleHit: true,
+          }));
+        }
+        break;
+      }
+
+      // ── TIER 4 NEW ───────────────────────────────────────────────────────
+      case 'doom_comet': {
+        // 1.5s warning comet — massive blast + all debuffs on every enemy hit.
+        const rDC = skill.radius ?? 200;
+        this.spawnAoeZone(new AoeZone(px, py, rDC, 0, 0.0, {
+          color: '#f03e3e', activeTime: 1.5, singleHit: true,
+        }));
+        // Detonation + debuffs after warning
+        this.spawnAoeZone(new AoeZone(px, py, rDC, baseDmg, 1.5, {
+          color: '#ff8c00', activeTime: 0.6, singleHit: false,
+        }));
+        // Apply all debuffs to enemies in radius after impact
+        for (const e of this.enemies) {
+          if (e.dead) continue;
+          if (Math.hypot(e.x - px, e.y - py) <= rDC) {
+            e.statusFX.apply('fragility', { stacks: 8 });
+            e.statusFX.apply('exposed', { stacks: 6 });
+            e.statusFX.apply('condemned', { stacks: 8 });
+            e.statusFX.apply('brittle', { stacks: 10 });
+            e.burnTimer = Math.max(e.burnTimer, 4.0);
+            e.poisonTimer = Math.max(e.poisonTimer, 4.0);
+            e.frozenTimer = Math.max(e.frozenTimer, 0.8);
+          }
+        }
+        break;
+      }
+      case 'hellfire_rain': {
+        // 20 hellfire bolts rain down on all living enemies over 4 seconds.
+        const rHR = skill.radius ?? 65;
+        const aliveHR = this.enemies.filter(e => !e.dead);
+        const count = Math.min(20, Math.max(20, aliveHR.length));
+        for (let i = 0; i < count; i++) {
+          let ix: number, iy: number;
+          if (aliveHR.length > 0) {
+            const t = aliveHR[i % aliveHR.length];
+            ix = t.x + (Math.random() - 0.5) * 50;
+            iy = t.y + (Math.random() - 0.5) * 50;
+          } else {
+            const a = Math.random() * Math.PI * 2;
+            ix = px + Math.cos(a) * (Math.random() * 300);
+            iy = py + Math.sin(a) * (Math.random() * 300);
+          }
+          this.spawnAoeZone(new AoeZone(ix, iy, rHR, baseDmg, i * 0.2, {
+            color: '#ff4500', activeTime: 0.4, singleHit: true,
+          }));
+        }
+        break;
+      }
     }
   }
 

@@ -4342,7 +4342,7 @@ export const ITEM_CATALOG: Item[] = [
     // Spell Scrolls equip an active skill to the [Q] or [E] slot (mobile: SKILL/E buttons).
     // 1st scroll → Q slot; 2nd scroll → E slot; buying a 3rd replaces the oldest.
     // Two skills can be active simultaneously with independent cooldowns.
-    // No stat effects — the active skill ability IS the effect. All 26 skills are covered.
+    // No stat effects — the active skill ability IS the effect. All 34 skills are covered.
 
     // --- Tier 1 (Common) scrolls ---
     { id: 'scroll_frost_nova', name: 'Frost Tome', description: 'Equips Frost Nova: freeze ring (2× dmg + 3s slow, 5s cd). [Q/E]', rarity: 'common', tier: ItemTier.Common, cost: 14, icon: '❄️', unlocked: true, tags: ['elemental', 'utility'], activatesSkill: 'frost_nova' },
@@ -4350,6 +4350,7 @@ export const ITEM_CATALOG: Item[] = [
     { id: 'scroll_arcane_barrage', name: 'Arcane Tome', description: 'Equips Arcane Barrage: 5 homing bolts → 5 nearest enemies (3× each, 4s cd). [Q/E]', rarity: 'common', tier: ItemTier.Common, cost: 14, icon: '🔮', unlocked: true, tags: ['elemental', 'ranged'], activatesSkill: 'arcane_barrage' },
     { id: 'scroll_inferno_aura', name: 'Inferno Codex', description: 'Equips Inferno Aura: fire ring ignites all nearby enemies (2.5× dmg, 7s cd). [Q/E]', rarity: 'common', tier: ItemTier.Common, cost: 13, icon: '🌟', unlocked: true, tags: ['elemental'], activatesSkill: 'inferno_aura' },
     { id: 'scroll_crystal_burst', name: 'Crystal Scroll', description: 'Equips Crystal Burst: hard-freeze + damage 4 nearest enemies (4× dmg, 6s cd). [Q/E]', rarity: 'common', tier: ItemTier.Common, cost: 15, icon: '💎', unlocked: true, tags: ['elemental', 'utility'], activatesSkill: 'crystal_burst' },
+    { id: 'scroll_thunder_clap', name: 'Thunder Clap Tome', description: 'Equips Thunder Clap: explosive repel blasts all nearby outward + stuns 1s (3× dmg, 6s cd). [Q/E]', rarity: 'common', tier: ItemTier.Common, cost: 13, icon: '💢', unlocked: true, tags: ['elemental', 'utility'], activatesSkill: 'thunder_clap' },
 
     // --- Tier 2 (Uncommon) scrolls ---
     { id: 'scroll_meteor', name: 'Meteor Scroll', description: 'Equips Meteor Strike: telegraphed impact (8× dmg, wide area, 8s cd). [Q/E]', rarity: 'rare', tier: ItemTier.Uncommon, cost: 22, icon: '☄️', unlocked: true, tags: ['elemental'], activatesSkill: 'meteor' },
@@ -4361,6 +4362,9 @@ export const ITEM_CATALOG: Item[] = [
     { id: 'scroll_void_pulse', name: 'Void Tome', description: 'Equips Void Pulse: 3 expanding damage rings ripple outward (3× each, 6s cd). [Q/E]', rarity: 'rare', tier: ItemTier.Uncommon, cost: 20, icon: '🌑', unlocked: true, tags: ['elemental'], activatesSkill: 'void_pulse' },
     { id: 'scroll_blizzard', name: 'Blizzard Scroll', description: 'Equips Blizzard: 6 frost shards scatter wide — slow + damage (3.5× each, 7s cd). [Q/E]', rarity: 'rare', tier: ItemTier.Uncommon, cost: 22, icon: '🌨️', unlocked: true, tags: ['elemental', 'utility'], activatesSkill: 'blizzard' },
     { id: 'scroll_gravity_pull', name: 'Gravity Codex', description: 'Equips Gravity Pull: yank all enemies toward you then slow for 3s (10s cd). [Q/E]', rarity: 'rare', tier: ItemTier.Uncommon, cost: 28, icon: '🕳️', unlocked: true, tags: ['utility'], activatesSkill: 'gravity_pull' },
+    { id: 'scroll_bone_spear', name: 'Bone Lance Scroll', description: 'Equips Bone Spear: massive piercing lance through all enemies in its path (10× dmg, 5s cd). [Q/E]', rarity: 'rare', tier: ItemTier.Uncommon, cost: 24, icon: '🦴', unlocked: true, tags: ['melee', 'ranged'], activatesSkill: 'bone_spear' },
+    { id: 'scroll_spectral_shield', name: 'Ghost Ward Tome', description: 'Equips Spectral Shield: 5s invincibility + burst nova on cast (4× dmg, 12s cd). [Q/E]', rarity: 'rare', tier: ItemTier.Uncommon, cost: 26, icon: '🛡️', unlocked: true, tags: ['defensive', 'utility'], activatesSkill: 'spectral_shield' },
+    { id: 'scroll_rune_field', name: 'Rune Field Scroll', description: 'Equips Rune Field: drop 6 delayed rune blasts at enemy positions (5× each, 7s cd). [Q/E]', rarity: 'rare', tier: ItemTier.Uncommon, cost: 22, icon: '🔴', unlocked: true, tags: ['elemental', 'utility'], activatesSkill: 'rune_field' },
 
     // --- Tier 3 (Rare) scrolls ---
     { id: 'scroll_blood_nova', name: 'Blood Ritual Tome', description: 'Equips Blood Nova: dark AoE (6× dmg) + heals 20% dealt (6s cd). [Q/E]', rarity: 'epic', tier: ItemTier.Rare, cost: 42, icon: '🩸', unlocked: true, tags: ['elemental', 'utility'], activatesSkill: 'blood_nova' },
@@ -4370,6 +4374,8 @@ export const ITEM_CATALOG: Item[] = [
     { id: 'scroll_vampire_burst', name: 'Vampire Codex', description: 'Equips Vampire Burst: drain 10 nearest (5× each) + heal 30% dealt (8s cd). [Q/E]', rarity: 'epic', tier: ItemTier.Rare, cost: 48, icon: '🧛', unlocked: true, tags: ['elemental', 'utility'], activatesSkill: 'vampire_burst' },
     { id: 'scroll_spectral_dash', name: 'Phase Scroll', description: 'Equips Spectral Dash: phase through 5 enemies in rapid succession (6× each, 9s cd). [Q/E]', rarity: 'epic', tier: ItemTier.Rare, cost: 50, icon: '💨', unlocked: true, tags: ['utility'], activatesSkill: 'spectral_dash' },
     { id: 'scroll_plague_bomb', name: 'Plague Canister Tome', description: 'Equips Plague Bomb: hurl a massive DoT zone lasting 8 seconds (8s cd). [Q/E]', rarity: 'epic', tier: ItemTier.Rare, cost: 44, icon: '🧪', unlocked: true, tags: ['elemental', 'utility'], activatesSkill: 'plague_bomb' },
+    { id: 'scroll_soul_shatter', name: 'Soul Shatter Codex', description: 'Equips Soul Shatter: max-stack Condemned+Fragility on 8 nearest then detonate (8× dmg, 10s cd). [Q/E]', rarity: 'epic', tier: ItemTier.Rare, cost: 50, icon: '💔', unlocked: true, tags: ['elemental', 'utility'], activatesSkill: 'soul_shatter' },
+    { id: 'scroll_mirror_strike', name: 'Mirror Tome', description: 'Equips Mirror Strike: 3 simultaneous strikes hit EVERY enemy on screen (4× each, 12s cd). [Q/E]', rarity: 'epic', tier: ItemTier.Rare, cost: 48, icon: '🪞', unlocked: true, tags: ['elemental'], activatesSkill: 'mirror_strike' },
 
     // --- Tier 4 (Legendary) scrolls ---
     { id: 'scroll_earthquake', name: 'World-Shaker Tome', description: 'Equips Earthquake: damage + stun ALL enemies on screen (10× dmg, 12s cd). [Q/E]', rarity: 'legendary', tier: ItemTier.Legendary, cost: 80, icon: '🌋', unlocked: true, tags: ['elemental', 'utility'], activatesSkill: 'earthquake' },
@@ -4377,4 +4383,6 @@ export const ITEM_CATALOG: Item[] = [
     { id: 'scroll_curse_wave', name: 'Malediction Codex', description: 'Equips Curse Wave: apply Fragility + Exposed to every enemy on screen (14s cd). [Q/E]', rarity: 'legendary', tier: ItemTier.Legendary, cost: 75, icon: '💀', unlocked: true, tags: ['elemental', 'utility'], activatesSkill: 'curse_wave' },
     { id: 'scroll_divine_wrath', name: 'Divine Codex', description: 'Equips Divine Wrath: 3× holy strike hits ALL enemies; you are invincible during (16s cd). [Q/E]', rarity: 'legendary', tier: ItemTier.Legendary, cost: 85, icon: '⚜️', unlocked: true, tags: ['elemental', 'utility'], activatesSkill: 'divine_wrath' },
     { id: 'scroll_armageddon', name: 'Armageddon Tome', description: 'Equips Armageddon: 12 meteors rain over 3 seconds (6× each, 20s cd). [Q/E]', rarity: 'legendary', tier: ItemTier.Legendary, cost: 95, icon: '💥', unlocked: true, tags: ['elemental'], activatesSkill: 'armageddon' },
+    { id: 'scroll_doom_comet', name: 'Doom Comet Tome', description: 'Equips Doom Comet: 1.5s warning comet (18× dmg, huge radius, all debuffs, 22s cd). [Q/E]', rarity: 'legendary', tier: ItemTier.Legendary, cost: 98, icon: '🌠', unlocked: true, tags: ['elemental', 'utility'], activatesSkill: 'doom_comet' },
+    { id: 'scroll_hellfire_rain', name: 'Hellfire Codex', description: 'Equips Hellfire Rain: 20 bolts target all living enemies over 4 seconds (7× each, 24s cd). [Q/E]', rarity: 'legendary', tier: ItemTier.Legendary, cost: 90, icon: '🔥', unlocked: true, tags: ['elemental'], activatesSkill: 'hellfire_rain' },
 ];

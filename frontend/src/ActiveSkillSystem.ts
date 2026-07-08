@@ -24,22 +24,30 @@ export type ActiveSkillEffect =
   | 'arcane_barrage'   // 5 homing bolts fired at 5 nearest enemies
   | 'inferno_aura'     // Brief fire ring burns all nearby enemies
   | 'crystal_burst'    // Crystallize 4 nearest (hard freeze + damage)
+  | 'thunder_clap'     // Explosive repel — blasts all nearby enemies outward + stuns
   // --- Tier 2 additions ---
   | 'blade_storm'      // 8 blades spiral outward from player
   | 'lightning_storm'  // 5 rapid lightning strikes in area
   | 'void_pulse'       // 3 expanding damage rings
   | 'blizzard'         // 6 frost impacts scattered in large radius
   | 'gravity_pull'     // Pull all enemies toward player then slow
+  | 'bone_spear'       // Massive single piercing bone lance through all enemies in line
+  | 'spectral_shield'  // 5s invincibility bubble + burst nova on cast
+  | 'rune_field'       // Drop 6 delayed rune detonations at nearest enemy positions
   // --- Tier 3 additions ---
   | 'time_warp'        // Freeze all, then reduce to 20% speed for 5s
   | 'vampire_burst'    // Drain 10 nearest, heal per hit
   | 'spectral_dash'    // 5× quick dashes through enemies
   | 'plague_bomb'      // Large persistent poison zone with spread
+  | 'soul_shatter'     // Stack Condemned + Fragility on 8 nearest then detonate
+  | 'mirror_strike'    // 3× simultaneous strike hits ALL enemies on screen
   // --- Tier 4 additions ---
   | 'black_hole'       // Pull then detonate — massive damage
   | 'curse_wave'       // Apply fragility + exposed to all enemies on screen
   | 'divine_wrath'     // Holy multi-strike all enemies + i-frames
-  | 'armageddon';      // 12 sequential meteor impacts over 3 seconds
+  | 'armageddon'       // 12 sequential meteor impacts over 3 seconds
+  | 'doom_comet'       // Single massive comet — 1.5s warning, huge radius, all debuffs
+  | 'hellfire_rain';   // 20 rapid fire strikes targeting all living enemies over 4s
 
 export interface ActiveSkill {
   id: string;
@@ -169,6 +177,17 @@ export const ACTIVE_SKILLS: ActiveSkill[] = [
 
   // ===================== TIER 1 — NEW =====================
   {
+    id: 'thunder_clap',
+    name: 'Thunder Clap',
+    icon: '💢',
+    desc: 'Explosive repel — blast all nearby enemies outward and stun them for 1s.',
+    cooldown: 6,
+    effect: 'thunder_clap',
+    tier: 1,
+    baseDamageMultiplier: 3,
+    radius: 200,
+  },
+  {
     id: 'arcane_barrage',
     name: 'Arcane Barrage',
     icon: '🔮',
@@ -256,6 +275,39 @@ export const ACTIVE_SKILLS: ActiveSkill[] = [
     radius: 900,
   },
 
+  {
+    id: 'bone_spear',
+    name: 'Bone Spear',
+    icon: '🦴',
+    desc: 'Hurl a massive bone lance that pierces every enemy in its path (10× dmg).',
+    cooldown: 5,
+    effect: 'bone_spear',
+    tier: 2,
+    baseDamageMultiplier: 10,
+  },
+  {
+    id: 'spectral_shield',
+    name: 'Spectral Shield',
+    icon: '🛡️',
+    desc: 'Conjure a ghost barrier — 5s of invincibility + burst nova on cast (4× dmg).',
+    cooldown: 12,
+    effect: 'spectral_shield',
+    tier: 2,
+    baseDamageMultiplier: 4,
+    radius: 160,
+  },
+  {
+    id: 'rune_field',
+    name: 'Rune Field',
+    icon: '🔴',
+    desc: 'Drop 6 delayed rune detonations at enemy positions — each a 5× blast (0.5s fuse).',
+    cooldown: 7,
+    effect: 'rune_field',
+    tier: 2,
+    baseDamageMultiplier: 5,
+    radius: 70,
+  },
+
   // ===================== TIER 3 — NEW =====================
   {
     id: 'time_warp',
@@ -298,6 +350,27 @@ export const ACTIVE_SKILLS: ActiveSkill[] = [
     tier: 3,
     baseDamageMultiplier: 1.5,
     radius: 140,
+  },
+
+  {
+    id: 'soul_shatter',
+    name: 'Soul Shatter',
+    icon: '💔',
+    desc: 'Shatter the souls of 8 nearby enemies — stacks Condemned×12 + Fragility×10, then detonates (8× dmg).',
+    cooldown: 10,
+    effect: 'soul_shatter',
+    tier: 3,
+    baseDamageMultiplier: 8,
+  },
+  {
+    id: 'mirror_strike',
+    name: 'Mirror Strike',
+    icon: '🪞',
+    desc: 'Your attack echoes across reality — 3 simultaneous strikes hit EVERY enemy on screen.',
+    cooldown: 12,
+    effect: 'mirror_strike',
+    tier: 3,
+    baseDamageMultiplier: 4,
   },
 
   // ===================== TIER 4 — NEW =====================
@@ -343,6 +416,28 @@ export const ACTIVE_SKILLS: ActiveSkill[] = [
     tier: 4,
     baseDamageMultiplier: 6,
     radius: 100,
+  },
+  {
+    id: 'doom_comet',
+    name: 'Doom Comet',
+    icon: '🌠',
+    desc: 'Call a doom comet (1.5s warning) — massive 18× blast, applies all debuffs to every enemy hit.',
+    cooldown: 22,
+    effect: 'doom_comet',
+    tier: 4,
+    baseDamageMultiplier: 18,
+    radius: 200,
+  },
+  {
+    id: 'hellfire_rain',
+    name: 'Hellfire Rain',
+    icon: '🔥',
+    desc: '20 hellfire bolts rain down targeting every living enemy over 4 seconds.',
+    cooldown: 24,
+    effect: 'hellfire_rain',
+    tier: 4,
+    baseDamageMultiplier: 7,
+    radius: 65,
   },
 ];
 
