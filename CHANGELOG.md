@@ -4,6 +4,64 @@ Newest first. One block per production deploy: player-visible changes first, the
 and the live-build verification (Felix plays on his phone — every entry is verified at a mobile
 portrait viewport).
 
+---
+
+## 2026-07-08 (night) — Dynamic mobile skill labels
+
+**Player-visible**
+- Mobile Q/E buttons now show the equipped skill's icon and short name instead of generic "🔮 Q" / "✨ E" labels. When a skill scroll is equipped, the button updates instantly — buy a Fireball scroll and the Q button shows "🔥 Fireba…". Buttons are greyed out when no skill is assigned to that slot, so you can tell at a glance whether you have an active skill ready.
+
+**Technical**
+- `updateMobileSkillButtons()` in `Game.ts` reads equipped skill IDs and updates `blastBtn`/`skillEBtn` innerHTML + disabled state. Hooked into: shop buy, stash sell, inspect-popup unequip/sell, `beginRun()`.
+- Commit `f74d34a`, bundle `index-BFiynUFl.js`, live ✓
+
+---
+
+## 2026-07-08 (night) — Overcharge artifact + 2 new devil deals
+
+**Player-visible**
+- **Overcharge Battery** (epic artifact) now actually fires the promised free nova. The artifact
+  was rollable and appeared in reward pools but had no combat effect — every 6th primary volley
+  now spawns a 130-radius golden nova burst (3× player damage, instant AoE) around the player.
+- **2 new devil-deal events** bring all 5 active curses into play:
+  - *The Brittle Crown* — grants an artifact for the permanent price of −45 max HP (`curse_glass_bones`).
+  - *The Starving God* — grants an artifact +50 max HP for −40% XP gained forever (`curse_famine`).
+  - (13 events total; previously curse_glass_bones and curse_famine were defined but never reachable.)
+
+**Under the hood**
+- `ArtifactSystem.overchargeEvery()` reads the tuning knob from held artifacts.
+- `Game.ts` tracks `overchargeShotCount` (reset each run) and fires the AoE on every Nth volley.
+
+**Commit** `d25cfb1`
+**Live verified** bundle `index-DChjnKKd.js` at roguelite-game-blush.vercel.app (was index-Bfhf3Iqp.js).
+
+---
+
+## 2026-07-08 (night) — Dual active skill slots
+
+**Player-visible**
+- **Q and E are now independent skill slots.** Buying your first scroll equips it to Q; buying a
+  second equips it to E. Both have their own cooldown timers and fire independently.
+- **26 × 26 = 676 unique skill combos** — meteor + chain lightning, time warp + plague bomb,
+  armageddon + curse wave, and every other combination is now a real build decision.
+- HUD shows both skill bars stacked vertically: Q on top, E below. Each bar shows the skill name,
+  icon, and a live cooldown drain or "[Q] READY" / "[E] READY" indicator.
+- Only 1 scroll owned: Q fires it; E bar is hidden (no change from before for new players).
+- Mobile: Q fires via the SKILL button; E is keyboard-only (phone players get the primary skill
+  as before — a mobile E button can be added later).
+
+**Under the hood**
+- `Input.ts`: `blastPressed` stays Q/mobile; new `skillEPressed` for E key; `consumeSkillE()` added.
+- `ItemSystem.ts`: `getScrollSkills()` returns [Q, E] — oldest-of-top-2 and newest.
+  `getEquippedSkillIdQ()` added; `getEquippedSkillId()` now returns E slot (undefined if <2 scrolls).
+- `Game.ts`: `activeSkillCooldownE` added; `useActiveSkill(slot)` accepts `'q'|'e'`; update loop
+  ticks both cooldowns and polls both input consumers.
+
+**Commit** `0509eac`
+**Live verified** `index-DoqKeUoW.js` confirmed live on roguelite-game-blush.vercel.app (200, new
+bundle hash present); TypeScript clean; `qa-roguelite.mjs` 0 errors; `qa-catalog-integrity.mjs`
+1335 items CLEAN; `qa-skill-tree.mjs` all-pass.
+
 Live: https://roguelite-game-blush.vercel.app
 
 ---
