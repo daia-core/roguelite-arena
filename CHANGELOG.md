@@ -6,6 +6,20 @@ portrait viewport).
 
 ---
 
+## 2026-07-08 (early morning) — Fix: active skills now deal enemy damage
+
+**Bug:** 4 active skills (Mirror Strike, Hellfire Rain, Rune Field, Doom Comet) displayed visuals but dealt zero damage to enemies — `AoeZone` only processes player hits, not enemy hits. Worse, the AoeZone damage payload was accidentally hurting the player when they stood in the zone.
+
+**Fix:** Added `pendingDmg` deferred-damage queue + `resolvePendingDmg(dt)` resolver. Each fixed skill now spawns a damage=0 AoeZone for the visual telegraph and pushes a pendingDmg job for the actual enemy damage:
+- **Mirror Strike** — deals baseDmg to every living enemy immediately, with per-enemy burst VFX
+- **Rune Field** — 6 pendingDmg jobs at 0.5–1.1s fuse delays (enemies in range at detonation time)
+- **Doom Comet** — debuffs applied at cast, full baseDmg blast 1.5s later (matches the warning arc)
+- **Hellfire Rain** — 20 pendingDmg jobs at 0–3.8s delays targeting bolt impact positions
+
+Commit: 70e4859 · Bundle: index-Bw4wLEWn.js · Live ✓
+
+---
+
 ## 2026-07-08 (night) — 8 new Soulstone-inspired active skills (34 total)
 
 **Player-visible**
