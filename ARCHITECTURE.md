@@ -1,6 +1,6 @@
 # Roguelite Arena — Architecture Overview
 
-> **Last updated: 2026-07-08** — MapScene extracted (step 3 de-god-class); active-skill damage fix pass (34 skills live, 1335+ items, AoeZone constraint documented)
+> **Last updated: 2026-07-08** — RestScene extracted (step 5 de-god-class); EventScene (step 4), MapScene (step 3) prior; 34 active skills live, 1335+ items, AoeZone constraint documented
 
 ---
 
@@ -155,6 +155,16 @@ Slay-the-Spire-style node-routing screen shown between encounters. Extracted fro
 of the incremental de-god-classing (2026-07-08). Owns draw + input for the `'map'` state; Game.ts
 retains the transition logic (act generation, node resolution into game states).
 
+### EventScene (~235 lines)
+The `?` event node's text-choice screen. Extracted from Game.ts in step 4 (2026-07-08). Owns
+`currentEvent`, `eventResultText`, `eventReward` state. Calls `onOptionPicked(opt)` for Game to
+apply the effect (artifact grant, curse, gold) and returns the outcome text + optional reward card.
+
+### RestScene (~155 lines)
+The campfire node's heal-or-upgrade screen. Extracted from Game.ts in step 5 (2026-07-08). Owns
+`restResolved` and `restResultText`. Calls `onChoose('rest'|'train')` for Game to apply player
+effects (heal 40% HP / +15 max HP) and returns the outcome text.
+
 ### ArtifactSystem
 Artifacts trigger active powers during combat (e.g. Overcharge fires a 3× nova every N shots).
 Called from `Game.ts` update loop.
@@ -291,14 +301,16 @@ ArtifactSystem.ts
 ```
 File                        Lines    Role
 ────────────────────────────────────────────────────────
-Game.ts                      ~6990   Main game loop + all game state (shrinking via Scene splits)
+Game.ts                      ~6840   Main game loop + all game state (shrinking via Scene splits)
 items/catalog.ts             4388    Item definitions (1335+ items)
 Enemy.ts                     2192    Enemy types, AI, status-effect visuals
 ItemSystem.ts                1582    Item aggregation + shop logic
 sprites.ts                   1685    Sprite/asset data
 WaveManager.ts                964    Wave spawning + difficulty
 VillageScene.ts               876    Village / home base UI
+EventScene.ts                ~235    Event/choice screen (extracted step 4)
 MapScene.ts                   167    Map / node-routing screen (extracted step 3)
+RestScene.ts                 ~155    Campfire heal/train screen (extracted step 5)
 Renderer.ts                   690    Canvas draw primitives
 StatusEffectEngine.ts         668    Status effect stacks + damage math
 SkillTree.ts                  653    Skill tree render + unlock logic

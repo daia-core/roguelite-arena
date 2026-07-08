@@ -6,6 +6,21 @@ portrait viewport).
 
 ---
 
+## 2026-07-08 (afternoon) — RestScene extracted (step 5 de-god-classing)
+
+**Player-visible**
+- No gameplay change. Campfire rest screen (heal/train choice) behaviour is identical.
+
+**Internal**
+- `RestScene.ts` (~155 lines) extracted from Game.ts: owns restResolved/restResultText
+  state, draw/update logic, and enter() disarm. Game.ts delegates via onChoose() callback
+  and applyRestChoice() for player stat mutation. ~74 lines removed from Game.ts.
+- ARCHITECTURE.md updated: EventScene (step 4) and RestScene (step 5) documented.
+
+**Commit:** `4824deb` — **live `index-CH7hPdsi.js` ✓** (prod alias roguelite-game-blush.vercel.app 200).
+
+---
+
 ## 2026-07-08 (morning) — Projectiles clear between waves
 
 **Player-visible**
