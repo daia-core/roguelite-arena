@@ -1,6 +1,6 @@
 # Roguelite Arena — Architecture Overview
 
-> **Last updated: 2026-07-08** — useActiveSkill dispatch extracted (step 14, −610 lines, Game.ts now 3,694 lines); HUDRenderer (step 13, −216); PauseScene (step 11, −91); SkillTreeScene (step 12, −288); RewardScene (step 10); ClassSelectScene (step 9); AchievementsScene (step 8); GameOverScene (step 7); ShopScene (step 6); RestScene (step 5); EventScene (step 4); MapScene (step 3). 34 active skills, 1335+ items, AoeZone constraint documented. **Full QA suite verified post-extraction (2026-07-08 evening):** 6/6 scripts PASS (catalog 1894 clean, builddiv, damagetype, triggered-items, synergy 14/14, stats-parity 2166/2166).
+> **Last updated: 2026-07-08** — Step 16 extraction plan written: `drawPlaying()` → `PlayingRenderer` (deps interface, 5-step extraction order, safety rules). Execution ready next dw-roguelite pull. updatePlaying decomposition complete (step 15); Game.ts 3,749 lines. Full QA suite verified: 6/6 PASS. 34 active skills, 1894 items.
 
 ---
 
@@ -714,6 +714,196 @@ Safest to riskiest — build stays green after each step:
 - Does not unblock a future CombatSystem (that remains a > day-long refactor not worth the risk)
 
 **Estimated Game.ts after step 15:** still ~3,695 lines, but `updatePlaying()` shrinks from 937 to ~80 lines — readable as a high-level orchestrator.
+
+---
+
+---
+
+## Step 16 Extraction Plan — `drawPlaying()` → `PlayingRenderer`
+
+> **Status: PLANNED (2026-07-08)** — ready to execute next dw-roguelite pull when content budget is available.
+
+### Why `drawPlaying` is the right next extraction
+
+After step 15, `updatePlaying()` is broken into 7 named sub-methods inside Game.ts. The de-god-classing refactor has a clear pattern: extract **cohesive, bounded domains** into separate classes. `drawPlaying()` (lines 3547–3725, ~178 lines) is the ideal next candidate:
+
+- **Pure read + render** — reads Game state, writes to canvas. Zero state mutation.
+- **Clear domain boundary** — everything in `drawPlaying` is visual: iterate entity arrays, call `.draw(ctx)`, overlay the HUD/announcements, run the perf monitor.
+- **Mirrors HUDRenderer (step 13)** — same pattern: a `PlayingRendererDeps` interface + constructor injection. HUDRenderer is already a proven template.
+- **~178 lines removed from Game.ts** — Game.ts goes from 3,749 → ~3,571 lines.
+
+### Why NOT to extract `handleEnemyKill` instead
+
+`handleEnemyKill` (lines 2350–2627, ~277 lines) seems bigger but is wrong for next extraction:
+- Writes to 15+ `this.*` fields (`kills`, `killStackCount`, `killStackTimer`, `soulTitheKills/Stacks`, `bossKills`, `particles`, `xpOrbs`, `coins`, `healthOrbs`, enemies array).
+- Calls 5+ private helpers (`spawnCeremonialDaggers`, `triggerHitPause`, `createParticle`, `grantXP`, `splitWorm`).
+- Would need a `KillHandlerDeps` with 20+ mutation-capable refs — essentially recreating Game with a different name. See the "Why not CombatSystem" note above.
+- **Leave it in Game.ts.** It's logically self-contained where it is.
+
+### `PlayingRendererDeps` interface (full spec)
+
+```typescript
+// frontend/src/PlayingRenderer.ts
+import { Player } from './Player';
+import { Enemy } from './Enemy';
+import { Particle } from './Particle';
+import { Projectile } from './Projectile';
+import { MeleeAttack } from './MeleeAttack';  // or whatever the melee type is
+import { AoeZone } from './AoeZone';
+import { HealthOrb, XPOrb, CoinPickup } from './Pickups';  // adjust imports
+import { OrbitingOrb } from './OrbitingOrb';               // adjust imports
+import { DamageNumber } from './DamageNumber';
+import { WaveManager } from './WaveManager';
+import { Renderer } from './Renderer';
+import { EntityCuller } from './EntityCuller';
+import { ParticleBatchRenderer } from './ParticleBatchRenderer';
+import { PerformanceMonitor } from './PerformanceMonitor';
+import { QualityManager } from './QualityManager';
+import { ScreenEffects } from './ScreenEffects';
+import { Input } from './Input';
+import { HUDRenderer } from './HUDRenderer';
+import { Quadtree } from './Quadtree';
+// import Shockwave, Bomb, SpawnTelegraph from their files
+
+export interface PlayingRendererDeps {
+  // Stable references — passed by constructor, never change during a run
+  canvas: HTMLCanvasElement;
+  renderer: Renderer;
+  entityCuller: EntityCuller;
+  particleBatchRenderer: ParticleBatchRenderer;
+  performanceMonitor: PerformanceMonitor;
+  qualityManager: QualityManager;
+  screenEffects: ScreenEffects;
+  input: Input;
+  hudRenderer: HUDRenderer;
+  waveManager: WaveManager;
+  enemyQuadtree: Quadtree<any>;
+  WORLD_SCALE: number;  // constant 2 — pass as dep so PlayingRenderer stays unit-testable
+
+  // Array getters — arrays can be replaced by-ref on wave reset, so we use getters
+  // to always get the live array (not a snapshot taken at construction time).
+  getParticles(): Particle[];
+  getProjectiles(): Projectile[];
+  getMeleeAttacks(): any[];       // MeleeAttack[] — use the real type
+  getShockwaves(): any[];         // Shockwave[]
+  getBombs(): any[];              // Bomb[]
+  getAoeZones(): AoeZone[];
+  getSpawnTelegraphs(): any[];    // SpawnTelegraph[]
+  getEnemies(): Enemy[];
+  getHealthOrbs(): HealthOrb[];
+  getXpOrbs(): XPOrb[];
+  getCoins(): CoinPickup[];
+  getOrbitingOrbs(): OrbitingOrb[];  // or OrbPickup
+  getDamageNumbers(): DamageNumber[];
+  getPlayer(): Player | null;
+
+  // Scalar getters — change at runtime (timers, text)
+  getWaveModifierTimer(): number;
+  getPhaseBannerTimer(): number;
+  getPhaseBannerText(): string;
+}
+```
+
+> **Fix imports above** — some type names may differ (e.g., `CoinPickup` vs `Coin`, `OrbitingOrb` vs `OrbPickup`). Run `grep -n "class.*Orb\|class.*Coin\|class.*Shockwave\|class.*Bomb\|class.*Melee\|class.*Telegraph" frontend/src/*.ts` to confirm the actual class names before writing the interface.
+
+### `PlayingRenderer` class skeleton
+
+```typescript
+export class PlayingRenderer {
+  private deps: PlayingRendererDeps;
+
+  constructor(deps: PlayingRendererDeps) {
+    this.deps = deps;
+  }
+
+  draw(): void {
+    // Cut-and-paste drawPlaying() body here, replacing:
+    //   this.X       →  this.deps.X
+    //   this.getX()  →  this.deps.getX()
+    //   this.entityCuller.updateViewport(0, 0, this.worldWidth, this.worldHeight, 100)
+    //              →  this.deps.entityCuller.updateViewport(
+    //                   0, 0,
+    //                   this.deps.canvas.width * this.deps.WORLD_SCALE,
+    //                   this.deps.canvas.height * this.deps.WORLD_SCALE,
+    //                   100)
+  }
+}
+```
+
+### Changes to `Game.ts`
+
+**Add field + construction (in `constructor` or `setupUI`, after all deps exist):**
+```typescript
+private playingRenderer!: PlayingRenderer;
+
+// In setupUI() or constructor, after renderer/entityCuller/etc. are ready:
+this.playingRenderer = new PlayingRenderer({
+  canvas: this.canvas,
+  renderer: this.renderer,
+  entityCuller: this.entityCuller,
+  particleBatchRenderer: this.particleBatchRenderer,
+  performanceMonitor: this.performanceMonitor,
+  qualityManager: this.qualityManager,
+  screenEffects: this.screenEffects,
+  input: this.input,
+  hudRenderer: this.hudRenderer,   // must be constructed first
+  waveManager: this.waveManager,
+  enemyQuadtree: this.enemyQuadtree,
+  WORLD_SCALE: this.WORLD_SCALE,
+
+  getParticles: () => this.particles,
+  getProjectiles: () => this.projectiles,
+  getMeleeAttacks: () => this.meleeAttacks,
+  getShockwaves: () => this.shockwaves,
+  getBombs: () => this.bombs,
+  getAoeZones: () => this.aoeZones,
+  getSpawnTelegraphs: () => this.spawnTelegraphs,
+  getEnemies: () => this.enemies,
+  getHealthOrbs: () => this.healthOrbs,
+  getXpOrbs: () => this.xpOrbs,
+  getCoins: () => this.coins,
+  getOrbitingOrbs: () => this.orbitingOrbs,
+  getDamageNumbers: () => this.damageNumbers,
+  getPlayer: () => this.player,
+
+  getWaveModifierTimer: () => this.waveModifierTimer,
+  getPhaseBannerTimer: () => this.phaseBannerTimer,
+  getPhaseBannerText: () => this.phaseBannerText,
+});
+```
+
+**Replace the drawPlaying() call in the game loop:**
+```typescript
+// Find the call site (likely in draw() or the main update/render switch):
+// Before: this.drawPlaying();
+// After:  this.playingRenderer.draw();
+```
+
+**Delete `private drawPlaying(): void { … }` from Game.ts.**
+
+### Extraction steps (one commit each)
+
+1. Add `PlayingRenderer.ts` with the interface + empty class. Build → green. (No Game.ts changes yet.)
+2. Wire the constructor in Game.ts (`this.playingRenderer = new PlayingRenderer({…})`). Build → green.
+3. Replace `this.drawPlaying()` call site with `this.playingRenderer.draw()` — but keep the old `private drawPlaying()` in place and make the new `draw()` delegate: `draw() { (this.deps as any).__game.drawPlaying(); }`. Build + smoke test live URL.
+4. Cut-and-paste `drawPlaying()` body into `PlayingRenderer.draw()`, swapping `this.X` → `this.deps.X`. Delete the delegation shim. Build → green.
+5. Delete `private drawPlaying()` from Game.ts. Build → green. Run `node qa-*.mjs` — all 6 scripts should pass (no interface change; `drawPlaying` was never on `window.__game`).
+
+> **Step 3's delegation shim** is optional but recommended for complex methods — it lets you verify the wiring is correct before committing to the full body move, so the risky commit is just the body cut-paste.
+
+### Safety rules
+
+1. One commit per step. Build clean after every commit.
+2. No logic changes — pure cut-and-paste + `this.` → `this.deps.` rename only.
+3. `drawPlaying` was never on `window.__game` in QA scripts, so no QA script updates needed.
+4. If TypeScript complains about a type mismatch in the deps (e.g., an array type), fix the interface — don't cast.
+5. Confirm `this.hudRenderer` is constructed before `this.playingRenderer` in `setupUI()` (HUDRenderer is a dep).
+
+### Expected result
+
+- `PlayingRenderer.ts` — new file, ~200 lines (178 body + interface + imports)
+- `Game.ts` — 3,749 → ~3,571 lines (−178)
+- No behavior change, no QA regression
 
 ---
 
