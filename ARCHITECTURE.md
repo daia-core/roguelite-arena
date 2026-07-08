@@ -1,6 +1,6 @@
 # Roguelite Arena — Architecture Overview
 
-> **Last updated: 2026-07-09** — QA infrastructure fixes: `qa-village.mjs` PASS (villageScene getter + camX/camY public + enterVillage() public); `simulate-balance.mjs` runs (finishSkillTree() added). Commits `928924d` + `7140ad1`, live `index-BeaPZxfx.js` ✓. Game.ts 3,619 lines. Next: step 17 — `drawEvolutionBanner()` → `EvolutionBannerRenderer` or identify next largest cohesive domain.
+> **Last updated: 2026-07-09** — Step 17 analysis written (combat-engine wall documented). QA clean: stats-parity PASS, catalog CLEAN, village PASS. Game.ts 3,623 lines. Scene extraction phase **complete** — remaining methods are the combat-engine core (see Step 17). Next pull: a genuine feel/balance improvement, or the CombatEngine refactor if scope is acceptable.
 
 ---
 
@@ -904,6 +904,108 @@ this.playingRenderer = new PlayingRenderer({
 - `PlayingRenderer.ts` — new file, ~200 lines (178 body + interface + imports)
 - `Game.ts` — 3,749 → ~3,571 lines (−178)
 - No behavior change, no QA regression
+
+---
+
+## Step 17 Analysis — The Combat-Engine Wall
+
+> **Status: ANALYSIS COMPLETE (2026-07-09)** — Scene extraction phase is done. Remaining Game.ts is the combat-engine core. See options below.
+
+### What was extracted (steps 1–16)
+
+| Step | Extracted class | Lines removed |
+|------|----------------|---------------|
+| 1 | VillageScene | ~200 |
+| 2–5 | MapScene, EventScene, RestScene, GameOverScene | ~450 |
+| 6 | ShopScene | ~900 |
+| 7–11 | AchievementsScene, ClassSelectScene, RewardScene, SkillTreeScene, PauseScene | ~800 |
+| 13 | HUDRenderer | ~220 |
+| 16 | PlayingRenderer | ~136 |
+
+Game.ts went from ~5,100 → 3,623 lines. The extracted pattern was: **cohesive, bounded domains** where reads clearly dominated writes, and private method calls were limited to 0–2 callbacks.
+
+### Why further per-method extraction hits a wall
+
+The remaining large methods are all combat-engine methods that share the same web of mutable state:
+
+| Method | Lines | Private methods called | Arrays mutated |
+|--------|-------|----------------------|----------------|
+| `updateEnemies()` | 361 | `handleEnemyKill`, `applyOnHitEffects`, `dealAuxDamage`, `triggerHitPause`, `spawnExecuteBurst`, `createParticle` | enemies, particles, damageNumbers |
+| `handleEnemyKill()` | 277 | `spawnCeremonialDaggers`, `triggerHitPause`, `createParticle`, `grantXP`, `splitWorm` | 15+ fields |
+| `updatePickupsAndCleanup()` | 215 | `updateAuxWeapons`, `updateAoeZones`, `removeDeadEntities`, `resolvePendingDmg`, `resolveActiveDmgZones`, `checkWeaponEvolution`, `enterShop`, `gameOver`, `autoSave` | All entity arrays |
+| `updateProjectileCollisions()` | 172 | `handleEnemyKill`, `applyOnHitEffects`, `applyThorns`, `createParticle`, `createDamageNumber`, `spawnExecuteBurst` | enemies, particles, damageNumbers |
+| `updateAuxWeapons()` | 111 | `dealAuxDamage`, `detonateBomb` | orbitingOrbs, bombs, shockwaves, meleeAttacks |
+| `updateRuntimeModifiers()` | 70 | *(none)* | 3 primitive Game fields |
+
+The **per-method extraction pattern** that worked for scenes fails here because:
+1. Every method calls 2–9 other private Game methods (which would become callbacks in any deps interface).
+2. Every method mutates the same shared arrays (`enemies`, `projectiles`, `particles`, `damageNumbers`). Arrays passed by-reference are fine; arrays that get *replaced* (e.g., `this.enemies = splits` on worm-split) are not.
+3. A `CombatDeps` with 20+ mutation-capable refs would **recreate Game with a different name** — the exact failure mode documented in step 16 for `handleEnemyKill`.
+
+**Exception:** `updateRuntimeModifiers()` (70 lines) has no private method calls and reads bounded state (player, artifacts, playerStats, 3 scalar fields). It *could* be extracted as `RuntimeModifierCalculator`, but the 3 primitive-field mutations (`momentumTime`, `killStackTimer`, `killStackCount`) require getter/setter pairs in the deps interface — extraction overhead > benefit for 70 lines.
+
+**`drawEvolutionBanner()` (20 lines):** too small to extract as its own class. It runs on every `draw()` call, short-circuits immediately when no banner is active, and only reads `this.evolutionBannerTimer` + `this.evolutionBannerText`. Leave in `Game.ts`.
+
+### Options going forward
+
+#### Option A — Accept the current structure *(recommended)*
+
+Game.ts at 3,623 lines is the **combat-engine core**. The code is:
+- Legitimately complex domain logic (physics, collision, enemy AI, item interactions)
+- Well-organized into named private methods (`updateEnemies`, `updateProjectileCollisions`, etc.)
+- Not a usability problem — TypeScript editors navigate it fine; QA scripts cover it
+
+3,600 lines is reasonable for a complete game engine. The refactor has already halved the file size. Continuing to extract for its own sake creates more files and more interfaces without a functional improvement.
+
+**If choosing Option A:** shift effort to gameplay improvements (feel, balance, content) rather than continued architecture work. The scene extraction was valuable; the combat-engine extraction is diminishing returns.
+
+#### Option B — CombatEngine class refactor *(large scope, optional)*
+
+Extract the entire combat layer into `CombatEngine.ts` that **owns the entity arrays**:
+
+```typescript
+class CombatEngine {
+  // Owns the shared state
+  enemies: Enemy[] = [];
+  projectiles: Projectile[] = [];
+  particles: Particle[] = [];
+  damageNumbers: DamageNumber[] = [];
+  meleeAttacks: MeleeAttack[] = [];
+  bombs: Bomb[] = [];
+  shockwaves: Shockwave[] = [];
+  aoeZones: AoeZone[] = [];
+
+  // Receives read-only deps
+  private player: Player;
+  private playerStats: PlayerStats;
+  private artifacts: ArtifactSystem;
+  private enemyQuadtree: Quadtree<Enemy>;
+  private audio: AudioSystem;
+  private renderer: Renderer;
+  // ...
+
+  updateAll(dt: number, moving: boolean): CombatResult {
+    this.updateEnemies(dt);
+    this.updateProjectileCollisions(dt);
+    this.updateMeleeCollisions(dt);
+    this.updateAuxWeapons(dt);
+    this.updateAoeZones(dt);
+    this.updateRuntimeModifiers(dt, moving);
+    this.updatePickupsAndCleanup(dt);
+    return this.drainResults(); // kills, level-ups, wave-complete, game-over
+  }
+}
+```
+
+`Game.ts` becomes a thin coordinator: manages state (playing/paused/shop/map), owns the scenes, and delegates `update()` → `combatEngine.updateAll()`.
+
+**Scope:** 2–3 days of careful refactoring. 1,200–1,500 lines move from Game.ts. Risk: many interdependencies to wire correctly.
+
+**When to choose Option B:** if Felix explicitly wants Game.ts under 2,000 lines, or if the game grows to the point where the combat engine genuinely needs to be unit-tested in isolation.
+
+### Recommendation
+
+**Option A for now.** The game plays well, QA is clean, and the architecture is already much improved after 16 extraction steps. The remaining complexity in Game.ts is the inherent complexity of a real-time combat system, not structural debt. Focus effort on gameplay improvements.
 
 ---
 
