@@ -1058,16 +1058,47 @@ export class PlayerStats {
   }
 
   /**
-   * Returns the active skill ID equipped by the player, or undefined if none.
-   * The LAST scroll purchased wins — buying a new Spell Scroll replaces the
-   * previous one's effect without removing the old item from the owned list.
+   * Dual active skill slots — Q (primary) and E (secondary).
+   *
+   * • 0 scrolls → Q=undefined, E=undefined
+   * • 1 scroll  → Q=that scroll, E=undefined  (Q fires it; E is silent)
+   * • 2+ scrolls → Q=second-newest, E=newest  (two independent cooldowns)
+   *
+   * Buying scrolls accumulates in purchase order; only the two most recent
+   * matter at runtime. There is no explicit "replace" step — old scrolls just
+   * fall below the top-2 window.
+   */
+  private getScrollSkills(): [string | undefined, string | undefined] {
+    // Collect all scroll skill IDs newest-first (items are ordered by purchase).
+    const found: string[] = [];
+    for (let i = this.items.length - 1; i >= 0; i--) {
+      const sk = this.items[i].activatesSkill;
+      if (sk) {
+        found.push(sk);
+        if (found.length >= 2) break;
+      }
+    }
+    // found[0] = newest, found[1] = second-newest
+    if (found.length === 0) return [undefined, undefined];
+    if (found.length === 1) return [found[0], undefined]; // Q=only scroll, E=empty
+    return [found[1], found[0]]; // Q=second-newest, E=newest
+  }
+
+  /**
+   * Slot 1 (Q key / mobile button) — the primary / older equipped skill.
+   * Returns the skill when only 1 scroll is owned (E slot stays empty).
+   */
+  getEquippedSkillIdQ(): string | undefined {
+    return this.getScrollSkills()[0];
+  }
+
+  /**
+   * Slot 2 (E key) — the secondary / newest equipped skill.
+   * Returns undefined when fewer than 2 scrolls are owned
+   * (the only scroll lives in the Q slot instead).
    */
   getEquippedSkillId(): string | undefined {
-    for (let i = this.items.length - 1; i >= 0; i--) {
-      const skill = this.items[i].activatesSkill;
-      if (skill) return skill;
-    }
-    return undefined;
+    return this.getScrollSkills()[1];
   }
 
   getBleedChance(): number {

@@ -232,8 +232,9 @@ export class Game {
   private static readonly RANGED_ARMOR_PEN = 0.5;
   private static readonly CONTACT_ARMOR_PEN = 0.25;
 
-  // Active Skill System — tracks the cooldown for the player's equipped spell scroll.
-  private activeSkillCooldown: number = 0;
+  // Active Skill System — dual-slot cooldowns (Q = primary, E = secondary).
+  private activeSkillCooldown: number = 0;   // slot Q
+  private activeSkillCooldownE: number = 0;  // slot E
 
   // Stats
   kills: number = 0;
@@ -588,6 +589,7 @@ export class Game {
     this.soulTitheStacks = 0;
     this.shotsFired = 0;
     this.activeSkillCooldown = 0;
+    this.activeSkillCooldownE = 0;
 
     this.waveManager.reset();
     // The map layer drives wave numbers now: the first battle node starts wave
@@ -905,10 +907,14 @@ export class Game {
       this.audio.playShoot();
     }
 
-    // Active Skill — Q/E keys or mobile SKILL button triggers the equipped spell scroll.
+    // Active Skill — Q/mobile = slot 1 (primary), E = slot 2 (secondary).
     if (this.activeSkillCooldown > 0) this.activeSkillCooldown = Math.max(0, this.activeSkillCooldown - dt);
+    if (this.activeSkillCooldownE > 0) this.activeSkillCooldownE = Math.max(0, this.activeSkillCooldownE - dt);
     if (this.input.consumeSkill()) {
-      this.useActiveSkill();
+      this.useActiveSkill('q');
+    }
+    if (this.input.consumeSkillE()) {
+      this.useActiveSkill('e');
     }
 
     // Wave manager — enemies now spawn via telegraphed in-arena formations (red blinking X).
@@ -1764,18 +1770,23 @@ export class Game {
   }
 
   /**
-   * Fire the player's currently equipped active skill (from a Spell Scroll).
+   * Fire the player's equipped active skill for the given slot.
+   *   slot 'q' → primary skill (Q key / mobile button), uses activeSkillCooldown
+   *   slot 'e' → secondary skill (E key only), uses activeSkillCooldownE
    * Effects use existing AoeZone / Projectile / Enemy systems — no new infrastructure.
-   * Called by Q/E key or the mobile SKILL button when the cooldown has expired.
    */
-  private useActiveSkill(): void {
-    if (!this.player || this.activeSkillCooldown > 0) return;
-    const skillId = this.playerStats.getEquippedSkillId();
+  private useActiveSkill(slot: 'q' | 'e' = 'q'): void {
+    const cooldown = slot === 'q' ? this.activeSkillCooldown : this.activeSkillCooldownE;
+    if (!this.player || cooldown > 0) return;
+    const skillId = slot === 'q'
+      ? this.playerStats.getEquippedSkillIdQ()
+      : this.playerStats.getEquippedSkillId();
     if (!skillId) return;
     const skill = getActiveSkillById(skillId);
     if (!skill) return;
 
-    this.activeSkillCooldown = skill.cooldown;
+    if (slot === 'q') this.activeSkillCooldown = skill.cooldown;
+    else this.activeSkillCooldownE = skill.cooldown;
     const baseDmg = this.playerStats.getDamage() * skill.baseDamageMultiplier;
     const px = this.player.x;
     const py = this.player.y;
@@ -5189,49 +5200,67 @@ export class Game {
       drawBar(bx, by, bw, bh, boss.health / boss.maxHealth, '#e03131', '#3c0000');
     }
 
-    // --- Active Skill indicator (bottom-left, below the status panel) ---
-    const activeSkillId = this.playerStats.getEquippedSkillId();
-    if (activeSkillId) {
-      const sk = getActiveSkillById(activeSkillId);
-      if (sk) {
-        const skX = s(6);
-        const skY = topY + panelH + s(12);
-        const skSize = s(28);
-        // Background pill
-        ctx.fillStyle = '#241407';
-        ctx.fillRect(skX - s(2), skY - s(2), skSize + s(68), skSize + s(4));
-        // Cooldown fill (purple = ready, dark = on cooldown)
-        const cdFrac = this.activeSkillCooldown > 0 ? this.activeSkillCooldown / sk.cooldown : 0;
-        const bgCol = cdFrac > 0 ? '#3a1a5c' : '#5a2d82';
-        ctx.fillStyle = bgCol;
-        ctx.fillRect(skX, skY, skSize + s(64), skSize);
-        // Cooldown progress bar (drains as skill cools down)
-        if (cdFrac > 0) {
-          ctx.fillStyle = '#9b59b6';
-          ctx.fillRect(skX, skY, Math.round((skSize + s(64)) * (1 - cdFrac)), skSize);
-        }
-        // Icon
-        ctx.font = `${s(14)}px serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(sk.icon, skX + s(14), skY + skSize / 2);
-        // Label + cooldown text
-        ctx.font = `bold ${s(7)}px monospace`;
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'middle';
-        ctx.fillStyle = '#ffffff';
-        const label = cdFrac > 0 ? `${Math.ceil(this.activeSkillCooldown)}s` : '[Q] READY';
-        ctx.fillText(`${sk.name}`, skX + s(30), skY + s(9));
-        ctx.font = `${s(7)}px monospace`;
-        ctx.fillStyle = cdFrac > 0 ? '#cc99ff' : '#a0ffa0';
-        ctx.fillText(label, skX + s(30), skY + s(20));
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'alphabetic';
+    // --- Active Skill indicators (bottom-left, below the status panel) ---
+    // Dual-slot: Q = primary (slot 1), E = secondary (slot 2).
+    // Draw a bar for each equipped slot; stacked vertically.
+    const activeSkillIdQ = this.playerStats.getEquippedSkillIdQ();
+    const activeSkillIdE = this.playerStats.getEquippedSkillId();
+    const skX = s(6);
+    const skSize = s(28);
+    const skBarW = skSize + s(64);
+    let skillBarH = 0;
+
+    const drawSkillBar = (skillId: string, cdFrac: number, cdSecs: number, keyLabel: string, yPos: number) => {
+      const sk = getActiveSkillById(skillId);
+      if (!sk) return;
+      // Background pill
+      ctx.fillStyle = '#241407';
+      ctx.fillRect(skX - s(2), yPos - s(2), skBarW + s(4), skSize + s(4));
+      // Cooldown fill (purple = ready, dark = on cooldown)
+      ctx.fillStyle = cdFrac > 0 ? '#3a1a5c' : '#5a2d82';
+      ctx.fillRect(skX, yPos, skBarW, skSize);
+      // Progress bar (drains as cooldown ticks down)
+      if (cdFrac > 0) {
+        ctx.fillStyle = '#9b59b6';
+        ctx.fillRect(skX, yPos, Math.round(skBarW * (1 - cdFrac)), skSize);
       }
+      // Icon
+      ctx.font = `${s(14)}px serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(sk.icon, skX + s(14), yPos + skSize / 2);
+      // Name + status label
+      const label = cdFrac > 0 ? `${cdSecs}s` : `[${keyLabel}] READY`;
+      ctx.font = `bold ${s(7)}px monospace`;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(sk.name, skX + s(30), yPos + s(9));
+      ctx.font = `${s(7)}px monospace`;
+      ctx.fillStyle = cdFrac > 0 ? '#cc99ff' : '#a0ffa0';
+      ctx.fillText(label, skX + s(30), yPos + s(20));
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'alphabetic';
+    };
+
+    if (activeSkillIdQ) {
+      const skYQ = topY + panelH + s(8);
+      const cdQ = this.activeSkillCooldown;
+      const skQ = getActiveSkillById(activeSkillIdQ);
+      const cdFracQ = skQ && cdQ > 0 ? cdQ / skQ.cooldown : 0;
+      drawSkillBar(activeSkillIdQ, cdFracQ, Math.ceil(cdQ), 'Q', skYQ);
+      skillBarH += s(36);
+    }
+    if (activeSkillIdE) {
+      const skYE = topY + panelH + s(8) + (activeSkillIdQ ? s(36) : 0);
+      const cdE = this.activeSkillCooldownE;
+      const skE = getActiveSkillById(activeSkillIdE);
+      const cdFracE = skE && cdE > 0 ? cdE / skE.cooldown : 0;
+      drawSkillBar(activeSkillIdE, cdFracE, Math.ceil(cdE), 'E', skYE);
+      skillBarH += s(36);
     }
 
     // --- Status callouts under the left panel ---
-    const skillBarH = activeSkillId ? s(40) : 0;
     let statusY = topY + panelH + s(8) + skillBarH;
     if (this.player.shield) {
       this.renderer.drawText('SHIELD ACTIVE', s(10), statusY, { size: s(8), color: '#4a9eff' });

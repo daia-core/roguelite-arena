@@ -44,7 +44,8 @@ export class Input {
 
   // Ability buttons
   dashPressed: boolean = false;
-  blastPressed: boolean = false;
+  blastPressed: boolean = false;     // Q key or mobile button → skill slot 1 (primary)
+  skillEPressed: boolean = false;    // E key → skill slot 2 (secondary)
 
   // Multi-touch tracking (canvas-space) for pinch-to-zoom on the skill-tree screen.
   // The mouse/joystick path collapses everything to one pointer; this keeps every
@@ -76,8 +77,12 @@ export class Input {
         this.dashPressed = true;
         e.preventDefault();
       }
-      if (e.key === 'e' || e.key === 'q') {
+      if (e.key === 'q') {
         this.blastPressed = true;
+        e.preventDefault();
+      }
+      if (e.key === 'e') {
+        this.skillEPressed = true;
         e.preventDefault();
       }
     });
@@ -292,9 +297,17 @@ export class Input {
     return pressed;
   }
 
-  /** Active Skill trigger — same binding as blast (Q/E keys + skill button). */
+  /** Active Skill slot 1 trigger — Q key or mobile SKILL button. */
   consumeSkill(): boolean {
     return this.consumeBlast();
+  }
+
+  /** Active Skill slot 2 trigger — E key only. */
+  consumeSkillE(): boolean {
+    const pressed = this.skillEPressed;
+    this.skillEPressed = false;
+    if (pressed) this.triggerHaptic(40);
+    return pressed;
   }
 
   private triggerHaptic(duration: number): void {
