@@ -6,7 +6,25 @@ portrait viewport).
 
 ---
 
-## 2026-07-08 (evening) — PauseScene extracted (step 11) · `8260b3c` · `index-Blgb8Izc.js` ✓
+## 2026-07-08 (evening) — useActiveSkill extracted (step 14) · `3ba40f5` · `index-cRH2V7ES.js` ✓
+
+**Architecture (no player-visible change):** Moved the 34-case active-skill dispatch switch
+(~610 lines) from `Game.ts` into `ActiveSkillSystem.ts` as `executeSkill()`. Introduced the
+`ActiveSkillContext` interface so the function can operate on Game state via closures (enemies,
+player, worldWidth/Height, pushPendingDmg, pushActiveDmgZone, spawnAoeZone, dealAuxDamage,
+pushProjectile, setCooldown). Game.ts `useActiveSkill()` is now an 18-line thin wrapper.
+Game.ts: 4,304 → 3,694 lines (−610). TypeScript clean.
+
+---
+
+## 2026-07-08 (evening) — HUDRenderer extracted (step 13) · `8f08a9e` · `index-Blgb8Izc.js` ✓
+
+**Architecture (no player-visible change):** Extracted `drawHUD()` + `updateMobileSkillButtons()`
+into `HUDRenderer.ts`. Game.ts: 4,520 → 4,304 lines (−216). TypeScript clean.
+
+---
+
+## 2026-07-08 (evening) — PauseScene extracted (step 11) · `8260b3c` · `index-Blgb8Izc.js` (prev)
 
 **Architecture (no player-visible change):** Extracted the pause overlay into `PauseScene.ts`
 (153 lines). Owns `update`/`draw`, shared geometry helpers (`screenScale`, `columnRects`,

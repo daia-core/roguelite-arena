@@ -1,6 +1,6 @@
 # Roguelite Arena — Architecture Overview
 
-> **Last updated: 2026-07-08** — PauseScene extracted (step 11, −91 lines, Game.ts now 4,520 lines); SkillTreeScene (step 12, −288); RewardScene (step 10, −62); ClassSelectScene (step 9); AchievementsScene (step 8); GameOverScene (step 7); ShopScene (step 6); RestScene (step 5); EventScene (step 4); MapScene (step 3). 34 active skills, 1335+ items, AoeZone constraint documented.
+> **Last updated: 2026-07-08** — useActiveSkill dispatch extracted (step 14, −610 lines, Game.ts now 3,694 lines); HUDRenderer (step 13, −216); PauseScene (step 11, −91); SkillTreeScene (step 12, −288); RewardScene (step 10); ClassSelectScene (step 9); AchievementsScene (step 8); GameOverScene (step 7); ShopScene (step 6); RestScene (step 5); EventScene (step 4); MapScene (step 3). 34 active skills, 1335+ items, AoeZone constraint documented.
 
 ---
 
@@ -16,10 +16,12 @@ damage (and some hurt the player instead) — caught and fixed 2026-07-08.
 **For enemy damage, always use one of:**
 
 ```typescript
-// One-shot damage after a delay (telegraphed blast):
-this.pendingDmg.push({ x, y, r, dmg, delay, color });
+// Inside executeSkill() in ActiveSkillSystem.ts (step 14 extraction):
+ctx.pushPendingDmg(x, y, r, dmg, delay, color);           // one-shot delayed blast
+ctx.pushActiveDmgZone(x, y, r, dmgPerSec, remaining, color); // persistent tick zone
 
-// Persistent tick damage (DoT zone):
+// Inside Game.ts methods (non-extracted code):
+this.pendingDmg.push({ x, y, r, dmg, delay, color });
 this.activeDmgZones.push({ x, y, r, dmgPerSec, remaining, color });
 ```
 
@@ -27,11 +29,11 @@ Use `AoeZone` only for the **visual telegraph** with `damage: 0`:
 
 ```typescript
 // ✅ CORRECT — visual telegraph + enemy pendingDmg:
-this.spawnAoeZone(new AoeZone(x, y, r, 0, delay, { color }));   // damage=0
-this.pendingDmg.push({ x, y, r, dmg: baseDmg, delay, color });  // enemy damage
+ctx.spawnAoeZone(new AoeZone(x, y, r, 0, delay, { color }));   // damage=0, visual only
+ctx.pushPendingDmg(x, y, r, baseDmg, delay, color);            // enemy damage
 
 // ❌ WRONG — hits the player instead of enemies:
-this.spawnAoeZone(new AoeZone(x, y, r, baseDmg, delay, { color }));
+ctx.spawnAoeZone(new AoeZone(x, y, r, baseDmg, delay, { color }));
 ```
 
 ---
@@ -46,7 +48,7 @@ this.spawnAoeZone(new AoeZone(x, y, r, baseDmg, delay, { color }));
 
 Core Loop               Extended Systems          Meta / UI
 ──────────────          ────────────────          ─────────────
-Game.ts (~4.5k lines)   StatusEffectEngine         AchievementSystem
+Game.ts (~3.7k lines)   StatusEffectEngine         AchievementSystem
 Player.ts               ActiveSkillSystem           MetaProgression
 Enemy.ts (2k)           ArtifactSystem              SkillTree (~185 nodes)
 WaveManager.ts          EventSystem                 SaveManager
