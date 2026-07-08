@@ -1,6 +1,6 @@
 # Roguelite Arena — Architecture Overview
 
-> **Last updated: 2026-07-08** — after active-skill damage fix pass (34 skills live, 1335+ items, AoeZone constraint documented)
+> **Last updated: 2026-07-08** — MapScene extracted (step 3 de-god-class); active-skill damage fix pass (34 skills live, 1335+ items, AoeZone constraint documented)
 
 ---
 
@@ -150,6 +150,11 @@ const flat = se.getFlatHitBonus(enemy);          // Brittle
 ### VillageScene (876 lines)
 Home base between runs — upgrades, meta-progression, character select.
 
+### MapScene (167 lines)
+Slay-the-Spire-style node-routing screen shown between encounters. Extracted from Game.ts in step 3
+of the incremental de-god-classing (2026-07-08). Owns draw + input for the `'map'` state; Game.ts
+retains the transition logic (act generation, node resolution into game states).
+
 ### ArtifactSystem
 Artifacts trigger active powers during combat (e.g. Overcharge fires a 3× nova every N shots).
 Called from `Game.ts` update loop.
@@ -272,6 +277,9 @@ SkillTree.ts (653 lines)
 VillageScene.ts (876 lines)
  └── requires MetaProgression, SaveManager
 
+MapScene.ts (167 lines)
+ └── requires MapSystem, Input, Renderer (deps-injected via MapSceneDeps)
+
 ArtifactSystem.ts
  └── requires Game context for combat hooks
 ```
@@ -283,13 +291,14 @@ ArtifactSystem.ts
 ```
 File                        Lines    Role
 ────────────────────────────────────────────────────────
-Game.ts                      7031    Main game loop + all game state
+Game.ts                      ~6990   Main game loop + all game state (shrinking via Scene splits)
 items/catalog.ts             4388    Item definitions (1335+ items)
 Enemy.ts                     2192    Enemy types, AI, status-effect visuals
 ItemSystem.ts                1582    Item aggregation + shop logic
 sprites.ts                   1685    Sprite/asset data
 WaveManager.ts                964    Wave spawning + difficulty
 VillageScene.ts               876    Village / home base UI
+MapScene.ts                   167    Map / node-routing screen (extracted step 3)
 Renderer.ts                   690    Canvas draw primitives
 StatusEffectEngine.ts         668    Status effect stacks + damage math
 SkillTree.ts                  653    Skill tree render + unlock logic

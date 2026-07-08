@@ -20,6 +20,20 @@ preserved, fresh wave still spawns; core regressions (status/slow-status/dash) P
 
 ---
 
+## 2026-07-08 (morning) — MapScene architecture extraction
+
+**Internal/architecture (no player-visible change)**
+- The map/node-routing screen (`drawMap` + `updateMap`, ~90 lines) extracted from
+  `Game.ts` into a standalone `MapScene.ts` — step 3 of the incremental de-god-classing
+  (MenuScene = step 1, VillageScene = step 2). Follows the same `Scene` interface;
+  wired via deps injection (`canvas`, `renderer`, `input`, `mapSystem`, `onNodePicked`
+  callback). `Game.ts` is now ~90 lines lighter and its map-related switch cases are gone.
+  No behaviour change — verbatim port, build clean.
+
+**Commit:** `47a324a` — **live `index-CSIxGk1a.js` ✓** (included in the projectile-clear build above)
+
+---
+
 ## 2026-07-08 (morning) — Dash button actually dashes now
 
 **Player-visible**
