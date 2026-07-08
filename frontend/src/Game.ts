@@ -48,6 +48,7 @@ import { AchievementsScene } from './AchievementsScene';
 import { ClassSelectScene } from './ClassSelectScene';
 import { RewardScene } from './RewardScene';
 import { SkillTreeScene } from './SkillTreeScene';
+import { PauseScene } from './PauseScene';
 
 // The map/node meta-layer adds three between-wave screens on top of the core loop:
 //   'map'    — the Slay-the-Spire-style branching node picker (route your run)
@@ -250,9 +251,6 @@ export class Game {
     soulsEarned: 0,
     personalBest: 0
   };
-
-  // Pause
-  pauseRequested: boolean = false;
 
   // Wave modifier announcement
   waveModifierTimer: number = 0;
@@ -502,6 +500,20 @@ export class Game {
       },
     });
     this.scenes.skilltree = this.skillTreeScene;
+
+    this.scenes.paused = new PauseScene({
+      canvas: this.canvas,
+      renderer: this.renderer,
+      input: this.input,
+      audio: this.audio,
+      drawPlayingUnderlay: () => this.drawPlaying(),
+      getCurrentWave: () => this.waveManager.currentWave,
+      getBossKills: () => this.bossKills,
+      onResume: () => { this.state = 'playing'; },
+      onEndRun: () => { this.gameOver(); },
+      onRestartRun: () => { this.openClassSelect(); },
+      onMainMenu: () => { this.state = 'menu'; SaveManager.clearRun(); },
+    });
 
     this.setupUI();
   }
@@ -875,9 +887,6 @@ export class Game {
         this.updatePlaying(simDt);
         break;
       }
-      case 'paused':
-        this.updatePaused();
-        break;
     }
   }
 
@@ -3848,29 +3857,6 @@ export class Game {
     this.playerStats.runtimeFireRateMult = fr;
   }
 
-  // ---- shared UI helpers for the meta-layer screens ----
-
-  /** Zoom-scale helper shared by the map/event/reward/rest screens. */
-  private screenScale() {
-    const zoom = this.canvas.clientWidth ? this.canvas.width / this.canvas.clientWidth : 1;
-    const s = (v: number) => Math.round(v * zoom);
-    const W = this.canvas.width;
-    const H = this.canvas.height;
-    const isMobile = W / zoom < 800;
-    return { zoom, s, W, H, isMobile };
-  }
-
-  /** A centred vertical stack of button rects — geometry both draw & update use. */
-  private columnRects(n: number, topY: number, s: (v: number) => number, W: number, isMobile: boolean) {
-    const bw = Math.min(W - s(40), s(isMobile ? 320 : 440));
-    const bh = s(isMobile ? 54 : 48);
-    const gap = s(12);
-    const x = (W - bw) / 2;
-    const rects: { x: number; y: number; width: number; height: number }[] = [];
-    for (let i = 0; i < n; i++) rects.push({ x, y: topY + i * (bh + gap), width: bw, height: bh });
-    return rects;
-  }
-
   /** The in-run gear button, top-right just under the wave panel. One source of
    *  truth so drawHUD (paints it) and updatePlaying (hit-tests it) never drift. */
   private gearButtonRect(): { x: number; y: number; width: number; height: number } {
@@ -3982,38 +3968,6 @@ export class Game {
     }
   }
 
-  // Pause/menu overlay buttons — shared geometry so drawPaused and updatePaused
-  // can never drift (the old code drew centred but hit-tested at a fixed y).
-  private pausedTopY(s: (v: number) => number, isMobile: boolean): number {
-    return s(isMobile ? 150 : 172);
-  }
-
-  private updatePaused(): void {
-    if (!this.input.mouseDown) return;
-    const { s, W, isMobile } = this.screenScale();
-    const rects = this.columnRects(5, this.pausedTopY(s, isMobile), s, W, isMobile);
-    const mx = this.input.mouseX;
-    const my = this.input.mouseY;
-
-    if (pointInRect(mx, my, rects[0])) {          // Resume
-      this.state = 'playing';
-      this.input.mouseDown = false;
-    } else if (pointInRect(mx, my, rects[1])) {   // Sound toggle
-      this.audio.toggle();
-      this.input.mouseDown = false;
-    } else if (pointInRect(mx, my, rects[2])) {   // End Run — cash out souls now
-      this.input.mouseDown = false;
-      this.gameOver();
-    } else if (pointInRect(mx, my, rects[3])) {   // Restart Run
-      this.input.mouseDown = false;
-      this.openClassSelect();
-    } else if (pointInRect(mx, my, rects[4])) {   // Main Menu (abandons the run)
-      this.input.mouseDown = false;
-      this.state = 'menu';
-      SaveManager.clearRun();
-    }
-  }
-
   /** Transition to the walkable village base. */
   private enterVillage(): void {
     this.scenes.village?.enter?.(this.state);
@@ -4093,9 +4047,6 @@ export class Game {
     switch (this.state) {
       case 'playing':
         this.drawPlaying();
-        break;
-      case 'paused':
-        this.drawPaused();
         break;
     }
     }
@@ -4563,48 +4514,6 @@ export class Game {
     this.player.maxHealth = this.playerStats.getMaxHealth();
     if (this.player.health > this.player.maxHealth) {
       this.player.health = this.player.maxHealth;
-    }
-  }
-
-  private drawPaused(): void {
-    // Keep the frozen arena visible behind the overlay so pause reads as "stopped
-    // mid-run", not a blank screen.
-    this.drawPlaying();
-
-    const ctx = this.renderer.getContext();
-    const { s, W, H, isMobile } = this.screenScale();
-
-    // Dim the arena.
-    ctx.save();
-    ctx.globalAlpha = 0.82;
-    ctx.fillStyle = '#000000';
-    ctx.fillRect(0, 0, W, H);
-    ctx.restore();
-
-    const titleY = s(isMobile ? 96 : 100);
-    this.renderer.drawText('PAUSED', W / 2, titleY, {
-      size: s(isMobile ? 26 : 40), bold: true, align: 'center', color: '#ffd700',
-    });
-
-    // Make "End Run" an informed choice: show what banking now is worth.
-    const souls = MetaProgression.calculateSoulsEarned(this.waveManager.currentWave, this.bossKills);
-    this.renderer.drawText(
-      `Wave ${this.waveManager.currentWave}  ·  end now to bank ${souls} souls`,
-      W / 2, titleY + s(isMobile ? 24 : 34),
-      { size: s(isMobile ? 10 : 12), align: 'center', color: '#c8b998' }
-    );
-
-    const labels = [
-      'Resume',
-      this.audio.isEnabled() ? 'Sound: On' : 'Sound: Off',
-      'End Run',
-      'Restart Run',
-      'Main Menu',
-    ];
-    const rects = this.columnRects(labels.length, this.pausedTopY(s, isMobile), s, W, isMobile);
-    for (let i = 0; i < labels.length; i++) {
-      const r = rects[i];
-      this.renderer.drawButton(r.x, r.y, r.width, r.height, labels[i], false, true, isMobile);
     }
   }
 
