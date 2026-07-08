@@ -46,6 +46,7 @@ import { ShopScene } from './ShopScene';
 import { GameOverScene, type GameOverStats } from './GameOverScene';
 import { AchievementsScene } from './AchievementsScene';
 import { ClassSelectScene } from './ClassSelectScene';
+import { RewardScene } from './RewardScene';
 
 // The map/node meta-layer adds three between-wave screens on top of the core loop:
 //   'map'    — the Slay-the-Spire-style branching node picker (route your run)
@@ -472,6 +473,31 @@ export class Game {
     });
     this.scenes.shop = this.shopScene;
 
+    // Step 10: RewardScene.
+    this.scenes.reward = new RewardScene({
+      canvas: this.canvas,
+      renderer: this.renderer,
+      input: this.input,
+      getRewardChoices: () => this.rewardChoices,
+      getRewardTitle: () => this.rewardTitle,
+      isRewardSkippable: () => this.rewardSkippable,
+      onSelectArtifact: (artifact: Artifact) => {
+        this.grantArtifact(artifact);
+        const then = this.rewardThen;
+        this.rewardChoices = [];
+        this.rewardThen = null;
+        this.rewardSkippable = false;
+        if (then) then();
+      },
+      onSkip: () => {
+        const then = this.rewardThen;
+        this.rewardChoices = [];
+        this.rewardThen = null;
+        this.rewardSkippable = false;
+        if (then) then();
+      },
+    });
+
     this.setupUI();
   }
 
@@ -850,9 +876,6 @@ export class Game {
       }
       case 'paused':
         this.updatePaused();
-        break;
-      case 'reward':
-        this.updateReward();
         break;
       case 'skilltree':
         this.updateSkillTree();
@@ -4126,12 +4149,6 @@ export class Game {
     return rects;
   }
 
-  /** Word-wrap helper — delegates to the renderer's single canonical wrap so draw
-   *  and hit-test math share one implementation (see `Renderer.wrapLines`). */
-  private wrapText(text: string, maxWidth: number, fontPx: number): string[] {
-    return this.renderer.wrapLines(text, maxWidth, fontPx);
-  }
-
   /** The in-run gear button, top-right just under the wave panel. One source of
    *  truth so drawHUD (paints it) and updatePlaying (hit-tests it) never drift. */
   private gearButtonRect(): { x: number; y: number; width: number; height: number } {
@@ -4228,83 +4245,7 @@ export class Game {
 
   // ---- REWARD screen (1-of-3 artifact pick) ----
 
-  private drawReward(): void {
-    const ctx = this.renderer.getContext();
-    const { s, W, isMobile } = this.screenScale();
-    this.paintBackdrop();
-
-    this.renderer.drawText(this.rewardTitle || 'CHOOSE AN ARTIFACT', W / 2, s(isMobile ? 26 : 34), { size: s(isMobile ? 14 : 20), align: 'center', color: '#ffd700' });
-    this.renderer.drawText('Artifacts last the whole run', W / 2, s(isMobile ? 26 : 34) + s(isMobile ? 16 : 20), { size: s(isMobile ? 8 : 9), align: 'center', color: '#c8b998' });
-
-    const rarityColor: Record<string, string> = { rare: '#74c0fc', epic: '#b06bd9', legendary: '#f2b04e' };
-    const cardW = Math.min(W - s(32), s(isMobile ? 340 : 460));
-    const cardH = s(isMobile ? 74 : 68);
-    const gap = s(12);
-    const x0 = (W - cardW) / 2;
-    const topY = s(isMobile ? 72 : 92);
-    const bodyPx = s(isMobile ? 8 : 9);
-
-    const iconBox = s(isMobile ? 28 : 30);
-    const textX = x0 + s(12) + iconBox + s(8);
-    const textW = cardW - (textX - x0) - s(12);
-    this.rewardChoices.forEach((a, i) => {
-      const y = topY + i * (cardH + gap);
-      drawPanel(ctx, x0, y, cardW, cardH, DARK_WOOD_THEME, 11 + i, 53);
-      this.renderer.drawArtifactIcon(a.id, x0 + s(12), y + (cardH - iconBox) / 2, iconBox, 'left');
-      this.renderer.drawText(a.name, textX, y + s(isMobile ? 16 : 18), { size: s(isMobile ? 11 : 13), align: 'left', color: rarityColor[a.rarity] || '#ffffff' });
-      this.renderer.drawText(a.rarity.toUpperCase(), x0 + cardW - s(12), y + s(isMobile ? 16 : 18), { size: s(7), align: 'right', color: rarityColor[a.rarity] || '#ffffff' });
-      for (const [li, line] of this.wrapText(a.desc, textW, bodyPx).entries()) {
-        this.renderer.drawText(line, textX, y + s(isMobile ? 34 : 36) + li * (bodyPx + s(3)), { size: bodyPx, align: 'left', color: '#d8c9a8' });
-      }
-    });
-
-    // Optional Skip — decline the artifact (e.g. to keep a tight, focused build).
-    if (this.rewardSkippable) {
-      const skipY = topY + this.rewardChoices.length * (cardH + gap) + s(4);
-      const r = this.columnRects(1, skipY, s, W, isMobile)[0];
-      this.renderer.drawButton(r.x, r.y, r.width, r.height, 'Skip', false, true, isMobile);
-    }
-  }
-
-  private updateReward(): void {
-    if (!this.input.mouseDown) return;
-    const { s, W, isMobile } = this.screenScale();
-    const cardW = Math.min(W - s(32), s(isMobile ? 340 : 460));
-    const cardH = s(isMobile ? 74 : 68);
-    const gap = s(12);
-    const x0 = (W - cardW) / 2;
-    const topY = s(isMobile ? 72 : 92);
-    const mx = this.input.mouseX;
-    const my = this.input.mouseY;
-
-    for (let i = 0; i < this.rewardChoices.length; i++) {
-      const y = topY + i * (cardH + gap);
-      if (pointInRect(mx, my, { x: x0, y, width: cardW, height: cardH })) {
-        this.input.mouseDown = false;
-        this.grantArtifact(this.rewardChoices[i]);
-        const then = this.rewardThen;
-        this.rewardChoices = [];
-        this.rewardThen = null;
-        this.rewardSkippable = false;
-        if (then) then();
-        return;
-      }
-    }
-
-    // Skip button (same geometry as the draw pass).
-    if (this.rewardSkippable) {
-      const skipY = topY + this.rewardChoices.length * (cardH + gap) + s(4);
-      const r = this.columnRects(1, skipY, s, W, isMobile)[0];
-      if (pointInRect(mx, my, r)) {
-        this.input.mouseDown = false;
-        const then = this.rewardThen;
-        this.rewardChoices = [];
-        this.rewardThen = null;
-        this.rewardSkippable = false;
-        if (then) then();
-      }
-    }
-  }
+  // ---- REWARD screen — moved to RewardScene (step 10 of Game.ts de-god-classing) ----
 
   // ---- REST screen — moved to RestScene (step 5 of Game.ts de-god-classing) ----
 
@@ -4440,9 +4381,6 @@ export class Game {
         break;
       case 'paused':
         this.drawPaused();
-        break;
-      case 'reward':
-        this.drawReward();
         break;
       case 'skilltree':
         this.drawSkillTree();
