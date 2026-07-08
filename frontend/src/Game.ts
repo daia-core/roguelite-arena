@@ -31,11 +31,12 @@ import { ParticleBatchRenderer } from './ParticleBatchRenderer';
 import { drawPanel, DARK_WOOD_THEME } from './pixel/panel';
 import { DUO_COMBOS } from './DuoSystem';
 import { UISprites } from './UISprites';
-import { MapSystem, nodeIcon, nodeLabel, serializeMap, deserializeMap, type NodeType } from './MapSystem';
+import { MapSystem, serializeMap, deserializeMap } from './MapSystem';
 import { ArtifactSystem, ARTIFACTS, ROLLABLE_ARTIFACTS, getArtifactById, type Artifact } from './ArtifactSystem';
 import { randomEvent, EVENTS, type GameEvent, type EventEffect, type EventOption } from './EventSystem';
 import { EvolutionSystem, type Evolution } from './EvolutionSystem';
 import { VillageScene } from './VillageScene';
+import { MapScene } from './MapScene';
 import { SkillTree, SKILL_NODES, SKILL_EDGES, ARM_COLOR, getNode, neighborsOf, type SkillNode } from './SkillTree';
 import { getActiveSkillById } from './ActiveSkillSystem';
 import type { Scene } from './scenes/Scene';
@@ -412,8 +413,8 @@ export class Game {
     });
 
     // Register extracted per-screen scenes. MenuScene was the pilot (step 1);
-    // VillageScene is step 2. Both are pre-constructed here so the state machine
-    // can dispatch to them without lazy init.
+    // VillageScene is step 2; MapScene is step 3. Pre-constructed so the state
+    // machine can dispatch to them without lazy init.
     this.scenes.menu = new MenuScene(this);
     this.scenes.village = new VillageScene({
       canvas: this.canvas,
@@ -423,6 +424,13 @@ export class Game {
       meta: this.metaProgression,
       onEmbark: () => this.openClassSelect(),
       onBack: () => { this.state = 'menu'; },
+    });
+    this.scenes.map = new MapScene({
+      canvas: this.canvas,
+      renderer: this.renderer,
+      input: this.input,
+      mapSystem: this.mapSystem,
+      onNodePicked: (id) => this.onMapNodePicked(id),
     });
 
     this.setupUI();
@@ -809,9 +817,6 @@ export class Game {
         break;
       case 'gameover':
         this.updateGameOver();
-        break;
-      case 'map':
-        this.updateMap();
         break;
       case 'event':
         this.updateEvent();
@@ -4405,8 +4410,8 @@ export class Game {
       const nextAct = (this.mapSystem.map?.act ?? 0) + 1;
       this.mapSystem.generateAct(nextAct);
     }
+    this.scenes.map?.enter?.(this.state);
     this.state = 'map';
-    this.input.mouseDown = false;
   }
 
   /** Resolve a picked map node into the appropriate game state / reward. */
@@ -4603,92 +4608,6 @@ export class Game {
     ctx.fillStyle = '#120b05';
     ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     ctx.restore();
-  }
-
-  // ---- MAP screen ----
-
-  private drawMap(): void {
-    const ctx = this.renderer.getContext();
-    const { s, W, H, isMobile } = this.screenScale();
-    this.paintBackdrop();
-    const map = this.mapSystem.map;
-    if (!map) return;
-
-    this.renderer.drawText('CHOOSE YOUR PATH', W / 2, s(28), { size: s(isMobile ? 15 : 22), align: 'center', color: '#ffd700' });
-    this.renderer.drawText(`Act ${map.act}`, W / 2, s(28) + s(isMobile ? 16 : 22), { size: s(isMobile ? 9 : 11), align: 'center', color: '#c8b998' });
-
-    const placements = this.mapSystem.layout(W, H, s);
-    const reachable = new Set(this.mapSystem.reachable());
-
-    // Edges first (behind the nodes). Live edges (from the current node to a
-    // pickable node) glow gold; the rest are dim brown scaffolding.
-    ctx.save();
-    ctx.lineWidth = Math.max(1, s(2));
-    for (const node of map.nodes) {
-      const from = placements.get(node.id);
-      if (!from) continue;
-      for (const eid of node.edges) {
-        const to = placements.get(eid);
-        if (!to) continue;
-        const live = map.currentId === node.id && reachable.has(eid);
-        ctx.strokeStyle = live ? 'rgba(242,217,78,0.9)' : 'rgba(120,90,50,0.35)';
-        ctx.beginPath();
-        ctx.moveTo(from.x, from.y);
-        ctx.lineTo(to.x, to.y);
-        ctx.stroke();
-      }
-    }
-    ctx.restore();
-
-    const colors: Record<NodeType, string> = {
-      battle: '#c0855a', elite: '#d9534f', event: '#5bc0de',
-      treasure: '#f2d94e', rest: '#8ce99a', boss: '#b06bd9',
-    };
-
-    for (const node of map.nodes) {
-      const p = placements.get(node.id);
-      if (!p) continue;
-      const canPick = reachable.has(node.id);
-      const isCurrent = map.currentId === node.id;
-      ctx.save();
-      ctx.globalAlpha = (canPick || isCurrent || node.visited) ? 1 : 0.4;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-      ctx.fillStyle = (node.visited && !isCurrent) ? '#3a2c1a' : colors[node.type];
-      ctx.fill();
-      ctx.lineWidth = s(canPick ? 3 : 2);
-      ctx.strokeStyle = isCurrent ? '#ffffff' : (canPick ? '#fff2b0' : '#2a1c0e');
-      ctx.stroke();
-      ctx.restore();
-
-      this.renderer.drawText(nodeIcon(node.type), p.x, p.y - s(5), { size: s(isMobile ? 14 : 17), align: 'center', color: '#1a1008' });
-      this.renderer.drawText(nodeLabel(node.type), p.x, p.y + p.r + s(3), { size: s(isMobile ? 7 : 8), align: 'center', color: canPick ? '#ffffff' : '#9a8a6a' });
-    }
-
-    this.renderer.drawText(
-      map.currentId ? 'Tap a lit node to advance' : 'Tap a starting node',
-      W / 2, H - s(22), { size: s(isMobile ? 8 : 9), align: 'center', color: '#c8b998' }
-    );
-  }
-
-  private updateMap(): void {
-    if (!this.input.mouseDown) return;
-    const { s, W, H } = this.screenScale();
-    const placements = this.mapSystem.layout(W, H, s);
-    const mx = this.input.mouseX;
-    const my = this.input.mouseY;
-    for (const id of this.mapSystem.reachable()) {
-      const p = placements.get(id);
-      if (!p) continue;
-      const dx = mx - p.x;
-      const dy = my - p.y;
-      const hit = p.r * 1.6; // generous tap target for mobile
-      if (dx * dx + dy * dy <= hit * hit) {
-        this.input.mouseDown = false;
-        this.onMapNodePicked(id);
-        return;
-      }
-    }
   }
 
   // ---- EVENT screen ----
@@ -5191,9 +5110,6 @@ export class Game {
         break;
       case 'gameover':
         this.drawGameOver();
-        break;
-      case 'map':
-        this.drawMap();
         break;
       case 'event':
         this.drawEvent();
