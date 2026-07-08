@@ -27,7 +27,7 @@ export interface GameEvent {
   options: EventOption[];
 }
 
-// ~9 events — a mix of pure upside (rare), gamble, and cost/benefit trades so the
+// ~26 events — a mix of pure upside (rare), gamble, and cost/benefit trades so the
 // `?` node always feels like a real decision rather than free loot.
 export const EVENTS: GameEvent[] = [
   {
@@ -192,6 +192,177 @@ export const EVENTS: GameEvent[] = [
         result: 'You feed the god in coin. It restores your wounds and asks nothing more.' },
       { label: 'Turn away', effects: [{ kind: 'nothing' }],
         result: 'The god watches you leave. Hungry.' },
+    ],
+  },
+
+  // ---- ADDITIONAL REGULAR EVENTS — expand run variety on the ? node ----
+  {
+    id: 'pillar',
+    title: 'The Memory Pillar',
+    text: 'An ancient obelisk hums with inscribed runes. They pulse faintly as you approach.',
+    options: [
+      { label: 'Touch the runes', effects: [{ kind: 'item' }],
+        result: 'Knowledge floods your hands — and something useful forms there.' },
+      { label: 'Meditate before it', effects: [{ kind: 'heal', frac: 0.5 }],
+        result: 'The quiet resonance knits your wounds.' },
+      { label: 'Leave it standing', effects: [{ kind: 'nothing' }],
+        result: 'The runes dim as you pass. Their secret stays buried.' },
+    ],
+  },
+  {
+    id: 'poison_well',
+    title: 'The Poison Well',
+    text: 'The water is black and smells of copper. Those who survive it grow stronger.',
+    options: [
+      { label: 'Drink deep', effects: [{ kind: 'hurt', frac: 0.25 }, { kind: 'artifact' }],
+        result: 'It burns all the way down — and something inside you ignites.' },
+      { label: 'Take a cautious sip', effects: [{ kind: 'hurt', frac: 0.1 }, { kind: 'heal', frac: 0.3 }],
+        result: 'Minor pain, minor mending. Tested but intact.' },
+      { label: 'Leave it alone', effects: [{ kind: 'nothing' }],
+        result: 'Some strengths are not worth the cost.' },
+    ],
+  },
+  {
+    id: 'orc_champion',
+    title: 'The Orc Champion',
+    text: 'A scarred orc bars the path. "Fight me and take your prize. Or crawl past."',
+    options: [
+      { label: 'Accept the duel', effects: [{ kind: 'hurt', frac: 0.3 }, { kind: 'artifact' }, { kind: 'gold', amount: 40 }],
+        result: 'You trade blows, bleed freely, and win. The orc nods with real respect.' },
+      { label: 'Pay tribute (50g)', effects: [{ kind: 'gold', amount: -50 }, { kind: 'item' }],
+        result: 'A tense exchange. Coin for passage and a trinket thrown in.' },
+      { label: 'Back away', effects: [{ kind: 'nothing' }],
+        result: 'You retreat slowly. The orc laughs but lets you pass.' },
+    ],
+  },
+  {
+    id: 'burial_mound',
+    title: 'Ancient Burial Mound',
+    text: 'Freshly disturbed earth. Something valuable was buried here — someone was buried with it.',
+    options: [
+      { label: 'Dig it up', effects: [{ kind: 'item' }, { kind: 'hurt', frac: 0.15 }],
+        result: 'You find what you sought — but the dead never rest easy in these lands.' },
+      { label: 'Leave an offering (20g)', effects: [{ kind: 'gold', amount: -20 }, { kind: 'heal', frac: 0.4 }],
+        result: 'The mound accepts your gold. A warm peace settles over you.' },
+      { label: 'Walk past', effects: [{ kind: 'nothing' }],
+        result: 'You leave the dead undisturbed. Some peace is best kept.' },
+    ],
+  },
+  {
+    id: 'echoing_library',
+    title: 'The Echoing Library',
+    text: 'Shelves stretch out of sight. Books and scrolls crowd every surface, many still legible.',
+    options: [
+      { label: 'Study the stacks', effects: [{ kind: 'maxHp', amount: 30 }, { kind: 'item' }],
+        result: 'Hours well spent — knowledge hardens the body and fills the hands.' },
+      { label: 'Grab what you can carry', effects: [{ kind: 'item' }, { kind: 'gold', amount: 20 }],
+        result: 'Useful gear and whatever coin fell loose from a tome.' },
+      { label: 'Burn it — deny the enemy', effects: [{ kind: 'gold', amount: 80 }],
+        result: 'The fire burns bright and brief. You sift the ash for coin.' },
+    ],
+  },
+  {
+    id: 'bone_witch',
+    title: 'The Bone Witch',
+    text: 'A hunched crone sits among trophies. "Trade me something — I will give something back."',
+    options: [
+      { label: 'Trade vitality for power', effects: [{ kind: 'maxHp', amount: -30 }, { kind: 'artifact' }],
+        result: 'She takes what she needs — and hands you something older than your fear.' },
+      { label: 'Trade gold for healing (40g)', effects: [{ kind: 'gold', amount: -40 }, { kind: 'heal', frac: 0.6 }],
+        result: 'A fair trade. She mends your wounds with something sharp-smelling.' },
+      { label: 'Offer nothing', effects: [{ kind: 'nothing' }],
+        result: '"Come back with something worth trading." You leave empty-handed.' },
+    ],
+  },
+  {
+    id: 'trapped_chest',
+    title: 'Suspicious Chest',
+    text: 'A chest in the middle of the room — no door in, no enemies. Unnervingly neat.',
+    options: [
+      { label: 'Open it boldly', effects: [{ kind: 'item' }],
+        result: 'It opens cleanly. Maybe it was just a chest.' },
+      { label: 'Spike it first', effects: [{ kind: 'hurt', frac: 0.12 }, { kind: 'artifact' }],
+        result: 'The spike triggers — but so does the real mechanism. Pain, and a real prize.' },
+      { label: 'Leave it be', effects: [{ kind: 'nothing' }],
+        result: 'You nudge it with your foot. It does not spring. You leave it.' },
+    ],
+  },
+  {
+    id: 'traveling_smith',
+    title: 'The Traveling Smith',
+    text: 'A smith has set up a makeshift forge in the ruins. Her hammer rings steady.',
+    options: [
+      { label: 'Commission two pieces (50g)', effects: [{ kind: 'gold', amount: -50 }, { kind: 'item' }, { kind: 'item' }],
+        result: 'She works fast. Two pieces, paid for fairly.' },
+      { label: 'Have her reinforce you (30g)', effects: [{ kind: 'gold', amount: -30 }, { kind: 'maxHp', amount: 25 }],
+        result: 'She tempers something inside you. Your frame grows a little harder.' },
+      { label: 'Watch but buy nothing', effects: [{ kind: 'nothing' }],
+        result: 'The craft is admirable. You move on.' },
+    ],
+  },
+  {
+    id: 'haunted_mirror',
+    title: 'The Haunted Mirror',
+    text: 'Your reflection moves a beat behind — and it is holding something you are not.',
+    options: [
+      { label: 'Reach through the glass', effects: [{ kind: 'hurt', frac: 0.2 }, { kind: 'artifact' }],
+        result: 'Cold fingers close on yours. You pull something back — and bleed.' },
+      { label: 'Smash it', effects: [{ kind: 'gold', amount: 45 }],
+        result: 'Seven years bad luck they say. The shards fetch decent coin either way.' },
+      { label: 'Walk away', effects: [{ kind: 'nothing' }],
+        result: 'You refuse to look again. The reflection is still there as you leave.' },
+    ],
+  },
+  {
+    id: 'flooded_vault',
+    title: 'The Flooded Vault',
+    text: 'Knee-deep black water. Something gleams beneath the surface in two separate spots.',
+    options: [
+      { label: 'Wade in and salvage both', effects: [{ kind: 'item' }, { kind: 'item' }],
+        result: 'You surface cold, slow, and loaded. Worth it.' },
+      { label: 'Dive for the brightest gleam', effects: [{ kind: 'artifact' }, { kind: 'hurt', frac: 0.15 }],
+        result: 'The gleam was real. So was whatever bit you on the way back.' },
+      { label: 'Drain what you can reach', effects: [{ kind: 'gold', amount: 55 }],
+        result: 'Shallow pickings — but coin you can spend.' },
+    ],
+  },
+  {
+    id: 'twin_gamble',
+    title: "The Twin's Challenge",
+    text: 'Your shadow separates from you. "Survive the split and claim double the prize."',
+    options: [
+      { label: 'Accept the challenge', effects: [{ kind: 'hurt', frac: 0.3 }, { kind: 'artifact' }, { kind: 'artifact' }],
+        result: 'Pain splits you apart. You reunite — battered, but carrying two prizes.' },
+      { label: 'Bribe the twin (60g)', effects: [{ kind: 'gold', amount: -60 }, { kind: 'heal', frac: 0.35 }],
+        result: 'Coin soothes the shadow. You recover and it rejoins you, satisfied.' },
+      { label: 'Refuse', effects: [{ kind: 'nothing' }],
+        result: 'Your shadow snaps back into place. The moment passes.' },
+    ],
+  },
+
+  // ---- DEVIL DEALS (continued) — curse_myopia added, full curse roster covered ----
+  {
+    id: 'devil_hollow_eye',
+    title: 'The Hollow Eye',
+    text: 'A floating orb of obsidian promises perfect sight — at the cost of your precision.',
+    options: [
+      { label: 'Accept the vision', effects: [{ kind: 'artifact' }, { kind: 'gold', amount: 80 }, { kind: 'curse', id: 'curse_myopia' }],
+        result: 'Your sight widens across the entire arena — but your aim goes blurry at its edges. (+artifact, +80g, -12% crit forever)' },
+      { label: 'Refuse the eye', effects: [{ kind: 'nothing' }],
+        result: 'The orb drifts away. You were the smarter one.' },
+    ],
+  },
+  {
+    id: 'devil_rot_crown',
+    title: 'The Rot Crown',
+    text: 'A crown woven from blighted vines promises a stronger body — and leaden legs.',
+    options: [
+      { label: 'Wear the crown', effects: [{ kind: 'maxHp', amount: 80 }, { kind: 'artifact' }, { kind: 'curse', id: 'curse_sloth' }],
+        result: 'Life surges in — and your legs grow heavier with each step. (+80 max HP, +artifact, -30% move speed forever)' },
+      { label: 'Tear it apart for coin', effects: [{ kind: 'gold', amount: 55 }, { kind: 'heal', frac: 0.25 }],
+        result: 'The vines smoulder slowly. Their ash is surprisingly valuable, and the warmth mends you a little.' },
+      { label: 'Leave it', effects: [{ kind: 'nothing' }],
+        result: 'The crown waits for a braver fool.' },
     ],
   },
 ];
