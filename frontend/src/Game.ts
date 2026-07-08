@@ -3461,8 +3461,11 @@ export class Game {
     }
   }
 
+  /** Public getter for the village scene (used by qa-village.mjs). */
+  get villageScene(): VillageScene { return this.scenes.village as VillageScene; }
+
   /** Transition to the walkable village base. */
-  private enterVillage(): void {
+  enterVillage(): void {
     this.scenes.village?.enter?.(this.state);
     this.state = 'village';
   }

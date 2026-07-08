@@ -105,8 +105,8 @@ export class VillageScene implements Scene {
   // World / camera (all in canvas px, recomputed each frame from canvas size)
   private worldW = 0;
   private worldH = 0;
-  private camX = 0;
-  private camY = 0;
+  camX = 0;   // public for qa-village.mjs
+  camY = 0;   // public for qa-village.mjs
 
   // Player avatar (world coords, at the feet)
   private px = 0;
