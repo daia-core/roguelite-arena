@@ -6,6 +6,21 @@ portrait viewport).
 
 ---
 
+## 2026-07-08 (night) — All 26 active skills now reachable in the shop
+
+**Player-visible**
+- Fixed a significant gap: 26 active skills existed in the game but only 10 had shop scroll items. The other 16 (Arcane Barrage, Inferno Aura, Crystal Burst, Blade Storm, Lightning Storm, Void Pulse, Blizzard, Gravity Pull, Time Warp, Vampire Burst, Spectral Dash, Plague Bomb, Black Hole, Curse Wave, Divine Wrath, Armageddon) were entirely unreachable by the player.
+- 16 new Spell Scroll shop items added, one per missing skill, tiered correctly (Common t1 → Legendary t4).
+- Scroll descriptions updated from `[Q]` to `[Q/E]` to reflect dual active skill slots added earlier this session. First scroll bought goes to Q; a second scroll goes to E; buying a third replaces the oldest.
+
+**Under the hood**
+- 26 `activatesSkill` entries in `catalog.ts` now match the 26 skills defined in `ActiveSkillSystem.ts` (verified via bundle grep — all 26 `scroll_*` IDs present, 26 `[Q/E]` refs, 0 stale `[Q]`-only refs).
+- TS clean; bundle `index-C1l0CG-0.js` confirmed live at roguelite-game-blush.vercel.app.
+
+**Commit** `e8e42e4`
+
+---
+
 ## 2026-07-08 (night) — Dynamic mobile skill labels
 
 **Player-visible**
