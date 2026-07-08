@@ -6,6 +6,16 @@ portrait viewport).
 
 ---
 
+## 2026-07-08 (evening) — ClassSelectScene extracted (step 9 de-god-classing)
+
+**Player-visible**
+- No gameplay change. Class selection screen behavior is identical.
+
+**Internal**
+- `ClassSelectScene.ts` (104 lines) extracted from `Game.ts`: owns `classCardLayout`, `updateClassSelect`, `drawClassSelect`
+- Game.ts: 5,016 → 4,961 lines (−55). TypeScript clean.
+- **Commit:** `af239e4` | **Bundle:** `index-BOiKwZu-.js` | **Live:** roguelite-game-blush.vercel.app ✓
+
 ## 2026-07-08 (evening) — AchievementsScene extracted (step 8 de-god-classing)
 
 **Player-visible**

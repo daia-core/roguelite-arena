@@ -1,6 +1,6 @@
 # Roguelite Arena — Architecture Overview
 
-> **Last updated: 2026-07-08** — AchievementsScene extracted (step 8, −95 lines, Game.ts now 5,016 lines); GameOverScene (step 7); ShopScene (step 6); RestScene (step 5); EventScene (step 4); MapScene (step 3). 34 active skills, 1335+ items, AoeZone constraint documented.
+> **Last updated: 2026-07-08** — ClassSelectScene extracted (step 9, −55 lines, Game.ts now 4,961 lines); AchievementsScene (step 8); GameOverScene (step 7); ShopScene (step 6); RestScene (step 5); EventScene (step 4); MapScene (step 3). 34 active skills, 1335+ items, AoeZone constraint documented.
 
 ---
 
