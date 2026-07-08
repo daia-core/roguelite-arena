@@ -172,7 +172,7 @@ effects (heal 40% HP / +15 max HP) and returns the outcome text.
 > each had 155–235 lines and 1–2 callbacks. ShopScene is ~800 lines with 20+
 > dependencies. Plan, verify TypeScript, and deploy before touching Game.ts.
 
-**Methods to move into `ShopScene.ts` (~820 lines total):**
+**Methods to move into `ShopScene.ts` (~960 lines total):**
 
 | Method | Lines | Notes |
 |--------|-------|-------|
@@ -184,7 +184,8 @@ effects (heal 40% HP / +15 max HP) and returns the outcome text.
 | `handleInspectPopupTap()` | 5665–5706 | Inspect popup input |
 | `handleEquipmentStripTap()` | 5611–5664 | Equipment strip input |
 | `showShopToast()` | 5707–5721 | Toast helper |
-| `autoBuyAll()` | 4356–4418 | Calls onPurchase/onReroll loop |
+| `autoBuyAll()` | 4356–4383 | Calls onPurchase/onReroll loop via callbacks |
+| `drawEquipmentStrip()` | 5477–5610 (~134) | Equipment/stash rendering — was missing from original plan; writes equipSlotRects/stashItemRects/stashSellRects (own state) |
 | `drawInspectPopup()` | 6270–6534 | Inspect popup rendering |
 | `drawCombosOverlay()` | 6535–6841 | Combos guide rendering |
 
@@ -209,9 +210,10 @@ private inspectedEquipKey: EquipHolderKey | null = null;
 private inspectUnequipRect: Rect | null = null;
 private inspectSellRect: Rect | null = null;
 
-// Equipment strip
-private equipSlotRects: EquipSlotRect[] = [];
-// (stashItemRects etc. — check drawEquipmentStrip for full list)
+// Equipment strip hit-rects (written by drawEquipmentStrip, read by handleEquipmentStripTap)
+private equipSlotRects: Array<{ key: EquipHolderKey; x: number; y: number; width: number; height: number }> = [];
+private stashItemRects: Array<{ index: number; x: number; y: number; width: number; height: number }> = [];
+private stashSellRects: Array<{ index: number; x: number; y: number; width: number; height: number }> = [];
 
 // Toast
 private shopToastText = '';
@@ -235,7 +237,7 @@ interface ShopSceneDeps {
   canvas: HTMLCanvasElement;
   renderer: Renderer;
   input: Input;
-  audio: AudioSystem;
+  audio: AudioManager;        // not AudioSystem — actual type in Game.ts
 
   // Read-only views (pass by reference — shop reads but never writes)
   getPlayer(): Player | null;
@@ -243,14 +245,17 @@ interface ShopSceneDeps {
   getSkillTree(): SkillTree;
   getWave(): number;
 
-  // Mutations (all owned by Game.ts)
-  onPurchase(slotIndex: number): boolean;  // returns true on success
-  onReroll(): boolean;                      // returns true on success
+  // Mutations (all owned by Game.ts — each callback does the FULL chain:
+  //   the primary action + player.gold update + syncMaxHealth + updateMobileSkillButtons)
+  onPurchase(slotIndex: number): boolean;  // purchaseShopItem(i) — returns true on success
+  onReroll(): boolean;                      // rerollShop() — returns true on success
   onContinue(): void;                       // toMapFromShop()
   onOpenSkillTree(): void;                  // openSkillTree(true)
-  onSellEquip(key: EquipHolderKey, sellFor: number): void;
-  onUnequipToStash(key: EquipHolderKey): void;
-  onEquipFromStash(stashIndex: number): void;
+  onSellFromStash(stashIndex: number): void;   // sell a stash item (removeItem + gold += sellValue + syncMax + mobileSkills)
+  onEquipFromStash(stashIndex: number): void;  // equipFromStash + syncMax + mobileSkills
+  // Equip-slot inspect popup actions — full mutation chain each:
+  onUnequipToStash(key: EquipHolderKey): void; // unequipToStash OR sell-if-full + gold + syncMax + mobileSkills
+  onSellEquip(key: EquipHolderKey): void;      // removeItem + gold += sellValue + syncMax + mobileSkills
 }
 ```
 
