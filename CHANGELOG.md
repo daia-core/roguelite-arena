@@ -6,6 +6,30 @@ portrait viewport).
 
 ---
 
+## 2026-07-08 (morning, heartbeat #2) — Game-over button fix + View Achievements
+
+**Player-visible**
+- **Game-over buttons now register correctly on all screen sizes.** The click zones were offset
+  from the drawn buttons by up to 20px (especially on mobile) — the two functions used
+  mismatched layout constants. Fixed: click zones now share the same isMobile-aware math as
+  the drawing code.
+- **"🏆 View Achievements" button on the game-over screen (desktop).** When you earn at least one
+  achievement in a run, a fourth button appears below "Main Menu" and takes you straight to the
+  Achievements screen. The existing "★ UNLOCKED: …" text line is still there for mobile. The
+  Achievements screen (always accessible from Main Menu) shows every achievement, its reward item,
+  and lets you enable/disable locked rewards to fine-tune the shop pool.
+
+**Under the hood**
+- `Game.ts`: `updateGameOver()` aligned to `drawGameOver()` layout (isMobile, buttonWidth/Height,
+  spacing, startY). On desktop with new achievements, buttons shift up one slot to make room for
+  the fourth. Used `else if` chain so only one button registers per click.
+
+**Commit** `4b089aa`
+**Verified** live at https://roguelite-game-blush.vercel.app — bundle `index-8P2P8btr.js` served
+(HTTP 200, "View Achievements" string confirmed present in live JS).
+
+---
+
 ## 2026-07-08 (morning, heartbeat) — Stacked-value chips + 530 new-mechanic items (→1894)
 
 **Player-visible**
