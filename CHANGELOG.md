@@ -6,6 +6,26 @@ portrait viewport).
 
 ---
 
+## 2026-07-08 (evening) — ShopScene extracted (step 6 de-god-classing)
+
+**Player-visible**
+- No gameplay change. Shop, equipment strip, combos overlay, inspect popup, stats popup behaviour is identical.
+
+**Internal**
+- `ShopScene.ts` (~900 lines) extracted from Game.ts: owns all shop UI state
+  (selectedShopItem, showCombosOverlay, showStatsPopup, toast, inspect rects, equipment strip rects)
+  and all draw/update methods (updateShop, drawShop, drawEquipmentStrip, drawInspectPopup,
+  drawStatsPopup, drawCombosOverlay, handleEquipmentStripTap, handleInspectPopupTap,
+  getShopLayout, getCombosButtonRect, getSkillsButtonRect, autoBuyAll,
+  getCardDuoInfo, getCardEvolutionInfo).
+- ShopSceneDeps pattern: inventory state (shopItems, lockedShopItems, shopRerollCost) stays
+  in Game.ts, read by ShopScene via getters; mutations via onPurchase/onReroll/onContinue callbacks.
+- Game.ts: -1,569 lines (6861 → 5292). Compile clean. QA 0 errors. Deployed.
+
+**Commit:** `e742a11` — **live `index-Ds8xtZWX.js` ✓** (prod alias roguelite-game-blush.vercel.app 200, shopScene + COMBOS strings confirmed in bundle).
+
+---
+
 ## 2026-07-08 (afternoon) — RestScene extracted (step 5 de-god-classing)
 
 **Player-visible**

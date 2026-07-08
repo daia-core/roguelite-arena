@@ -1,6 +1,6 @@
 # Roguelite Arena — Architecture Overview
 
-> **Last updated: 2026-07-08** — ShopScene extraction plan added (step 6, complex — see §ShopScene); RestScene extracted (step 5); EventScene (step 4); MapScene (step 3). 34 active skills, 1335+ items, AoeZone constraint documented.
+> **Last updated: 2026-07-08** — ShopScene extracted (step 6, ~1,569 lines removed, Game.ts now ~5,292 lines); RestScene (step 5); EventScene (step 4); MapScene (step 3). 34 active skills, 1335+ items, AoeZone constraint documented.
 
 ---
 
@@ -46,7 +46,7 @@ this.spawnAoeZone(new AoeZone(x, y, r, baseDmg, delay, { color }));
 
 Core Loop               Extended Systems          Meta / UI
 ──────────────          ────────────────          ─────────────
-Game.ts (7k lines)      StatusEffectEngine         AchievementSystem
+Game.ts (~5.3k lines)   StatusEffectEngine         AchievementSystem
 Player.ts               ActiveSkillSystem           MetaProgression
 Enemy.ts (2k)           ArtifactSystem              SkillTree (~185 nodes)
 WaveManager.ts          EventSystem                 SaveManager
@@ -165,7 +165,7 @@ The campfire node's heal-or-upgrade screen. Extracted from Game.ts in step 5 (20
 `restResolved` and `restResultText`. Calls `onChoose('rest'|'train')` for Game to apply player
 effects (heal 40% HP / +15 max HP) and returns the outcome text.
 
-### ShopScene — PLANNED extraction (step 6) ⚠️ complex
+### ShopScene — ✅ EXTRACTED (step 6, 2026-07-08, commit e742a11)
 
 > **Read this before attempting the extraction** — the shop is far more
 > interconnected than the scenes already extracted. MapScene/EventScene/RestScene
