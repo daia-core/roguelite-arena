@@ -286,6 +286,132 @@ enter(items: (Item | null)[], lockedIndices: Set<number>, lastInterest: number):
 
 ---
 
+### Step 13 — `drawHUD` + `updateMobileSkillButtons` → `HUDRenderer.ts` (next recommended pull)
+
+> **Quick win (~238 lines, LOW risk)** — pure render/DOM methods, no mutation of core game state.
+> Read this before attempting; then extract, compile-check, and deploy.
+
+**Methods to move:**
+
+| Method | Lines in Game.ts | Notes |
+|--------|-----------------|-------|
+| `drawHUD()` | 4282–4483 (~201) | Reads player/wave/enemy state, renders left panel, right panel, gear button, boss bar, skill bars |
+| `updateMobileSkillButtons()` | 4483–4520 (~37) | DOM writes only — updates `#blastBtn` / `#skillEBtn` HTML |
+
+**Dependencies `drawHUD` reads (all read-only):**
+- `this.player` — health, maxHealth, xp, xpToNextLevel, level, gold, shield, pendingDodges
+- `this.playerStats` — `getEquippedSkillIdQ()`, `getEquippedSkillId()`, `getWeaponSpecialization()`
+- `this.waveManager` — currentWave, isBossWave, isHordeWave, waveTimer, waveEnemiesRemaining
+- `this.enemies` — length (enemy count), `.find(isBoss)` (boss HP bar)
+- `this.canvas` — width, height, clientWidth
+- `this.renderer` — `getContext()`, `drawText()`
+- `this.activeSkillCooldown`, `this.activeSkillCooldownE` — cooldown fractions for skill bars
+- `this.gearButtonRect()` — must be exposed or inlined; tiny method
+- `this.safeAreaTop(zoom)` — must be exposed or inlined
+- `UISprites.getIcon(...)`, `drawPanel(...)`, `getActiveSkillById(...)` — module imports, no change needed
+
+**Dependencies `updateMobileSkillButtons` reads:**
+- `this.playerStats` — `getEquippedSkillIdQ()`, `getEquippedSkillId()`
+- `getActiveSkillById(...)` — import from ActiveSkillSystem
+
+**Proposed interface:**
+
+```typescript
+interface HUDRendererDeps {
+  canvas: HTMLCanvasElement;
+  renderer: Renderer;
+  getPlayer(): Player | null;
+  getPlayerStats(): PlayerStats;
+  getWaveManager(): WaveManager;
+  getEnemies(): Enemy[];
+  getActiveSkillCooldownQ(): number;
+  getActiveSkillCooldownE(): number;
+  getGearButtonRect(): { x: number; y: number; width: number; height: number };
+  getSafeAreaTop(zoom: number): number;
+}
+```
+
+**Extraction order (3 steps):**
+1. Create `HUDRenderer.ts` with `HUDRendererDeps` interface + move both methods verbatim, replacing `this.X` reads with `this.deps.getX()` calls. Compile-check standalone.
+2. In `Game.ts` constructor: `this.hudRenderer = new HUDRenderer(deps)`. Replace the `this.drawHUD()` call in `drawPlaying()` with `this.hudRenderer.drawHUD()`. Replace `this.updateMobileSkillButtons()` calls (search for them) with `this.hudRenderer.updateMobileSkillButtons()`.
+3. Delete both methods from Game.ts. TypeScript compile + quick mobile-button smoke test.
+
+**Estimated line reduction:** ~238 lines from Game.ts.
+
+---
+
+### Step 14 — `useActiveSkill` → merged into `ActiveSkillSystem.ts` (MEDIUM complexity)
+
+> **~645 lines** (lines ~1944–2589 in current Game.ts). Higher risk than HUD extraction —
+> touches enemies/player/combat infrastructure. Plan carefully; do after step 13.
+
+`useActiveSkill` is a large `switch(skill.effect)` block dispatching 34 active skill effects.
+`ActiveSkillSystem.ts` already owns the skill *definitions* (ACTIVE_SKILLS array, `getActiveSkillById`).
+Moving the *dispatch* there collapses the logical split between "what a skill is" and "what it does."
+
+**What `useActiveSkill` writes/calls (must be passed as a context object):**
+
+| Game.ts symbol | Type | Notes |
+|---|---|---|
+| `this.enemies` | `Enemy[]` | Iterated + frozen/DoT timers written |
+| `this.player` | `Player` | Read position, heal() called for lifesteal skills |
+| `this.playerStats` | `PlayerStats` | getDamage(), getEquippedSkillId*() |
+| `this.pendingDmg.push(...)` | callback | Deferred AoE damage |
+| `this.activeDmgZones.push(...)` | callback | Persistent tick zones |
+| `this.spawnAoeZone(zone)` | callback | Visual telegraph |
+| `this.dealAuxDamage(e, dmg, color)` | callback | Per-enemy hit + lifesteal + particles |
+| `this.projectiles.push(...)` | callback | Bone Spear, phoenix beam, etc. |
+| `this.particles.push(...)` / `createParticle(...)` | callback | Visual effects |
+| `this.screenEffects.shake(...)` | callback | Thunder Clap, etc. |
+| `this.activeSkillCooldown` / `this.activeSkillCooldownE` | field write | Cooldown reset |
+
+**Proposed interface:**
+
+```typescript
+interface ActiveSkillContext {
+  enemies: Enemy[];
+  player: Player;
+  playerStats: PlayerStats;
+  pushPendingDmg(x: number, y: number, r: number, dmg: number, delay: number, color: string): void;
+  pushActiveDmgZone(x: number, y: number, r: number, dmgPerSec: number, remaining: number, color: string): void;
+  spawnAoeZone(zone: AoeZone): void;
+  dealAuxDamage(enemy: Enemy, dmg: number, color: string): void;
+  pushProjectile(p: Projectile): void;
+  createParticle(config: ParticleConfig): Particle;
+  shakeScreen(intensity: number, duration: number): void;
+  setCooldown(slot: 'q' | 'e', value: number): void;
+}
+```
+
+**New method in `ActiveSkillSystem.ts`:**
+
+```typescript
+executeSkill(skillId: string, slot: 'q' | 'e', ctx: ActiveSkillContext): void {
+  const skill = getActiveSkillById(skillId);
+  if (!skill) return;
+  ctx.setCooldown(slot, skill.cooldown);
+  const baseDmg = ctx.playerStats.getDamage() * skill.baseDamageMultiplier;
+  const px = ctx.player.x, py = ctx.player.y;
+  switch (skill.effect) {
+    // ... move all 34 cases verbatim, replace this.X with ctx.X ...
+  }
+}
+```
+
+**Extraction order (4 steps):**
+1. Define `ActiveSkillContext` interface in `ActiveSkillSystem.ts`. Add `executeSkill()` method with all 34 switch cases verbatim (replacing `this.` with `ctx.` throughout). Compile-check standalone.
+2. In `Game.ts` `useActiveSkill()`: replace entire switch body with `this.activeSkillSystem.executeSkill(skillId, slot, ctx)` where `ctx` captures `this` references via arrow closures. Keep cooldown-check guard at the top.
+3. TypeScript compile + smoke each skill type in-browser (one per category: meteor/AoE, frost_nova/CC, chain_lightning/bounce, blood_nova/lifesteal, orbital_strike/multi-impact, bone_spear/projectile).
+4. Delete the moved switch body from Game.ts. Final TypeScript compile + Vercel deploy.
+
+**Estimated line reduction:** ~645 lines from Game.ts → Game.ts under 3,900 lines.
+
+**⚠️ Key risk:** `dealAuxDamage` is referenced in 3 places by `useActiveSkill`. It must remain in
+Game.ts (it touches `this.players`, `this.damageNumbers`, etc.) and be passed as a callback — do NOT
+move it into ActiveSkillSystem. Keep the callback pattern; don't reach back into Game.
+
+---
+
 ### ArtifactSystem
 Artifacts trigger active powers during combat (e.g. Overcharge fires a 3× nova every N shots).
 Called from `Game.ts` update loop.
