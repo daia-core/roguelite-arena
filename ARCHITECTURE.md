@@ -1,6 +1,6 @@
 # Roguelite Arena — Architecture Overview
 
-> **Last updated: 2026-07-08** — Step 16 SHIPPED: `drawPlaying()` → `PlayingRenderer.ts` extracted. Game.ts 3,749 → 3,613 lines (−136 net). Commit `cfa58aa`, live `index-VAtDyVod.js` ✓. 8 QA scripts PASS. Next: step 17 — `drawEvolutionBanner()` → `EvolutionBannerRenderer` or identify next largest cohesive domain.
+> **Last updated: 2026-07-09** — QA infrastructure fixes: `qa-village.mjs` PASS (villageScene getter + camX/camY public + enterVillage() public); `simulate-balance.mjs` runs (finishSkillTree() added). Commits `928924d` + `7140ad1`, live `index-BeaPZxfx.js` ✓. Game.ts 3,619 lines. Next: step 17 — `drawEvolutionBanner()` → `EvolutionBannerRenderer` or identify next largest cohesive domain.
 
 ---
 
