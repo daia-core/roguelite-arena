@@ -120,7 +120,7 @@ export class ShopScene implements Scene {
    * visuals, so both consume this. Values are canvas px, derived from display
    * (CSS) sizes via the zoom factor so the shop reads identically at any zoom.
    */
-  private getShopLayout() {
+  getShopLayout() {
     const canvas = this.deps.canvas;
     const zoom = canvas.clientWidth ? canvas.width / canvas.clientWidth : 1;
     const cssW = canvas.width / zoom;

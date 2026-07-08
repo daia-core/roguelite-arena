@@ -74,13 +74,13 @@ const errors = [];
   await new Promise((r) => setTimeout(r, 1200));
   await page.screenshot({ path: path.join(OUT, 'live-02-shop-portrait.png') });
 
-  // Replicate the game's own hitbox math (Game.getShopLayout + updateShop) to find
+  // Replicate the shop layout math (ShopScene.getShopLayout via window.__shopScene, falling back to g.getShopLayout if present) to find
   // the first purchasable card, click its CENTER, and confirm gold drops -> proves the
   // portrait click hitbox aligns with the visible card (the bug that was fixed).
   const clickResult = await page.evaluate(() => {
     const g = window.__game;
     if (!g) return { ok: false, reason: 'no __game' };
-    const L = g.getShopLayout();
+    const ss = window.__shopScene; const L = ss ? ss.getShopLayout() : g.getShopLayout?.();
     const items = g.shopItems || [];
     let target = null;
     for (let i = 0; i < items.length; i++) {

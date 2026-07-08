@@ -89,7 +89,7 @@ for (const size of SIZES) {
       g.shopItems = items.slice(0, 3);
     }
     g.state = 'shop';
-    const L = g.getShopLayout();
+    const ss = window.__shopScene; const L = ss ? ss.getShopLayout() : g.getShopLayout?.();
     const W = g.canvas.width, H = g.canvas.height;
 
     // Rebuild the exact card rects the draw/hit loops use.

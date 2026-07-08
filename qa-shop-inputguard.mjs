@@ -52,7 +52,7 @@ const out = await page.evaluate(() => {
   g.player.gold = 9999;       // plenty to afford anything
 
   // Aim the held finger at the centre of card 0.
-  const L = g.getShopLayout();
+  const ss = window.__shopScene; const L = ss ? ss.getShopLayout() : g.getShopLayout?.();
   const cx = L.startX + L.itemWidth / 2;
   const cy = L.startY + L.itemHeight / 2;
   g.input.mouseX = cx; g.input.mouseY = cy;

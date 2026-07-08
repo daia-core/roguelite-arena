@@ -91,7 +91,7 @@ const shop = await page.evaluate(() => {
   const s = (n) => n * (W / 390);
   const item = g.shopItems && g.shopItems[0];
   // Card width in portrait: derive from layout if exposed, else conservative.
-  const layout = typeof g.getShopLayout === 'function' ? g.getShopLayout() : null;
+  const ss = window.__shopScene; const layout = ss ? ss.getShopLayout() : (typeof g.getShopLayout === 'function' ? g.getShopLayout() : null);
   const itemWidth = layout ? layout.itemWidth : s(92);
   const descMaxW = itemWidth - s(12);
   const descSize = s(8);

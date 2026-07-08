@@ -106,7 +106,7 @@ async function run(label, viewport, shotPrefix) {
   // Click the Auto-Buy button using the shared shop layout geometry.
   await page.evaluate(() => {
     const g = window.__game;
-    const L = g.getShopLayout();
+    const ss = window.__shopScene; const L = ss ? ss.getShopLayout() : g.getShopLayout?.();
     g.input.mouseX = L.autoBuyX;
     g.input.mouseY = L.rerollY + L.buttonHeight / 2;
     g.input.mouseDown = true;
