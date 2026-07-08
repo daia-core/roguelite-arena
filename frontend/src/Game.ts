@@ -1409,22 +1409,7 @@ export class Game {
       }
     }
 
-    // PERFORMANCE: Rebuild quadtrees only for living entities
-    // Skip dead entities to reduce quadtree size and improve query performance
-    this.enemyQuadtree.clear();
-    this.projectileQuadtree.clear();
-
-    // Batch insert - more efficient than individual inserts
-    const aliveEnemies = this.enemies.filter(e => !e.dead);
-    const aliveProjectiles = this.projectiles.filter(p => !p.dead);
-
-    for (const enemy of aliveEnemies) {
-      this.enemyQuadtree.insert(enemy);
-    }
-
-    for (const proj of aliveProjectiles) {
-      this.projectileQuadtree.insert(proj);
-    }
+    this.rebuildQuadtrees();
 
     // Projectiles
     for (const proj of this.projectiles) {
@@ -1842,6 +1827,26 @@ export class Game {
 
     // Auto-save
     this.autoSave();
+  }
+
+  /** Step 15a — quadtree rebuild factored out of updatePlaying() for readability. */
+  private rebuildQuadtrees(): void {
+    // PERFORMANCE: Rebuild quadtrees only for living entities
+    // Skip dead entities to reduce quadtree size and improve query performance
+    this.enemyQuadtree.clear();
+    this.projectileQuadtree.clear();
+
+    // Batch insert - more efficient than individual inserts
+    const aliveEnemies = this.enemies.filter(e => !e.dead);
+    const aliveProjectiles = this.projectiles.filter(p => !p.dead);
+
+    for (const enemy of aliveEnemies) {
+      this.enemyQuadtree.insert(enemy);
+    }
+
+    for (const proj of aliveProjectiles) {
+      this.projectileQuadtree.insert(proj);
+    }
   }
 
   // Dash/Blast abilities removed - keeping method commented for potential future use
