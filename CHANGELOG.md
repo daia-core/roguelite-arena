@@ -6,6 +6,16 @@ portrait viewport).
 
 ---
 
+## 2026-07-08 — SkillTreeScene extraction (step 12) · `cbaaa8e` · `index-J7buFMpy.js` ✓
+
+**Architecture (no player-visible change):** Extracted the skill-tree screen out of Game.ts into
+`SkillTreeScene.ts` (408 lines). Moved all `st*` state (pan X/Y, zoom, pointer tracking, pinch dist,
+selected node, returnToShop flag), 6 helper methods (stView, stButtons, stNodeRadius, stApplyZoom,
+stZoomAbout, centerOnStart), and update/draw/tap-handler into the scene. Also removed now-dead
+`paintBackdrop()`. Game.ts: 4,899 → 4,611 lines (−288). TypeScript clean.
+
+---
+
 ## 2026-07-08 (evening) — RewardScene extracted (step 10 de-god-classing)
 
 **Player-visible**
