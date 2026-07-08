@@ -1,6 +1,6 @@
 # Roguelite Arena — Architecture Overview
 
-> **Last updated: 2026-07-08** — RestScene extracted (step 5 de-god-class); EventScene (step 4), MapScene (step 3) prior; 34 active skills live, 1335+ items, AoeZone constraint documented
+> **Last updated: 2026-07-08** — ShopScene extraction plan added (step 6, complex — see §ShopScene); RestScene extracted (step 5); EventScene (step 4); MapScene (step 3). 34 active skills, 1335+ items, AoeZone constraint documented.
 
 ---
 
@@ -164,6 +164,122 @@ apply the effect (artifact grant, curse, gold) and returns the outcome text + op
 The campfire node's heal-or-upgrade screen. Extracted from Game.ts in step 5 (2026-07-08). Owns
 `restResolved` and `restResultText`. Calls `onChoose('rest'|'train')` for Game to apply player
 effects (heal 40% HP / +15 max HP) and returns the outcome text.
+
+### ShopScene — PLANNED extraction (step 6) ⚠️ complex
+
+> **Read this before attempting the extraction** — the shop is far more
+> interconnected than the scenes already extracted. MapScene/EventScene/RestScene
+> each had 155–235 lines and 1–2 callbacks. ShopScene is ~800 lines with 20+
+> dependencies. Plan, verify TypeScript, and deploy before touching Game.ts.
+
+**Methods to move into `ShopScene.ts` (~820 lines total):**
+
+| Method | Lines | Notes |
+|--------|-------|-------|
+| `drawShop()` | 5722–6269 (~548) | Pure rendering |
+| `updateShop()` | 4066–4227 (~162) | Input dispatch — calls callbacks |
+| `getShopLayout()` | 3933–4044 (~112) | Shared draw+hit geometry |
+| `getCombosButtonRect()` | 4045–4056 | Geometry helper |
+| `getSkillsButtonRect()` | 4057–4065 | Geometry helper |
+| `handleInspectPopupTap()` | 5665–5706 | Inspect popup input |
+| `handleEquipmentStripTap()` | 5611–5664 | Equipment strip input |
+| `showShopToast()` | 5707–5721 | Toast helper |
+| `autoBuyAll()` | 4356–4418 | Calls onPurchase/onReroll loop |
+| `drawInspectPopup()` | 6270–6534 | Inspect popup rendering |
+| `drawCombosOverlay()` | 6535–6841 | Combos guide rendering |
+
+**State to move to ShopScene (own these fields, don't read from Game):**
+
+```typescript
+// Shop inventory
+shopItems: (Item | null)[] = [];
+selectedShopItem: number = -1;
+shopRerollCost: number = 2;
+shopRerolls: number = 0;
+lockedShopItems: Set<number> = new Set();
+lastInterestGained: number = 0;
+
+// UI overlays
+showCombosOverlay: boolean = false;
+showStatsPopup: boolean = false;
+private statsPanelRect = { x: 0, y: 0, width: 0, height: 0 };
+
+// Inspect popup
+private inspectedEquipKey: EquipHolderKey | null = null;
+private inspectUnequipRect: Rect | null = null;
+private inspectSellRect: Rect | null = null;
+
+// Equipment strip
+private equipSlotRects: EquipSlotRect[] = [];
+// (stashItemRects etc. — check drawEquipmentStrip for full list)
+
+// Toast
+private shopToastText = '';
+private shopToastAt = 0;
+```
+
+**Methods that STAY in `Game.ts` (they mutate game/player state):**
+
+| Method | Why it stays |
+|--------|-------------|
+| `enterShop()` | Banking interest calc + item generation (touches player.gold, waveManager, playerStats, ItemDatabase) |
+| `purchaseShopItem(i)` | Mutates player.gold, player.addItem(), duoSystem, evolutionSystem |
+| `rerollShop()` | Mutates shopItems (through callback), player.gold, shopRerollCost |
+| `toMapFromShop()` | Changes `this.state`, `this.mapScene`, `this.lockedShopItems` clear |
+| `openSkillTree(fromShop)` | Changes `this.state`, `this.skillTreeReturnsToShop` |
+
+**Callbacks needed in `ShopSceneDeps`:**
+
+```typescript
+interface ShopSceneDeps {
+  canvas: HTMLCanvasElement;
+  renderer: Renderer;
+  input: Input;
+  audio: AudioSystem;
+
+  // Read-only views (pass by reference — shop reads but never writes)
+  getPlayer(): Player | null;
+  getPlayerStats(): PlayerStats;
+  getSkillTree(): SkillTree;
+  getWave(): number;
+
+  // Mutations (all owned by Game.ts)
+  onPurchase(slotIndex: number): boolean;  // returns true on success
+  onReroll(): boolean;                      // returns true on success
+  onContinue(): void;                       // toMapFromShop()
+  onOpenSkillTree(): void;                  // openSkillTree(true)
+  onSellEquip(key: EquipHolderKey, sellFor: number): void;
+  onUnequipToStash(key: EquipHolderKey): void;
+  onEquipFromStash(stashIndex: number): void;
+}
+```
+
+**Key integration point — `enter()` resets UI state but NOT shop inventory:**
+
+```typescript
+// ShopScene.enter() — called by Game.ts after enterShop() generates items:
+enter(items: (Item | null)[], lockedIndices: Set<number>, lastInterest: number): void {
+  this.shopItems = items;
+  this.lockedShopItems = new Set(lockedIndices);
+  this.lastInterestGained = lastInterest;
+  this.selectedShopItem = -1;
+  this.showCombosOverlay = false;
+  this.showStatsPopup = false;
+  this.inspectedEquipKey = null;
+  this.input.mouseDown = false;
+}
+```
+
+**Extraction order (do in sequence):**
+1. Create `ShopScene.ts` with all state + methods — compile-check before touching Game.ts
+2. In `Game.ts`: construct `this.shopScene` in constructor, pass deps
+3. Move `drawShop/updateShop` dispatch to `this.shopScene.draw()/update()`
+4. Remove the moved methods from Game.ts one batch at a time (each batch: compile + QA smoke)
+5. Final: run headless QA (shop purchase, reroll, lock, inspect, equip strip all work)
+
+**Estimated line reduction for Game.ts:** ~820 lines → below 6,000 lines total.
+
+---
 
 ### ArtifactSystem
 Artifacts trigger active powers during combat (e.g. Overcharge fires a 3× nova every N shots).
