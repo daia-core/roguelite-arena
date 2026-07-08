@@ -6,6 +6,22 @@ portrait viewport).
 
 ---
 
+## 2026-07-08 (morning) — Dash button actually dashes now
+
+**Player-visible**
+- The 💨 DASH button (and Space/Shift on keyboard) now works. It was rendering
+  but wired to nothing — the press was registered and then dropped, so tapping it
+  did nothing. Now it fires a real dash: a quick 0.2s burst with dodge i-frames on
+  a 3s cooldown.
+- Dash goes the way you're moving; if you tap it standing still, you dash in the
+  direction you last faced (no more dead taps).
+- Button now responds to mouse clicks too, not only touch.
+
+**Commit:** `088282d` — **live `index-DvrUt5nS.js` ✓** (prod alias 200, `playDash`
+present in live JS; dash QA: i-frames + standing/directional/cooldown all PASS).
+
+---
+
 ## 2026-07-08 (morning, heartbeat ~09:15) — VillageScene architecture extraction
 
 **Internal/architecture (no player-visible change)**
