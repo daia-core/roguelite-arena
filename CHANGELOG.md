@@ -6,6 +6,17 @@ portrait viewport).
 
 ---
 
+## 2026-07-08 (evening) — PauseScene extracted (step 11) · `8260b3c` · `index-Blgb8Izc.js` ✓
+
+**Architecture (no player-visible change):** Extracted the pause overlay into `PauseScene.ts`
+(153 lines). Owns `update`/`draw`, shared geometry helpers (`screenScale`, `columnRects`,
+`pausedTopY`), and a `drawPlayingUnderlay` callback that keeps the frozen arena visible behind
+the overlay. Removed dead `pauseRequested` field and the now-unused helpers from Game.ts.
+Game.ts: 4,611 → 4,520 lines (−91). All 13 non-playing states now have dedicated scene files.
+TypeScript clean.
+
+---
+
 ## 2026-07-08 — SkillTreeScene extraction (step 12) · `cbaaa8e` · `index-J7buFMpy.js` ✓
 
 **Architecture (no player-visible change):** Extracted the skill-tree screen out of Game.ts into

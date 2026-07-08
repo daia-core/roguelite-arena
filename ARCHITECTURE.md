@@ -1,6 +1,6 @@
 # Roguelite Arena — Architecture Overview
 
-> **Last updated: 2026-07-08** — SkillTreeScene extracted (step 12, −288 lines, Game.ts now 4,611 lines); RewardScene (step 10, −62); ClassSelectScene (step 9); AchievementsScene (step 8); GameOverScene (step 7); ShopScene (step 6); RestScene (step 5); EventScene (step 4); MapScene (step 3). 34 active skills, 1335+ items, AoeZone constraint documented.
+> **Last updated: 2026-07-08** — PauseScene extracted (step 11, −91 lines, Game.ts now 4,520 lines); SkillTreeScene (step 12, −288); RewardScene (step 10, −62); ClassSelectScene (step 9); AchievementsScene (step 8); GameOverScene (step 7); ShopScene (step 6); RestScene (step 5); EventScene (step 4); MapScene (step 3). 34 active skills, 1335+ items, AoeZone constraint documented.
 
 ---
 
@@ -46,7 +46,7 @@ this.spawnAoeZone(new AoeZone(x, y, r, baseDmg, delay, { color }));
 
 Core Loop               Extended Systems          Meta / UI
 ──────────────          ────────────────          ─────────────
-Game.ts (~5.3k lines)   StatusEffectEngine         AchievementSystem
+Game.ts (~4.5k lines)   StatusEffectEngine         AchievementSystem
 Player.ts               ActiveSkillSystem           MetaProgression
 Enemy.ts (2k)           ArtifactSystem              SkillTree (~185 nodes)
 WaveManager.ts          EventSystem                 SaveManager
