@@ -6,6 +6,75 @@ portrait viewport).
 
 ---
 
+## 2026-07-08 (morning, heartbeat) — Stacked-value chips + 530 new-mechanic items (→1894)
+
+**Player-visible**
+- **Upgraded gear now shows its FULL stacked value.** When you stack a piece to +N, the inspect
+  popup's stat chips read the real total, not the per-copy number — e.g. an Iron Ring taken to +5
+  shows **+131% Damage** (6× the base +15%), a Burn ring at +5 reads **+72% Burn**. The effect math
+  was already stacking correctly; this fixes the *display* so what you read matches what you hit for.
+  Descriptions that merely restate the base numbers still stay hidden, so a card never shows the same
+  stat twice.
+- **530 brand-new items — a whole new-mechanic wave (catalog 1364 → 1894).** Where the last wave was
+  more of the familiar stats, this batch is built around the mechanics the engine supports but barely
+  used: orbiting energy orbs, an autonomous whirling blade, spectral ceremonial daggers, self-dropped
+  bombs, expanding nova pulses, the six on-hit debuffs (Fragility / Exposed / Condemned / Brittle /
+  Dazed / Disoriented), conditional scaling (Grindstone ramps per wave, Last-Stand at low HP,
+  Juggernaut while unhurt, Killing-Spree per kill, Miser off unspent gold), multicast volleys,
+  war-chest spoils, and a soul-tithe. Weighted toward uncommon→legendary. Every item pairs a real
+  upside with a thematic bite and reads at least one clear stat chip.
+- Renamed the "10+ items in a run" achievement reward from *Treasure Map* (a name a shop item already
+  used) to **Collector's Atlas**.
+
+**Under the hood**
+- `items/types.ts`: `itemStatSegments(item, level)` / `itemStatLines(item, level)` scale each chip
+  exactly as `PlayerStats.ensureAgg` folds an upgraded item (additive ×level, multiplicative ^level).
+  The inspect popup passes the item's `upgradeLevel`; redundancy suppression tests against BASE stats.
+- `items/catalog.ts`: +530 generated items (`gen-content-2.mjs`, prefix `sx1`–`sx4`), every field
+  verified consumed by gameplay; integrity gate CLEAN (no dup id/name, no invalid fields).
+- QA harnesses `qa-slow-status` / `qa-expansion-shots` brought current with the StatusEffectManager
+  (`statusFX`) migration so they no longer crash on `g.update`.
+
+**Commit** `d999b2a`
+**Verified** live at https://roguelite-game-blush.vercel.app — bundle `index-D1-2iJaJ.js` served
+(HTTP 200, no auth wall; new-content strings present in the live JS). Regression suite all PASS with
+0 console errors: catalog-integrity (1894, CLEAN), stack-inspect, status-engines, shop-8slot,
+warchest, soultithe, daggers, slow-status. Mobile (390×844) + desktop shop shots eyeballed — new
+items (Ceremonial Fan, Detonation Crown, …) render correctly through the offer UI.
+
+---
+
+## 2026-07-08 (morning, heartbeat) — Class identity from turn 1 + boss phase banners
+
+**Player-visible**
+- **Class gateway node pre-allocated at run start.** Every non-Gunner class now begins with the
+  first node in its themed arm already allocated — Berserker's `might_gate` (+2% dmg), Arcanist's
+  `precision_gate` (+1% crit), Ranger's `alacrity_gate` (+2% fire rate), Prospector's `fortune_gate`
+  (+2% gold), Reaver's `vitality_gate` (+10 max HP), Brawler's `aegis_gate` (+1 armor). Zero extra
+  skill points spent — it's a free nudge in the right direction so the class tilt is tangible from
+  second one, not only after the first point buy. Gunner unchanged (starts at the hub, equidistant
+  to all arms).
+- **Boss phase transition banners.** When a boss crosses 66% or 33% HP for the first time, a
+  gold banner flashes over the screen: "PHASE 2 — FLAME FIEND!" / "PHASE 3 — ENRAGED — VOID BEAST!"
+  — plus the transformation sound. The existing per-phase behavior changes (speed, AoE cadence,
+  summon rate, teleport, dash patterns) were already there; now they announce themselves so the
+  shift reads as a dramatic moment rather than a silent stat bump. Each threshold fires once per run.
+
+**Under the hood**
+- `SkillTree.ts`: `CLASS_GATE_NODE` map + `reset()` / `setClass()` pre-allocate the gateway for
+  non-Gunner classes. Gate nodes are always adjacent to class start nodes (edge guaranteed by
+  `buildTree()`), so allocation rules are satisfied.
+- `Enemy.ts`: `bossPhaseAnnounced` field (starts 1, never retreats) + `bossPhaseChange` in
+  `EnemyUpdateResult` — set once per crossing.
+- `Game.ts`: handles `result.bossPhaseChange`, reuses `evolutionBannerText/Timer` overlay.
+
+**Commit** `abc62d2`
+**Verified** live at https://roguelite-game-blush.vercel.app — bundle `index-BEe8--k5.js` served
+(confirmed via `curl`); deployment sha `abc62d258f1af35429635829deaea75a1f9d050d` matches commit;
+state READY. Skill tree QA: all keystones reachable, console errors: none. Smoke test: 0 errors.
+
+---
+
 ## 2026-07-08 (early morning, heartbeat) — Achievement System: RunStats + 5 milestone achievements
 
 **Meta-progression**
