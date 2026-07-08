@@ -6,6 +6,18 @@ portrait viewport).
 
 ---
 
+## 2026-07-09 (night) — Balance-sim QA fix · `7140ad1` · `index-BeaPZxfx.js` ✓
+
+**No player-visible change.** `simulate-balance.mjs` crashed on every run with
+`g.finishSkillTree is not a function` after SkillTreeScene was extracted in step 12:
+
+- Added public `finishSkillTree()` to `Game.ts` — transitions state back to `'playing'`
+- The headless bot allocates all skill points then calls this to resume the run;
+  the real flow goes through `SkillTreeScene.deps.onFinish`, so they're equivalent
+- Balance sim now completes: 3 runs, wave data logged to `/tmp/roguelite-shots/balance-sim.json`
+
+---
+
 ## 2026-07-09 (night) — Village QA fix · `928924d` · `index-C5EV32u_.js` ✓
 
 **No player-visible change.** `qa-village.mjs` was crashing with `TypeError: Cannot read
