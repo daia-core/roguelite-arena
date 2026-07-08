@@ -94,6 +94,9 @@ export class Game {
 
   // Telegraphed enemy AoE attacks (red ground markers -> delayed hit).
   aoeZones: AoeZone[] = [];
+  // Deferred area damage for player skills whose visual delay ≠ instant resolve.
+  // Each entry resolves after `delay` seconds — finds enemies in `r` px of (x, y).
+  private pendingDmg: Array<{x: number; y: number; r: number; dmg: number; delay: number; color: string}> = [];
   // Telegraphed enemy spawns (red blinking X -> enemy materializes after 2s).
   spawnTelegraphs: SpawnTelegraph[] = [];
   private bombTimer: number = 0;
@@ -1648,6 +1651,7 @@ export class Game {
     this.removeDeadEntities(this.shockwaves);
     this.updateAoeZones(dt);
     this.removeDeadEntities(this.aoeZones);
+    this.resolvePendingDmg(dt);
 
     // Check wave completion
     if (this.waveManager.isWaveComplete()) {
@@ -1717,6 +1721,7 @@ export class Game {
     this.bombs = [];
     this.shockwaves = [];
     this.aoeZones = [];
+    this.pendingDmg = [];
     this.bombTimer = 0;
     this.novaTimer = 0;
     this.auxMeleeTimer = 0;
@@ -2271,17 +2276,25 @@ export class Game {
         const rRF = skill.radius ?? 70;
         for (let i = 0; i < alivRF.length; i++) {
           const t = alivRF[i];
-          this.spawnAoeZone(new AoeZone(t.x, t.y, rRF, baseDmg, 0.5 + i * 0.1, {
+          const delay = 0.5 + i * 0.1;
+          // Visual telegraphed marker (damage=0 — AoeZone only hits the player).
+          this.spawnAoeZone(new AoeZone(t.x, t.y, rRF, 0, delay, {
             color: '#ff6b6b', activeTime: 0.4, singleHit: true,
           }));
+          // Deferred enemy damage resolved at detonation time.
+          this.pendingDmg.push({ x: t.x, y: t.y, r: rRF, dmg: baseDmg, delay, color: '#ff6b6b' });
         }
         // If fewer than 6 enemies, fill with random positions around player
         for (let i = alivRF.length; i < 6; i++) {
           const ang = (i / 6) * Math.PI * 2;
           const d = 100 + Math.random() * 80;
-          this.spawnAoeZone(new AoeZone(px + Math.cos(ang) * d, py + Math.sin(ang) * d, rRF, baseDmg, 0.5 + i * 0.1, {
+          const rx = px + Math.cos(ang) * d;
+          const ry = py + Math.sin(ang) * d;
+          const delay = 0.5 + i * 0.1;
+          this.spawnAoeZone(new AoeZone(rx, ry, rRF, 0, delay, {
             color: '#ff6b6b', activeTime: 0.4, singleHit: true,
           }));
+          this.pendingDmg.push({ x: rx, y: ry, r: rRF, dmg: baseDmg, delay, color: '#ff6b6b' });
         }
         break;
       }
@@ -2310,32 +2323,38 @@ export class Game {
       case 'mirror_strike': {
         // 3 simultaneous strikes hit EVERY enemy on screen.
         const alivMS = this.enemies.filter(e => !e.dead);
+        // Visual shockwave rings (damage=0 — AoeZone only hits the player).
         for (let wave = 0; wave < 3; wave++) {
-          this.spawnAoeZone(new AoeZone(px, py, 900, baseDmg / 3, wave * 0.3, {
-            color: '#e599f7', activeTime: 0.25, singleHit: false,
+          this.spawnAoeZone(new AoeZone(px, py, 900, 0, wave * 0.3, {
+            color: '#e599f7', activeTime: 0.25, singleHit: true,
           }));
         }
-        // Extra visual on each enemy
+        // Actual enemy damage: deal baseDmg to each living enemy (3 waves × baseDmg/3).
         for (const e of alivMS) {
-          if (!e.dead) this.spawnAoeZone(new AoeZone(e.x, e.y, 30, 0, 0.0, {
-            color: '#cc5de8', activeTime: 0.2, singleHit: true,
-          }));
+          if (!e.dead) {
+            this.dealAuxDamage(e, baseDmg, '#cc5de8');
+            // Per-enemy burst visual.
+            this.spawnAoeZone(new AoeZone(e.x, e.y, 30, 0, 0.0, {
+              color: '#cc5de8', activeTime: 0.25, singleHit: true,
+            }));
+          }
         }
         break;
       }
 
       // ── TIER 4 NEW ───────────────────────────────────────────────────────
       case 'doom_comet': {
-        // 1.5s warning comet — massive blast + all debuffs on every enemy hit.
+        // 1.5s warning comet — massive blast + all debuffs on every enemy in radius.
         const rDC = skill.radius ?? 200;
+        // Telegraph: 1.5s red warning fill (visual only).
         this.spawnAoeZone(new AoeZone(px, py, rDC, 0, 0.0, {
           color: '#f03e3e', activeTime: 1.5, singleHit: true,
         }));
-        // Detonation + debuffs after warning
-        this.spawnAoeZone(new AoeZone(px, py, rDC, baseDmg, 1.5, {
-          color: '#ff8c00', activeTime: 0.6, singleHit: false,
+        // Detonation flash: pure visual, damage=0 (AoeZone only hits the player).
+        this.spawnAoeZone(new AoeZone(px, py, rDC, 0, 1.5, {
+          color: '#ff8c00', activeTime: 0.6, singleHit: true,
         }));
-        // Apply all debuffs to enemies in radius after impact
+        // Debuffs applied immediately at cast (pre-mark — amplify the incoming blast).
         for (const e of this.enemies) {
           if (e.dead) continue;
           if (Math.hypot(e.x - px, e.y - py) <= rDC) {
@@ -2348,14 +2367,15 @@ export class Game {
             e.frozenTimer = Math.max(e.frozenTimer, 0.8);
           }
         }
+        // Deferred blast damage: resolved 1.5s later against enemies still in radius.
+        this.pendingDmg.push({ x: px, y: py, r: rDC, dmg: baseDmg, delay: 1.5, color: '#ff8c00' });
         break;
       }
       case 'hellfire_rain': {
         // 20 hellfire bolts rain down on all living enemies over 4 seconds.
         const rHR = skill.radius ?? 65;
         const aliveHR = this.enemies.filter(e => !e.dead);
-        const count = Math.min(20, Math.max(20, aliveHR.length));
-        for (let i = 0; i < count; i++) {
+        for (let i = 0; i < 20; i++) {
           let ix: number, iy: number;
           if (aliveHR.length > 0) {
             const t = aliveHR[i % aliveHR.length];
@@ -2366,9 +2386,13 @@ export class Game {
             ix = px + Math.cos(a) * (Math.random() * 300);
             iy = py + Math.sin(a) * (Math.random() * 300);
           }
-          this.spawnAoeZone(new AoeZone(ix, iy, rHR, baseDmg, i * 0.2, {
+          const delay = i * 0.2;
+          // Visual telegraph marker (damage=0 — AoeZone only hits the player).
+          this.spawnAoeZone(new AoeZone(ix, iy, rHR, 0, delay, {
             color: '#ff4500', activeTime: 0.4, singleHit: true,
           }));
+          // Deferred enemy damage at the bolt's impact position.
+          this.pendingDmg.push({ x: ix, y: iy, r: rHR, dmg: baseDmg, delay, color: '#ff4500' });
         }
         break;
       }
@@ -2521,6 +2545,24 @@ export class Game {
   /** Queue a telegraphed AoE attack (used by bosses / ranged enemies). */
   spawnAoeZone(zone: AoeZone): void {
     this.aoeZones.push(zone);
+  }
+
+  /** Tick and resolve deferred area damage from active skills. */
+  private resolvePendingDmg(dt: number): void {
+    for (let i = this.pendingDmg.length - 1; i >= 0; i--) {
+      const job = this.pendingDmg[i];
+      job.delay -= dt;
+      if (job.delay <= 0) {
+        // Find enemies in radius at resolution time (enemies may have moved).
+        const nearby = this.enemyQuadtree.retrieve({ x: job.x, y: job.y, radius: job.r + 20 });
+        for (const e of nearby) {
+          if (!e.dead && Math.hypot(e.x - job.x, e.y - job.y) <= job.r) {
+            this.dealAuxDamage(e, job.dmg, job.color);
+          }
+        }
+        this.pendingDmg.splice(i, 1);
+      }
+    }
   }
 
   private detonateBomb(bomb: Bomb): void {
