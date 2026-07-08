@@ -2012,6 +2012,23 @@ export class Game {
     this.audio.playTransformation();
   }
 
+  /** QA + shop-card helper: returns the evolution the given item participates in (as
+   *  base weapon or catalyst) given the player's current loadout, or null if no hint
+   *  applies. Exposed publicly so QA scripts can assert via window.__game; ShopScene
+   *  delegates here so both surfaces stay in sync. */
+  getCardEvolutionInfo(item: Item): { name: string } | null {
+    const ownedIds = new Set(this.playerStats.items.map(i => i.id));
+    for (const evo of this.evolutionSystem.getAllEvolutions()) {
+      if (item.id === evo.catalystItemId && ownedIds.has(evo.baseWeaponId) && !ownedIds.has(evo.evolvedWeaponId)) {
+        return { name: evo.name };
+      }
+      if (item.id === evo.baseWeaponId && ownedIds.has(evo.catalystItemId) && !ownedIds.has(evo.evolvedWeaponId)) {
+        return { name: evo.name };
+      }
+    }
+    return null;
+  }
+
   // Apply damage from an auxiliary weapon to one enemy, reusing the same crit /
   // boss-mult / lifesteal / particle / kill flow the primary weapons use so the
   // stacked weapons feel identical in impact.
