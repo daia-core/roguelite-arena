@@ -38,7 +38,7 @@ import { RestScene } from './RestScene';
 import { EvolutionSystem, type Evolution } from './EvolutionSystem';
 import { VillageScene } from './VillageScene';
 import { MapScene } from './MapScene';
-import { SkillTree, SKILL_NODES, SKILL_EDGES, ARM_COLOR, getNode, neighborsOf, type SkillNode } from './SkillTree';
+import { SkillTree, SKILL_NODES, SKILL_EDGES, neighborsOf } from './SkillTree';
 import { getActiveSkillById } from './ActiveSkillSystem';
 import type { Scene } from './scenes/Scene';
 import { MenuScene } from './scenes/MenuScene';
@@ -47,6 +47,7 @@ import { GameOverScene, type GameOverStats } from './GameOverScene';
 import { AchievementsScene } from './AchievementsScene';
 import { ClassSelectScene } from './ClassSelectScene';
 import { RewardScene } from './RewardScene';
+import { SkillTreeScene } from './SkillTreeScene';
 
 // The map/node meta-layer adds three between-wave screens on top of the core loop:
 //   'map'    — the Slay-the-Spire-style branching node picker (route your run)
@@ -71,6 +72,8 @@ export class Game {
   private scenes: Partial<Record<GameState, Scene>> = {};
   /** Typed reference so purchaseShopItem() can call shopScene.showToast(). */
   private shopScene: ShopScene | null = null;
+  /** Typed reference so openSkillTree() can call skillTreeScene.open(). */
+  private skillTreeScene: SkillTreeScene | null = null;
   private audio: AudioManager;
 
   // Hidden probe that reads the device safe-area insets (notch / status bar) so the
@@ -176,24 +179,9 @@ export class Game {
   private rewardThen: (() => void) | null = null; // what to do once an artifact is picked
   // ---- SKILL TREE state (replaces the old level-up item pick, Felix 2026-07-05) ----
   // Each level-up grants 1 skill point banked on the tree; points are spent on the
-  // between-waves skill-tree screen (never mid-wave). skillTreeReturnsToShop drains
-  // banked points at the shop break and lands on the shop, mirroring the old flow.
+  // between-waves skill-tree screen (never mid-wave). SkillTreeScene owns all
+  // pan/zoom/pointer state; Game retains only the SkillTree instance (shared state).
   skillTree: SkillTree = new SkillTree();
-  private skillTreeReturnsToShop: boolean = false; // opened at the shop break → land on the shop on Continue
-  // Pan/zoom camera for the PoE-style web screen. panX/panY are canvas-px offsets from
-  // the view centre; stZoom is logical-canvas-px per tree-unit. Pointer tracking below
-  // distinguishes a drag-to-pan from a tap-to-allocate by accumulated travel distance.
-  private stPanX: number = 0;
-  private stPanY: number = 0;
-  private stZoom: number = 0.5;
-  private stPointerActive: boolean = false;
-  private stLastX: number = 0;
-  private stLastY: number = 0;
-  private stDownX: number = 0;
-  private stDownY: number = 0;
-  private stDragDist: number = 0;
-  private stPinchDist: number = 0;             // finger spread on the previous pinch frame (0 = not pinching)
-  private stSelected: string | null = null;    // last-tapped node (for the info panel)
   private pendingWaveArtifact: boolean = false;   // elite/boss wave grants spoils on clear
   private pendingEliteCascade: boolean = false;   // elite/boss wave grants a free bonus item in the shop
   // Momentum artifact: seconds the player has been continuously moving.
@@ -498,6 +486,23 @@ export class Game {
       },
     });
 
+    this.skillTreeScene = new SkillTreeScene({
+      canvas: this.canvas,
+      renderer: this.renderer,
+      input: this.input,
+      getSkillTree: () => this.skillTree,
+      getPlayerStats: () => this.playerStats,
+      onNodeAllocated: (armColor: string) => {
+        this.refreshMaxHealth();
+        this.audio.playLevelUp();
+        this.screenEffects.flash(armColor, 0.16);
+      },
+      onFinish: (returnToShop: boolean) => {
+        this.state = returnToShop ? 'shop' : 'playing';
+      },
+    });
+    this.scenes.skilltree = this.skillTreeScene;
+
     this.setupUI();
   }
 
@@ -707,8 +712,6 @@ export class Game {
     // PlayerStats so no stale skill bonus leaks across runs.
     this.skillTree.reset(this.selectedClassId);
     this.skillTree.recomputeInto(this.playerStats);
-    this.skillTreeReturnsToShop = false;
-    this.centerSkillTreeOnStart();
 
     this.refreshMaxHealth();
     this.pendingWaveArtifact = false;
@@ -787,8 +790,6 @@ export class Game {
     this.skillTree.reset(this.selectedClassId);
     this.skillTree.load(save.skillTree);
     this.skillTree.recomputeInto(this.playerStats);
-    this.skillTreeReturnsToShop = false;
-    this.centerSkillTreeOnStart();
 
     this.player = new Player(this.worldWidth / 2, this.worldHeight / 2, this.playerStats);
     this.syncArtifactStatic();
@@ -876,9 +877,6 @@ export class Game {
       }
       case 'paused':
         this.updatePaused();
-        break;
-      case 'skilltree':
-        this.updateSkillTree();
         break;
     }
   }
@@ -2829,287 +2827,11 @@ export class Game {
 
   /** Open the skill-tree screen. `fromShop` = drained at the shop break / reopened from
    *  the shop, so Continue returns to the shop rather than back into the fight. */
+  /** Open the skill-tree screen.  fromShop=true → Continue returns to the shop. */
   private openSkillTree(fromShop: boolean): void {
-    this.skillTreeReturnsToShop = fromShop;
+    this.skillTreeScene!.open(fromShop);
     this.state = 'skilltree';
-    this.stPointerActive = false;
-    this.stDragDist = 0;
-    this.centerSkillTreeOnStart();
-    this.input.disarmUntilRelease(); // a finger held over from the shop can't insta-tap a node
   }
-
-  /** Leave the tree: land on the shop when opened at the break, otherwise resume play. */
-  private finishSkillTree(): void {
-    if (this.skillTreeReturnsToShop) {
-      this.skillTreeReturnsToShop = false;
-      this.state = 'shop';
-    } else {
-      this.state = 'playing';
-    }
-  }
-
-  /** Frame the current class's start node in the middle of the web at a default zoom. */
-  private centerSkillTreeOnStart(): void {
-    const { isMobile, zoom } = this.screenScale();
-    this.stZoom = isMobile ? 0.42 : 0.6;
-    const start = getNode(this.skillTree.startId);
-    const Z = this.stZoom * zoom;
-    this.stPanX = start ? -start.x * Z : 0;
-    this.stPanY = start ? -start.y * Z : 0;
-    this.stSelected = this.skillTree.startId;
-  }
-
-  /** Zoom about the view centre (keeps the centred tree-point fixed on screen). */
-  private stApplyZoom(factor: number): void {
-    const nz = Math.min(1.4, Math.max(0.16, this.stZoom * factor));
-    const f = nz / this.stZoom;
-    this.stPanX *= f;
-    this.stPanY *= f;
-    this.stZoom = nz;
-  }
-
-  /** Zoom about an arbitrary screen point (sx,sy) — keeps the tree-point under it
-   *  fixed, so a pinch feels anchored between the fingers. */
-  private stZoomAbout(factor: number, sx: number, sy: number): void {
-    const nz = Math.min(1.4, Math.max(0.16, this.stZoom * factor));
-    if (nz === this.stZoom) return;
-    const { zoom } = this.screenScale();
-    const V = this.stView();
-    const Z = this.stZoom * zoom;
-    const Zn = nz * zoom;
-    // Tree-space point currently under (sx,sy) — hold it in place across the zoom.
-    const tx = (sx - V.cx - this.stPanX) / Z;
-    const ty = (sy - V.cy - this.stPanY) / Z;
-    this.stPanX = sx - V.cx - tx * Zn;
-    this.stPanY = sy - V.cy - ty * Zn;
-    this.stZoom = nz;
-  }
-
-  /** Screen geometry: the pannable web band sits between the header and the info panel. */
-  private stView() {
-    const { s, W, H, isMobile, zoom } = this.screenScale();
-    const topBand = s(isMobile ? 46 : 56);
-    const btnH = s(isMobile ? 44 : 46);
-    const btnW = Math.min(W - s(40), s(isMobile ? 260 : 360));
-    const btnX = (W - btnW) / 2;
-    const infoH = s(isMobile ? 44 : 50);
-    const btnY = H - btnH - s(8);
-    const infoY = btnY - infoH - s(6);
-    const cx = W / 2;
-    const cy = topBand + (infoY - topBand) / 2;
-    return { s, W, H, isMobile, zoom, topBand, btnH, btnW, btnX, btnY, infoH, infoY, cx, cy };
-  }
-
-  /** Right-edge zoom-in / zoom-out / recenter buttons. */
-  private stButtons() {
-    const V = this.stView();
-    const { s, W, isMobile } = V;
-    const bs = s(isMobile ? 34 : 40);
-    const gap = s(8);
-    const rx = W - bs - s(8);
-    const midY = V.cy;
-    return {
-      bs,
-      zoomIn:   { x: rx, y: midY - bs * 1.5 - gap, width: bs, height: bs },
-      zoomOut:  { x: rx, y: midY - bs * 0.5,       width: bs, height: bs },
-      recenter: { x: rx, y: midY + bs * 0.5 + gap, width: bs, height: bs },
-    };
-  }
-
-  /** On-screen radius of a node (by type), scaled mildly with zoom. */
-  private stNodeRadius(node: SkillNode): number {
-    const { s } = this.screenScale();
-    const base = node.type === 'keystone' ? 15 : node.type === 'start' ? 15 : node.type === 'notable' ? 11 : 6.5;
-    const zs = Math.min(1.5, Math.max(0.6, this.stZoom / 0.5));
-    return s(base) * zs;
-  }
-
-  private updateSkillTree(): void {
-    const mx = this.input.mouseX, my = this.input.mouseY;
-    const down = this.input.mouseDown;
-    const { s } = this.screenScale();
-
-    // Two fingers → pinch-zoom about the midpoint. Owns input while active: the
-    // single-pointer pan/tap logic below is suppressed so lifting a finger can't
-    // register a tap or make the web jump.
-    const pinch = this.input.getPinch();
-    if (pinch) {
-      if (this.stPinchDist > 0 && pinch.dist > 0) {
-        this.stZoomAbout(pinch.dist / this.stPinchDist, pinch.cx, pinch.cy);
-      }
-      this.stPinchDist = pinch.dist;
-      this.stPointerActive = false;   // abandon any in-progress single-finger pan
-      return;
-    }
-    this.stPinchDist = 0;
-
-    if (down && !this.stPointerActive) {
-      // Press start — record the anchor so we can tell a tap from a pan on release.
-      this.stPointerActive = true;
-      this.stDownX = mx; this.stDownY = my;
-      this.stLastX = mx; this.stLastY = my;
-      this.stDragDist = 0;
-    } else if (down && this.stPointerActive) {
-      // Held — drag pans the web.
-      const dx = mx - this.stLastX, dy = my - this.stLastY;
-      this.stPanX += dx; this.stPanY += dy;
-      this.stDragDist += Math.abs(dx) + Math.abs(dy);
-      this.stLastX = mx; this.stLastY = my;
-    } else if (!down && this.stPointerActive) {
-      // Release — a small-travel press counts as a tap.
-      this.stPointerActive = false;
-      if (this.stDragDist <= s(6)) this.handleSkillTreeTap(this.stDownX, this.stDownY);
-    }
-  }
-
-  /** Resolve a tap: Continue / zoom / recenter buttons first, else a node hit-test. */
-  private handleSkillTreeTap(x: number, y: number): void {
-    const V = this.stView();
-    if (pointInRect(x, y, { x: V.btnX, y: V.btnY, width: V.btnW, height: V.btnH })) { this.finishSkillTree(); return; }
-    const B = this.stButtons();
-    if (pointInRect(x, y, B.zoomIn))   { this.stApplyZoom(1.25); return; }
-    if (pointInRect(x, y, B.zoomOut))  { this.stApplyZoom(0.8);  return; }
-    if (pointInRect(x, y, B.recenter)) { this.centerSkillTreeOnStart(); return; }
-
-    const Z = this.stZoom * V.zoom;
-    let hit: SkillNode | null = null;
-    for (const node of SKILL_NODES) {
-      const sx = V.cx + this.stPanX + node.x * Z;
-      const sy = V.cy + this.stPanY + node.y * Z;
-      const r = this.stNodeRadius(node);
-      if (Math.hypot(x - sx, y - sy) <= r + V.s(4)) { hit = node; break; }
-    }
-    if (!hit) return;
-    this.stSelected = hit.id;
-    if (this.skillTree.allocate(hit.id)) {
-      this.skillTree.recomputeInto(this.playerStats);
-      this.refreshMaxHealth();
-      this.audio.playLevelUp();
-      this.screenEffects.flash(ARM_COLOR[hit.arm] || '#ffd700', 0.16);
-    }
-  }
-
-  private drawSkillTree(): void {
-    const ctx = this.renderer.getContext();
-    const V = this.stView();
-    const { s, W, isMobile } = V;
-    const Z = this.stZoom * V.zoom;
-    this.paintBackdrop();
-
-    const screenOf = (n: SkillNode) => ({ x: V.cx + this.stPanX + n.x * Z, y: V.cy + this.stPanY + n.y * Z });
-    const zScale = Math.min(1.4, Math.max(0.6, this.stZoom / 0.5));
-
-    // --- Web (edges + nodes), clipped to the band between header and info panel. ---
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(0, V.topBand, W, V.infoY - V.topBand);
-    ctx.clip();
-
-    // Edges first so nodes sit on top.
-    ctx.lineWidth = Math.max(1, s(1.2) * zScale);
-    for (const [a, b] of SKILL_EDGES) {
-      const na = getNode(a), nb = getNode(b);
-      if (!na || !nb) continue;
-      const pa = screenOf(na), pb = screenOf(nb);
-      if ((pa.x < -60 && pb.x < -60) || (pa.x > W + 60 && pb.x > W + 60)) continue;
-      const both = this.skillTree.isAllocated(a) && this.skillTree.isAllocated(b);
-      const either = this.skillTree.isAllocated(a) || this.skillTree.isAllocated(b);
-      ctx.strokeStyle = both ? '#ffe9a8' : either ? '#8a7a52' : '#3a3020';
-      ctx.beginPath(); ctx.moveTo(pa.x, pa.y); ctx.lineTo(pb.x, pb.y); ctx.stroke();
-    }
-
-    // Nodes.
-    const showLabels = this.stZoom >= 0.42;
-    for (const node of SKILL_NODES) {
-      const p = screenOf(node);
-      const r = this.stNodeRadius(node);
-      if (p.x < -r * 2 || p.x > W + r * 2 || p.y < V.topBand - r * 2 || p.y > V.infoY + r * 2) continue;
-      const alloc = this.skillTree.isAllocated(node.id);
-      const reachable = this.skillTree.isReachable(node.id);
-      const canAlloc = this.skillTree.canAllocate(node.id);
-      const armColor = node.arm === 'core' ? '#ffd700' : (ARM_COLOR[node.arm] || '#c8b998');
-
-      ctx.save();
-      ctx.beginPath();
-      if (node.type === 'keystone') {
-        ctx.moveTo(p.x, p.y - r); ctx.lineTo(p.x + r, p.y); ctx.lineTo(p.x, p.y + r); ctx.lineTo(p.x - r, p.y); ctx.closePath();
-      } else if (node.type === 'start') {
-        ctx.rect(p.x - r, p.y - r, r * 2, r * 2);
-      } else {
-        ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
-      }
-      ctx.fillStyle = alloc ? armColor : canAlloc ? '#2a2416' : reachable ? '#231d12' : '#181206';
-      ctx.fill();
-      ctx.lineWidth = Math.max(1, s(canAlloc ? 2.2 : 1.4));
-      ctx.strokeStyle = alloc ? '#fff4cf' : canAlloc ? armColor : reachable ? '#6b5d47' : '#3a3020';
-      ctx.stroke();
-      if (this.stSelected === node.id) {
-        ctx.lineWidth = Math.max(1, s(1.5));
-        ctx.strokeStyle = '#ffffff';
-        ctx.beginPath(); ctx.arc(p.x, p.y, r + s(3), 0, Math.PI * 2); ctx.stroke();
-      }
-      ctx.restore();
-
-      if (r >= s(9)) {
-        this.renderer.drawText(node.icon, p.x, p.y + r * 0.35, { size: Math.round(r * 1.1), align: 'center', color: alloc ? '#1a1206' : '#ffffff' });
-      }
-      if (showLabels && node.type !== 'minor') {
-        this.renderer.drawText(node.name, p.x, p.y + r + s(9), { size: s(isMobile ? 7 : 8), align: 'center', color: alloc ? armColor : reachable ? '#d8c9a8' : '#6b5d47' });
-      }
-    }
-    ctx.restore(); // unclip
-
-    // --- Header ---
-    const pts = this.skillTree.availablePoints;
-    this.renderer.drawText('SKILL TREE', W / 2, s(isMobile ? 15 : 21), { size: s(isMobile ? 13 : 18), align: 'center', color: '#ffd700' });
-    this.renderer.drawText(
-      pts > 0 ? `${pts} point${pts === 1 ? '' : 's'} · drag to pan · tap a lit node` : 'drag to pan · tap a node to inspect',
-      W / 2, s(isMobile ? 29 : 39), { size: s(isMobile ? 7 : 9), align: 'center', color: pts > 0 ? '#a8e063' : '#c8b998' }
-    );
-
-    // --- Zoom / recenter buttons ---
-    const B = this.stButtons();
-    const iconBtn = (rct: { x: number; y: number; width: number; height: number }, label: string) => {
-      ctx.save();
-      ctx.fillStyle = 'rgba(20,14,6,0.85)';
-      ctx.fillRect(rct.x, rct.y, rct.width, rct.height);
-      ctx.strokeStyle = '#c8a15a';
-      ctx.lineWidth = Math.max(1, s(1.4));
-      ctx.strokeRect(rct.x, rct.y, rct.width, rct.height);
-      ctx.restore();
-      this.renderer.drawText(label, rct.x + rct.width / 2, rct.y + rct.height / 2 + s(5), { size: s(isMobile ? 15 : 18), align: 'center', color: '#ffd700' });
-    };
-    iconBtn(B.zoomIn, '+');
-    iconBtn(B.zoomOut, '\u2212');
-    iconBtn(B.recenter, '\u2302');
-
-    // --- Info panel for the selected node ---
-    drawPanel(ctx, V.btnX, V.infoY, V.btnW, V.infoH, DARK_WOOD_THEME, 71, 55);
-    const sel = this.stSelected ? getNode(this.stSelected) : null;
-    if (sel) {
-      const selAlloc = this.skillTree.isAllocated(sel.id);
-      const selCan = this.skillTree.canAllocate(sel.id);
-      const selReach = this.skillTree.isReachable(sel.id);
-      const status = sel.type === 'start' ? 'START'
-        : selAlloc ? 'ALLOCATED'
-        : selCan ? 'TAP TO ALLOCATE'
-        : selReach ? (pts > 0 ? '' : 'NEED A POINT')
-        : 'LOCKED';
-      const armColor = sel.arm === 'core' ? '#ffd700' : (ARM_COLOR[sel.arm] || '#c8b998');
-      this.renderer.drawText(`${sel.icon} ${sel.name}`, V.btnX + s(8), V.infoY + s(isMobile ? 15 : 17), { size: s(isMobile ? 9 : 11), align: 'left', color: armColor });
-      this.renderer.drawText(sel.desc || 'Travel node', V.btnX + s(8), V.infoY + s(isMobile ? 29 : 33), { size: s(isMobile ? 8 : 9), align: 'left', color: '#d8c9a8' });
-      if (status) this.renderer.drawText(status, V.btnX + V.btnW - s(8), V.infoY + s(isMobile ? 15 : 17), { size: s(isMobile ? 7 : 8), align: 'right', color: selAlloc ? '#a8e063' : selCan ? '#ffd700' : '#c8a15a' });
-    } else {
-      this.renderer.drawText('Tap a node to inspect it', V.btnX + V.btnW / 2, V.infoY + V.infoH / 2 + s(3), { size: s(isMobile ? 8 : 9), align: 'center', color: '#c8b998' });
-    }
-
-    // --- Continue button ---
-    drawPanel(ctx, V.btnX, V.btnY, V.btnW, V.btnH, DARK_WOOD_THEME, 91, 60);
-    this.renderer.drawText(pts > 0 ? 'CONTINUE (points banked)' : 'CONTINUE', W / 2, V.btnY + V.btnH / 2 + s(4), { size: s(isMobile ? 10 : 13), align: 'center', color: '#ffd700' });
-  }
-
-  /** Arm a hit-stop freeze, taking the longer of any overlapping request and
-   *  clamping to the hard ceiling so nothing can stall gameplay unfairly. */
   private triggerHitPause(seconds: number): void {
     if (seconds > this.hitPauseTimer) this.hitPauseTimer = seconds;
     if (this.hitPauseTimer > Game.HIT_PAUSE_MAX) this.hitPauseTimer = Game.HIT_PAUSE_MAX;
@@ -4165,13 +3887,6 @@ export class Game {
     };
   }
 
-  private paintBackdrop(): void {
-    const ctx = this.renderer.getContext();
-    ctx.save();
-    ctx.fillStyle = '#120b05';
-    ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-    ctx.restore();
-  }
 
   // ---- EVENT screen — moved to EventScene (step 4 of Game.ts de-god-classing) ----
 
@@ -4381,9 +4096,6 @@ export class Game {
         break;
       case 'paused':
         this.drawPaused();
-        break;
-      case 'skilltree':
-        this.drawSkillTree();
         break;
     }
     }
