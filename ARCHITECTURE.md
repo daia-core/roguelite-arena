@@ -1,6 +1,6 @@
 # Roguelite Arena — Architecture Overview
 
-> **Last updated: 2026-07-08** — useActiveSkill dispatch extracted (step 14, −610 lines, Game.ts now 3,694 lines); HUDRenderer (step 13, −216); PauseScene (step 11, −91); SkillTreeScene (step 12, −288); RewardScene (step 10); ClassSelectScene (step 9); AchievementsScene (step 8); GameOverScene (step 7); ShopScene (step 6); RestScene (step 5); EventScene (step 4); MapScene (step 3). 34 active skills, 1335+ items, AoeZone constraint documented.
+> **Last updated: 2026-07-08** — useActiveSkill dispatch extracted (step 14, −610 lines, Game.ts now 3,694 lines); HUDRenderer (step 13, −216); PauseScene (step 11, −91); SkillTreeScene (step 12, −288); RewardScene (step 10); ClassSelectScene (step 9); AchievementsScene (step 8); GameOverScene (step 7); ShopScene (step 6); RestScene (step 5); EventScene (step 4); MapScene (step 3). 34 active skills, 1335+ items, AoeZone constraint documented. **Full QA suite verified post-extraction (2026-07-08 evening):** 6/6 scripts PASS (catalog 1894 clean, builddiv, damagetype, triggered-items, synergy 14/14, stats-parity 2166/2166).
 
 ---
 
@@ -35,6 +35,34 @@ ctx.pushPendingDmg(x, y, r, baseDmg, delay, color);            // enemy damage
 // ❌ WRONG — hits the player instead of enemies:
 ctx.spawnAoeZone(new AoeZone(x, y, r, baseDmg, delay, { color }));
 ```
+
+---
+
+## ⚠️ QA Script Maintenance — Two Known Drift Points
+
+Run `node qa-*.mjs` from the repo root after any significant refactor. Two drift points caught
+2026-07-08 (post-extraction QA pass) that can cause false failures:
+
+### 1. Scene extraction breaks `window.__game.*` access in QA scripts
+
+When a method moves from Game.ts to a Scene (e.g., ShopScene), QA scripts that access it via
+`window.__game.methodName()` will throw `"not a function"`. Fix:
+- Make the method `public` on the Scene class (remove `private`).
+- Expose the Scene instance on `window`: add `(window as any).__shopScene = this.shopScene;`
+  in Game.ts after the Scene is created.
+- Update the QA script to route through `window.__shopScene.methodName()` for that case.
+
+**Affected QA script:** `qa-synergy.mjs` (cases D+E use ShopScene methods — now via `window.__shopScene`).
+
+### 2. Cap/constant changes in ItemSystem.ts must be mirrored in `qa-stats-parity.mjs`
+
+`qa-stats-parity.mjs` recomputes every stat getter independently and compares against the live
+memoized value. Any cap defined in `ItemSystem.ts` (e.g., `Math.min(0.6, ...)` in `getRerollDiscount`)
+must match the corresponding `Math.min(X, ...)` in the `expected()` function in `qa-stats-parity.mjs`.
+
+**Symptom:** mismatches appear only after enough items push the cumulative sum past the cap.
+**Rule:** when changing a `Math.min(cap, ...)` in any getter in `ItemSystem.ts`, search for the
+same numeric constant in `qa-stats-parity.mjs` `expected()` and update it.
 
 ---
 
