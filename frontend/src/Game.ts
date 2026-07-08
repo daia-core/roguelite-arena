@@ -920,6 +920,23 @@ export class Game {
 
     this.updateWaveAndEnemySpawn(dt);
 
+    this.updateEnemies(dt);
+
+    this.rebuildQuadtrees();
+
+    this.updateProjectileCollisions(dt);
+
+    this.updateMeleeCollisions(dt);
+
+    this.updatePickupsAndCleanup(dt);
+  }
+
+  /** Step 15g — per-enemy pathfinding, DoT ticking (legacy + StatusEffectEngine), DoT-kill routing,
+   *  enemy.update() (movement/AI), shooting, AoE attacks, boss phases, wall/player contact.
+   *  Phases 3 + 4 from the planning guide combined into one pass to avoid a second iteration
+   *  over this.enemies. Player null guard mirrors updatePlaying() caller guard. */
+  private updateEnemies(dt: number): void {
+    if (!this.player) return;
     // Enemies
     for (const enemy of this.enemies) {
       // PATHFINDING: Update paths for smart enemies (mimic, wizard, necromancer, etc.)
@@ -1274,14 +1291,6 @@ export class Game {
         }
       }
     }
-
-    this.rebuildQuadtrees();
-
-    this.updateProjectileCollisions(dt);
-
-        this.updateMeleeCollisions(dt);
-
-        this.updatePickupsAndCleanup(dt);
   }
 
   /** Step 15f — homing steering, projectile.update(), player-projectile→enemy collision
