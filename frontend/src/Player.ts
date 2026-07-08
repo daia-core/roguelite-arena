@@ -53,6 +53,14 @@ export class Player {
   velocityX: number = 0;
   velocityY: number = 0;
 
+  // Last non-zero movement direction (unit vector), so a dash while standing still
+  // still shoots you somewhere sensible. Defaults to facing right.
+  private lastDirX: number = 1;
+  private lastDirY: number = 0;
+  // Direction locked in at the moment a dash starts (dash ignores live input mid-dash).
+  private dashDirX: number = 1;
+  private dashDirY: number = 0;
+
   // Subtle walk bob: phase advances only while moving, drives a small vertical wobble in draw().
   private bobPhase: number = 0;
 
@@ -79,10 +87,23 @@ export class Player {
     this.dashDuration = Math.max(0, this.dashDuration - dt);
     this.invincibilityTimer = Math.max(0, this.invincibilityTimer - dt);
 
-    // Movement
-    const speed = this.dashDuration > 0 ? this.dashSpeed : this.stats.getSpeed();
-    this.velocityX = inputX * speed;
-    this.velocityY = inputY * speed;
+    // Remember the last real heading so a standing-still dash has a direction.
+    if (inputX !== 0 || inputY !== 0) {
+      const len = Math.hypot(inputX, inputY) || 1;
+      this.lastDirX = inputX / len;
+      this.lastDirY = inputY / len;
+    }
+
+    // Movement. While dashing, drive along the locked-in dash direction at dash
+    // speed so the dash always covers ground (even if the stick is centred).
+    if (this.dashDuration > 0) {
+      this.velocityX = this.dashDirX * this.dashSpeed;
+      this.velocityY = this.dashDirY * this.dashSpeed;
+    } else {
+      const speed = this.stats.getSpeed();
+      this.velocityX = inputX * speed;
+      this.velocityY = inputY * speed;
+    }
 
     this.x += this.velocityX * dt;
     this.y += this.velocityY * dt;
@@ -220,9 +241,19 @@ export class Player {
     return projectiles;
   }
 
-  // Dash ability
-  tryDash(): boolean {
+  // Dash ability. dirX/dirY = the current movement input; when it's ~zero (player
+  // standing still) the dash falls back to the last-faced direction.
+  tryDash(dirX: number = 0, dirY: number = 0): boolean {
     if (this.dashCooldown > 0) return false;
+
+    const len = Math.hypot(dirX, dirY);
+    if (len > 0.01) {
+      this.dashDirX = dirX / len;
+      this.dashDirY = dirY / len;
+    } else {
+      this.dashDirX = this.lastDirX;
+      this.dashDirY = this.lastDirY;
+    }
 
     this.dashDuration = 0.2; // 200ms dash
     this.dashCooldown = 3; // 3 second cooldown

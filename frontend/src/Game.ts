@@ -952,6 +952,15 @@ export class Game {
       this.useActiveSkill('e');
     }
 
+    // Dash — 💨 mobile button / Space / Shift. i-frame dodge in the current move
+    // direction (or last-faced direction when standing still), 3s cooldown.
+    if (this.input.consumeDash()) {
+      const mv = this.input.getMovementVector();
+      if (this.player.tryDash(mv.x, mv.y)) {
+        this.audio.playDash();
+      }
+    }
+
     // Wave manager — enemies now spawn via telegraphed in-arena formations (red blinking X).
     this.enemies = this.waveManager.update(
       dt,

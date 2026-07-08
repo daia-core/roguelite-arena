@@ -227,7 +227,9 @@ export class Input {
     this.skillEButton = document.getElementById('skillEBtn') as HTMLButtonElement;
 
     if (this.dashButton) {
-      this.dashButton.addEventListener('touchstart', (e) => {
+      // pointerdown covers touch, pen AND mouse click, so the button fires on any
+      // input (touchstart alone missed mouse clicks).
+      this.dashButton.addEventListener('pointerdown', (e) => {
         e.preventDefault();
         this.dashPressed = true;
       });
