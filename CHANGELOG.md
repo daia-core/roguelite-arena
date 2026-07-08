@@ -6,6 +6,20 @@ portrait viewport).
 
 ---
 
+## 2026-07-08 (morning) — Projectiles clear between waves
+
+**Player-visible**
+- Stray bullets/projectiles no longer linger into the next wave. When a new wave
+  starts, any projectiles still in flight from the previous one are cleared.
+- Pickups (XP orbs, coins) are untouched — they still stay on the ground to collect
+  across the wave break, exactly as before.
+
+**Commit:** `3864e9f` — **live `index-CSIxGk1a.js` ✓** (prod alias 200). QA:
+projectiles 8→0 on wave start, pool released cleanly (no leak), xpOrbs/coins
+preserved, fresh wave still spawns; core regressions (status/slow-status/dash) PASS.
+
+---
+
 ## 2026-07-08 (morning) — Dash button actually dashes now
 
 **Player-visible**
