@@ -6,6 +6,21 @@ portrait viewport).
 
 ---
 
+## 2026-07-08 (evening) — GameOverScene extracted (step 7 de-god-classing)
+
+**Player-visible**
+- No gameplay change. Game-over screen, buttons, stats panel, and achievement unlock banner behaviour is identical.
+
+**Internal**
+- `GameOverScene.ts` (221 lines) extracted from Game.ts: owns updateGameOver() + drawGameOver()
+  via deps-injection pattern (same as ShopScene). Navigation handled by callbacks:
+  onRetry (→class select), onViewUpgrades (→village), onMenu (→menu), onViewAchievements (→achievements).
+- `GameOverStats` interface now exported from GameOverScene.ts; inline type removed from Game.ts.
+- Game.ts −178 lines: 5,289 → 5,111.
+- Commit: `951fc79` · Bundle: `index-DzllMxww.js` · Live: roguelite-game-blush.vercel.app ✓
+
+---
+
 ## 2026-07-08 (evening) — ShopScene extracted (step 6 de-god-classing)
 
 **Player-visible**
