@@ -1264,6 +1264,22 @@ export class Game {
         }
       }
 
+      // Boss phase transition banner — reuses the evolution banner overlay so the
+      // moment reads loud over whatever is on screen.
+      if (result.bossPhaseChange && result.bossPhaseChange > 1) {
+        const BOSS_PHASE_NAMES: Record<string, string> = {
+          boss_necrolord:    'NECRO LORD',
+          boss_flamefiend:   'FLAME FIEND',
+          boss_voidbeast:    'VOID BEAST',
+          boss_stormking:    'STORM KING',
+          boss_ancientgolem: 'ANCIENT GOLEM',
+        };
+        const label = result.bossPhaseChange === 2 ? 'PHASE 2' : 'PHASE 3 — ENRAGED';
+        this.evolutionBannerText = `${label} — ${BOSS_PHASE_NAMES[enemy.type] ?? 'BOSS'}!`;
+        this.evolutionBannerTimer = 2.5;
+        this.audio.playTransformation();
+      }
+
       // Egg sac hatched (timer elapsed while it survived): spawn its tougher
       // payload and remove the egg. Killing the egg first prevents this.
       if (enemy.eggShouldHatch && !enemy.dead) {
@@ -6523,7 +6539,9 @@ export class Game {
     };
     const nameCol = rarityColor[item.rarity] ?? '#ffffff';
     const level = item.upgradeLevel ?? 1;
-    const segs = itemStatSegments(item);
+    // Show the FULL stacked value for an upgraded piece (+N) — the chips scale by level
+    // exactly as PlayerStats folds them, so "+5" reads its real 6× contribution.
+    const segs = itemStatSegments(item, level);
     const stats = segs.map(sg => sg.text);
 
     // Panel geometry: centred card, width bounded for phone. Height grows with the
@@ -6545,7 +6563,10 @@ export class Game {
     const estLines = Math.ceil(item.description.length / charsPerLine);
     // Drop the description block entirely when it just restates the stat rows above
     // (same redundancy the shop card skips) so the panel doesn't reserve empty space.
-    const descRedundant = descRestatesStats(item.description, stats);
+    // Test against BASE stats (level 1): a description restating the per-copy numbers
+    // stays suppressed even when the chips above show the scaled +N total — the green
+    // scaled chips are the single source of truth, no base-vs-stacked number clash.
+    const descRedundant = descRestatesStats(item.description, itemStatSegments(item).map(sg => sg.text));
     const descLineCount = descRedundant ? 0 : Math.min(4, Math.max(1, estLines));
 
     const headerH = Math.max(iconBox, headSize + lineH); // icon row height

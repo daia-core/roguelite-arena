@@ -51,6 +51,8 @@ export interface EnemyUpdateResult {
   shouldSpawnMinion?: boolean;
   /** Telegraphed AoE(s) to spawn this frame. */
   aoeAttacks?: AoeAttackRequest[];
+  /** Set to 2 or 3 the first frame a boss crosses a phase threshold (one signal per crossing). */
+  bossPhaseChange?: number;
 }
 
 // Global multiplier on every enemy's base move speed. Early waves felt sluggish
@@ -774,6 +776,8 @@ export class Enemy {
 
   // BOSS: Multi-phase system (behavior changes at 66% and 33% HP)
   bossPhase: number = 1; // 1, 2, or 3
+  /** Highest phase announced so far; prevents re-triggering the same phase banner. */
+  private bossPhaseAnnounced: number = 1;
   bossSpecialAttackCooldown: number = 0;
   /** Cooldown for a boss's telegraphed AoE ground attack. */
   bossAoeCooldown: number = 3;
@@ -870,6 +874,7 @@ export class Enemy {
     let shouldHeal = false;
     let shouldSpawnMinion = false;
     let aoeAttacks: AoeAttackRequest[] | undefined;
+    let bossPhaseChange: number | undefined;
 
     // Movement behavior based on type
     if (dist > 0) {
@@ -1300,6 +1305,12 @@ export class Enemy {
           this.bossPhase = 3;
         }
 
+        // Signal to Game when a phase threshold is crossed for the first time (never retreats).
+        if (this.bossPhase > this.bossPhaseAnnounced) {
+          this.bossPhaseAnnounced = this.bossPhase;
+          bossPhaseChange = this.bossPhase;
+        }
+
         this.bossSpecialAttackCooldown -= dt;
 
         // Necro Lord - Summons more minions as HP drops
@@ -1536,7 +1547,7 @@ export class Enemy {
       }
     }
 
-    return { shouldShoot, shouldTeleport, shouldSummon, shouldScream, shouldStomp, splitInto, poisonTrail, sporeCloud, shouldHeal, shouldSpawnMinion, aoeAttacks };
+    return { shouldShoot, shouldTeleport, shouldSummon, shouldScream, shouldStomp, splitInto, poisonTrail, sporeCloud, shouldHeal, shouldSpawnMinion, aoeAttacks, bossPhaseChange };
   }
 
   takeDamage(amount: number, attackAngle?: number): Enemy[] | null {

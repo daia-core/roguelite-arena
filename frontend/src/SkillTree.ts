@@ -233,6 +233,19 @@ const CLASS_START_ARM: Record<string, string> = {
   brawler:    'aegis',      // armor / thorns — melee fortress
 };
 
+// The gateway node is the first minor in each arm (r=150, always adjacent to the class
+// start node). Pre-allocating it at run start makes the class identity tangible from the
+// very first second — you're already one step toward your themed arm before buying anything.
+// Gunner omitted: it starts at the hub, adjacent to ALL gateways (no single arm to push).
+const CLASS_GATE_NODE: Record<string, string> = {
+  berserker:  'might_gate',
+  arcanist:   'precision_gate',
+  ranger:     'alacrity_gate',
+  prospector: 'fortune_gate',
+  reaver:     'vitality_gate',
+  brawler:    'aegis_gate',
+};
+
 // Relative slot template applied to every arm. (radius, angleOffset°, role).
 // role: 'p' = primary(laneA) minor, 's' = secondary(laneB) minor, 'pod' = pod minor,
 //       'nA'..'nD' = the four notables, 'kL'/'kM'/'kR' = the three rim keystones.
@@ -544,13 +557,15 @@ export class SkillTree {
     this.availablePoints = 0;
     this.totalEarned = 0;
     this.startId = startNodeForClass(classId);
-    this.allocated = new Set([this.startId]);
+    const gate = classId ? (CLASS_GATE_NODE[classId] ?? null) : null;
+    this.allocated = new Set(gate ? [this.startId, gate] : [this.startId]);
   }
 
   /** Re-anchor to a class start mid-setup (keeps points; used by beginRun order). */
   setClass(classId: string): void {
     this.startId = startNodeForClass(classId);
-    this.allocated = new Set([this.startId]);
+    const gate = CLASS_GATE_NODE[classId] ?? null;
+    this.allocated = new Set(gate ? [this.startId, gate] : [this.startId]);
   }
 
   grantPoints(n: number = 1): void {
