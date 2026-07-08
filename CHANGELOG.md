@@ -6,6 +6,15 @@ portrait viewport).
 
 ---
 
+## 2026-07-08 (afternoon) — Balance: Bone Spear cooldown nerf
+
+**Balance**
+- **Bone Spear** (T2): Cooldown increased 5s → 8s. At 10× damage on a 5s cooldown, it outclassed higher-tier skills — now properly balanced for T2 (compare Meteor: 8× dmg, 8s CD; Phoenix Beam: 6× dmg, 6s CD).
+
+Commit: 6c621dc · Bundle: index-D7GRDc9u.js · Live ✓
+
+---
+
 ## 2026-07-08 (morning) — Fix: 11 more active skills now deal enemy damage
 
 **Bug:** Systematic `AoeZone` architecture misuse — `AoeZone` only damages the **player**, never enemies. 11 skills across all tiers were passing non-zero `damage` to `spawnAoeZone()`, resulting in zero enemy damage and accidental player self-damage. Skills looked impressive visually but did nothing to enemies.
@@ -25,7 +34,7 @@ portrait viewport).
 
 **Infrastructure added:** `activeDmgZones` array + `resolveActiveDmgZones(dt)` for persistent player-beneficial AoE zones that tick enemy damage (powers Poison Cloud and Circle of Power).
 
-Commit: pending · Bundle: index-XoPSvy0v.js · Live ✓
+Commit: 367ba79 · Bundle: index-XoPSvy0v.js · Live ✓
 
 ---
 

@@ -280,7 +280,7 @@ export const ACTIVE_SKILLS: ActiveSkill[] = [
     name: 'Bone Spear',
     icon: '🦴',
     desc: 'Hurl a massive bone lance that pierces every enemy in its path (10× dmg).',
-    cooldown: 5,
+    cooldown: 8,
     effect: 'bone_spear',
     tier: 2,
     baseDamageMultiplier: 10,
