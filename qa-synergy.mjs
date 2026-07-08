@@ -47,8 +47,9 @@ await new Promise(r => setTimeout(r, 1500));
 
 const result = await page.evaluate(() => {
   const g = window.__game;
+  const sh = window.__shopScene;   // ShopScene instance — cases D + E
   const DB = window.__ItemDatabase;
-  if (!g || !DB) return { fatal: 'no __game / __ItemDatabase handle' };
+  if (!g || !sh || !DB) return { fatal: 'no __game / __shopScene / __ItemDatabase handle' };
   g.startNewGame();
   // startNewGame now opens on the node-map meta screen; drop into combat for this
   // synergy-panel harness (the map layer has its own coverage in qa-node-map).
@@ -89,24 +90,25 @@ const result = await page.evaluate(() => {
   // --- Case D: getCardDuoInfo(partner) says completes + carries the effect ---
   clear(); give(A_ID);
   const partnerCard = DB.getItemById(B_ID);
-  const info = g.getCardDuoInfo(partnerCard);
+  const info = sh.getCardDuoInfo(partnerCard);
   out.D_completes = info?.completes === true;
   out.D_hasEffect = !!(info && typeof info.effect === 'string' && info.effect.length > 0);
   out.D_names = info?.name || null;
 
   // --- Case E: overlay toggle is clean (open/close, no purchase leak) ---
+  // enterShop() is on Game; showCombosOverlay / getCombosButtonRect / updateShop are on ShopScene.
   g.enterShop();
-  out.E_closedOnEnter = g.showCombosOverlay === false;    // enterShop resets it
-  const btn = g.getCombosButtonRect();
+  out.E_closedOnEnter = sh.showCombosOverlay === false;    // enterShop resets it
+  const btn = sh.getCombosButtonRect();
   const cx = btn.x + btn.width / 2, cy = btn.y + btn.height / 2;
   // Simulate a tap on the COMBOS button
   g.input.mouseX = cx; g.input.mouseY = cy; g.input.mouseDown = true;
-  g.updateShop();
-  out.E_opensOnTap = g.showCombosOverlay === true;
+  sh.updateShop();
+  out.E_opensOnTap = sh.showCombosOverlay === true;
   // While open, a tap anywhere closes it and consumes the click
   g.input.mouseX = cx; g.input.mouseY = cy; g.input.mouseDown = true;
-  g.updateShop();
-  out.E_closesOnTap = g.showCombosOverlay === false;
+  sh.updateShop();
+  out.E_closesOnTap = sh.showCombosOverlay === false;
 
   clear();
   return out;

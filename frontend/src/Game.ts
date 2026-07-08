@@ -459,6 +459,7 @@ export class Game {
       onUpdateMobileSkills: () => this.hudRenderer.updateMobileSkillButtons(),
     });
     this.scenes.shop = this.shopScene;
+    (window as unknown as { __shopScene: ShopScene }).__shopScene = this.shopScene;
 
     // Step 10: RewardScene.
     this.scenes.reward = new RewardScene({

@@ -208,7 +208,7 @@ export class ShopScene implements Scene {
   }
 
   // "COMBOS ?" help button — top-left of the shop header.
-  private getCombosButtonRect() {
+  getCombosButtonRect() {
     const canvas = this.deps.canvas;
     const zoom = canvas.clientWidth ? canvas.width / canvas.clientWidth : 1;
     const s = (v: number) => Math.round(v * zoom);
@@ -231,7 +231,7 @@ export class ShopScene implements Scene {
 
   // ─── Update ───────────────────────────────────────────────────────────────
 
-  private updateShop(): void {
+  updateShop(): void {
     const player = this.deps.getPlayer();
     if (!player) return;
 
@@ -620,7 +620,7 @@ export class ShopScene implements Scene {
 
   // ─── Card info helpers ────────────────────────────────────────────────────
 
-  private getCardDuoInfo(item: Item): { name: string; partner: string; effect: string; completes: boolean } | null {
+  getCardDuoInfo(item: Item): { name: string; partner: string; effect: string; completes: boolean } | null {
     const ps = this.deps.getPlayerStats();
     let discovery: { name: string; partner: string; effect: string; completes: boolean } | null = null;
     for (const duo of DUO_COMBOS) {
