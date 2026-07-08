@@ -45,6 +45,7 @@ import { MenuScene } from './scenes/MenuScene';
 import { ShopScene } from './ShopScene';
 import { GameOverScene, type GameOverStats } from './GameOverScene';
 import { AchievementsScene } from './AchievementsScene';
+import { ClassSelectScene } from './ClassSelectScene';
 
 // The map/node meta-layer adds three between-wave screens on top of the core loop:
 //   'map'    — the Slay-the-Spire-style branching node picker (route your run)
@@ -439,6 +440,12 @@ export class Game {
       renderer: this.renderer,
       input: this.input,
       onBack: () => { this.state = 'menu'; },
+    });
+    this.scenes.classselect = new ClassSelectScene({
+      canvas: this.canvas,
+      renderer: this.renderer,
+      input: this.input,
+      onSelectClass: (cls) => this.beginRun(cls),
     });
 
     // Step 6: ShopScene.
@@ -849,9 +856,6 @@ export class Game {
         break;
       case 'skilltree':
         this.updateSkillTree();
-        break;
-      case 'classselect':
-        this.updateClassSelect();
         break;
     }
   }
@@ -3081,62 +3085,6 @@ export class Game {
     this.renderer.drawText(pts > 0 ? 'CONTINUE (points banked)' : 'CONTINUE', W / 2, V.btnY + V.btnH / 2 + s(4), { size: s(isMobile ? 10 : 13), align: 'center', color: '#ffd700' });
   }
 
-  // ==================== CLASS SELECT ====================
-  // Shown at the start of every run (startNewGame → 'classselect'). Picking a card
-  // calls beginRun(cls), which builds the run with that class's weapon + stat tilt.
-
-  /** Shared card layout so draw() visuals and update() hitboxes never drift apart. */
-  private classCardLayout() {
-    const { s, W } = this.screenScale();
-    const isMobile = this.screenScale().isMobile;
-    const cardW = Math.min(W - s(32), s(isMobile ? 340 : 460));
-    const cardH = s(isMobile ? 70 : 66);
-    const gap = s(12);
-    const x0 = (W - cardW) / 2;
-    const topY = s(isMobile ? 64 : 88);
-    return { s, W, isMobile, cardW, cardH, gap, x0, topY };
-  }
-
-  private updateClassSelect(): void {
-    if (!this.input.mouseDown) return;
-    const { cardW, cardH, gap, x0, topY } = this.classCardLayout();
-    const mx = this.input.mouseX, my = this.input.mouseY;
-    for (let i = 0; i < STARTING_CLASSES.length; i++) {
-      const y = topY + i * (cardH + gap);
-      if (pointInRect(mx, my, { x: x0, y, width: cardW, height: cardH })) {
-        this.input.mouseDown = false;
-        this.beginRun(STARTING_CLASSES[i]);
-        return;
-      }
-    }
-  }
-
-  private drawClassSelect(): void {
-    const ctx = this.renderer.getContext();
-    const { s, W, isMobile, cardW, cardH, gap, x0, topY } = this.classCardLayout();
-    this.paintBackdrop();
-
-    this.renderer.drawText('CHOOSE YOUR CLASS', W / 2, s(isMobile ? 26 : 34), { size: s(isMobile ? 14 : 20), align: 'center', color: '#ffd700' });
-    this.renderer.drawText('Your starting weapon & stat tilt for the run', W / 2, s(isMobile ? 26 : 34) + s(isMobile ? 16 : 20), { size: s(isMobile ? 8 : 9), align: 'center', color: '#c8b998' });
-
-    const bodyPx = s(isMobile ? 8 : 9);
-    const iconBox = s(isMobile ? 30 : 32);
-    const textX = x0 + s(12) + iconBox + s(8);
-    const textW = cardW - (textX - x0) - s(12);
-
-    STARTING_CLASSES.forEach((cls, i) => {
-      const y = topY + i * (cardH + gap);
-      drawPanel(ctx, x0, y, cardW, cardH, DARK_WOOD_THEME, 11 + i, 53);
-      this.renderer.drawText(cls.icon, x0 + s(12) + iconBox / 2, y + cardH / 2 + s(4), { size: iconBox, align: 'center', color: '#ffffff' });
-      this.renderer.drawText(cls.name, textX, y + s(isMobile ? 16 : 18), { size: s(isMobile ? 12 : 14), align: 'left', color: '#ffd700' });
-      for (const [li, line] of this.wrapText(cls.blurb, textW, bodyPx).entries()) {
-        this.renderer.drawText(line, textX, y + s(isMobile ? 32 : 34) + li * (bodyPx + s(3)), { size: bodyPx, align: 'left', color: '#d8c9a8' });
-      }
-    });
-  }
-
-  // ---- Achievements screen (milestone unlocks + click-to-disable reward pool) ----
-
   /** Arm a hit-stop freeze, taking the longer of any overlapping request and
    *  clamping to the hard ceiling so nothing can stall gameplay unfairly. */
   private triggerHitPause(seconds: number): void {
@@ -4498,9 +4446,6 @@ export class Game {
         break;
       case 'skilltree':
         this.drawSkillTree();
-        break;
-      case 'classselect':
-        this.drawClassSelect();
         break;
     }
     }
