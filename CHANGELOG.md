@@ -6,6 +6,17 @@ portrait viewport).
 
 ---
 
+## 2026-07-08 (evening) — AchievementsScene extracted (step 8 de-god-classing)
+
+**Player-visible**
+- No gameplay change. Achievements screen behavior is identical.
+
+**Internal**
+- `AchievementsScene.ts` (153 lines) extracted from `Game.ts`: owns `achievementLayout`, `updateAchievements`, `drawAchievements`
+- Follows same Scene interface + deps-injection pattern as ShopScene/GameOverScene/MapScene/etc.
+- Game.ts: 5,111 → 5,016 lines (−95). TypeScript clean.
+- **Commit:** `0add1dd` | **Bundle:** `index-Dn1mx5c1.js` | **Live:** roguelite-game-blush.vercel.app ✓
+
 ## 2026-07-08 (evening) — GameOverScene extracted (step 7 de-god-classing)
 
 **Player-visible**
