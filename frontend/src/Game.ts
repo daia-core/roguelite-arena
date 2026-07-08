@@ -2253,8 +2253,8 @@ export class Game {
         break;
       }
       case 'spectral_shield': {
-        // 5s invincibility bubble + immediate burst nova around the player.
-        if (this.player) this.player.invincibilityTimer = Math.max(this.player.invincibilityTimer, 5.0);
+        // 2.5s invincibility bubble + immediate burst nova around the player.
+        if (this.player) this.player.invincibilityTimer = Math.max(this.player.invincibilityTimer, 2.5);
         const rSS = skill.radius ?? 160;
         for (const e of this.enemies) {
           if (e.dead) continue;
