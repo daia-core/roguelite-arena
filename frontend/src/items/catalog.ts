@@ -3295,6 +3295,15 @@ export const ITEM_CATALOG: Item[] = [
     { id: 'ach_survivors_charm', name: "Survivor's Charm", description: '+30 max health, +3 armor and +1 HP/sec. Earned by reaching wave 15.', rarity: 'legendary', tier: ItemTier.Legendary, cost: 68, icon: '🍀', unlocked: false, tags: ['defensive'], slot: 'ring', maxHealthBonus: 30, armor: 3, healthRegen: 1 },
     { id: 'ach_veterans_medal', name: "Veteran's Medal", description: '+25% damage, +25 max health and +5% crit. Earned by reaching wave 20.', rarity: 'legendary', tier: ItemTier.Legendary, cost: 74, icon: '🏅', unlocked: false, tags: ['ranged', 'melee'], slot: 'amulet', damageMultiplier: 1.25, maxHealthBonus: 25, critChance: 0.05 },
 
+    // ==================== MILESTONE ACHIEVEMENT REWARDS (rich checks — Jul 8 2026) ====================
+    // Gated behind the five non-wave achievements in AchievementSystem.ts (boss_slayer / blood_bath /
+    // speed_run / collector / all_classes). Themed to their trigger.
+    { id: 'ach_first_boss_reward', name: "Warlord's Trophy", description: 'First boss falls. +8 armor, +30 max HP, +5% damage. Proof of victory.', rarity: 'legendary', tier: ItemTier.Legendary, cost: 68, icon: '🏆', unlocked: false, tags: ['defensive', 'melee', 'ranged'], slot: 'head', armor: 8, maxHealthBonus: 30, damageMultiplier: 1.05 },
+    { id: 'ach_blood_bath_reward', name: "Reaper's Sigil", description: '1000 kills total. Execute at 8% HP, +5% crit, +8% damage. It remembers.', rarity: 'legendary', tier: ItemTier.Legendary, cost: 72, icon: '💀', unlocked: false, tags: ['melee', 'ranged'], slot: 'ring', executeThreshold: 0.08, critChance: 0.05, damageMultiplier: 1.08 },
+    { id: 'ach_speed_run_reward', name: "Mercury's Boots", description: 'Wave 5 under 3:30. +22% speed, +6% fire rate. Outlawed in three provinces.', rarity: 'legendary', tier: ItemTier.Legendary, cost: 72, icon: '⚡', unlocked: false, tags: ['ranged'], slot: 'feet', speedMultiplier: 1.22, fireRateMultiplier: 1.06 },
+    { id: 'ach_collector_reward', name: 'Treasure Map', description: '10+ items in one run. +25% gold, +10% luck. Shop visits pay double dividends.', rarity: 'legendary', tier: ItemTier.Legendary, cost: 64, icon: '🗺️', unlocked: false, tags: ['economic'], slot: 'head', goldBonus: 1.25, luck: 0.10 },
+    { id: 'ach_all_classes_reward', name: 'Crown of Crowns', description: 'All 7 classes mastered. +6% damage, +6% speed, +6% crit. The prestige item.', rarity: 'legendary', tier: ItemTier.Legendary, cost: 80, icon: '👑', unlocked: false, tags: ['ranged', 'melee'], slot: 'head', damageMultiplier: 1.06, speedMultiplier: 1.06, critChance: 0.06 },
+
     // ==================== PHASE 3c — AMP DEBUFF ITEMS (brittle / dazed / disoriented) ====================
     // Completes the StatusEffectEngine's amp-debuff family. These three effects were fully wired
     // into the damage pipeline (getFlatHitBonus / getBonusCritChanceReceived / getBonusCritDamageReceived)

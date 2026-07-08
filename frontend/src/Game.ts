@@ -19,7 +19,7 @@ import { OrbitingOrb, Bomb, Shockwave } from './Weapons';
 import { AoeZone } from './AoeZone';
 import { SpawnTelegraph } from './SpawnTelegraph';
 import { MetaProgression } from './MetaProgression';
-import { AchievementSystem, ACHIEVEMENTS, type Achievement } from './AchievementSystem';
+import { AchievementSystem, ACHIEVEMENTS, type Achievement, type RunStats } from './AchievementSystem';
 import { ObjectPool } from './ObjectPool';
 import { Quadtree } from './Quadtree';
 import { PerformanceMonitor } from './PerformanceMonitor';
@@ -250,6 +250,8 @@ export class Game {
   kills: number = 0;
   bossKills: number = 0;
   soulsEarnedThisRun: number = 0;
+  /** Timestamp (ms) when the current run started — used to compute runDurationMs for achievements. */
+  private runStartTime: number = 0;
   // Achievements earned in the just-ended run, surfaced as a banner on the game-over screen.
   private newAchievementsThisRun: Achievement[] = [];
 
@@ -591,6 +593,7 @@ export class Game {
     this.hitPauseTimer = 0;
     this.bossKills = 0;
     this.soulsEarnedThisRun = 0;
+    this.runStartTime = Date.now();
     // Reset conditional-item run state (fresh run = no ramp, no kill streak).
     this.wavesSurvived = 0;
     this.killStackCount = 0;
@@ -5111,12 +5114,19 @@ export class Game {
       personalBest: previousBest
     };
 
-    // Evaluate achievements for this run (reached wave + which class) — any newly earned unlock
-    // their reward item immediately and are shown on the game-over screen.
-    this.newAchievementsThisRun = AchievementSystem.checkRun(
-      this.getSelectedClassId(),
-      this.waveManager.currentWave
-    );
+    // Evaluate achievements for this run — any newly earned unlock their reward item immediately
+    // and are shown on the game-over screen. checkRunFull handles both wave-based and rich checks
+    // (boss kills, cumulative kills, run duration, items owned, all-classes).
+    const runStats: RunStats = {
+      classId: this.getSelectedClassId(),
+      wavesReached: this.waveManager.currentWave,
+      enemiesKilled: this.kills,
+      bossesDefeated: this.bossKills,
+      runDurationMs: this.runStartTime > 0 ? Date.now() - this.runStartTime : 0,
+      itemsCollected: this.playerStats.items.length,
+      goldEarned: this.gameOverStats.goldEarned,
+    };
+    this.newAchievementsThisRun = AchievementSystem.checkRunFull(runStats);
 
     // Update meta stats
     SaveManager.updateMetaAfterRun(this.waveManager.currentWave, this.kills);
