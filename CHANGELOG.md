@@ -16,7 +16,16 @@ portrait viewport).
 - **Doom Comet** — debuffs applied at cast, full baseDmg blast 1.5s later (matches the warning arc)
 - **Hellfire Rain** — 20 pendingDmg jobs at 0–3.8s delays targeting bolt impact positions
 
-Commit: 70e4859 · Bundle: index-Bw4wLEWn.js · Live ✓
+Commit: 70e4859 · Bundle: index-ChF5Yklm.js · Live ✓
+
+---
+
+## 2026-07-08 (early morning) — Balance: Spectral Shield nerf
+
+**Player-visible**
+- **Spectral Shield** (T2): Invincibility duration reduced 5s → 2.5s; cooldown increased 12s → 15s. At 5s i-frames on a 12s cooldown, it outclassed Divine Wrath (T4, 16s cd, 2s i-frames) on uptime — now properly positioned as T2.
+
+Commit: 6534f74 · Bundle: index-ChF5Yklm.js · Live ✓ (deployed together with 70e4859)
 
 ---
 
