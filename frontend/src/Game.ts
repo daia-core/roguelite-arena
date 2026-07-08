@@ -918,7 +918,7 @@ export class Game {
 
     this.updatePlayerTick(dt);
 
-        this.updateWaveAndEnemySpawn(dt);
+    this.updateWaveAndEnemySpawn(dt);
 
     // Enemies
     for (const enemy of this.enemies) {
@@ -1444,6 +1444,15 @@ export class Game {
       }
     }
 
+    this.updateMeleeCollisions(dt);
+
+        this.updatePickupsAndCleanup(dt);
+  }
+
+  /** Step 15e — melee attack updates + arc-overlap enemy collision (crit, amps, on-hit).
+   *  Player null guard mirrors updatePlaying() caller guard; this always runs with a live player. */
+  private updateMeleeCollisions(dt: number): void {
+    if (!this.player) return;
     // Melee attacks
     for (const melee of this.meleeAttacks) {
       if (!this.player) continue;
@@ -1520,8 +1529,6 @@ export class Game {
         }
       }
     }
-
-    this.updatePickupsAndCleanup(dt);
   }
 
   /** Step 15d — player input, movement, regen, shooting (incl. multicast + overcharge),
