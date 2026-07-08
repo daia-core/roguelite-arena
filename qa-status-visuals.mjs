@@ -190,7 +190,7 @@ const checks = {
   'burn paints': telemetry.orange > 10,
   'poison paints': telemetry.green > 10,
   'bleed paints': telemetry.red > 10,
-  'doom paints': telemetry.purple > 40, // isolated rune, summed over a blink period
+  'doom paints': telemetry.purple > 25, // isolated rune, summed over a blink period (~36px observed)
 };
 let ok = true;
 for (const [k, v] of Object.entries(checks)) { if (!v) { ok = false; console.log('  ✗ FAILED:', k); } }

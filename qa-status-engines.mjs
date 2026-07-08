@@ -59,6 +59,17 @@ const result = await page.evaluate(() => {
       contactCooldown: 999, usePathfinding: false,
       typeData: { isBoss:false, damage:5, xpValue:1, goldValue:1, radius:14 },
       knockbackVelocityX:0, knockbackVelocityY:0, hitFlashTimer:0,
+      // Minimal StatusEffectManager stub — the new-engine tick path runs but yields no damage,
+      // so the legacy burnTimer/bleedTimer/doomTimer/poisonTimer assertions still work cleanly.
+      statusFX: {
+        tick(){ return { dotDamage:0, doomDetonation:null, poisonSpreads:false, daggerDot:false }; },
+        has(){ return false; }, get(){ return null; },
+        getIncomingDamageMult(){ return 1; }, getDirectHitMult(){ return 1; },
+        getFlatHitBonus(){ return 0; }, getBonusCritChanceReceived(){ return 0; },
+        getBonusCritDamageReceived(){ return 0; }, checkCondemned(){ return 0; },
+        apply(){ return []; }, applySynergyChain(){},
+        setBurnTimer(){}, setBleedTimer(){}, setPoisonTimer(){}, setFreezeTimer(){},
+      },
       takeDamage(d){ this.health -= d; this._dmg=(this._dmg||0)+d; return null; },
       applyKnockback(){}, checkWallCollision(){}, draw(){}, updatePath(){},
       collidesWith(){ return false; }, update(){ return NO; }
