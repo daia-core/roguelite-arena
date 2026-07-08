@@ -35,6 +35,7 @@ import { MapSystem, serializeMap, deserializeMap } from './MapSystem';
 import { ArtifactSystem, ARTIFACTS, ROLLABLE_ARTIFACTS, getArtifactById, type Artifact } from './ArtifactSystem';
 import { EVENTS, type EventEffect, type EventOption } from './EventSystem';
 import { EventScene, type EventReward } from './EventScene';
+import { RestScene } from './RestScene';
 import { EvolutionSystem, type Evolution } from './EvolutionSystem';
 import { VillageScene } from './VillageScene';
 import { MapScene } from './MapScene';
@@ -193,8 +194,6 @@ export class Game {
   private stSelected: string | null = null;    // last-tapped node (for the info panel)
   private pendingWaveArtifact: boolean = false;   // elite/boss wave grants spoils on clear
   private pendingEliteCascade: boolean = false;   // elite/boss wave grants a free bonus item in the shop
-  restResolved: boolean = false;             // rest node: an option has been taken
-  restResultText: string = '';               // rest node outcome line
   // Momentum artifact: seconds the player has been continuously moving.
   private momentumTime: number = 0;
 
@@ -433,6 +432,13 @@ export class Game {
       renderer: this.renderer,
       input: this.input,
       onOptionPicked: (opt) => this.applyEventOption(opt),
+      onDone: () => { this.state = 'map'; },
+    });
+    this.scenes.rest = new RestScene({
+      canvas: this.canvas,
+      renderer: this.renderer,
+      input: this.input,
+      onChoose: (choice) => this.applyRestChoice(choice),
       onDone: () => { this.state = 'map'; },
     });
 
@@ -826,9 +832,6 @@ export class Game {
         break;
       case 'skilltree':
         this.updateSkillTree();
-        break;
-      case 'rest':
-        this.updateRest();
         break;
       case 'classselect':
         this.updateClassSelect();
@@ -4451,8 +4454,8 @@ export class Game {
         this.offerArtifactReward('TREASURE', () => { this.state = 'map'; });
         break;
       case 'rest':
-        this.restResolved = false;
-        this.restResultText = '';
+        // RestScene.enter() resets resolved/result state + disarms input.
+        this.scenes.rest?.enter?.(this.state);
         this.state = 'rest';
         break;
     }
@@ -4767,75 +4770,24 @@ export class Game {
     }
   }
 
-  // ---- REST screen ----
+  // ---- REST screen — moved to RestScene (step 5 of Game.ts de-god-classing) ----
 
-  private drawRest(): void {
-    const ctx = this.renderer.getContext();
-    const { s, W, H, isMobile } = this.screenScale();
-    this.paintBackdrop();
-
-    const contentW = Math.min(W - s(24), s(isMobile ? 372 : 520));
-    const x0 = (W - contentW) / 2;
-    drawPanel(ctx, x0 - s(8), s(12), contentW + s(16), H - s(24), DARK_WOOD_THEME, 19, 61);
-
-    let y = s(isMobile ? 30 : 40);
-    this.renderer.drawText('A QUIET CAMPFIRE', W / 2, y, { size: s(isMobile ? 14 : 18), align: 'center', color: '#ffd700' });
-    y += s(isMobile ? 22 : 28);
-    const bodyPx = s(isMobile ? 9 : 11);
-
-    if (!this.restResolved) {
-      this.renderer.drawText('Take a moment. Choose one.', W / 2, y, { size: bodyPx, align: 'center', color: '#d8c9a8' });
-      y += s(isMobile ? 18 : 22);
-      const rects = this.columnRects(2, y, s, W, isMobile);
-      this.renderer.drawButton(rects[0].x, rects[0].y, rects[0].width, rects[0].height, 'Rest — heal 40% HP', false, true, isMobile);
-      this.renderer.drawButton(rects[1].x, rects[1].y, rects[1].width, rects[1].height, 'Train — +15 max HP', false, true, isMobile);
-    } else {
-      for (const line of this.wrapText(this.restResultText, contentW - s(24), bodyPx)) {
-        this.renderer.drawText(line, W / 2, y, { size: bodyPx, align: 'center', color: '#8ce99a' });
-        y += bodyPx + s(5);
-      }
-      y += s(12);
-      const r = this.columnRects(1, y, s, W, isMobile)[0];
-      this.renderer.drawButton(r.x, r.y, r.width, r.height, 'Continue', true, true, isMobile);
-    }
-  }
-
-  private updateRest(): void {
-    if (!this.input.mouseDown || !this.player) return;
-    const { s, W, H, isMobile } = this.screenScale();
-    const mx = this.input.mouseX;
-    const my = this.input.mouseY;
-    let y = s(isMobile ? 30 : 40) + s(isMobile ? 22 : 28);
-    const bodyPx = s(isMobile ? 9 : 11);
-
-    if (!this.restResolved) {
-      y += s(isMobile ? 18 : 22);
-      const rects = this.columnRects(2, y, s, W, isMobile);
-      if (pointInRect(mx, my, rects[0])) {
-        this.input.mouseDown = false;
+  /**
+   * Apply the chosen rest-node option and return the outcome text.
+   * Called by RestScene.onChoose; Game owns player/stat mutation,
+   * RestScene owns the screen state (resolved flag, result text).
+   */
+  private applyRestChoice(choice: 'rest' | 'train'): string {
+    if (choice === 'rest') {
+      if (this.player) {
         this.player.health = Math.min(this.player.maxHealth, this.player.health + Math.round(0.4 * this.player.maxHealth));
-        this.restResolved = true;
-        this.restResultText = 'You rest by the fire and recover your strength.';
-        return;
       }
-      if (pointInRect(mx, my, rects[1])) {
-        this.input.mouseDown = false;
-        this.playerStats.baseMaxHealth += 15;
-        this.refreshMaxHealth();
-        this.restResolved = true;
-        this.restResultText = 'You train through the night. You feel permanently hardier.';
-        return;
-      }
+      return 'You rest by the fire and recover your strength.';
     } else {
-      const contentW = Math.min(W - s(24), s(isMobile ? 372 : 520));
-      y += this.wrapText(this.restResultText, contentW - s(24), bodyPx).length * (bodyPx + s(5)) + s(12);
-      const r = this.columnRects(1, y, s, W, isMobile)[0];
-      if (pointInRect(mx, my, r)) {
-        this.input.mouseDown = false;
-        this.state = 'map';
-      }
+      this.playerStats.baseMaxHealth += 15;
+      this.refreshMaxHealth();
+      return 'You train through the night. You feel permanently hardier.';
     }
-    void H;
   }
 
   // Pause/menu overlay buttons — shared geometry so drawPaused and updatePaused
@@ -4999,9 +4951,6 @@ export class Game {
         break;
       case 'skilltree':
         this.drawSkillTree();
-        break;
-      case 'rest':
-        this.drawRest();
         break;
       case 'classselect':
         this.drawClassSelect();
