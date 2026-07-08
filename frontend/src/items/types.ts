@@ -128,21 +128,29 @@ export function slotLabel(item: Item): string {
 // in red instead of hiding it in the same green as their upside.
 export interface ItemStatSegment { text: string; neg: boolean; }
 
-export function itemStatSegments(item: Item): ItemStatSegment[] {
+// `level` is the item's upgrade level (upgradeLevel; 1 = base). Stacked items apply their
+// stats scaled — additive fields ×level, multiplicative fields ^level — EXACTLY as
+// PlayerStats.ensureAgg() folds them, so passing the owned instance's level makes the chips
+// show the FULL stacked value (a Burn +5 reads "+72% Burn", not the "+12%" of one copy).
+// Default 1 keeps shop-offer cards showing the honest per-copy value.
+export function itemStatSegments(item: Item, level: number = 1): ItemStatSegment[] {
   const segs: ItemStatSegment[] = [];
+  const lv = level > 1 ? level : 1;
   const mul = (v: number | undefined, label: string) => {
     if (v === undefined) return;
-    const p = Math.round((v - 1) * 100);
+    const scaled = lv === 1 ? v : Math.pow(v, lv);
+    const p = Math.round((scaled - 1) * 100);
     if (p !== 0) segs.push({ text: `${p > 0 ? '+' : ''}${p}% ${label}`, neg: p < 0 });
   };
   const frac = (v: number | undefined, label: string) => {
     if (v === undefined) return;
-    const p = Math.round(v * 100);
+    const p = Math.round(v * lv * 100);
     if (p !== 0) segs.push({ text: `${p > 0 ? '+' : ''}${p}% ${label}`, neg: p < 0 });
   };
   const flat = (v: number | undefined, label: string) => {
     if (v === undefined || v === 0) return;
-    segs.push({ text: `${v > 0 ? '+' : ''}${v} ${label}`, neg: v < 0 });
+    const val = v * lv;
+    segs.push({ text: `${val > 0 ? '+' : ''}${val} ${label}`, neg: val < 0 });
   };
   const flag = (v: boolean | undefined, label: string) => { if (v) segs.push({ text: label, neg: false }); };
 
@@ -196,8 +204,8 @@ export function itemStatSegments(item: Item): ItemStatSegment[] {
   return segs;
 }
 
-export function itemStatLines(item: Item): string[] {
-  return itemStatSegments(item).map(s => s.text);
+export function itemStatLines(item: Item, level: number = 1): string[] {
+  return itemStatSegments(item, level).map(s => s.text);
 }
 
 // True when the hand-written description merely restates the auto-generated stat

@@ -31,6 +31,7 @@ async function shoot(vp, label) {
         frozenTimer:0, slowTimer:3, slowFactor:0.6, poisonTimer:0, burnTimer:0, bleedTimer:0, poisonSpreads:false, woundMult:1,
         doomTimer:0, doomStored:0, lastX:px+dx, lastY:py+dy, contactCooldown:999, usePathfinding:false,
         typeData:{ isBoss:false, damage:5, xpValue:1, goldValue:1, radius:16 }, knockbackVelocityX:0, knockbackVelocityY:0, hitFlashTimer:0,
+        statusFX:{ tick(){ return { dotDamage:0, doomDetonation:null, poisonSpreads:false, daggerDot:false }; }, has(){ return false; }, get(){ return null; }, getIncomingDamageMult(){ return 1; }, getDirectHitMult(){ return 1; }, getFlatHitBonus(){ return 0; }, getBonusCritChanceReceived(){ return 0; }, getBonusCritDamageReceived(){ return 0; }, checkCondemned(){ return 0; }, apply(){ return []; }, applySynergyChain(){}, setBurnTimer(){}, setBleedTimer(){}, setPoisonTimer(){}, setFreezeTimer(){} },
         takeDamage(d){ this.health-=d; return null; }, applyKnockback(){}, checkWallCollision(){}, draw(){}, updatePath(){},
         collidesWith(){ return false; }, update(){ return NO; }
       };
