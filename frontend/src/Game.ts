@@ -1032,27 +1032,7 @@ export class Game {
       }
     }
 
-    // Wave manager — enemies now spawn via telegraphed in-arena formations (red blinking X).
-    this.enemies = this.waveManager.update(
-      dt,
-      this.enemies,
-      this.worldWidth,
-      this.worldHeight,
-      this.spawnTelegraphs,
-      this.player.x,
-      this.player.y
-    );
-
-    // Tick spawn telegraphs (red blinking X countdown) and cull spent/cancelled ones.
-    // WaveManager consumes `ready` telegraphs into real enemies before we prune here.
-    for (const tg of this.spawnTelegraphs) tg.update(dt);
-    this.removeDeadEntities(this.spawnTelegraphs);
-
-    // Waves-within-waves: flash the new sub-phase banner when a phase begins.
-    if (this.waveManager.phaseJustChanged) {
-      this.phaseBannerText = this.waveManager.phaseText;
-      this.phaseBannerTimer = 2.4;
-    }
+    this.updateWaveAndEnemySpawn(dt);
 
     // Enemies
     for (const enemy of this.enemies) {
@@ -1656,6 +1636,33 @@ export class Game {
     }
 
     this.updatePickupsAndCleanup(dt);
+  }
+
+  /** Step 15c — wave manager update + spawn telegraphs + phase banner tick. Factored
+   *  out of updatePlaying() for readability. Player non-null guaranteed by caller guard. */
+  private updateWaveAndEnemySpawn(dt: number): void {
+    if (!this.player) return;
+    // Wave manager — enemies now spawn via telegraphed in-arena formations (red blinking X).
+    this.enemies = this.waveManager.update(
+      dt,
+      this.enemies,
+      this.worldWidth,
+      this.worldHeight,
+      this.spawnTelegraphs,
+      this.player.x,
+      this.player.y
+    );
+
+    // Tick spawn telegraphs (red blinking X countdown) and cull spent/cancelled ones.
+    // WaveManager consumes `ready` telegraphs into real enemies before we prune here.
+    for (const tg of this.spawnTelegraphs) tg.update(dt);
+    this.removeDeadEntities(this.spawnTelegraphs);
+
+    // Waves-within-waves: flash the new sub-phase banner when a phase begins.
+    if (this.waveManager.phaseJustChanged) {
+      this.phaseBannerText = this.waveManager.phaseText;
+      this.phaseBannerTimer = 2.4;
+    }
   }
 
   /** Step 15a — quadtree rebuild factored out of updatePlaying() for readability. */
