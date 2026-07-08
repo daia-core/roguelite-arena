@@ -4388,6 +4388,14 @@ export class Game {
     this.wavesSurvived++;
     this.syncArtifactStatic();
 
+    // Clear any projectiles still in flight from the previous wave so stray bullets
+    // don't carry over into the new one. Return them to the pool for reuse. Pickups
+    // (xpOrbs / coins) are deliberately left alone so they stay collectable across waves.
+    if (this.projectiles.length > 0) {
+      this.projectilePool.releaseMany(this.projectiles);
+      this.projectiles.length = 0;
+    }
+
     this.waveManager.startWave(this.waveManager.currentWave + 1, opts);
     this.waveModifierTimer = 3; // Show wave modifier for 3 seconds
     // Always flash the wave's unique intro line (phase 0 text) so every wave
