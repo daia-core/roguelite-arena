@@ -1655,6 +1655,36 @@ export class Game {
       }
     }
 
+    this.updatePickupsAndCleanup(dt);
+  }
+
+  /** Step 15a — quadtree rebuild factored out of updatePlaying() for readability. */
+  private rebuildQuadtrees(): void {
+    // PERFORMANCE: Rebuild quadtrees only for living entities
+    // Skip dead entities to reduce quadtree size and improve query performance
+    this.enemyQuadtree.clear();
+    this.projectileQuadtree.clear();
+
+    // Batch insert - more efficient than individual inserts
+    const aliveEnemies = this.enemies.filter(e => !e.dead);
+    const aliveProjectiles = this.projectiles.filter(p => !p.dead);
+
+    for (const enemy of aliveEnemies) {
+      this.enemyQuadtree.insert(enemy);
+    }
+
+    for (const proj of aliveProjectiles) {
+      this.projectileQuadtree.insert(proj);
+    }
+  }
+
+  /** Step 15b — aux weapons, pickups (health orbs / XP / coins), entity cleanup,
+   *  AoE zone resolution, wave/game-over checks, and autosave. Factored out of
+   *  updatePlaying() for readability. Player-null guard mirrors updatePlaying()'s
+   *  top-of-method guard; both code paths require a live player to make sense. */
+  private updatePickupsAndCleanup(dt: number): void {
+    if (!this.player) return;
+
     // AUXILIARY STACKING WEAPONS — orbiting orbs, dropped bombs, nova pulses and a
     // whirling melee arc. These run in ADDITION to the primary weapon each frame.
     this.updateAuxWeapons(dt);
@@ -1827,26 +1857,6 @@ export class Game {
 
     // Auto-save
     this.autoSave();
-  }
-
-  /** Step 15a — quadtree rebuild factored out of updatePlaying() for readability. */
-  private rebuildQuadtrees(): void {
-    // PERFORMANCE: Rebuild quadtrees only for living entities
-    // Skip dead entities to reduce quadtree size and improve query performance
-    this.enemyQuadtree.clear();
-    this.projectileQuadtree.clear();
-
-    // Batch insert - more efficient than individual inserts
-    const aliveEnemies = this.enemies.filter(e => !e.dead);
-    const aliveProjectiles = this.projectiles.filter(p => !p.dead);
-
-    for (const enemy of aliveEnemies) {
-      this.enemyQuadtree.insert(enemy);
-    }
-
-    for (const proj of aliveProjectiles) {
-      this.projectileQuadtree.insert(proj);
-    }
   }
 
   // Dash/Blast abilities removed - keeping method commented for potential future use
