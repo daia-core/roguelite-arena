@@ -129,7 +129,7 @@ const result = await page.evaluate(() => {
       getDoomChance: Math.min(1, sum('doom')),
       getWoundChance: Math.min(1, sum('wound')),
       getMulticastChance: Math.min(0.9, sum('multicast')),
-      getRerollDiscount: Math.min(0.9, sum('rerollDiscount')),
+      getRerollDiscount: Math.min(0.6, sum('rerollDiscount')),  // Cap matches ItemSystem.ts (was 0.9, reduced to 0.6 to prevent near-free rerolls)
       getShopDiscount: Math.min(0.3, sum('shopDiscount') + tf.shopDiscount),
       getInterestBonus: Math.min(0.4, sum('interestBonus')),
       getLuck: Math.min(1.0, sum('luck')),
