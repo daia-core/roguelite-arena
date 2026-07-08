@@ -149,6 +149,10 @@ export class Game {
   // PERFORMANCE: Batch particle rendering (40-60% faster)
   private particleBatchRenderer: ParticleBatchRenderer;
 
+  // GAME FEEL: Per-enemy DoT damage accumulators for throttled colored damage numbers.
+  // Avoids spawning a number every frame (60/s) while still providing feel feedback.
+  private _dotDisplay = new WeakMap<Enemy, {t: number; burn: number; bleed: number; poison: number}>();
+
   // Shop state - ADVANCED BROTATO-LEVEL MECHANICS
   shopItems: Item[] = [];
   selectedShopItem: number = -1;
@@ -978,17 +982,44 @@ export class Game {
       if (enemy.frozenTimer > 0) enemy.frozenTimer -= dt;
       if (enemy.slowTimer > 0) { enemy.slowTimer -= dt; if (enemy.slowTimer <= 0) enemy.slowFactor = 1; }
       let dotDamage = 0;
-      if (enemy.poisonTimer > 0) { enemy.poisonTimer -= dt; dotDamage += 7 * dt; }
-      if (enemy.burnTimer > 0) { enemy.burnTimer -= dt; dotDamage += 16 * dt; } // Ignite: hurts fast, burns out fast
+      let _burnDmg = 0, _bleedDmg = 0, _poisonDmg = 0;
+      if (enemy.poisonTimer > 0) { enemy.poisonTimer -= dt; _poisonDmg = 7 * dt; dotDamage += _poisonDmg; }
+      if (enemy.burnTimer > 0) { enemy.burnTimer -= dt; _burnDmg = 16 * dt; dotDamage += _burnDmg; } // Ignite: hurts fast, burns out fast
       if (enemy.bleedTimer > 0) {
         enemy.bleedTimer -= dt;
         // Bleed hits harder while the enemy is moving (punishes rushers).
         const moved = Math.hypot(enemy.x - enemy.lastX, enemy.y - enemy.lastY);
-        dotDamage += (6 + Math.min(18, moved * 1.5)) * dt;
+        _bleedDmg = (6 + Math.min(18, moved * 1.5)) * dt;
+        dotDamage += _bleedDmg;
       }
       enemy.lastX = enemy.x; enemy.lastY = enemy.y;
       if (dotDamage > 0) {
-        enemy.health -= dotDamage * enemy.woundMult;
+        const wm = enemy.woundMult;
+        enemy.health -= dotDamage * wm;
+        // GAME FEEL: Throttled colored damage numbers for DoT (max ~2/s per enemy)
+        let ds = this._dotDisplay.get(enemy);
+        if (!ds) { ds = { t: 0, burn: 0, bleed: 0, poison: 0 }; this._dotDisplay.set(enemy, ds); }
+        ds.burn += _burnDmg * wm;
+        ds.bleed += _bleedDmg * wm;
+        ds.poison += _poisonDmg * wm;
+        ds.t -= dt;
+        if (ds.t <= 0) {
+          const maxV = Math.max(ds.burn, ds.bleed, ds.poison);
+          if (maxV >= 1) {
+            let dotColor: string, dotAccum: number;
+            if (ds.burn >= ds.bleed && ds.burn >= ds.poison) {
+              dotColor = '#ff6b1a'; dotAccum = ds.burn;      // Burn: orange
+            } else if (ds.bleed >= ds.poison) {
+              dotColor = '#cc3333'; dotAccum = ds.bleed;     // Bleed: dark red
+            } else {
+              dotColor = '#44cc44'; dotAccum = ds.poison;    // Poison: green
+            }
+            this.damageNumbers.push(this.createDamageNumber(
+              enemy.x + (Math.random() - 0.5) * 16, enemy.y - 8, Math.round(dotAccum), false, dotColor
+            ));
+          }
+          ds.burn = 0; ds.bleed = 0; ds.poison = 0; ds.t = 0.45;
+        }
         if (enemy.health <= 0 && !enemy.dead) { this.killByDot(enemy); continue; }
       }
       // Doom: stores damage, then detonates. Executes if the stored payload >= remaining HP.
@@ -998,6 +1029,19 @@ export class Game {
           const payload = enemy.doomStored * enemy.woundMult;
           enemy.doomStored = 0;
           this.renderer.addImpactFlash(enemy.x, enemy.y);
+          // GAME FEEL: Doom detonation — purple explosion burst + screen flash
+          this.screenEffects.flash('#9040d0', 0.22);
+          const _doomPCount = this.getParticleCount(18);
+          for (let _di = 0; _di < _doomPCount; _di++) {
+            const _dang = (Math.PI * 2 * _di) / _doomPCount;
+            const _dspd = 100 + Math.random() * 130;
+            this.particles.push(this.createParticle({
+              x: enemy.x, y: enemy.y,
+              vx: Math.cos(_dang) * _dspd, vy: Math.sin(_dang) * _dspd,
+              color: _di % 2 === 0 ? '#b06bff' : '#ff40ff',
+              size: 4 + Math.random() * 5, lifetime: 350 + Math.random() * 300, gravity: 80
+            }));
+          }
           if (payload >= enemy.health) {
             enemy.health = 0;
             this.damageNumbers.push(this.createDamageNumber(enemy.x, enemy.y - 20, payload, true, '#b06bff'));
@@ -1022,6 +1066,19 @@ export class Game {
         if (fxResult.doomDetonation && !enemy.dead) {
           const { payload } = fxResult.doomDetonation;
           this.renderer.addImpactFlash(enemy.x, enemy.y);
+          // GAME FEEL: Doom detonation burst
+          this.screenEffects.flash('#9040d0', 0.22);
+          const _doomPCount2 = this.getParticleCount(18);
+          for (let _dj = 0; _dj < _doomPCount2; _dj++) {
+            const _dang2 = (Math.PI * 2 * _dj) / _doomPCount2;
+            const _dspd2 = 100 + Math.random() * 130;
+            this.particles.push(this.createParticle({
+              x: enemy.x, y: enemy.y,
+              vx: Math.cos(_dang2) * _dspd2, vy: Math.sin(_dang2) * _dspd2,
+              color: _dj % 2 === 0 ? '#b06bff' : '#ff40ff',
+              size: 4 + Math.random() * 5, lifetime: 350 + Math.random() * 300, gravity: 80
+            }));
+          }
           if (payload >= enemy.health) {
             enemy.health = 0;
             this.damageNumbers.push(this.createDamageNumber(enemy.x, enemy.y - 20, payload, true, '#b06bff'));
