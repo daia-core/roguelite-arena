@@ -619,6 +619,7 @@ export class Game {
     this.pendingWaveArtifact = false;
     this.pendingEliteCascade = false;
 
+    this.updateMobileSkillButtons(); // reset to disabled at run start (no scrolls yet)
     this.state = 'map';
   }
 
@@ -3878,6 +3879,7 @@ export class Game {
     // upgrade would mutate every future shop offering of the same id.
     const bought: Item = JSON.parse(JSON.stringify(item));
     const { newDuos, newTransformations, overflow, upgraded, upgradeLevel } = this.playerStats.addItem(bought);
+    this.updateMobileSkillButtons(); // skill scrolls change which active ability is on Q/E
     this.itemsPurchasedThisWave++;
 
     // Duplicate buy → upgraded an owned instance. Tell the player (e.g. "Amulet +2").
@@ -5291,6 +5293,40 @@ export class Game {
     }
   }
 
+  /**
+   * Update the mobile skill buttons (blastBtn / skillEBtn) to reflect the currently
+   * equipped Q/E skills — shows skill icon + short name, disabled when no skill is
+   * equipped in that slot. Called after any item acquisition that might change scrolls.
+   */
+  private updateMobileSkillButtons(): void {
+    const blastBtn = document.getElementById('blastBtn') as HTMLButtonElement | null;
+    const skillEBtn = document.getElementById('skillEBtn') as HTMLButtonElement | null;
+    const qSkillId = this.playerStats.getEquippedSkillIdQ();
+    const eSkillId = this.playerStats.getEquippedSkillId();
+    if (blastBtn) {
+      const sk = qSkillId ? getActiveSkillById(qSkillId) : null;
+      if (sk) {
+        const name = sk.name.length > 7 ? sk.name.slice(0, 6) + '…' : sk.name;
+        blastBtn.innerHTML = `${sk.icon}<span style="font-size:9px">${name}</span>`;
+        blastBtn.disabled = false;
+      } else {
+        blastBtn.innerHTML = `🔮<span>Q</span>`;
+        blastBtn.disabled = true;
+      }
+    }
+    if (skillEBtn) {
+      const sk = eSkillId ? getActiveSkillById(eSkillId) : null;
+      if (sk) {
+        const name = sk.name.length > 7 ? sk.name.slice(0, 6) + '…' : sk.name;
+        skillEBtn.innerHTML = `${sk.icon}<span style="font-size:9px">${name}</span>`;
+        skillEBtn.disabled = false;
+      } else {
+        skillEBtn.innerHTML = `✨<span>E</span>`;
+        skillEBtn.disabled = true;
+      }
+    }
+  }
+
   // Duo/combo info for a shop card so synergies are legible: which named combo this item
   // belongs to, its partner, its effect, and whether buying it would COMPLETE the combo.
   // Prefers a duo you can complete now; otherwise surfaces one to teach the pairing.
@@ -5493,6 +5529,7 @@ export class Game {
           this.playerStats.removeItem(item.id);
           this.player.gold += refund;
           this.syncMaxHealthAfterItemChange();
+          this.updateMobileSkillButtons();
           this.audio.playPurchase();
           this.showShopToast(`Sold ${item.name} · +${refund}g`);
         }
@@ -5550,6 +5587,7 @@ export class Game {
         this.showShopToast(`Stash full — sold ${occupant.name} · +${refund}g`);
       }
       this.syncMaxHealthAfterItemChange();
+      this.updateMobileSkillButtons();
       this.audio.playPurchase();
       this.inspectedEquipKey = null;
       return true;
@@ -5561,6 +5599,7 @@ export class Game {
       this.playerStats.removeItem(occupant.id);
       this.player.gold += refund;
       this.syncMaxHealthAfterItemChange();
+      this.updateMobileSkillButtons();
       this.audio.playPurchase();
       this.showShopToast(`Sold ${occupant.name} · +${refund}g`);
       this.inspectedEquipKey = null;
