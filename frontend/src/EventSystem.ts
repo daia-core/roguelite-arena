@@ -51,7 +51,7 @@ export interface GameEvent {
   options: EventOption[];
 }
 
-// ~33 events — a mix of pure upside (rare), gamble, cost/benefit trades, and
+// ~39 events — a mix of pure upside (rare), gamble, cost/benefit trades, and
 // stat-gated (requirement-locked) choices so the `?` node always feels like a real
 // decision rather than free loot.
 export const EVENTS: GameEvent[] = [
@@ -492,6 +492,116 @@ export const EVENTS: GameEvent[] = [
         result: 'Small stakes, small winnings — but winnings all the same.' },
       { label: 'Keep your purse shut', effects: [{ kind: 'nothing' }],
         result: 'The dealer shrugs. "Come back when you can afford to lose." You leave.' },
+    ],
+  },
+
+  // ---- ADVANCED STAT GATES — higher thresholds reward players who fully commit
+  // to a single build axis. Each only opens for serious investment (vs. the starter
+  // gates which kick in at modest thresholds). ----
+  {
+    id: 'iron_vault',
+    title: 'The Iron Vault',
+    text: 'A vault door forged from inch-thick iron bars the way. It won\'t yield to tools — only to someone already sheathed in enough steel.',
+    options: [
+      { label: 'Shoulder it open',
+        effects: [{ kind: 'artifact' }, { kind: 'artifact' }, { kind: 'gold', amount: 50 }],
+        result: 'Iron meets iron — yours wins. The vault swings open and gives up everything inside.',
+        requirement: { stat: 'armor', min: 15, label: 'Armor 15+' } },
+      { label: 'Wedge it with a beam (risky)',
+        effects: [{ kind: 'hurt', frac: 0.2 }, { kind: 'artifact' }],
+        result: 'The beam splinters and so does something in your shoulder. One prize, one scar.' },
+      { label: 'Leave it sealed',
+        effects: [{ kind: 'nothing' }],
+        result: 'The vault wins this round. You move along the corridor.' },
+    ],
+  },
+  {
+    id: 'war_idol',
+    title: 'The War Idol',
+    text: 'A carved idol pulses with martial fury. Tribal runes warn that it answers only to a true champion of close combat.',
+    options: [
+      { label: 'Channel the idol',
+        effects: [{ kind: 'artifact' }, { kind: 'maxHp', amount: 50 }],
+        result: 'The idol roars as your hands close on it — raw power and endurance surge through you.',
+        requirement: { stat: 'meleeDmgPct', min: 50, label: 'Melee +50%' } },
+      { label: 'Smash it for salvage',
+        effects: [{ kind: 'hurt', frac: 0.2 }, { kind: 'gold', amount: 70 }],
+        result: 'It fights back as it breaks. Bruised and lighter, you count the coin.' },
+      { label: 'Leave it for a worthy challenger',
+        effects: [{ kind: 'nothing' }],
+        result: 'Not your idol. Not today.' },
+    ],
+  },
+  {
+    id: 'blade_corridor',
+    title: 'The Blade Corridor',
+    text: 'A passage lined with hidden triggers. An assassin who reads every room survives without a scratch — everyone else pays in blood.',
+    options: [
+      { label: 'Walk it clean',
+        effects: [{ kind: 'artifact' }, { kind: 'item' }, { kind: 'gold', amount: 40 }],
+        result: 'You feel each trap before it springs. You reach the far end uncut, pockets full.',
+        requirement: { stat: 'critPct', min: 40, label: 'Crit 40%+' } },
+      { label: 'Sprint through — take what hits',
+        effects: [{ kind: 'hurt', frac: 0.3 }, { kind: 'artifact' }],
+        result: 'Three cuts and one prize. Could have been worse.' },
+      { label: 'Go around',
+        effects: [{ kind: 'nothing' }],
+        result: 'The long way round loses you nothing — and nothing finds you.' },
+    ],
+  },
+
+  // ---- CHOICE EVENTS — no hidden gating; the decision IS the mechanic.
+  // Deliberate picks signal what the player needs right now. ----
+  {
+    id: 'oracle_choice',
+    title: "The Oracle's Chamber",
+    text: 'A blind seer sits in the dark. "I see three paths before you. Show me which you hunger for."',
+    options: [
+      { label: 'Hunger for power',
+        effects: [{ kind: 'artifact' }],
+        result: 'She reaches into nothing and places something in your palm. "Power has a price," she murmurs.' },
+      { label: 'Hunger for endurance',
+        effects: [{ kind: 'maxHp', amount: 45 }],
+        result: '"Your body will hold the weight," she promises. It does.' },
+      { label: 'Hunger for fortune',
+        effects: [{ kind: 'gold', amount: 70 }],
+        result: '"Then fortune will find you." She presses a heavy purse into your hands.' },
+    ],
+  },
+
+  // ---- NEW DEVIL DEAL — two artifacts for a long-term growth curse ----
+  {
+    id: 'cursed_reliquary',
+    title: 'The Cursed Reliquary',
+    text: 'A cabinet of wonders, each piece marked with a warning sigil. Beautiful. Dangerous. Yours — if you can accept the cost.',
+    options: [
+      { label: 'Take both relics (accept the famine)',
+        effects: [{ kind: 'artifact' }, { kind: 'artifact' }, { kind: 'curse', id: 'curse_famine' }],
+        result: 'Two prizes, real and heavy — but the lessons you\'ve earned begin to slip away. (+2 artifacts, -40% XP forever)' },
+      { label: 'Take one piece — sealed carefully',
+        effects: [{ kind: 'artifact' }],
+        result: 'You take one and seal the rest. It doesn\'t fight back. Yet.' },
+      { label: 'Burn the cabinet — denied to all',
+        effects: [{ kind: 'gold', amount: 45 }, { kind: 'heal', frac: 0.2 }],
+        result: 'The warped magic dissolves into warmth and ash. A small but clean reward.' },
+    ],
+  },
+
+  // ---- REGULAR VARIETY EVENT ----
+  {
+    id: 'siege_engine',
+    title: 'The Dormant Siege Engine',
+    text: 'A rusted war machine crouches in the corner, half-loaded. With the right touch it could fire one last round — at whatever you aim it at.',
+    options: [
+      { label: 'Fire it at the sealed vault door',
+        effects: [{ kind: 'item' }, { kind: 'item' }, { kind: 'gold', amount: 30 }],
+        result: 'The explosion is magnificent. What remains of the vault is yours.' },
+      { label: 'Strip it down for parts',
+        effects: [{ kind: 'gold', amount: 85 }],
+        result: 'The engine yields good salvage. Eighty-five gold for careful work.' },
+      { label: 'Leave it be',
+        effects: [{ kind: 'nothing' }],
+        result: 'Some machines are better left dormant. You step around it and move on.' },
     ],
   },
 ];

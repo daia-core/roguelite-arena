@@ -521,8 +521,11 @@ Artifacts trigger active powers during combat (e.g. Overcharge fires a 3× nova 
 Called from `Game.ts` update loop.
 
 ### EventSystem
-Devil deals between waves: trade a permanent curse for a powerful artifact.
-All 5 curses reachable in-game (curse_glass_bones, curse_famine, etc.).
+`?` map nodes: ~39 data-driven events — regular events, devil deals (6 curses:
+curse_frailty, curse_sloth, curse_dullness, curse_glass_bones, curse_famine, curse_myopia),
+stat-gated events (Slay-the-Spire style: meleeDmgPct, rangedDmgPct, critPct, moveSpeedPct,
+armor, maxHp, gold gates at starter AND advanced thresholds), and pure-choice events.
+`randomEvent(visited)` deduplicates within a run; falls back to full pool when exhausted.
 
 ---
 
