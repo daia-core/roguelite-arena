@@ -55,6 +55,8 @@ export class EventScene implements Scene {
   private currentEvent: GameEvent | null = null;
   private eventResultText: string | null = null;
   private eventReward: EventReward | null = null;
+  /** Event ids seen this run — used to avoid replaying the same event back-to-back. */
+  private visitedEventIds: Set<string> = new Set();
 
   private static readonly RARITY_COLOR: Record<string, string> = {
     common: '#cbd5e1', rare: '#74c0fc', epic: '#b06bd9', legendary: '#f2b04e',
@@ -82,8 +84,14 @@ export class EventScene implements Scene {
       : `${opt.label}  ✓ ${opt.requirement.label}`;
   }
 
+  /** Call at the start of every new run so events don't persist across runs. */
+  resetVisited(): void {
+    this.visitedEventIds.clear();
+  }
+
   enter(_prev: GameState): void {
-    this.currentEvent = randomEvent();
+    this.currentEvent = randomEvent(this.visitedEventIds);
+    if (this.currentEvent) this.visitedEventIds.add(this.currentEvent.id);
     this.eventResultText = null;
     this.eventReward = null;
     // Disarm any held press so it can't immediately register as a button tap.

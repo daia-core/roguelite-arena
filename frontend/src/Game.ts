@@ -781,6 +781,9 @@ export class Game {
     this.pendingWaveArtifact = false;
     this.pendingEliteCascade = false;
 
+    // Clear per-run event deduplication so no events bleed across runs.
+    (this.scenes.event as EventScene).resetVisited();
+
     this.hudRenderer.updateMobileSkillButtons(); // reset to disabled at run start (no scrolls yet)
     this.state = 'map';
   }

@@ -495,6 +495,16 @@ export const EVENTS: GameEvent[] = [
   },
 ];
 
-export function randomEvent(): GameEvent {
+/**
+ * Pick a random event, preferring ones the player hasn't seen this run.
+ * Pass `visited` (a Set of event ids already seen) to enable deduplication.
+ * Falls back to the full pool only when all events have been visited.
+ */
+export function randomEvent(visited?: ReadonlySet<string>): GameEvent {
+  if (visited && visited.size > 0) {
+    const fresh = EVENTS.filter(e => !visited.has(e.id));
+    const pool = fresh.length > 0 ? fresh : EVENTS;
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
   return EVENTS[Math.floor(Math.random() * EVENTS.length)];
 }
