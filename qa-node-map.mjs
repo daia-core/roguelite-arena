@@ -59,11 +59,23 @@ const result = await page.evaluate(async () => {
   let guard = 0;
 
   const tapNode = (id) => {
-    const { s, W, H } = g.screenScale();
+    // screenScale() moved to individual Scene classes (MapScene etc.) during scene extraction.
+    // Inline equivalent: in headless Chromium clientWidth=0, so zoom=1, s=identity.
+    const zoom = g.canvas.clientWidth ? g.canvas.width / g.canvas.clientWidth : 1;
+    const s = v => Math.round(v * zoom);
+    const W = g.canvas.width, H = g.canvas.height;
     const pl = g.mapSystem.layout(W, H, s);
     const p = pl.get(id);
+    // Sync lastUpdateState first — if state just changed (e.g. startNewGame → 'map'),
+    // the FIRST g.update() call calls disarmUntilRelease() and sets pressDisarmed=true,
+    // which would swallow the click below. Run a 0-dt tick to settle the transition,
+    // then clear pressDisarmed so the synthetic tap is accepted as a fresh press.
+    g.update(0);
+    g.input.pressDisarmed = false;
     g.input.mouseX = p.x; g.input.mouseY = p.y; g.input.mouseDown = true;
-    g.updateMap();
+    // updateMap() moved to MapScene during scene extraction.
+    // g.update(dt) dispatches to the active scene when state='map', so this is equivalent.
+    g.update(1/60);
   };
 
   while (guard++ < 200 && !wanted.every(t => tested.has(t))) {
@@ -80,12 +92,14 @@ const result = await page.evaluate(async () => {
       if (g.state === 'map' && (type === 'battle' || type === 'elite' || type === 'boss'))
         return fail(`picking a ${type} node left us on the map`);
     } else if (g.state === 'event') {
-      const ev = g.currentEvent;
+      // currentEvent + eventResultText moved to EventScene private fields during scene extraction.
+      // Access via g.scenes.event — TS private is compile-time only, accessible from JS.
+      const ev = g.scenes.event?.currentEvent ?? null;
       if (!ev || !ev.options.length) return fail('event screen with no options');
       for (const eff of ev.options[0].effects) g.applyEventEffect(eff);
-      g.eventResultText = ev.options[0].result;
-      g.draw(); // result view
-      g.currentEvent = null; g.eventResultText = null; g.state = 'map';
+      g.draw(); // render result view before advancing
+      // Just advance state — EventScene.enter() resets currentEvent on next entry.
+      g.state = 'map';
     } else if (g.state === 'reward') {
       if (!g.rewardChoices.length) return fail('reward screen with no choices');
       const a = g.rewardChoices[0];

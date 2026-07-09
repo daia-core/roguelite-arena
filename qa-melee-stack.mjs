@@ -59,11 +59,26 @@ const result = await page.evaluate(() => {
     for (let i = 0; i < n; i++) {
       const a = (Math.PI * 2 * i) / n;
       const NO = { shouldShoot:false, shouldTeleport:false, shouldSummon:false, shouldScream:false, shouldStomp:false, splitInto:0, poisonTrail:false, sporeCloud:false, shouldHeal:false, shouldSpawnMinion:false };
+      // statusFX stub: StatusEffectManager was wired into updateEnemies after this script was
+      // written (enemy.statusFX.tick() is called every frame). Provide a no-op mock so the
+      // immortal dummies work without pulling in the real engine.
+      const statusFX = {
+        tick: () => ({ dotDamage: 0, doomDetonation: null, poisonSpreads: false, daggerDot: false }),
+        getBonusCritChanceReceived: () => 0,
+        getBonusCritDamageReceived: () => 0,
+        getIncomingDamageMult: () => 1,
+        getDirectHitMult: () => 1,
+        getFlatHitBonus: () => 0,
+        checkCondemned: () => 0,
+        apply: () => [], has: () => false,
+      };
+      const ex = g.player.x + Math.cos(a) * dist, ey = g.player.y + Math.sin(a) * dist;
       g.enemies.push({
-        id: 5000 + i, type: 'slime', x: g.player.x + Math.cos(a) * dist, y: g.player.y + Math.sin(a) * dist,
+        id: 5000 + i, type: 'slime', x: ex, y: ey, lastX: ex, lastY: ey,
         radius: 14, dead: false, health: 1e9, hp: 1e9,
         frozenTimer: 0, poisonTimer: 0, contactCooldown: 999, usePathfinding: false,
         typeData: { isBoss: false, damage: 5, xpValue: 1, goldValue: 1 },
+        statusFX,
         takeDamage(d){ this.health -= d; this._dmg=(this._dmg||0)+d; return null; },
         applyKnockback(){}, checkWallCollision(){}, draw(){}, updatePath(){},
         collidesWith(){ return false; }, update(){ return NO; }
