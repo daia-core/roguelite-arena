@@ -6,6 +6,20 @@ portrait viewport).
 
 ---
 
+## 2026-07-09 (overnight) — Active skill balance fixes · `99e6a52` · live `index-BlNzpd8_.js` ✓
+
+**4 active skill bugs fixed** (all from the Q/E skill slots):
+
+- **Earthquake** — was splitting total damage across enemy count, so 45 enemies each
+  received ~11 damage (weaker than tier-1 Frost Nova). Now hits each enemy for the
+  full 10× baseDamage. A crowd nuke that actually nukes crowds.
+- **Plague Bomb** — AoeZone had `damage = baseDmg/5` which hit the PLAYER (AoeZones
+  are player-damage constructs). The zone had no mechanism to damage enemies at all.
+  Fixed: zone visual is damage=0; added proper per-second enemy damage zone (8s duration).
+- **Spectral Shield** — tooltip said "5s invincibility" but code granted 2.5s. Now 5.0s.
+- **Poison Cloud** — 1.2× per second was too weak; enemies walking through barely noticed
+  the zone. Bumped to 2.5× per second (kills a wave-1 enemy that lingers ~3s in zone).
+
 ## 2026-07-09 (late night) — QA maintenance · `644c04e` (no deploy needed)
 
 **No player-visible change.** Pure QA infrastructure work.
