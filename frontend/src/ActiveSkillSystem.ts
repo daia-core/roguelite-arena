@@ -559,13 +559,18 @@ export function executeSkill(skillId: string, slot: 'q' | 'e', ctx: ActiveSkillC
     }
     case 'poison_cloud': {
       // Persistent AoE DoT zone — ticks enemy damage for 5 seconds.
+      // BALANCE FIX 2026-07-09: was baseDmg (1.2× player dmg) per sec — enemies passing
+      // through barely noticed (30 DPS at wave 1, ~90 dmg hit on a 156 HP slime). A zone
+      // with 5s CD and 5s duration needs to meaningfully punish enemies inside it.
+      // Bumped to 3× baseDamageMultiplier equivalent: pushActiveDmgZone gets 3× baseDmg/1.2
+      // so the total over 5s equals 12.5× player dmg — kills a wave-1 enemy in ~3s in zone.
       const r = skill.radius ?? 110;
       // Visual zone (damage=0 — AoeZone only hits the player).
       ctx.spawnAoeZone(new AoeZone(px, py, r, 0, 0.0, {
         color: '#40c057', activeTime: 5.0, singleHit: false,
       }));
-      // Persistent enemy damage tick (baseDmg per second for 5s).
-      ctx.pushActiveDmgZone(px, py, r, baseDmg, 5.0, '#40c057');
+      // Persistent enemy damage tick — 2.5× per second for 5s (was 1× per second, too weak).
+      ctx.pushActiveDmgZone(px, py, r, baseDmg * 2.5, 5.0, '#40c057');
       break;
     }
     case 'phoenix_beam': {
@@ -587,11 +592,12 @@ export function executeSkill(skillId: string, slot: 'q' | 'e', ctx: ActiveSkillC
     }
     case 'earthquake': {
       // Damage + slow ALL enemies on screen; big visual pulse.
-      const count = ctx.enemies.filter(e => !e.dead).length;
-      const perEnemy = count > 0 ? baseDmg / Math.max(1, count) * 2 : baseDmg;
+      // BALANCE FIX 2026-07-09: was baseDmg/count*2 (split across enemies) → each enemy
+      // took almost nothing in large hordes (45 enemies: 11 dmg each vs Frost Nova's 50).
+      // Earthquake should hit each enemy for the FULL damage — it's a crowd-clear nuke.
       for (const e of ctx.enemies) {
         if (e.dead) continue;
-        ctx.dealAuxDamage(e, perEnemy, '#c5aa6a');
+        ctx.dealAuxDamage(e, baseDmg, '#c5aa6a');
         e.frozenTimer = Math.max(e.frozenTimer, 2.0);
       }
       ctx.spawnAoeZone(new AoeZone(px, py, 900, 0, 0.0, {
@@ -810,8 +816,9 @@ export function executeSkill(skillId: string, slot: 'q' | 'e', ctx: ActiveSkillC
       break;
     }
     case 'spectral_shield': {
-      // 2.5s invincibility bubble + immediate burst nova around the player.
-      ctx.player.invincibilityTimer = Math.max(ctx.player.invincibilityTimer, 2.5);
+      // 5s invincibility bubble + immediate burst nova around the player.
+      // BALANCE FIX 2026-07-09: description said "5s" but code gave 2.5s. Fixed to match.
+      ctx.player.invincibilityTimer = Math.max(ctx.player.invincibilityTimer, 5.0);
       const rSS = skill.radius ?? 160;
       for (const e of ctx.enemies) {
         if (e.dead) continue;
@@ -913,10 +920,18 @@ export function executeSkill(skillId: string, slot: 'q' | 'e', ctx: ActiveSkillC
     }
     case 'plague_bomb': {
       // Massive persistent poison zone (8s) + immediate poisonTimer on enemies inside.
+      // BUG FIX 2026-07-09: AoeZone had damage=baseDmg/5 which was hitting the PLAYER
+      // (AoeZones are player-damage constructs). Changed to damage=0 (visual only) and
+      // added pushActiveDmgZone for proper enemy DoT. Also: poison was only applied to
+      // enemies at cast time (no ongoing entry-triggers); zone now damages all who linger.
       const rPB = skill.radius ?? 140;
-      ctx.spawnAoeZone(new AoeZone(px, py, rPB, baseDmg / 5, 0.0, {
+      // Visual zone only — damage=0 so the player is NOT hurt by their own bomb.
+      ctx.spawnAoeZone(new AoeZone(px, py, rPB, 0, 0.0, {
         color: '#40c057', activeTime: 8.0, singleHit: false,
       }));
+      // Persistent enemy damage: baseDmg per second for 8s (total 8× mult over zone lifetime).
+      ctx.pushActiveDmgZone(px, py, rPB, baseDmg, 8.0, '#40c057');
+      // Poison status to all enemies currently in zone at cast time.
       for (const e of ctx.enemies) {
         if (e.dead) continue;
         if (Math.hypot(e.x - px, e.y - py) <= rPB) {
