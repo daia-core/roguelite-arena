@@ -74,7 +74,8 @@ export const EVENTS: GameEvent[] = [
     text: 'A grinning figure shuffles bones. "Double or nothing on your luck?"',
     options: [
       { label: 'Bet 40 gold', effects: [{ kind: 'gold', amount: 40 }],
-        result: 'The bones fall your way — you pocket the winnings.' },
+        result: 'The bones fall your way — your stake comes back doubled.',
+        requirement: { stat: 'gold', min: 40, label: '40+ gold' } },
       { label: 'Bet your blood', effects: [{ kind: 'hurt', frac: 0.2 }, { kind: 'artifact' }],
         result: 'Pain buys power. The figure cackles and vanishes.' },
       { label: 'Walk away', effects: [{ kind: 'nothing' }],
