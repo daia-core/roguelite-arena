@@ -6,6 +6,15 @@ portrait viewport).
 
 ---
 
+## 2026-07-09 (evening) — Game-over polish: class + duration · `b260a5e` · live `index-C-I1vViB.js` ✓
+
+**Game-over screen now shows your class and run duration.** The subtitle "Berserker  •  4:32"
+appears in grey below the GAME OVER title — class name on the left, wall-clock run time on the
+right (M:SS). Both were already tracked internally; now they're surfaced so each run feels
+distinct and worth remembering.
+
+---
+
 ## 2026-07-09 (early morning) — QA fix: live smoke test wave-clear · `64e00ed` · live `index-DWFZd3px.js` ✓
 
 **QA-only fix, no player-visible change.** `finishSkillTree()` was always setting state
