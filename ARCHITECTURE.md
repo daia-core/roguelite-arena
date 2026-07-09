@@ -1,6 +1,6 @@
 # Roguelite Arena — Architecture Overview
 
-> **Last updated: 2026-07-09** — Step 17 analysis written (combat-engine wall documented). QA clean: stats-parity PASS, catalog CLEAN, village PASS. Game.ts 3,623 lines. Scene extraction phase **complete** — remaining methods are the combat-engine core (see Step 17). Next pull: a genuine feel/balance improvement, or the CombatEngine refactor if scope is acceptable.
+> **Last updated: 2026-07-09** — Step 17 analysis written (combat-engine wall documented). QA drift pattern 6 added (`finishSkillTree` returnToShop fix). Live smoke test: PASS 9/9 ✓. Game.ts 3,623 lines. Scene extraction phase **complete** — remaining methods are the combat-engine core (see Step 17). Next pull: a genuine feel/balance improvement, or the CombatEngine refactor if scope is acceptable.
 
 ---
 
