@@ -57,6 +57,56 @@ methods); `qa-shop-inputguard.mjs`, `qa-shop-layout.mjs`, `qa-xp-coin-shop.mjs`,
 and `tools/qa/verify-live.mjs` (all used `g.getShopLayout()` which moved to ShopScene in step 6).
 Pattern: `const ss = window.__shopScene; const L = ss ? ss.getShopLayout() : g.getShopLayout?.();`
 
+### 3. New system hooks in the combat loop need stubs in enemy mocks
+
+`qa-melee-stack.mjs` (and similar scripts that construct stub enemy objects inline) must track
+every field that `updateEnemies()` reads or calls a method on. When a system is wired into the
+combat loop after the test was written, the stub won't have it and the QA throws at runtime.
+
+**Symptom:** `TypeError: Cannot read properties of undefined (reading 'tick')` inside `updateEnemies`.
+**Fix (2026-07-09 night):** Add a no-op `statusFX` mock to stub enemies:
+```javascript
+statusFX: {
+  tick: () => ({ dotDamage:0, doomDetonation:null, poisonSpreads:false, daggerDot:false }),
+  getBonusCritChanceReceived: () => 0, getBonusCritDamageReceived: () => 0,
+  getIncomingDamageMult: () => 1, getDirectHitMult: () => 1,
+  getFlatHitBonus: () => 0, checkCondemned: () => 0,
+  apply: () => [], has: () => false,
+}
+```
+**Rule:** whenever `updateEnemies()` adds a new `enemy.X.method()` call, check stub enemies
+in any QA that builds them from scratch and add matching stubs.
+
+### 4. `g.update()` calls `disarmUntilRelease()` on state change — clears QA synthetic taps
+
+If a QA directly sets `g.input.mouseDown = true` and then calls `g.update(dt)`, and the game
+state changed since the last update tick (e.g., `startNewGame()` just ran), `update()` will call
+`input.disarmUntilRelease()` which sets `mouseDown = false` and `pressDisarmed = true` — swallowing
+the synthetic tap before the active Scene can process it.
+
+**Symptom:** tap-based QA (e.g., picking a map node) silently fails to change state.
+**Fix (2026-07-09 night):** Call `g.update(0)` first to sync `lastUpdateState`, then clear
+`pressDisarmed` before setting `mouseDown`:
+```javascript
+g.update(0);
+g.input.pressDisarmed = false;
+g.input.mouseX = p.x; g.input.mouseY = p.y; g.input.mouseDown = true;
+g.update(1/60);
+```
+
+### 5. Private Scene state is not on `window.__game` — access via `g.scenes.*`
+
+When state that used to live on Game moves to a private field on a Scene (e.g., `currentEvent`
+moved to EventScene), QA scripts that read it from `window.__game` get `undefined`. TypeScript's
+`private` is compile-time only, so the field is still reachable at runtime.
+
+**Symptom:** `g.currentEvent === null` even when state='event'; or `g.eventResultText === undefined`.
+**Fix (2026-07-09 night):** Access via `g.scenes['event'].currentEvent` or use the return value
+from methods directly (`applyEventOption()` returns `{ resultText }` — don't look for it on Game).
+**Pattern:** `const ev = g.scenes.event?.currentEvent ?? null;`
+
+---
+
 ### 2. Cap/constant changes in ItemSystem.ts must be mirrored in `qa-stats-parity.mjs`
 
 `qa-stats-parity.mjs` recomputes every stat getter independently and compares against the live
