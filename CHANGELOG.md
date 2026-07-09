@@ -6,6 +6,22 @@ portrait viewport).
 
 ---
 
+## 2026-07-09 (early morning) — QA fix: live smoke test wave-clear · `64e00ed` · live `index-DWFZd3px.js` ✓
+
+**QA-only fix, no player-visible change.** `finishSkillTree()` was always setting state
+to `'playing'`, even when the skill tree was opened from the post-wave shop break. This
+caused `qa-live-smoke.mjs` to silently cancel every wave-clear: the wave timer fired,
+`enterShop()` set state to `'shop'` then immediately to `'skilltree'` (for banked points),
+the QA bot called `finishSkillTree()` → back to `'playing'` → next wave started without
+reaching the shop. Smoke test was permanently FAIL while the real game worked fine (the
+real SkillTreeScene uses the `onFinish(returnToShop)` callback, not `finishSkillTree()`).
+
+Fix: `SkillTreeScene.isReturnToShop` public getter; `finishSkillTree()` resolves to
+`'shop'` when opened from the post-wave break, `'playing'` for mid-combat skill points.
+Live smoke test: was FAIL (0/9 wave-clear), now PASS 9/9 ✓.
+
+---
+
 ## 2026-07-09 (overnight) — Stat-gated event choices · live `index-CLUgf4Xv.js` ✓
 
 **`?` events can now have requirement-locked options (Slay-the-Spire style).** An option can
