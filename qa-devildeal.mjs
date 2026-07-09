@@ -153,11 +153,13 @@ const result = await page.evaluate(() => {
   const dd0 = g.player.gold;
   g.applyEventOption(slothOpt);                 // first pact: +120 gold, take curse_sloth
   const ddGold1 = g.player.gold, ddHeld1 = g.artifacts.has('curse_sloth');
-  g.applyEventOption(slothOpt);                 // recurrence: curse already held → refused
+  const refusalResult = g.applyEventOption(slothOpt); // recurrence: curse already held → refused
   const ddGold2 = g.player.gold;
   out.pactFirstPaysBoon = ddGold1 === dd0 + 120 && ddHeld1 === true;
   out.pactNoDoubleDip = ddGold2 === ddGold1;    // no second +120
-  out.pactRefusalMessaged = typeof g.eventResultText === 'string' && /already bear this mark/i.test(g.eventResultText);
+  // applyEventOption() returns { resultText } directly; g.eventResultText was moved to
+  // EventScene during scene extraction (step N), so test the return value instead.
+  out.pactRefusalMessaged = typeof refusalResult?.resultText === 'string' && /already bear this mark/i.test(refusalResult.resultText);
 
   return out;
 });
