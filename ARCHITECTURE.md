@@ -105,6 +105,27 @@ moved to EventScene), QA scripts that read it from `window.__game` get `undefine
 from methods directly (`applyEventOption()` returns `{ resultText }` — don't look for it on Game).
 **Pattern:** `const ev = g.scenes.event?.currentEvent ?? null;`
 
+### 6. `g.finishSkillTree()` resolves to 'shop' after a post-wave break, not 'playing'
+
+`enterShop()` sets `state='shop'` then immediately calls `openSkillTree(fromShop=true)` if
+banked skill points exist, which overrides to `state='skilltree'`. The QA helper
+`finishSkillTree()` used to always set state='playing', so any QA bot that called it after
+wave completion would silently cancel the wave-clear and resume combat — the shop was never
+reached, and the wave-clear check in the smoke test permanently failed.
+
+**Fix (2026-07-09 early morning):** `SkillTreeScene.isReturnToShop` public getter; `finishSkillTree()`
+now resolves to `'shop'` when `isReturnToShop=true` (post-wave break), `'playing'` otherwise.
+**Rule:** Any QA that advances through skill-tree transitions should call `g.finishSkillTree()`
+rather than `g.state = 'playing'` directly — the method now tracks the correct return destination.
+**Pattern:**
+```javascript
+if (g.state === 'skilltree') {
+  // ... spend points ...
+  g.finishSkillTree(); // → 'shop' if post-wave, 'playing' if mid-combat
+}
+if (g.state === 'shop') { /* wave cleared */ }
+```
+
 ---
 
 ### 2. Cap/constant changes in ItemSystem.ts must be mirrored in `qa-stats-parity.mjs`
