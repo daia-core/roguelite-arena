@@ -6,6 +6,26 @@ portrait viewport).
 
 ---
 
+## 2026-07-09 (overnight) — Stat-gated event choices · live `index-CLUgf4Xv.js` ✓
+
+**`?` events can now have requirement-locked options (Slay-the-Spire style).** An option can
+carry a stat gate — if your build doesn't meet it, the choice shows greyed and un-clickable
+with the requirement tagged on it (🔒 Melee +30%); once you've invested enough, it unlocks
+(✓) and is strictly stronger than the fallback. Build identity now opens doors a generalist
+can't.
+
+- **7 new gated events** across the stat spectrum: **The Fallen Boulder** (Melee +30% → lift it
+  for an artifact), **The Distant Lantern** (Ranged +30% → snipe the strongbox loose), **The
+  Frayed Tightrope** (Move speed +25% → dash across before it snaps), **The Sleeping Warden**
+  (Crit +25% → one-shot the weak point), **The Bent Portcullis** (Armor 5+ → brace the gate for
+  a double haul), **The Blood Toll** (Max HP 140+ → pay in blood for two artifacts), **The High
+  Roller** (100+ gold → buy the high table). Each keeps a free/neutral path so the gate is a
+  bonus lane, never a wall.
+- Gates read live from PlayerStats (melee/ranged %, crit %, move-speed %, armor, max HP, gold),
+  re-evaluated each time the event opens.
+- QA: `qa-event-gate.mjs` 12/12 + all 7 gated events surfaced well-formed · regressions
+  (event-title, devildeal, node-map) green · TSC clean.
+
 ## 2026-07-09 (overnight) — Active skill balance fixes · `99e6a52` · live `index-BlNzpd8_.js` ✓
 
 **4 active skill bugs fixed** (all from the Q/E skill slots):

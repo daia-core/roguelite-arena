@@ -30,7 +30,7 @@ import { ScreenEffects } from './ScreenEffects';
 import { ParticleBatchRenderer } from './ParticleBatchRenderer';
 import { MapSystem, serializeMap, deserializeMap } from './MapSystem';
 import { ArtifactSystem, ARTIFACTS, ROLLABLE_ARTIFACTS, getArtifactById, type Artifact } from './ArtifactSystem';
-import { EVENTS, type EventEffect, type EventOption } from './EventSystem';
+import { EVENTS, type EventEffect, type EventOption, type EventRequirement } from './EventSystem';
 import { EventScene, type EventReward } from './EventScene';
 import { RestScene } from './RestScene';
 import { EvolutionSystem, type Evolution } from './EvolutionSystem';
@@ -404,6 +404,7 @@ export class Game {
       input: this.input,
       onOptionPicked: (opt) => this.applyEventOption(opt),
       onDone: () => { this.state = 'map'; },
+      meetsRequirement: (req) => this.meetsEventRequirement(req),
     });
     this.scenes.rest = new RestScene({
       canvas: this.canvas,
@@ -3399,6 +3400,25 @@ export class Game {
    *  already bears that curse (a recurring devil event drawn again), the price is already
    *  paid — handing out the boon a second time for free would let a run farm boons and gut
    *  the "permanent price" risk axis. So an already-held-curse pact grants nothing. */
+  /** Read the current value of a gate-able stat from PlayerStats (percentages as whole %). */
+  private eventStatValue(stat: EventRequirement['stat']): number {
+    const ps = this.playerStats;
+    switch (stat) {
+      case 'meleeDmgPct':  return (ps.getMeleeDamageMult() - 1) * 100;
+      case 'rangedDmgPct': return (ps.getRangedDamageMult() - 1) * 100;
+      case 'critPct':      return ps.getCritChance() * 100;
+      case 'moveSpeedPct': return (ps.getSpeed() / ps.baseSpeed - 1) * 100;
+      case 'armor':        return ps.getArmor();
+      case 'maxHp':        return ps.getMaxHealth();
+      case 'gold':         return this.player ? this.player.gold : 0;
+    }
+  }
+
+  /** True when the player currently satisfies a gated event option's stat requirement. */
+  private meetsEventRequirement(req: EventRequirement): boolean {
+    return this.eventStatValue(req.stat) >= req.min;
+  }
+
   private applyEventOption(opt: EventOption): { resultText: string; reward: EventReward | null } {
     const curseEff = opt.effects.find(e => e.kind === 'curse');
     if (curseEff && curseEff.kind === 'curse' && this.artifacts.has(curseEff.id)) {

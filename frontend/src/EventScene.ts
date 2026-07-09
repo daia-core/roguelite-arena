@@ -2,7 +2,7 @@ import type { Scene } from './scenes/Scene';
 import type { GameState } from './Game';
 import type { Renderer } from './Renderer';
 import type { Input } from './Input';
-import { randomEvent, type GameEvent, type EventOption } from './EventSystem';
+import { randomEvent, type GameEvent, type EventOption, type EventRequirement } from './EventSystem';
 import { drawPanel, DARK_WOOD_THEME } from './pixel/panel';
 import { pointInRect } from './utils';
 
@@ -29,6 +29,11 @@ export interface EventSceneDeps {
   onOptionPicked: (opt: EventOption) => { resultText: string; reward: EventReward | null };
   /** Called when the player clicks "Continue" — returns control to the map. */
   onDone: () => void;
+  /**
+   * True when the player currently meets a gated option's stat requirement.
+   * Game owns PlayerStats; the scene only asks yes/no so it can lock the button.
+   */
+  meetsRequirement: (req: EventRequirement) => boolean;
 }
 
 /**
@@ -45,6 +50,7 @@ export class EventScene implements Scene {
   private readonly input: Input;
   private readonly onOptionPicked: (opt: EventOption) => { resultText: string; reward: EventReward | null };
   private readonly onDone: () => void;
+  private readonly meetsRequirement: (req: EventRequirement) => boolean;
 
   private currentEvent: GameEvent | null = null;
   private eventResultText: string | null = null;
@@ -60,6 +66,20 @@ export class EventScene implements Scene {
     this.input = deps.input;
     this.onOptionPicked = deps.onOptionPicked;
     this.onDone = deps.onDone;
+    this.meetsRequirement = deps.meetsRequirement;
+  }
+
+  /** An option is locked when it carries a stat gate the player doesn't yet meet. */
+  private isLocked(opt: EventOption): boolean {
+    return !!opt.requirement && !this.meetsRequirement(opt.requirement);
+  }
+
+  /** Button caption — appends the requirement tag so gated choices read their stake. */
+  private optionLabel(opt: EventOption): string {
+    if (!opt.requirement) return opt.label;
+    return this.isLocked(opt)
+      ? `${opt.label}  🔒 ${opt.requirement.label}`
+      : `${opt.label}  ✓ ${opt.requirement.label}`;
   }
 
   enter(_prev: GameState): void {
@@ -92,6 +112,7 @@ export class EventScene implements Scene {
       for (let i = 0; i < ev.options.length; i++) {
         if (pointInRect(mx, my, rects[i])) {
           this.input.mouseDown = false;
+          if (this.isLocked(ev.options[i])) return; // gated: unmet requirement, not selectable
           const { resultText, reward } = this.onOptionPicked(ev.options[i]);
           this.eventResultText = resultText;
           this.eventReward = reward;
@@ -145,7 +166,8 @@ export class EventScene implements Scene {
       const rects = this.columnRects(ev.options.length, y, s, W, isMobile);
       ev.options.forEach((opt, i) => {
         const r = rects[i];
-        this.renderer.drawButton(r.x, r.y, r.width, r.height, opt.label, false, true, isMobile);
+        // Locked (unmet stat gate) → greyed, un-clickable; the tag shows what it needs.
+        this.renderer.drawButton(r.x, r.y, r.width, r.height, this.optionLabel(opt), false, !this.isLocked(opt), isMobile);
       });
     } else {
       for (const line of this.wrapText(this.eventResultText, contentW - s(24), bodyPx)) {

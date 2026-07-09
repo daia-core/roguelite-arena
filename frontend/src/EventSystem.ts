@@ -13,11 +13,35 @@ export type EventEffect =
   | { kind: 'curse'; id: string }        // devil-deal price: grant a SPECIFIC curse artifact by id
   | { kind: 'nothing' };
 
+// A stat the player must ALREADY have enough of for a gated option to be selectable.
+// Values are read from PlayerStats at the moment the event opens (Game.meetsRequirement).
+export type EventStat =
+  | 'meleeDmgPct'   // melee-damage bonus above base, in % — (getMeleeDamageMult()-1)*100
+  | 'rangedDmgPct'  // ranged-damage bonus above base, in %
+  | 'critPct'       // crit chance, in %
+  | 'moveSpeedPct'  // move-speed bonus above base, in %
+  | 'armor'         // flat armor
+  | 'maxHp'         // flat max HP
+  | 'gold';         // current gold on hand
+
+/** A Slay-the-Spire-style stat gate: the option is only pickable when stat >= min. */
+export interface EventRequirement {
+  stat: EventStat;
+  min: number;
+  /** Short human tag shown on the button, e.g. 'Melee +30%'. */
+  label: string;
+}
+
 export interface EventOption {
   label: string;
   effects: EventEffect[];
   /** Shown after the option is chosen, before returning to the map. */
   result: string;
+  /**
+   * Optional stat gate. When present and unmet, the option renders locked (greyed,
+   * un-clickable) with the requirement shown; when met it reads as an unlocked choice.
+   */
+  requirement?: EventRequirement;
 }
 
 export interface GameEvent {
@@ -27,8 +51,9 @@ export interface GameEvent {
   options: EventOption[];
 }
 
-// ~26 events — a mix of pure upside (rare), gamble, and cost/benefit trades so the
-// `?` node always feels like a real decision rather than free loot.
+// ~33 events — a mix of pure upside (rare), gamble, cost/benefit trades, and
+// stat-gated (requirement-locked) choices so the `?` node always feels like a real
+// decision rather than free loot.
 export const EVENTS: GameEvent[] = [
   {
     id: 'shrine',
@@ -363,6 +388,109 @@ export const EVENTS: GameEvent[] = [
         result: 'The vines smoulder slowly. Their ash is surprisingly valuable, and the warmth mends you a little.' },
       { label: 'Leave it', effects: [{ kind: 'nothing' }],
         result: 'The crown waits for a braver fool.' },
+    ],
+  },
+
+  // ---- STAT-GATED EVENTS — Slay-the-Spire-style requirement-locked choices. Each has a
+  // "strong option" that only unlocks once the player has invested enough of a given stat,
+  // so build identity opens doors a generalist can't. The gated option is always strictly
+  // better than the fallback, and a free/neutral path is always available too. ----
+  {
+    id: 'boulder',
+    title: 'The Fallen Boulder',
+    text: 'A massive rock blocks a side-passage. Something glints in the gap behind it.',
+    options: [
+      { label: 'Lift the boulder aside', effects: [{ kind: 'artifact' }, { kind: 'gold', amount: 25 }],
+        result: 'Muscle wins — the boulder rolls clear and the cache behind it is yours.',
+        requirement: { stat: 'meleeDmgPct', min: 30, label: 'Melee +30%' } },
+      { label: 'Squeeze an arm through (10g worth of scrapes)', effects: [{ kind: 'hurt', frac: 0.12 }, { kind: 'item' }],
+        result: 'You skin your arm raw but wriggle one piece of gear loose.' },
+      { label: 'Move on', effects: [{ kind: 'nothing' }],
+        result: 'Not worth the effort. You leave the boulder where it lies.' },
+    ],
+  },
+  {
+    id: 'sniper_perch',
+    title: 'The Distant Lantern',
+    text: 'Across a ravine, a lantern hangs on a hook beside a strongbox. Too far to reach — but not too far to shoot.',
+    options: [
+      { label: 'Shoot the hook and drop the box', effects: [{ kind: 'artifact' }],
+        result: 'One perfect shot. The strongbox tumbles down to your side of the ravine.',
+        requirement: { stat: 'rangedDmgPct', min: 30, label: 'Ranged +30%' } },
+      { label: 'Throw rocks until something gives (40g)', effects: [{ kind: 'gold', amount: -40 }, { kind: 'item' }],
+        result: 'It takes a while and a sore arm, but the box finally falls.' },
+      { label: 'Leave it hanging', effects: [{ kind: 'nothing' }],
+        result: 'Some prizes hang just out of reach. You move on.' },
+    ],
+  },
+  {
+    id: 'tightrope',
+    title: 'The Frayed Tightrope',
+    text: 'A single rope spans a chasm to a treasure alcove. It will only bear someone quick and light on their feet.',
+    options: [
+      { label: 'Dash across before it snaps', effects: [{ kind: 'artifact' }, { kind: 'item' }],
+        result: 'You cross in a blur — the rope parts behind you, but the alcove is already looted.',
+        requirement: { stat: 'moveSpeedPct', min: 25, label: 'Move speed +25%' } },
+      { label: 'Inch across carefully', effects: [{ kind: 'hurt', frac: 0.25 }, { kind: 'item' }],
+        result: 'The rope snaps halfway. You fall, catch the ledge, and crawl up bloodied — with one prize.' },
+      { label: 'Turn back', effects: [{ kind: 'nothing' }],
+        result: 'You are no acrobat today. The alcove keeps its secrets.' },
+    ],
+  },
+  {
+    id: 'assassins_mark',
+    title: 'The Sleeping Warden',
+    text: 'A hulking guardian dozes atop a hoard. One precise strike to the weak point would end it before it wakes.',
+    options: [
+      { label: 'Strike the weak point', effects: [{ kind: 'artifact' }, { kind: 'gold', amount: 60 }],
+        result: 'You find the seam in its armor. It never wakes — and the hoard is yours.',
+        requirement: { stat: 'critPct', min: 25, label: 'Crit +25%' } },
+      { label: 'Grab what you can and run', effects: [{ kind: 'gold', amount: 40 }, { kind: 'hurt', frac: 0.2 }],
+        result: 'It stirs mid-grab. You snatch a handful of gold and flee, clipped on the way out.' },
+      { label: 'Creep away quietly', effects: [{ kind: 'nothing' }],
+        result: 'Better a live coward than a dead thief. You slip back into the dark.' },
+    ],
+  },
+  {
+    id: 'iron_gate',
+    title: 'The Bent Portcullis',
+    text: 'A rusted iron portcullis has jammed halfway. Behind it, a vault room. Holding it open takes a hardened frame.',
+    options: [
+      { label: 'Brace it on your shoulders', effects: [{ kind: 'item' }, { kind: 'item' }],
+        result: 'Your armored frame takes the weight. You loot the vault and let the gate crash down behind you.',
+        requirement: { stat: 'armor', min: 5, label: 'Armor 5+' } },
+      { label: 'Prop it with a beam (risky)', effects: [{ kind: 'hurt', frac: 0.18 }, { kind: 'item' }],
+        result: 'The beam holds just long enough. It splinters as you dive clear with one find.' },
+      { label: 'Leave the vault sealed', effects: [{ kind: 'nothing' }],
+        result: 'The gate wins this round. You move along the corridor.' },
+    ],
+  },
+  {
+    id: 'blood_toll',
+    title: 'The Blood Toll',
+    text: 'A crimson gate demands a heavy tribute of vitality — only the hale can afford to pay and walk on.',
+    options: [
+      { label: 'Pay the toll in blood', effects: [{ kind: 'hurt', frac: 0.3 }, { kind: 'artifact' }, { kind: 'artifact' }],
+        result: 'You have life to spare. The gate drinks deep and opens onto a double hoard.',
+        requirement: { stat: 'maxHp', min: 140, label: 'Max HP 140+' } },
+      { label: 'Offer gold instead (70g)', effects: [{ kind: 'gold', amount: -70 }, { kind: 'artifact' }],
+        result: 'The gate accepts coin, grudgingly, and grants a single prize.' },
+      { label: 'Refuse to pay', effects: [{ kind: 'nothing' }],
+        result: 'You keep your blood and your gold. The gate stays shut.' },
+    ],
+  },
+  {
+    id: 'high_roller',
+    title: 'The High Roller',
+    text: 'A velvet-clad dealer eyes your purse. "The big table is for serious coin only. Care to play?"',
+    options: [
+      { label: 'Buy into the high table (100g)', effects: [{ kind: 'gold', amount: -100 }, { kind: 'artifact' }, { kind: 'artifact' }],
+        result: 'Real money buys real stakes. You cash out with two genuine treasures.',
+        requirement: { stat: 'gold', min: 100, label: '100+ gold' } },
+      { label: 'Play the penny table (20g)', effects: [{ kind: 'gold', amount: -20 }, { kind: 'item' }],
+        result: 'Small stakes, small winnings — but winnings all the same.' },
+      { label: 'Keep your purse shut', effects: [{ kind: 'nothing' }],
+        result: 'The dealer shrugs. "Come back when you can afford to lose." You leave.' },
     ],
   },
 ];
