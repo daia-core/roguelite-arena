@@ -65,6 +65,8 @@ export class SkillTreeScene implements Scene {
   // Carried across the open() → Continue cycle: did the player open the tree
   // via the shop-break shortcut?  If so, Continue returns to the shop.
   private returnToShop: boolean = false;
+  /** Public so Game.finishSkillTree() can resolve the correct return state. */
+  get isReturnToShop(): boolean { return this.returnToShop; }
 
   constructor(deps: SkillTreeSceneDeps) {
     this.canvas = deps.canvas;

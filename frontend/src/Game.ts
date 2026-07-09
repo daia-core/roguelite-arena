@@ -2353,10 +2353,12 @@ export class Game {
     this.state = 'skilltree';
   }
 
-  /** Exit the skill-tree back to playing. Used by simulate-balance.mjs to resume the run
-   *  after the bot allocates all available skill points. */
+  /** Exit the skill-tree, respecting whether it was opened from the post-wave shop break.
+   *  When opened via enterShop() (fromShop=true), returning must land on 'shop' not
+   *  'playing' — otherwise the wave-clear is lost and combat resumes mid-transition.
+   *  Used by simulate-balance.mjs and qa-live-smoke.mjs to automate the skill-tree step. */
   finishSkillTree(): void {
-    this.state = 'playing';
+    this.state = this.skillTreeScene?.isReturnToShop ? 'shop' : 'playing';
   }
 
   private triggerHitPause(seconds: number): void {
