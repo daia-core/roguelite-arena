@@ -6,6 +6,14 @@ portrait viewport).
 
 ---
 
+## 2026-07-10 (midnight) — Wager event balance fix · `f76d301` · live `index-DCucbd5B.js` ✓
+
+**The Gambler's gold bet now requires you to actually have the gold.** "Bet 40 gold" was incorrectly granting +40g with no cost — free money every event. Fixed with a gold stat-gate (min 40): the option locks when you're broke (showing "🔒 40+ gold"), so early-game you're forced toward the blood bet or walking away. When you do have the stake, the +40g net represents doubling it. Now 8 stat-gated events total (was 7).
+
+**QA:** event-gate 8/8 ✓ · smoke 9/9 ✓ · TypeScript clean
+
+---
+
 ## 2026-07-09 (late night) — Stat-gate UX: progress feedback on locked options · `8389ad5` · live `index-CtVqMT28.js` ✓
 
 **Locked gated event options now show your current stat value.** When a `?` event option requires e.g. "Melee +30%" and you haven't invested enough, it now reads **"🔒 Melee +30% · you: 18%"** instead of just "🔒 Melee +30%". This makes the gate a progression goal you can see rather than a mystery — the Slay-the-Spire unlock feel, properly surfaced.
