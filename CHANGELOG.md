@@ -6,6 +6,60 @@ portrait viewport).
 
 ---
 
+## 2026-07-09 (late night) — QA maintenance · `644c04e` (no deploy needed)
+
+**No player-visible change.** Pure QA infrastructure work.
+
+Fixed 3 QA scripts that had drifted from the scene extraction pass (steps 1-16):
+- `qa-devildeal.mjs` — `pactRefusalMessaged` check: `applyEventOption()` returns
+  `{ resultText }` directly; the script was checking `g.eventResultText` which moved
+  to EventScene private. Now captures the return value. 21/21 PASS.
+- `qa-melee-stack.mjs` — stub enemies missing `statusFX`: the StatusEffectEngine
+  was wired into `updateEnemies` after this script was written. Added a no-op
+  `StatusEffectManager` mock. Also added `lastX/lastY` to the stub. PASS.
+- `qa-node-map.mjs` — three extraction drift points fixed:
+  1. `screenScale()` moved to MapScene private → inlined canvas calculation.
+  2. `g.update()` calls `disarmUntilRelease()` on state change, swallowing
+     synthetic taps → call `g.update(0)` first, then clear `pressDisarmed`.
+  3. `currentEvent` moved to EventScene private → access via `g.scenes.event`.
+  All node types routed successfully, persistence round-trips. PASS.
+
+Documented all 3 new drift patterns (3-5) in ARCHITECTURE.md QA section for
+future script authors.
+
+Also ran `host-skill-yaml-repair.py` (I-17 auto-repair): 3 host skills fixed.
+
+---
+
+## 2026-07-09 (night) — 26 event encounters · `2750dc9` · `index-B0h61D9M.js` ✓
+
+**Player-visible:** the `?` nodes on the map now draw from a pool twice as large (13 → 26 events),
+so longer runs no longer replay the same handful of decisions.
+
+**13 new events added:**
+
+*Regular events* — a mix of free choices, cost/benefit trades, and risky gambles:
+- **Memory Pillar** — touch for a trinket, meditate for healing, or leave it
+- **Poison Well** — drink deep (artifact + pain) or a cautious sip (minor hurt + minor heal)
+- **Orc Champion** — accept the duel (hurt + artifact + 40g), pay tribute (50g → item), retreat
+- **Ancient Burial Mound** — dig up an item (take minor damage) or leave an offering (20g → heal)
+- **Echoing Library** — study for hours (item + max HP), grab what you can (item + 20g), burn it (80g)
+- **Bone Witch** — trade 30 max HP for an artifact, or 40g for a big heal
+- **Suspicious Chest** — open boldly (item) or spike-first (artifact + minor hurt)
+- **Traveling Smith** — commission two pieces (50g), or have her reinforce you (30g → +25 max HP)
+- **Haunted Mirror** — reach through for an artifact (hurt + artifact), smash for coin, or walk away
+- **Flooded Vault** — wade in (2 items), dive for the gleam (artifact + hurt), or drain for gold
+- **Twin's Challenge** — accept the split (hurt + 2 artifacts), bribe your way out (60g → heal), or refuse
+
+*New devil deals* — completing the full curse roster (all 6 curses are now event-accessible):
+- **The Hollow Eye** — artifact + 80g, permanently -12% crit chance (`curse_myopia`, previously unused)
+- **The Rot Crown** — +80 max HP + artifact, permanently -30% move speed (`curse_sloth`, new context)
+
+**Commit** `2750dc9`
+**Live verified** `index-B0h61D9M.js` served at roguelite-game-blush.vercel.app (event strings present in bundle).
+
+---
+
 ## 2026-07-09 (night) — Balance-sim QA fix · `7140ad1` · `index-BeaPZxfx.js` ✓
 
 **No player-visible change.** `simulate-balance.mjs` crashed on every run with
