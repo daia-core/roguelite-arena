@@ -6,6 +6,16 @@ portrait viewport).
 
 ---
 
+## 2026-07-09 (late night) — Stat-gate UX: progress feedback on locked options · `8389ad5` · live `index-CtVqMT28.js` ✓
+
+**Locked gated event options now show your current stat value.** When a `?` event option requires e.g. "Melee +30%" and you haven't invested enough, it now reads **"🔒 Melee +30% · you: 18%"** instead of just "🔒 Melee +30%". This makes the gate a progression goal you can see rather than a mystery — the Slay-the-Spire unlock feel, properly surfaced.
+
+Format: percentage stats (melee/ranged/crit/move speed) show `X%`; raw stats (armor, max HP, gold) show the integer. Only locked options show the current value; met requirements keep the clean `✓` label.
+
+**QA:** smoke 9/9 ✓ · TypeScript clean
+
+---
+
 ## 2026-07-09 (night) — Event deduplication · `6d9c9a5` · live `index-kNyRFp0d.js` ✓
 
 **`?` events no longer repeat until you've seen every event.** Previously `randomEvent()` was pure random — a 5-event run had ~30% chance of seeing the same encounter twice. Now EventScene tracks which events have appeared this run and always draws from the unseen pool first; only once all 26 have been visited does it cycle back to the full set.
