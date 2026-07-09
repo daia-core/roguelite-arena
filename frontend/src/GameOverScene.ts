@@ -24,6 +24,10 @@ export interface GameOverStats {
   itemsCollected: number;
   soulsEarned: number;
   personalBest: number;
+  /** Display name of the class played this run (e.g. "Berserker"). */
+  className: string;
+  /** Run wall-clock duration in milliseconds. */
+  runDurationMs: number;
 }
 
 // ─── Deps ─────────────────────────────────────────────────────────────────────
@@ -124,6 +128,22 @@ export class GameOverScene implements Scene {
       color: '#ef4444'
     });
     ctx.restore();
+
+    // Class + duration subtitle ("Berserker • 4:32")
+    const { className, runDurationMs } = stats;
+    if (className) {
+      const totalSec = Math.floor(runDurationMs / 1000);
+      const mins = Math.floor(totalSec / 60);
+      const secs = String(totalSec % 60).padStart(2, '0');
+      const durationLabel = runDurationMs > 0 ? `${mins}:${secs}` : '';
+      const subtitle = durationLabel ? `${className}  •  ${durationLabel}` : className;
+      this.renderer.drawText(subtitle, this.canvas.width / 2, isMobile ? 112 : 140, {
+        size: isMobile ? 18 : 22,
+        bold: false,
+        align: 'center',
+        color: '#9ca3af'
+      });
+    }
 
     // Stats panel — taller to fit Bosses stat + personal best
     const panelWidth = isMobile ? Math.min(380, this.canvas.width - 40) : 500;

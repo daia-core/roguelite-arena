@@ -8,7 +8,7 @@ import { MeleeAttack } from './MeleeAttack';
 import { Particle, DamageNumber } from './Particle';
 import { WaveManager } from './WaveManager';
 import { PlayerStats, ItemDatabase, ItemTier, classifyItemSlot, type Item } from './ItemSystem';
-import { STARTING_CLASSES, type StartingClass } from './Classes';
+import { STARTING_CLASSES, getClassById, type StartingClass } from './Classes';
 import { SaveManager } from './SaveManager';
 import { Input } from './Input';
 import { Renderer } from './Renderer';
@@ -252,7 +252,9 @@ export class Game {
     goldEarned: 0,
     itemsCollected: 0,
     soulsEarned: 0,
-    personalBest: 0
+    personalBest: 0,
+    className: '',
+    runDurationMs: 0
   };
 
   // Wave modifier announcement
@@ -3538,7 +3540,9 @@ export class Game {
       goldEarned: this.player?.gold ?? 0,
       itemsCollected: this.playerStats.items.length,
       soulsEarned: this.soulsEarnedThisRun,
-      personalBest: previousBest
+      personalBest: previousBest,
+      className: getClassById(this.selectedClassId)?.name ?? '',
+      runDurationMs: this.runStartTime > 0 ? Date.now() - this.runStartTime : 0
     };
 
     // Evaluate achievements for this run — any newly earned unlock their reward item immediately
