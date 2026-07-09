@@ -6,6 +6,14 @@ portrait viewport).
 
 ---
 
+## 2026-07-09 (night) — Event deduplication · `6d9c9a5` · live `index-kNyRFp0d.js` ✓
+
+**`?` events no longer repeat until you've seen every event.** Previously `randomEvent()` was pure random — a 5-event run had ~30% chance of seeing the same encounter twice. Now EventScene tracks which events have appeared this run and always draws from the unseen pool first; only once all 26 have been visited does it cycle back to the full set.
+
+**QA:** live smoke 9/9 ✓ · qa-event-gate 13/13 ✓ (lock/unlock logic correct, all 7 gated events verified well-formed on live build) · test_tools 30/30 ✓
+
+---
+
 ## 2026-07-09 (evening) — Game-over polish: class + duration · `b260a5e` · live `index-C-I1vViB.js` ✓
 
 **Game-over screen now shows your class and run duration.** The subtitle "Berserker  •  4:32"
