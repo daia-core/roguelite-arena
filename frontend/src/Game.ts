@@ -407,6 +407,7 @@ export class Game {
       onOptionPicked: (opt) => this.applyEventOption(opt),
       onDone: () => { this.state = 'map'; },
       meetsRequirement: (req) => this.meetsEventRequirement(req),
+      getStatValue: (stat) => this.eventStatValue(stat),
     });
     this.scenes.rest = new RestScene({
       canvas: this.canvas,

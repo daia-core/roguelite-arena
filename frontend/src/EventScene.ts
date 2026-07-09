@@ -34,6 +34,11 @@ export interface EventSceneDeps {
    * Game owns PlayerStats; the scene only asks yes/no so it can lock the button.
    */
   meetsRequirement: (req: EventRequirement) => boolean;
+  /**
+   * Current value of a gateable stat (same scale as EventRequirement.min).
+   * Used to show progress feedback on locked options ("🔒 Melee +30% · you: +18%").
+   */
+  getStatValue: (stat: EventRequirement['stat']) => number;
 }
 
 /**
@@ -51,6 +56,7 @@ export class EventScene implements Scene {
   private readonly onOptionPicked: (opt: EventOption) => { resultText: string; reward: EventReward | null };
   private readonly onDone: () => void;
   private readonly meetsRequirement: (req: EventRequirement) => boolean;
+  private readonly getStatValue: (stat: EventRequirement['stat']) => number;
 
   private currentEvent: GameEvent | null = null;
   private eventResultText: string | null = null;
@@ -69,6 +75,7 @@ export class EventScene implements Scene {
     this.onOptionPicked = deps.onOptionPicked;
     this.onDone = deps.onDone;
     this.meetsRequirement = deps.meetsRequirement;
+    this.getStatValue = deps.getStatValue;
   }
 
   /** An option is locked when it carries a stat gate the player doesn't yet meet. */
@@ -76,12 +83,20 @@ export class EventScene implements Scene {
     return !!opt.requirement && !this.meetsRequirement(opt.requirement);
   }
 
+  /** Format a stat value for display alongside its requirement label. */
+  private formatStatVal(stat: EventRequirement['stat'], value: number): string {
+    const v = Math.round(value);
+    return stat.endsWith('Pct') ? `${v}%` : `${v}`;
+  }
+
   /** Button caption — appends the requirement tag so gated choices read their stake. */
   private optionLabel(opt: EventOption): string {
     if (!opt.requirement) return opt.label;
-    return this.isLocked(opt)
-      ? `${opt.label}  🔒 ${opt.requirement.label}`
-      : `${opt.label}  ✓ ${opt.requirement.label}`;
+    if (this.isLocked(opt)) {
+      const current = this.formatStatVal(opt.requirement.stat, this.getStatValue(opt.requirement.stat));
+      return `${opt.label}  🔒 ${opt.requirement.label} · you: ${current}`;
+    }
+    return `${opt.label}  ✓ ${opt.requirement.label}`;
   }
 
   /** Call at the start of every new run so events don't persist across runs. */
