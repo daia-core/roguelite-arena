@@ -6,7 +6,7 @@ portrait viewport).
 
 ---
 
-## 2026-07-10 (night) — Button text overflow fix · `pending` · live pending
+## 2026-07-10 (night) — Button text overflow fix · `d277531` · live `index-51mMYG2m.js` ✓
 
 **Button labels now auto-shrink to fit.** Long stat-gate labels like "SHOOT THE HOOK  🔒 RANGED +30% · YOU: 0%" could overflow their button bounds. Added `maxWidth` to `drawButton`'s text call, engaging the existing auto-shrink path in `drawText` (already used throughout all other UI text). No visual change for normal-length labels; font scales down proportionally when a label would otherwise clip.
 
