@@ -6,7 +6,7 @@ portrait viewport).
 
 ---
 
-## 2026-07-11 (night) — Elemental bullet sprites · `TBD` · live `index-B9U0aogt.js` ✓
+## 2026-07-11 (night) — Elemental bullet sprites · `f2fa201` · live `index-B9U0aogt.js` ✓
 
 **Fire/ice/lightning/poison shots now have distinct pixel-art sprites** instead of a recolored blue diamond:
 - **Fire** (`fire` element) — hot orange fireball with yellow core
