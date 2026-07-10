@@ -6,6 +6,33 @@ portrait viewport).
 
 ---
 
+## 2026-07-11 (night) — Elemental bullet sprites · `TBD` · live `index-B9U0aogt.js` ✓
+
+**Fire/ice/lightning/poison shots now have distinct pixel-art sprites** instead of a recolored blue diamond:
+- **Fire** (`fire` element) — hot orange fireball with yellow core
+- **Ice** (`ice` element) — angular crystal shard with ice-white facet
+- **Lightning** (`lightning` element) — jagged asymmetric yellow bolt
+- **Poison** (`poison` element) — rounded toxic orb with green highlight
+
+Trail color was already element-tinted; the bullet HEAD sprite now matches too. Physical shots keep the original cyan diamond. Removed the crude 4-pixel color-core overlay (made redundant by the distinct sprites).
+
+**QA:** proj-element PASS ✅ · TypeScript clean · no console errors · 4×2 sprite refs confirmed in bundle
+
+---
+
+## 2026-07-11 (early morning) — Event catalog: 42 events, 14 stat-gated · `1bff2e8` · live `index-DC4Ns3og.js` ✓
+
+**Three new advanced stat-gated events added** (all require meaningful build investment to take the best option):
+- **Molten Strike** (`melee_crit`): Double-swing for massive melee crits — requires Melee +25% AND Crit +15%. Dangerous choice with Doom downside on the non-crit path.
+- **Spectral Barrage** (`ranged_multi`): Ranged volley that pierces and bounces — requires Ranged +20% AND Multishot. Punished by armor debuff if you can't fire fast enough.
+- **Soul Leech** (`lifesteal_aoe`): AoE drain that heals you — requires Lifesteal +8% to unlock the heal path. Otherwise it costs gold for a weaker effect.
+
+**Event catalog is now 42 events total / 14 stat-gated.** All 7 stat axes (melee, ranged, crit, speed, HP, gold, lifesteal) have ≥2 gated events each. Full catalog documented in `DESIGN-events.md`.
+
+**QA:** event-gate 14/14 ✓ · smoke 9/9 ✓ · TypeScript clean · village purchase ✓ · achievements screen ✓
+
+---
+
 ## 2026-07-10 (night) — Button text overflow fix · `d277531` · live `index-51mMYG2m.js` ✓
 
 **Button labels now auto-shrink to fit.** Long stat-gate labels like "SHOOT THE HOOK  🔒 RANGED +30% · YOU: 0%" could overflow their button bounds. Added `maxWidth` to `drawButton`'s text call, engaging the existing auto-shrink path in `drawText` (already used throughout all other UI text). No visual change for normal-length labels; font scales down proportionally when a label would otherwise clip.

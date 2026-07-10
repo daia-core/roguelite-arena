@@ -1,6 +1,6 @@
 # Roguelite Arena — Architecture Overview
 
-> **Last updated: 2026-07-09** — Step 17 analysis written (combat-engine wall documented). QA drift pattern 6 added (`finishSkillTree` returnToShop fix). Live smoke test: PASS 9/9 ✓. Game.ts 3,623 lines. Scene extraction phase **complete** — remaining methods are the combat-engine core (see Step 17). Next pull: a genuine feel/balance improvement, or the CombatEngine refactor if scope is acceptable.
+> **Last updated: 2026-07-11** — Game state verified 00:25 Jul 11: all QA suites pass (smoke 9/9, event-gate 14/14, village purchase, achievements). 42 events / 14 stat-gated / all 7 stat axes covered ≥2 each. Game.ts 3,670 lines. Live: `TBD` / `index-B9U0aogt.js`. All systems confirmed working: Village+MetaProgression, Achievements (14 unlocks), ItemKind tags, StatusEffectEngine (burn/bleed/doom/wound/chain/freeze/slow), Scene extraction phase **complete**. Next pull: more melee/AOE items (DESIGN-PASS-PLAN.md step 4) or item-uniqueness pass (step 2, Felix steering needed).
 
 ---
 

@@ -195,25 +195,29 @@ export class Projectile {
       }
     }
 
-    const spriteName = this.fromPlayer ? 'bullet' : 'enemy_bullet';
+    // Pick element-specific sprite for player shots; enemy bullets stay uniform.
+    let spriteName: string;
+    if (this.fromPlayer) {
+      switch (this.damageType) {
+        case 'fire':      spriteName = 'bullet_fire'; break;
+        case 'ice':       spriteName = 'bullet_ice'; break;
+        case 'lightning': spriteName = 'bullet_lightning'; break;
+        case 'poison':    spriteName = 'bullet_poison'; break;
+        default:          spriteName = 'bullet'; break; // physical
+      }
+    } else {
+      spriteName = 'enemy_bullet';
+    }
     const sprite = SpriteSheet.get(spriteName);
 
     if (sprite) {
-      // PIXEL ART: Just draw the sprite, no glow, no outlines, no smooth effects
+      // PIXEL ART: Just draw the sprite, no glow, no outlines, no smooth effects.
+      // The element is already encoded in the sprite shape + trail color — no overlay needed.
       ctx.drawImage(
         sprite,
         Math.floor(this.x - sprite.width / 2),
         Math.floor(this.y - sprite.height / 2)
       );
-    }
-
-    // ELEMENT TINT: a small element-colored core over the bullet so the build's
-    // element reads at a glance (the trail is already tinted via this.color).
-    // Physical shots keep the default sprite look — no overlay.
-    if (this.fromPlayer && this.damageType !== 'physical') {
-      ctx.fillStyle = Projectile.ELEMENT_COLORS[this.damageType];
-      const cs = 4;
-      ctx.fillRect(Math.floor(this.x - cs / 2), Math.floor(this.y - cs / 2), cs, cs);
     }
 
     ctx.restore();

@@ -1420,6 +1420,92 @@ export class SpriteSheet {
 
     this.drawPixels(ctx2, enemyBulletPixels, enemyBulletColors, 6);
     this.sprites.set('enemy_bullet', enemyBullet);
+
+    // ── Elemental player bullets (7x7 @ scale 6 = 42px each) ──────────────
+
+    // FIRE bullet — hot orange fireball with yellow core
+    const bulletFire = this.createCanvas(42, 42);
+    const ctxFire = bulletFire.getContext('2d')!;
+    const bulletFirePixels = [
+      [0,0,0,1,0,0,0],
+      [0,0,1,3,1,0,0],
+      [0,1,2,3,3,1,0],
+      [1,2,3,3,2,2,1],
+      [0,1,2,3,3,1,0],
+      [0,0,1,2,2,1,0],
+      [0,0,0,1,0,0,0],
+    ];
+    const bulletFireColors = [
+      'transparent',
+      '#000000',     // 1 - black outline
+      '#f97316',     // 2 - orange fire
+      '#fde047'      // 3 - yellow-hot core
+    ];
+    this.drawPixels(ctxFire, bulletFirePixels, bulletFireColors, 6);
+    this.sprites.set('bullet_fire', bulletFire);
+
+    // ICE bullet — angular crystal shard with white facet
+    const bulletIce = this.createCanvas(42, 42);
+    const ctxIce = bulletIce.getContext('2d')!;
+    const bulletIcePixels = [
+      [0,0,1,3,1,0,0],
+      [0,1,3,3,3,1,0],
+      [1,3,3,2,3,3,1],
+      [0,1,2,2,2,1,0],
+      [0,1,3,3,3,1,0],
+      [0,0,1,3,1,0,0],
+      [0,0,0,1,0,0,0],
+    ];
+    const bulletIceColors = [
+      'transparent',
+      '#000000',     // 1 - black outline
+      '#0ea5e9',     // 2 - sky blue
+      '#e0f2fe'      // 3 - ice-white facet
+    ];
+    this.drawPixels(ctxIce, bulletIcePixels, bulletIceColors, 6);
+    this.sprites.set('bullet_ice', bulletIce);
+
+    // LIGHTNING bullet — jagged asymmetric bolt
+    const bulletLightning = this.createCanvas(42, 42);
+    const ctxLightning = bulletLightning.getContext('2d')!;
+    const bulletLightningPixels = [
+      [0,0,0,1,1,0,0],
+      [0,0,1,3,1,0,0],
+      [0,0,1,3,3,1,0],
+      [0,1,3,3,1,0,0],
+      [0,1,3,3,1,0,0],
+      [0,0,1,3,1,0,0],
+      [0,0,0,1,0,0,0],
+    ];
+    const bulletLightningColors = [
+      'transparent',
+      '#000000',     // 1 - black outline
+      '#eab308',     // 2 - yellow lightning
+      '#fef9c3'      // 3 - near-white electric core
+    ];
+    this.drawPixels(ctxLightning, bulletLightningPixels, bulletLightningColors, 6);
+    this.sprites.set('bullet_lightning', bulletLightning);
+
+    // POISON bullet — rounded toxic orb (more circular than the base diamond)
+    const bulletPoison = this.createCanvas(42, 42);
+    const ctxPoison = bulletPoison.getContext('2d')!;
+    const bulletPoisonPixels = [
+      [0,0,1,1,1,0,0],
+      [0,1,2,3,2,1,0],
+      [1,2,3,3,2,2,1],
+      [1,2,2,2,2,2,1],
+      [1,2,2,2,2,2,1],
+      [0,1,2,2,2,1,0],
+      [0,0,1,1,1,0,0],
+    ];
+    const bulletPoisonColors = [
+      'transparent',
+      '#000000',     // 1 - black outline
+      '#16a34a',     // 2 - poison green
+      '#86efac'      // 3 - light green highlight
+    ];
+    this.drawPixels(ctxPoison, bulletPoisonPixels, bulletPoisonColors, 6);
+    this.sprites.set('bullet_poison', bulletPoison);
   }
 
   // ==================== ITEMS & PICKUPS ====================
