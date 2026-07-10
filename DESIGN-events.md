@@ -1,6 +1,6 @@
 # Event System Design Reference
 
-*Last updated: 2026-07-10. Reflects EventSystem.ts at 39 events.*
+*Last updated: 2026-07-11. Reflects EventSystem.ts at 42 events.*
 
 The `?` node is the main narrative/choice break between waves. Events are data-driven in
 `EventSystem.ts`; `Game.ts` resolves effects at the sites it already owns (economy, health,
@@ -32,7 +32,7 @@ Curse roster covered:
 | curse_famine | -40% XP | devil_starving_god, cursed_reliquary |
 | curse_myopia | -12% crit | devil_hollow_eye |
 
-### 3. Stat-Gated Events (11)
+### 3. Stat-Gated Events (14)
 Slay-the-Spire-style: an option is greyed and un-clickable until the player's stat meets the
 threshold. When unlocked, the gated option is strictly better than the fallback path, so
 committing to a build pays off tangibly. Every gated event still keeps a free/neutral "leave"
@@ -59,6 +59,9 @@ Gated options are read from `PlayerStats` at the moment the event opens via
 | iron_vault (Iron Vault) | Armor 15+ | 2× artifact + 50g |
 | war_idol (War Idol) | Melee +50% | artifact + 50 max HP |
 | blade_corridor (Blade Corridor) | Crit 40%+ | artifact + item + 40g |
+| sniper_nest (Sniper's Nest) | Ranged +50% | 2× artifact + 40g |
+| collapsing_bridge (Collapsing Bridge) | Speed +45% | artifact + item + 30g |
+| weight_pillar (Weight-Bearing Pillar) | 100+ HP | artifact + item |
 
 ### 4. Pure Choice Events (1)
 No gate, no hidden outcome — the option labels are explicit about what you get. The player
@@ -71,7 +74,7 @@ without any stat prerequisite.
 
 ---
 
-## Full Catalog (39 events)
+## Full Catalog (42 events)
 
 ### Regular Events
 | id | Title | Mechanic |
@@ -124,24 +127,14 @@ without any stat prerequisite.
 | Stat | Starter gate | Advanced gate | Total gates |
 | --- | --- | --- | --- |
 | meleeDmgPct | boulder (+30%) | war_idol (+50%) | 2 |
-| rangedDmgPct | sniper_perch (+30%) | **none** | 1 ⚠️ |
+| rangedDmgPct | sniper_perch (+30%) | sniper_nest (+50%) | 2 |
 | critPct | assassins_mark (+25%) | blade_corridor (+40%) | 2 |
-| moveSpeedPct | tightrope (+25%) | **none** | 1 ⚠️ |
+| moveSpeedPct | tightrope (+25%) | collapsing_bridge (+45%) | 2 |
 | armor | iron_gate (5+) | iron_vault (15+) | 2 |
-| maxHp | blood_toll (140+) | **none** | 1 ⚠️ |
+| maxHp | weight_pillar (100+) | blood_toll (140+) | 2 |
 | gold | high_roller (100+) | — | 1 (+ wager at 40g) |
 
-**Gaps to fill (next content pass):**
-1. **Advanced ranged gate** — Ranged +50%+, triple reward (2× artifact + gold). The ranged build
-   currently tops out at the starter gate; a committed ranged run should have a big late-game pay-off.
-   Narrative idea: "The Sniper's Nest" — a tower position that only a true marksman can exploit.
-2. **Advanced speed gate** — Move speed +45%+, high mobility pay-off. Speed builds exist but have
-   no advanced reward. Narrative idea: "The Collapsing Bridge" — cross before it falls, only the
-   very fast make it in time.
-3. **Starter maxHp gate** (≈ 100 HP) — A lower-threshold HP gate to make tanky builds feel
-   powerful sooner. The blood_toll at 140+ is the only HP gate and it's high. Narrative idea:
-   "The Weight-Bearing Pillar" — hold up a collapsing ceiling while looting beneath it; needs
-   a sturdy frame.
+All 7 stats now have ≥2 gate tiers. Stat coverage complete.
 
 ---
 

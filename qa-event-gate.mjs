@@ -78,7 +78,7 @@ const result = await page.evaluate(() => {
       try { scene.isLocked(opt); } catch { evalThrew++; }
     }
   }
-  out.realGatedEventsSeen = seenGatedIds.size;         // expect all 11 gated events (7 starter + wager + 3 advanced)
+  out.realGatedEventsSeen = seenGatedIds.size;         // expect all 14 gated events (7 starter + wager + 6 advanced)
   out.noMalformedRequirements = badReq === 0;
   out.noEvalThrows = evalThrew === 0;
 
@@ -95,7 +95,7 @@ const checks = [
 ];
 let pass = !result.fatal;
 for (const k of checks) if (result[k] !== true) { pass = false; console.log('FAIL:', k); }
-if ((result.realGatedEventsSeen ?? 0) < 11) { pass = false; console.log('FAIL: realGatedEventsSeen <11 (got', result.realGatedEventsSeen, ')'); }
+if ((result.realGatedEventsSeen ?? 0) < 14) { pass = false; console.log('FAIL: realGatedEventsSeen <14 (got', result.realGatedEventsSeen, ')'); }
 if (errors.length) { pass = false; console.log('Console/page errors:', errors.slice(0, 5)); }
 
 console.log(pass ? '\n✅ PASS — stat gates lock/unlock correctly and real events are well-formed' : '\n❌ FAIL');
