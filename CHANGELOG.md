@@ -6,6 +6,14 @@ portrait viewport).
 
 ---
 
+## 2026-07-10 (night) — Button text overflow fix · `pending` · live pending
+
+**Button labels now auto-shrink to fit.** Long stat-gate labels like "SHOOT THE HOOK  🔒 RANGED +30% · YOU: 0%" could overflow their button bounds. Added `maxWidth` to `drawButton`'s text call, engaging the existing auto-shrink path in `drawText` (already used throughout all other UI text). No visual change for normal-length labels; font scales down proportionally when a label would otherwise clip.
+
+**QA:** TypeScript clean · smoke 9/9 ✓ · event-gate 13/13 ✓
+
+---
+
 ## 2026-07-10 (midnight) — Wager event balance fix · `f76d301` · live `index-DCucbd5B.js` ✓
 
 **The Gambler's gold bet now requires you to actually have the gold.** "Bet 40 gold" was incorrectly granting +40g with no cost — free money every event. Fixed with a gold stat-gate (min 40): the option locks when you're broke (showing "🔒 40+ gold"), so early-game you're forced toward the blood bet or walking away. When you do have the stake, the +40g net represents doubling it. Now 8 stat-gated events total (was 7).

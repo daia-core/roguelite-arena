@@ -581,6 +581,7 @@ export class Renderer {
       align: 'center',
       baseline: 'middle',
       color: enabled ? '#f4e6c2' : '#55534c',
+      maxWidth: width - 16, // shrink font if label overflows button (e.g. long stat-gate labels)
     });
   }
 
