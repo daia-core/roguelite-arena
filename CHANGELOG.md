@@ -6,6 +6,30 @@ portrait viewport).
 
 ---
 
+## 2026-07-11 (night) — Artifact pixel sprites complete · `0e34218` · live `index-Dt8Y1LyH.js` ✓
+
+**All 50 artifacts now have hand-crafted pixel-art icons** — 16 were using the procedural rune fallback (only 2 colours, failing `qa-artifact-icons`). Added distinct thematic glyphs for each:
+- **Bloodlust Idol** — red blood drop
+- **Empowerment Sigil** — gold 4-pointed star
+- **Frenzy Core** — orange spinning vortex
+- **Ancestral Boon** — stone idol/totem face
+- **Hunter's Mark** — green bullseye target
+- **Berserker's Roar** — triple claw slash marks
+- **Sage's Wisdom** — open glowing tome
+- **Bloodpact Relic** — purple sealed scroll with blood sigils
+- **Death's Wager** — skull with hollow eyes
+- **Reactive Carapace** — teal spiked shell
+- **Overcharge Battery** — blue battery with diagonal lightning bolt
+- **Gale Talisman** — cyan wind spiral
+- **Twin Moons** — two crescent moons with central glow
+- **Oracle's Eye** — crystal ball with glowing iris
+- **Reaper's Harvest** — curved scythe with red grip accent
+- **Curse of Myopia** — cracked spectacles (curse red tint)
+
+**QA:** artifact-icons PASS ✅ all 50 artifacts 3–5 colours · TypeScript clean · 0 console errors
+
+---
+
 ## 2026-07-11 (night) — Elemental bullet sprites · `f2fa201` · live `index-B9U0aogt.js` ✓
 
 **Fire/ice/lightning/poison shots now have distinct pixel-art sprites** instead of a recolored blue diamond:
