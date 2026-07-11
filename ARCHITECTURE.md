@@ -1,6 +1,6 @@
 # Roguelite Arena — Architecture Overview
 
-> **Last updated: 2026-07-11** — Game state verified 00:25 Jul 11: all QA suites pass (smoke 9/9, event-gate 14/14, village purchase, achievements). 42 events / 14 stat-gated / all 7 stat axes covered ≥2 each. Game.ts 3,670 lines. Live: `f2fa201` / `index-B9U0aogt.js`. All systems confirmed working: Village+MetaProgression, Achievements (14 unlocks), ItemKind tags, StatusEffectEngine (burn/bleed/doom/wound/chain/freeze/slow), Scene extraction phase **complete**. Next pull: more melee/AOE items (DESIGN-PASS-PLAN.md step 4) or item-uniqueness pass (step 2, Felix steering needed).
+> **Last updated: 2026-07-11** — Game state verified 03:37 Jul 11: all QA suites pass (smoke 9/9, event-gate 14/14, village purchase, achievements, artifact-icons 50/50). 42 events / 14 stat-gated / all 7 stat axes covered ≥2 each. Game.ts 3,670 lines. Live: `0e34218` / `index-Dt8Y1LyH.js`. All systems confirmed working: Village+MetaProgression, Achievements (14 unlocks), ItemKind tags, StatusEffectEngine (burn/bleed/doom/wound/chain/freeze/slow), Scene extraction phase **complete**. All 50 artifacts have hand-crafted pixel sprites (50/50 qa-artifact-icons PASS). Next pull: more melee/AOE items (DESIGN-PASS-PLAN.md step 4) or item-uniqueness pass (step 2, Felix steering needed).
 
 ---
 
