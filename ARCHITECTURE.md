@@ -1,6 +1,6 @@
 # Roguelite Arena — Architecture Overview
 
-> **Last updated: 2026-07-12** — Balance R1 shipped: Evasion Cloak, Phantom Cloak, Bomb Bandolier reclassified torso→slot (gear-named infinite-stack trinkets → proper equip items). Live: `e62dc67` / `index-DJ3d86ff.js`. All QA pass: catalog-integrity CLEAN (1894 items), shop-layout 11/11, live-smoke PASS. Game.ts 3,670 lines. Next: R1 remainder (gloves/gauntlets needs `hands` slot decision from Felix) or item-uniqueness/melee-AOE pass per DESIGN-PASS-PLAN.md.
+> **Last updated: 2026-07-12** — Step 4 melee pass shipped: 3 T3 pure-melee weapons (War Glaive/Siege Lance/Seismic Maul) + 2 melee passives (Blooddrinker/Earthshaker Band). Live: `9340fff` / `index-CQlgciFM.js`. Catalog: 1899 items. QA: catalog-integrity CLEAN, melee-stack PASS, melee-styles PASS, live-smoke PASS. Game.ts 3,670 lines. Next: R1 remainder (gloves/gauntlets `hands` slot — needs Felix) or item-uniqueness pass (step 2 — needs Felix steering).
 
 ---
 

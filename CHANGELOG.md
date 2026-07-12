@@ -6,6 +6,17 @@ portrait viewport).
 
 ---
 
+## 2026-07-12 (early morning) — Step 4: T3 pure-melee weapons + 2 melee passives · `9340fff` · live `index-CQlgciFM.js` ✓
+
+**New items (1894 → 1899):**
+- **War Glaive** (`melee_glaive_t3`, T3 Epic, 68g) — melee only, wide arc sweep with fast swings and 18% bleed. Fills the gap between T2 Brawler's Cleaver and T4 Chaos Blade.
+- **Siege Lance** (`melee_siege_lance_t3`, T3 Epic, 72g) — melee only, long thrust with 4-piercing and execute at 12% HP.
+- **Seismic Maul** (`melee_seismic_maul_t3`, T3 Epic, 75g) — melee only, heavy slam with 95-AOE disc and 28% burn on impact. Slow but devastating.
+- **Blooddrinker** (`melee_drain_t2`, T2 Rare trinket, 42g) — +38% melee dmg, +12% lifesteal, 12% faster swings. Sustain-focused melee passive.
+- **Earthshaker Band** (`melee_quake_t2`, T2 Rare ring, 38g) — 48-AOE shockwave on every swing, +22% melee dmg, 12% slower swings. Trade-off AOE item.
+
+All T3 melee weapons have `weaponType: 'melee'` (suppress gun). TypeScript clean, catalog-integrity CLEAN (1899 items), melee-stack PASS, melee-styles PASS, live-smoke PASS.
+
 ## 2026-07-12 (night) — Balance R1: gear-named trinkets → torso slot · `e62dc67` · live `index-DJ3d86ff.js` ✓
 
 Three items that were named like worn gear but stacking infinitely as trinkets are now proper torso equip items — takes a slot, so players choose between them:
