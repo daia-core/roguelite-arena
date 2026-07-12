@@ -38,10 +38,10 @@ ctx.spawnAoeZone(new AoeZone(x, y, r, baseDmg, delay, { color }));
 
 ---
 
-## ⚠️ QA Script Maintenance — Three Known Drift Points
+## ⚠️ QA Script Maintenance — Known Drift Points
 
-Run `node qa-*.mjs` from the repo root after any significant refactor. Three drift points
-caught 2026-07-08 (post-extraction QA passes) that can cause false failures:
+Run `node qa-*.mjs` from the repo root after any significant refactor. Drift points
+caught over time that can cause false failures or false positives:
 
 ### 1. Scene extraction breaks `window.__game.*` access in QA scripts
 
@@ -125,6 +125,26 @@ if (g.state === 'skilltree') {
 }
 if (g.state === 'shop') { /* wave cleared */ }
 ```
+
+### 7. Legacy QA scripts that used `localhost:4173` (Vite dev server) — now self-contained
+
+Six QA scripts were written when the game ran via `vite preview` and used `http://localhost:4173/`.
+They fail with `ERR_CONNECTION_REFUSED` when run standalone, and can produce **false positives**
+if a dev server happens to be running from unrelated work.
+
+**Migrated (2026-07-12):** `qa-event-gate`, `qa-slow-status`, `qa-dash`, `qa-wave-projectile-clear`,
+`qa-stack-inspect`, `qa-expansion-shots` — all use the standard self-contained pattern now:
+```javascript
+import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path';
+import { execSync } from 'node:child_process';
+execSync('npm run build', { cwd: FRONTEND, stdio: 'inherit' });
+const server = http.createServer(...); // serves frontend/dist
+await new Promise(r => server.listen(0, r));
+const base = `http://127.0.0.1:${server.address().port}/`;
+// ... tests ...
+server.close();
+```
+**Rule:** all new QA scripts must use the self-contained server pattern, never `localhost:4173`.
 
 ---
 
