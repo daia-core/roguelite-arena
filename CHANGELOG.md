@@ -6,7 +6,7 @@ portrait viewport).
 
 ---
 
-## 2026-07-13 (night) — balance: Devil's Bargain now guarantees an epic+ artifact · `pending`
+## 2026-07-13 (night) — balance: Devil's Bargain now guarantees an epic+ artifact · `0eec8a0`
 
 **Player-visible — "Trade your skin for strength" is now a real choice:**
 The skin-for-strength pact previously drew from the full unfiltered artifact pool, meaning you
