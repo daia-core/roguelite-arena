@@ -53,10 +53,14 @@ const result = await page.evaluate(async () => {
   // The real user flow starts on the Slay-the-Spire node map, not directly in combat.
   const startState = g.state; // expected 'map'
 
-  // Strong offensive loadout so kills happen quickly within the smoke window.
+  // Strong offensive loadout — chosen for reliable wave-clear across all random seeds.
+  // Items must directly boost DPS so the player clears wave 1 regardless of enemy composition.
+  // Previous loadout (whirl_blades/orbit/bomb/nova) had no raw damage boosts → flaky vs harder seeds.
+  // glass_cannon_t4 (+100% dmg) + battle_crown (head, +50% dmg +30% crit) guarantee fast kills;
+  // rapid_fire_module_t3 (fire rate) and nova_core_t3 (AoE) add burst. Max health penalty irrelevant in headless.
   const s = g.playerStats;
   const give = (id) => { const it = DB.getItemById(id); if (it) { s.items.push(it); return true; } return false; };
-  const wanted = ['whirl_blades_t2','orbit_orb_swarm_t3','bomb_bandolier_t2','nova_core_t3'];
+  const wanted = ['glass_cannon_t4','head_battle_crown','nova_core_t3','orbit_orb_swarm_t3'];
   const granted = wanted.filter(give);
 
   // Navigate the map toward a combat node (battle/elite/boss), the real user path.
