@@ -56,10 +56,26 @@ const result = await page.evaluate(() => {
     for (let i = 0; i < n; i++) {
       const a = (Math.PI * 2 * i) / n;
       const NO_RESULT = { shouldShoot:false, shouldTeleport:false, shouldSummon:false, shouldScream:false, shouldStomp:false, splitInto:0, poisonTrail:false, sporeCloud:false, shouldHeal:false, shouldSpawnMinion:false };
+      const ex = g.player.x + Math.cos(a) * dist, ey = g.player.y + Math.sin(a) * dist;
+      // Neutral statusFX stub — matches StatusEffectManager interface; returns safe no-op values.
+      const neutralFX = {
+        tick() { return { dotDamage: 0, doomDetonation: null }; },
+        apply() { return []; },
+        applySynergyChain() {},
+        getIncomingDamageMult() { return 1; },
+        getDirectHitMult() { return 1; },
+        getFlatHitBonus() { return 0; },
+        getBonusCritChanceReceived() { return 0; },
+        getBonusCritDamageReceived() { return 0; },
+        checkCondemned() { return 0; },
+      };
       const e = {
-        id: 1000 + i, type: 'slime', x: g.player.x + Math.cos(a) * dist, y: g.player.y + Math.sin(a) * dist,
+        id: 1000 + i, type: 'slime', x: ex, y: ey, lastX: ex, lastY: ey,
         radius: 14, dead: false, health: 100000, hp: 100000,
-        frozenTimer: 0, poisonTimer: 0, contactCooldown: 999, usePathfinding: false,
+        frozenTimer: 0, poisonTimer: 0, burnTimer: 0, bleedTimer: 0,
+        slowTimer: 0, slowFactor: 1, doomTimer: 0, doomStored: 0, woundMult: 1,
+        contactCooldown: 999, usePathfinding: false,
+        statusFX: neutralFX,
         typeData: { isBoss: false, damage: 5, xpValue: 1, goldValue: 1 },
         takeDamage(d) { this.health -= d; this._dmg = (this._dmg||0)+d; if (this.health<=0) this.dead=true; return null; },
         applyKnockback() {}, checkWallCollision() {}, draw() {}, updatePath() {},
