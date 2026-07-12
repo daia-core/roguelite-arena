@@ -3460,7 +3460,11 @@ export class Game {
         this.refreshMaxHealth();
         return null;
       case 'artifact': {
-        const pool = ROLLABLE_ARTIFACTS.filter(a => !this.artifacts.has(a.id));
+        const RARITY_RANK: Record<string, number> = { rare: 1, epic: 2, legendary: 3 };
+        const minRank = effect.minRarity ? (RARITY_RANK[effect.minRarity] ?? 0) : 0;
+        const pool = ROLLABLE_ARTIFACTS.filter(a =>
+          !this.artifacts.has(a.id) && (RARITY_RANK[a.rarity] ?? 0) >= minRank
+        );
         if (pool.length) {
           const picked = pool[Math.floor(Math.random() * pool.length)];
           this.grantArtifact(picked);

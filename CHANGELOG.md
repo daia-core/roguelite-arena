@@ -6,6 +6,28 @@ portrait viewport).
 
 ---
 
+## 2026-07-13 (night) — balance: Devil's Bargain now guarantees an epic+ artifact · `pending`
+
+**Player-visible — "Trade your skin for strength" is now a real choice:**
+The skin-for-strength pact previously drew from the full unfiltered artifact pool, meaning you
+could pay +50% permanent damage-taken (curse_frailty) and receive a common stat-stick. In practice,
+nobody took it — the price was too high vs. the expected value of a random reward. Fixed by
+restricting the pool to epic and legendary artifacts only (27 rollable options: 18 epic + 9 legendary).
+
+- Before: 1 random artifact from the full pool (~44 items, any rarity) for curse_frailty.
+- After: 1 epic or legendary artifact guaranteed (minRarity filter) for curse_frailty.
+- The other two options (120g + curse_sloth, and free walk-away) are unchanged.
+- The "Trade your speed for gold" option was already well-calibrated and stays as-is.
+
+**Under the hood:**
+`EventEffect` type extended with optional `minRarity?: ArtifactRarity` field. `applyEventEffect`
+in `Game.ts` now filters the rollable pool by rarity rank when minRarity is set. `qa-devildeal`
+extended with a new `bargainEpicPlusArtifact` assertion (50 samples, 22/22 PASS).
+
+**QA:** qa-devildeal 22/22 PASS, qa-balance-probe PASS, qa-stat-caps PASS, qa-catalog-integrity CLEAN.
+
+---
+
 ## 2026-07-12 (afternoon) — docs + qa: ARCHITECTURE sync + smoke-test flakiness fix · `1f2285e`
 
 **No player-visible change.** Two maintenance items:

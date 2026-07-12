@@ -94,6 +94,16 @@ const result = await page.evaluate(() => {
   }
   out.cursesNotInRandomPool = !sawCurseInRandom;
 
+  // === 3b. Devil's Bargain minRarity filter: epic+ pool only yields epic or legendary. ===
+  const RARITY_RANK_QA = { rare: 1, epic: 2, legendary: 3 };
+  let sawSubEpic = false;
+  for (let i = 0; i < 50; i++) {
+    g.artifacts.reset(); g.artifacts.applyStatic(g.playerStats);
+    const reward = g.applyEventEffect({ kind: 'artifact', minRarity: 'epic' });
+    if (reward && (RARITY_RANK_QA[reward.rarity] ?? 0) < RARITY_RANK_QA['epic']) { sawSubEpic = true; break; }
+  }
+  out.bargainEpicPlusArtifact = !sawSubEpic;
+
   // === 4a. FRAILTY pact: grant boon+curse, curse folds incoming-damage malus. ===
   fresh();
   g.applyEventEffect({ kind: 'artifact' });                 // boon
@@ -191,7 +201,7 @@ errors.forEach(e => console.log('  ', e));
 console.log('Screenshots →', OUT);
 
 const checks = ['cursesExist','cursesFlagged','cursesHaveMalus','devilEventsExist','devilHasWalkAway',
-  'devilHasCurseOption','cursesNotInRandomPool','frailtyHeld','frailtyBoonAlso','frailtyIncomingMalus',
+  'devilHasCurseOption','cursesNotInRandomPool','bargainEpicPlusArtifact','frailtyHeld','frailtyBoonAlso','frailtyIncomingMalus',
   'slothGold','slothHeld','slothSpeedMalus','dullnessMaxHp','dullnessHeld','dullnessFireMalus',
   'walkAwayNoGrant','curseIdempotent','pactFirstPaysBoon','pactNoDoubleDip','pactRefusalMessaged'];
 const pass = result && !result.fatal && checks.every(k => result[k] === true) && errors.length === 0;

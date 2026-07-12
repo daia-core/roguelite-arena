@@ -3,8 +3,10 @@
 // take a boon with a downside…). Kept data-driven: effects are descriptors that
 // Game.ts resolves at the combat/economy sites it already owns.
 
+import type { ArtifactRarity } from './ArtifactSystem';
+
 export type EventEffect =
-  | { kind: 'artifact' }                 // grant a random un-held artifact (pick)
+  | { kind: 'artifact'; minRarity?: ArtifactRarity } // grant a random un-held artifact; minRarity restricts to that tier or higher
   | { kind: 'gold'; amount: number }     // +/- gold
   | { kind: 'heal'; frac: number }       // heal frac * maxHP
   | { kind: 'hurt'; frac: number }       // lose frac * maxHP (event damage never kills)
@@ -173,8 +175,8 @@ export const EVENTS: GameEvent[] = [
     title: "The Devil's Bargain",
     text: 'A horned silhouette offers power for a permanent price. Its grin does not waver.',
     options: [
-      { label: 'Trade your skin for strength', effects: [{ kind: 'artifact' }, { kind: 'curse', id: 'curse_frailty' }],
-        result: 'Power floods your veins — and your flesh turns paper-thin. (+artifact, take +50% damage forever)' },
+      { label: 'Trade your skin for strength', effects: [{ kind: 'artifact', minRarity: 'epic' }, { kind: 'curse', id: 'curse_frailty' }],
+        result: 'Power floods your veins — and your flesh turns paper-thin. (+epic or legendary artifact, take +50% damage forever)' },
       { label: 'Trade your speed for gold', effects: [{ kind: 'gold', amount: 120 }, { kind: 'curse', id: 'curse_sloth' }],
         result: 'Your purse grows heavy; your legs grow heavier still. (+120 gold, -30% move speed forever)' },
       { label: 'Refuse the pact', effects: [{ kind: 'nothing' }],
