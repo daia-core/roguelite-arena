@@ -6,6 +6,19 @@ portrait viewport).
 
 ---
 
+## 2026-07-12 (night) — Balance R1: gear-named trinkets → torso slot · `e62dc67` · live `index-DJ3d86ff.js` ✓
+
+Three items that were named like worn gear but stacking infinitely as trinkets are now proper torso equip items — takes a slot, so players choose between them:
+- **Evasion Cloak** (`dodge_t2`) — 8% dodge; now competes with other armour in the torso slot
+- **Phantom Cloak** (`phantom_cloak_t3`) — +20% dodge/+10% speed; same
+- **Bomb Bandolier** (`bomb_bandolier_t2`) — bomb-drop active; a bandolier belongs on the body, not in infinite pockets
+
+**Remaining R1 items (gloves/gauntlets)** need a `hands` slot decision — parked for Felix's call.
+
+**QA:** catalog-integrity PASS ✅ · shop-layout 11/11 PASS ✅ · live-smoke PASS ✅ · 0 console errors · mobile portrait verified
+
+---
+
 ## 2026-07-11 (night) — Artifact pixel sprites complete · `0e34218` · live `index-Dt8Y1LyH.js` ✓
 
 **All 50 artifacts now have hand-crafted pixel-art icons** — 16 were using the procedural rune fallback (only 2 colours, failing `qa-artifact-icons`). Added distinct thematic glyphs for each:
