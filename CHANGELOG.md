@@ -6,6 +6,26 @@ portrait viewport).
 
 ---
 
+## 2026-07-12 (afternoon) — balance: active skills now scale with build specialization
+
+**Player-visible — active skills feel impactful on any build:**
+Active skill damage previously used `getDamage()` — the global damage value that excludes
+type-specific multipliers. A player who invested in ranged items got a 5× boost to every
+auto-attack shot but zero benefit to skill casts, so skills fell progressively further behind
+as the run went on. Early game: identical (no type items → same numbers). Mid/late game:
+skills now deal damage proportional to the player's built weapon type.
+
+- Ranged build with 5× ranged items: skills also hit ~5× harder vs baseline.
+- Melee build with heavy melee stacking: same — skills scale alongside the primary weapon.
+- No-specialization build: unchanged — at baseline max(ranged, melee) = getDamage().
+
+**Under the hood:**
+One-line change in `executeSkill()` (`ActiveSkillSystem.ts:484`):
+`getDamage()` → `Math.max(getRangedDamage(), getMeleeDamage())`.
+All 34 skill variants affected. No change to multiplier values, cooldowns, or radius.
+
+---
+
 ## 2026-07-12 (morning) — fix: gold cap filter + QA extraction-drift · `f75a524` · live `index-B0BNMbG-.js` ✓
 
 **Bug fix (gold-cap item filter):** Items with balance drawbacks (e.g. `gold_bonus_t2` has

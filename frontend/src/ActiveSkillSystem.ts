@@ -482,7 +482,17 @@ export function executeSkill(skillId: string, slot: 'q' | 'e', ctx: ActiveSkillC
   if (!skill) return;
 
   ctx.setCooldown(slot, skill.cooldown);
-  const baseDmg = ctx.playerStats.getDamage() * skill.baseDamageMultiplier;
+  // BALANCE FIX 2026-07-12: skills previously used getDamage() which excludes
+  // type-specific multipliers. A ranged build with 5× ranged items saw no benefit
+  // from those items on skill casts — skills fell further behind auto-attack as the
+  // player invested in their weapon type. Fix: use the player's best type-damage so
+  // skills scale with the build's specialization. At baseline (no type items) both
+  // methods equal getDamage(), so early-game numbers are unchanged.
+  const typeScaledDmg = Math.max(
+    ctx.playerStats.getRangedDamage(),
+    ctx.playerStats.getMeleeDamage()
+  );
+  const baseDmg = typeScaledDmg * skill.baseDamageMultiplier;
   const px = ctx.player.x;
   const py = ctx.player.y;
 
