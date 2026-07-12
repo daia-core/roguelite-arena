@@ -6,6 +6,23 @@ portrait viewport).
 
 ---
 
+## 2026-07-12 (morning) — fix: gold cap filter + QA extraction-drift · `f75a524` · live `index-B0BNMbG-.js` ✓
+
+**Bug fix (gold-cap item filter):** Items with balance drawbacks (e.g. `gold_bonus_t2` has
+`damageMultiplier: 0.95`) were never being filtered out of the shop once gold was maxed. The
+`isItemFullyCapped()` logic saw the damage penalty as an "uncapped stat" and returned false even
+when gold was capped. Fix: multiplicative values < 1 (cost/penalty) and negative additive values
+are now skipped — only positive benefits are checked against their cap. `qa-stat-caps 15/15 PASS`.
+
+**QA fix (extraction-drift):** `qa-equipment-manage` was 0/32 — all `equipSlotRects`,
+`inspectedEquipKey`, `inspectUnequipRect`, `inspectSellRect`, `stashItemRects` had moved to
+`ShopScene` during the scene-extraction refactor, but the QA script still read them off
+`window.__game`. Updated to use `window.__shopScene`. `32/32 PASS`.
+
+Internal fixes only; no new content. Live-build verified `index-B0BNMbG-.js`.
+
+---
+
 ## 2026-07-12 (early morning) — fix: stale cap thresholds in shop item filter · `29a32bd` · live `index-CfaCRNKk.js` ✓
 
 **Bug fix (shop item filtering):** Three stat caps had been lowered in their getter methods but
