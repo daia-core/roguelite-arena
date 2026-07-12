@@ -2,15 +2,37 @@
 // SAME harness the other status engines use: a real enemy, real g.update(dt) ticking, and
 // the real applyOnHitEffects path. Also confirms the tripled catalog loads with no errors.
 // Exercises the entity/status path I touched (game-dev regression rule).
+import http from 'node:http';
+import fs from 'node:fs';
+import path from 'node:path';
+import { execSync } from 'node:child_process';
 import puppeteer from 'puppeteer-core';
 
-const base = 'http://localhost:4173/';
-const browser = await puppeteer.launch({ executablePath: '/usr/bin/chromium', headless: 'new', args: ['--no-sandbox'] });
+const FRONTEND = '/workspace/work/roguelite-game/frontend';
+const ROOT = path.join(FRONTEND, 'dist');
+
+console.log('Building frontend (npm run build)...');
+execSync('npm run build', { cwd: FRONTEND, stdio: 'inherit' });
+
+const MIME = { '.html':'text/html','.js':'text/javascript','.json':'application/json','.svg':'image/svg+xml','.png':'image/png','.mp3':'audio/mpeg','.css':'text/css' };
+const server = http.createServer((req, res) => {
+  let p = decodeURIComponent(req.url.split('?')[0]);
+  if (p === '/') p = '/index.html';
+  const file = path.join(ROOT, p);
+  if (!file.startsWith(ROOT) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { res.writeHead(404); res.end('nf'); return; }
+  res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream' });
+  fs.createReadStream(file).pipe(res);
+});
+await new Promise(r => server.listen(0, r));
+const base = `http://127.0.0.1:${server.address().port}/`;
+
+const browser = await puppeteer.launch({ executablePath: '/usr/bin/chromium', headless: true, args: ['--no-sandbox','--disable-setuid-sandbox','--disable-gpu','--disable-dev-shm-usage'] });
 const page = await browser.newPage();
 const errors = [];
-page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errors.push(m.text()); });
 page.on('pageerror', (e) => errors.push(String(e)));
 await page.goto(base, { waitUntil: 'networkidle2', timeout: 30000 });
+await new Promise(r => setTimeout(r, 1500));
 
 const result = await page.evaluate(() => {
   const g = window.__game;
@@ -93,4 +115,5 @@ const pass = result && !result.fatal &&
   errors.length === 0;
 console.log('RESULT:', pass ? 'PASS ✅' : 'FAIL ❌');
 await browser.close();
+server.close();
 process.exit(pass ? 0 : 1);

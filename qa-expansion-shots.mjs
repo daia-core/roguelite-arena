@@ -2,16 +2,38 @@
 // (1) an in-game frame with a Chilled/Slowed enemy (new frost-mote VFX), and
 // (2) the shop screen (new items flow through the same offer UI).
 // game-dev rule: after a visual change, eyeball mobile (390x844) AND desktop shots.
+import http from 'node:http';
+import fs from 'node:fs';
+import path from 'node:path';
+import { execSync } from 'node:child_process';
 import puppeteer from 'puppeteer-core';
 
-const base = 'http://localhost:4173/';
+const FRONTEND = '/workspace/work/roguelite-game/frontend';
+const ROOT = path.join(FRONTEND, 'dist');
+
+console.log('Building frontend (npm run build)...');
+execSync('npm run build', { cwd: FRONTEND, stdio: 'inherit' });
+
+const MIME = { '.html':'text/html','.js':'text/javascript','.json':'application/json','.svg':'image/svg+xml','.png':'image/png','.mp3':'audio/mpeg','.css':'text/css' };
+const server = http.createServer((req, res) => {
+  let p = decodeURIComponent(req.url.split('?')[0]);
+  if (p === '/') p = '/index.html';
+  const file = path.join(ROOT, p);
+  if (!file.startsWith(ROOT) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { res.writeHead(404); res.end('nf'); return; }
+  res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream' });
+  fs.createReadStream(file).pipe(res);
+});
+await new Promise(r => server.listen(0, r));
+const base = `http://127.0.0.1:${server.address().port}/`;
+
 const outDir = 'shots';
-const browser = await puppeteer.launch({ executablePath: '/usr/bin/chromium', headless: 'new', args: ['--no-sandbox'] });
+const browser = await puppeteer.launch({ executablePath: '/usr/bin/chromium', headless: true, args: ['--no-sandbox','--disable-setuid-sandbox','--disable-gpu','--disable-dev-shm-usage'] });
 
 async function shoot(vp, label) {
   const page = await browser.newPage();
   await page.setViewport(vp);
   await page.goto(base, { waitUntil: 'networkidle2', timeout: 30000 });
+  await new Promise(r => setTimeout(r, 1500));
 
   // Start a game and force a Chilled enemy right next to the player, then paint one frame.
   await page.evaluate(() => {
@@ -58,3 +80,4 @@ await shoot({ width: 1280, height: 800, deviceScaleFactor: 1 }, 'desktop-1280');
 
 console.log('shots written: expansion-play/shop x mobile/desktop');
 await browser.close();
+server.close();
