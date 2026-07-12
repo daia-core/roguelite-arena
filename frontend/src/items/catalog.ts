@@ -206,6 +206,7 @@ export const ITEM_CATALOG: Item[] = [
     },
     {
       id: 'dodge_t2',
+      slot: 'torso',
       name: 'Evasion Cloak',
       description: '8% dodge chance',
       rarity: 'rare',
@@ -2167,6 +2168,7 @@ export const ITEM_CATALOG: Item[] = [
     },
     {
       id: 'bomb_bandolier_t2',
+      slot: 'torso',
       name: 'Bomb Bandolier',
       description: 'Drop a bomb at your feet every few seconds — big AoE blast',
       rarity: 'rare',
@@ -2735,6 +2737,7 @@ export const ITEM_CATALOG: Item[] = [
     },
     {
       id: 'phantom_cloak_t3',
+      slot: 'torso',
       name: 'Phantom Cloak',
       description: '+20% dodge, +10% speed',
       rarity: 'epic',
