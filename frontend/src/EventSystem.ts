@@ -385,8 +385,8 @@ export const EVENTS: GameEvent[] = [
     title: 'The Rot Crown',
     text: 'A crown woven from blighted vines promises a stronger body — and leaden legs.',
     options: [
-      { label: 'Wear the crown', effects: [{ kind: 'maxHp', amount: 80 }, { kind: 'artifact' }, { kind: 'curse', id: 'curse_sloth' }],
-        result: 'Life surges in — and your legs grow heavier with each step. (+80 max HP, +artifact, -30% move speed forever)' },
+      { label: 'Wear the crown', effects: [{ kind: 'maxHp', amount: 80 }, { kind: 'artifact' }, { kind: 'curse', id: 'curse_torpor' }],
+        result: 'Life surges in — and your legs sink into the earth with each step. (+80 max HP, +artifact, -30% move speed forever)' },
       { label: 'Tear it apart for coin', effects: [{ kind: 'gold', amount: 55 }, { kind: 'heal', frac: 0.25 }],
         result: 'The vines smoulder slowly. Their ash is surprisingly valuable, and the warmth mends you a little.' },
       { label: 'Leave it', effects: [{ kind: 'nothing' }],
@@ -628,9 +628,9 @@ export const EVENTS: GameEvent[] = [
     title: 'The Cursed Reliquary',
     text: 'A cabinet of wonders, each piece marked with a warning sigil. Beautiful. Dangerous. Yours — if you can accept the cost.',
     options: [
-      { label: 'Take both relics (accept the famine)',
-        effects: [{ kind: 'artifact' }, { kind: 'artifact' }, { kind: 'curse', id: 'curse_famine' }],
-        result: 'Two prizes, real and heavy — but the lessons you\'ve earned begin to slip away. (+2 artifacts, -40% XP forever)' },
+      { label: 'Take both relics (accept the entropy)',
+        effects: [{ kind: 'artifact' }, { kind: 'artifact' }, { kind: 'curse', id: 'curse_entropy' }],
+        result: 'Two prizes, real and heavy — but the wisdom that made you crumbles at the edges. (+2 artifacts, -40% XP forever)' },
       { label: 'Take one piece — sealed carefully',
         effects: [{ kind: 'artifact' }],
         result: 'You take one and seal the rest. It doesn\'t fight back. Yet.' },

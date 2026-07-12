@@ -62,7 +62,7 @@ const result = await page.evaluate(() => {
   const near = (a, b) => Math.abs(a - b) < 1e-6;
   const fresh = () => { g.startNewGame(); g.waveManager.reset(); g.waveManager.startWave(1); g.state = 'playing'; };
 
-  const CURSE_IDS = ['curse_frailty','curse_sloth','curse_dullness'];
+  const CURSE_IDS = ['curse_frailty','curse_sloth','curse_dullness','curse_torpor','curse_entropy'];
 
   // === 1. Curse catalog: all 3 exist, flagged curse:true, carry a real malus. ===
   const curses = CURSE_IDS.map(id => ARTIFACTS.find(a => a.id === id));
@@ -71,7 +71,10 @@ const result = await page.evaluate(() => {
   out.cursesHaveMalus = out.cursesExist && curses.every(c =>
     (c.speedMult !== undefined && c.speedMult < 1) ||
     (c.fireRateMult !== undefined && c.fireRateMult < 1) ||
-    (c.glassTakenMult !== undefined && c.glassTakenMult > 1));
+    (c.glassTakenMult !== undefined && c.glassTakenMult > 1) ||
+    (c.xpMult !== undefined && c.xpMult < 1) ||
+    (c.maxHealthBonus !== undefined && c.maxHealthBonus < 0) ||
+    (c.critChanceBonus !== undefined && c.critChanceBonus < 0));
 
   // === 2. Devil events exist and each carries a free walk-away option. ===
   const devilBargain = EVENTS.find(e => e.id === 'devil_bargain');
@@ -171,6 +174,28 @@ const result = await page.evaluate(() => {
   // EventScene during scene extraction (step N), so test the return value instead.
   out.pactRefusalMessaged = typeof refusalResult?.resultText === 'string' && /already bear this mark/i.test(refusalResult.resultText);
 
+  // === 8. Cross-curse fix: devil_rot_crown (curse_torpor) and cursed_reliquary (curse_entropy)
+  //        each have their OWN unique curse id, so holding curse_sloth or curse_famine from a
+  //        different event does NOT block their boons via the already-held guard. ===
+  // 8a. unique curse IDs on the affected events.
+  const rotCrown = EVENTS.find(e => e.id === 'devil_rot_crown');
+  const reliquary = EVENTS.find(e => e.id === 'cursed_reliquary');
+  const rotCrownCurseId = rotCrown?.options.flatMap(o => o.effects).find(f => f.kind === 'curse')?.id;
+  const reliquaryCurseId = reliquary?.options.flatMap(o => o.effects).find(f => f.kind === 'curse')?.id;
+  out.rotCrownUniqueCurse = rotCrownCurseId === 'curse_torpor';
+  out.reliquaryUniqueCurse = reliquaryCurseId === 'curse_entropy';
+  // 8b. runtime: having curse_sloth in hand does NOT block rot_crown's boons.
+  fresh();
+  g.applyEventEffect({ kind: 'curse', id: 'curse_sloth' }); // simulate prior devil_bargain pact
+  const rotCrownOpt = rotCrown?.options.find(o => o.effects.some(f => f.kind === 'curse'));
+  const maxHpBefore = g.player.maxHealth;
+  const artifactsBefore = g.artifacts.held.length;
+  const rotResult = g.applyEventOption(rotCrownOpt);
+  out.crossCurseNoBlock =
+    !(/already bear/i.test(rotResult?.resultText ?? '')) &&
+    g.player.maxHealth === maxHpBefore + 80 &&
+    g.artifacts.held.length > artifactsBefore;
+
   return out;
 });
 
@@ -203,7 +228,8 @@ console.log('Screenshots →', OUT);
 const checks = ['cursesExist','cursesFlagged','cursesHaveMalus','devilEventsExist','devilHasWalkAway',
   'devilHasCurseOption','cursesNotInRandomPool','bargainEpicPlusArtifact','frailtyHeld','frailtyBoonAlso','frailtyIncomingMalus',
   'slothGold','slothHeld','slothSpeedMalus','dullnessMaxHp','dullnessHeld','dullnessFireMalus',
-  'walkAwayNoGrant','curseIdempotent','pactFirstPaysBoon','pactNoDoubleDip','pactRefusalMessaged'];
+  'walkAwayNoGrant','curseIdempotent','pactFirstPaysBoon','pactNoDoubleDip','pactRefusalMessaged',
+  'rotCrownUniqueCurse','reliquaryUniqueCurse','crossCurseNoBlock'];
 const pass = result && !result.fatal && checks.every(k => result[k] === true) && errors.length === 0;
 console.log(`\n${checks.filter(k => result && result[k] === true).length}/${checks.length} checks passed`);
 console.log('RESULT:', pass ? 'PASS ✅' : 'FAIL ❌');

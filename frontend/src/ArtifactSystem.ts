@@ -209,6 +209,19 @@ export const ARTIFACTS: Artifact[] = [
     desc: '-25% fire rate, permanently.',
     curse: true, fireRateMult: 0.75,
   },
+  // curse_torpor and curse_entropy: unique curses for devil_rot_crown and cursed_reliquary
+  // (separate IDs prevent the "already-bears-this-curse → grant nothing" guard from
+  // blocking boons when two *different* devil events share a curse id).
+  {
+    id: 'curse_torpor', name: 'Curse of Torpor', icon: '🌿', rarity: 'legendary',
+    desc: '-30% move speed, permanently.',
+    curse: true, speedMult: 0.7,
+  },
+  {
+    id: 'curse_entropy', name: 'Curse of Entropy', icon: '⌛', rarity: 'legendary',
+    desc: '-40% XP gained, permanently.',
+    curse: true, xpMult: 0.6,
+  },
 ];
 
 export function getArtifactById(id: string): Artifact | undefined {
