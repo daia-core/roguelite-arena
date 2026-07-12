@@ -59,6 +59,9 @@ const out = await page.evaluate(() => {
   const AMULET  = 'fourleaf_charm_t3';   // amulet
 
   const get = id => JSON.parse(JSON.stringify(DB.getItemById(id)));
+  // ShopScene is a separate extracted class; its hit-rects and popup state live on
+  // window.__shopScene (exposed at Game init), not on window.__game any more.
+  const ss = window.__shopScene;
 
   // Fresh-tap helper: aim input at (x,y), then present a fresh press to the shop tick.
   // We set input state DIRECTLY (mouseX/Y + mouseDown, clearing any held-over
@@ -88,7 +91,7 @@ const out = await page.evaluate(() => {
     g.startNewGame();
     g.enterShop();
     g.player.gold = 0;
-    g.inspectedEquipKey = null;
+    ss.inspectedEquipKey = null;
     g.playerStats.addItem(get(SHOTGUN)); // weapon
     g.playerStats.addItem(get(SHIELD));  // offhand
     g.playerStats.addItem(get(AMULET));  // amulet
@@ -109,10 +112,10 @@ const out = await page.evaluate(() => {
   {
     const goldBefore = g.player.gold;
     const itemsBefore = g.playerStats.items.length;
-    const amu = g.equipSlotRects.find(r => r.key === 'amulet');
+    const amu = ss.equipSlotRects.find(r => r.key === 'amulet');
     const c = center(amu);
     tap(c.x, c.y);
-    R.tapOpensPopup = g.inspectedEquipKey === 'amulet';
+    R.tapOpensPopup = ss.inspectedEquipKey === 'amulet';
     R.openNoMutation = g.player.gold === goldBefore && g.playerStats.items.length === itemsBefore;
     R.openParity = parity();
   }
@@ -121,20 +124,20 @@ const out = await page.evaluate(() => {
   {
     g.draw(); // popup draw populates inspectUnequipRect / inspectSellRect
     const goldBefore = g.player.gold;
-    const c = center(g.inspectUnequipRect);
+    const c = center(ss.inspectUnequipRect);
     tap(c.x, c.y);
     const eq = g.playerStats.getEquipment();
     R.unequipFreesSlot = eq.amulet === null;
     R.unequipToStash = g.playerStats.getStash().some(i => i.id === AMULET);
     R.unequipNoGold = g.player.gold === goldBefore;
-    R.unequipClosesPopup = g.inspectedEquipKey === null;
+    R.unequipClosesPopup = ss.inspectedEquipKey === null;
     R.unequipParity = parity();
   }
 
   // 3. EQUIP FROM STASH: tap the benched amulet icon → re-equips into amulet slot.
   {
     g.draw();
-    const amuStash = g.stashItemRects.find(r => g.playerStats.getStash()[r.index] && g.playerStats.getStash()[r.index].id === AMULET);
+    const amuStash = ss.stashItemRects.find(r => g.playerStats.getStash()[r.index] && g.playerStats.getStash()[r.index].id === AMULET);
     if (!amuStash) throw new Error('scenario 3: benched amulet has no stash rect');
     // The sell-✕ badge sits over the icon's TOP-RIGHT corner and is hit-tested first,
     // so aim at the icon's lower-left quadrant (clear of the badge) to exercise the
@@ -150,35 +153,35 @@ const out = await page.evaluate(() => {
   // 4. SELL BUTTON: open the shield popup, tap Sell → removed + gold += sellValue, gone.
   {
     g.draw();
-    const off = g.equipSlotRects.find(r => r.key === 'offhand');
+    const off = ss.equipSlotRects.find(r => r.key === 'offhand');
     let c = center(off);
     tap(c.x, c.y); // open shield popup
-    R.sellPopupOpened = g.inspectedEquipKey === 'offhand';
+    R.sellPopupOpened = ss.inspectedEquipKey === 'offhand';
     g.draw();
     const occupant = g.playerStats.getEquipment().offhand;
     const sellValue = g.playerStats.getSellValue(occupant);
     const goldBefore = g.player.gold;
-    c = center(g.inspectSellRect);
+    c = center(ss.inspectSellRect);
     tap(c.x, c.y); // sell it
     R.sellRemovesItem = !g.playerStats.items.some(i => i.id === SHIELD);
     R.sellNotEquipped = g.playerStats.getEquipment().offhand === null;
     R.sellNotInStash = !g.playerStats.getStash().some(i => i.id === SHIELD);
     R.sellRefundsGold = g.player.gold === goldBefore + sellValue && sellValue > 0;
-    R.sellClosesPopup = g.inspectedEquipKey === null;
+    R.sellClosesPopup = ss.inspectedEquipKey === null;
     R.sellParity = parity();
   }
 
   // 5. TAP-OFF CLOSES: open a popup, tap a corner (off the buttons) → closes, no mutation.
   {
     fresh();
-    const amu = g.equipSlotRects.find(r => r.key === 'amulet');
+    const amu = ss.equipSlotRects.find(r => r.key === 'amulet');
     let c = center(amu);
     tap(c.x, c.y); // open
     g.draw();
     const goldBefore = g.player.gold;
     const itemsBefore = g.playerStats.items.length;
     tap(2, 2); // top-left corner — off every button
-    R.tapOffCloses = g.inspectedEquipKey === null;
+    R.tapOffCloses = ss.inspectedEquipKey === null;
     R.tapOffNoMutation = g.player.gold === goldBefore && g.playerStats.items.length === itemsBefore;
     R.tapOffParity = parity();
   }
@@ -203,14 +206,14 @@ const out = await page.evaluate(() => {
     }
     const stashFull = g.playerStats.getStash().length === CAP;
     g.draw();
-    const amu = g.equipSlotRects.find(r => r.key === 'amulet');
+    const amu = ss.equipSlotRects.find(r => r.key === 'amulet');
     let c = center(amu);
     tap(c.x, c.y); // open amulet popup
     g.draw();
     const occupant = g.playerStats.getEquipment().amulet;
     const sellValue = occupant ? g.playerStats.getSellValue(occupant) : 0;
     const goldBefore = g.player.gold;
-    c = center(g.inspectUnequipRect);
+    c = center(ss.inspectUnequipRect);
     tap(c.x, c.y); // unequip → must SELL (stash full)
     R.fullStashSetup = stashFull && !!occupant;
     R.fullStashSlotEmptied = g.playerStats.getEquipment().amulet === null;
@@ -225,12 +228,12 @@ const out = await page.evaluate(() => {
     fresh();
     g.playerStats.removeItem('shield_t3');
     g.draw();
-    const off = g.equipSlotRects.find(r => r.key === 'offhand');
+    const off = ss.equipSlotRects.find(r => r.key === 'offhand');
     const itemsBefore = g.playerStats.items.length;
     const goldBefore = g.player.gold;
     const c = center(off);
     tap(c.x, c.y);
-    R.emptySlotNoPopup = g.inspectedEquipKey === null;
+    R.emptySlotNoPopup = ss.inspectedEquipKey === null;
     R.emptySlotInert = g.playerStats.items.length === itemsBefore && g.player.gold === goldBefore;
     R.emptySlotParity = parity();
   }
@@ -243,11 +246,11 @@ const out = await page.evaluate(() => {
     g.playerStats.addItem(get(SPEAR)); // 2-hand → weapon holder, offhand disabled
     R.twoHandEquipped = g.playerStats.hasTwoHandEquipped();
     g.draw();
-    const w = g.equipSlotRects.find(r => r.key === 'weapon');
+    const w = ss.equipSlotRects.find(r => r.key === 'weapon');
     let c = center(w);
     tap(c.x, c.y); // open weapon popup
     g.draw();
-    c = center(g.inspectUnequipRect);
+    c = center(ss.inspectUnequipRect);
     tap(c.x, c.y); // unequip spear
     const eq = g.playerStats.getEquipment();
     R.twoHandBenched = eq.weapon === null && g.playerStats.getStash().some(i => i.id === SPEAR);

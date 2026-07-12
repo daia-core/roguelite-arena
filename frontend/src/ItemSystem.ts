@@ -1317,12 +1317,14 @@ export class PlayerStats {
     for (const f of PlayerStats.OFFER_MULT_FIELDS) {
       const v = item[f] as number | undefined;
       if (typeof v !== 'number' || v === 1) continue; // neutral multiplier
+      if (v < 1) continue; // balance drawback / penalty — not a benefit to cap-check
       if (!maxed[f]) return false;                    // uncapped, or capped-but-not-maxed → useful
       sawCappedStat = true;
     }
     for (const f of PlayerStats.OFFER_ADD_FIELDS) {
       const v = item[f] as number | undefined;
       if (typeof v !== 'number' || v === 0) continue; // neutral additive
+      if (v < 0) continue; // negative additive drawback — skip
       if (!maxed[f]) return false;
       sawCappedStat = true;
     }
