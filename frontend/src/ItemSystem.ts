@@ -1287,10 +1287,10 @@ export class PlayerStats {
       dodge: this.getDodgeChance() >= PlayerStats.DODGE_CAP,
       critChance: this.getCritChance() >= 1,
       lifesteal: this.getLifesteal() >= 1,
-      shopDiscount: this.getShopDiscount() >= 0.5,
-      rerollDiscount: this.getRerollDiscount() >= 0.9,
+      shopDiscount: this.getShopDiscount() >= 0.3,    // matches getShopDiscount() cap (was 0.5, stale)
+      rerollDiscount: this.getRerollDiscount() >= 0.6, // matches getRerollDiscount() cap (was 0.9, stale)
       interestBonus: this.getInterestBonus() >= 0.4,
-      luck: this.getLuck() >= 2.0,
+      luck: this.getLuck() >= 1.0,                     // matches getLuck() cap (was 2.0, stale)
       chainLightning: this.getChainLightningChance() >= 1,
       freeze: this.getFreezeChance() >= 1,
       burn: this.getBurnChance() >= 1,
