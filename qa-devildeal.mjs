@@ -74,7 +74,8 @@ const result = await page.evaluate(() => {
     (c.glassTakenMult !== undefined && c.glassTakenMult > 1) ||
     (c.xpMult !== undefined && c.xpMult < 1) ||
     (c.maxHealthBonus !== undefined && c.maxHealthBonus < 0) ||
-    (c.critChanceBonus !== undefined && c.critChanceBonus < 0));
+    (c.critChanceBonus !== undefined && c.critChanceBonus < 0) ||
+    (c.damageMult !== undefined && c.damageMult < 1));
 
   // === 2. Devil events exist and each carries a free walk-away option. ===
   const devilBargain = EVENTS.find(e => e.id === 'devil_bargain');

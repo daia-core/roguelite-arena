@@ -383,10 +383,10 @@ export const EVENTS: GameEvent[] = [
   {
     id: 'devil_rot_crown',
     title: 'The Rot Crown',
-    text: 'A crown woven from blighted vines promises a stronger body — and leaden legs.',
+    text: 'A crown woven from blighted vines promises a stronger body — and a leaden striking arm.',
     options: [
       { label: 'Wear the crown', effects: [{ kind: 'maxHp', amount: 80 }, { kind: 'artifact' }, { kind: 'curse', id: 'curse_torpor' }],
-        result: 'Life surges in — and your legs sink into the earth with each step. (+80 max HP, +artifact, -30% move speed forever)' },
+        result: 'Life surges in — but every blow you land falls 25% lighter. (+80 max HP, +artifact, -25% damage forever)' },
       { label: 'Tear it apart for coin', effects: [{ kind: 'gold', amount: 55 }, { kind: 'heal', frac: 0.25 }],
         result: 'The vines smoulder slowly. Their ash is surprisingly valuable, and the warmth mends you a little.' },
       { label: 'Leave it', effects: [{ kind: 'nothing' }],
@@ -630,7 +630,7 @@ export const EVENTS: GameEvent[] = [
     options: [
       { label: 'Take both relics (accept the entropy)',
         effects: [{ kind: 'artifact' }, { kind: 'artifact' }, { kind: 'curse', id: 'curse_entropy' }],
-        result: 'Two prizes, real and heavy — but the wisdom that made you crumbles at the edges. (+2 artifacts, -40% XP forever)' },
+        result: 'Two prizes, real and heavy — but something essential drains out of you, and it never returns. (+2 artifacts, -55 max HP forever)' },
       { label: 'Take one piece — sealed carefully',
         effects: [{ kind: 'artifact' }],
         result: 'You take one and seal the rest. It doesn\'t fight back. Yet.' },

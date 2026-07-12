@@ -212,15 +212,16 @@ export const ARTIFACTS: Artifact[] = [
   // curse_torpor and curse_entropy: unique curses for devil_rot_crown and cursed_reliquary
   // (separate IDs prevent the "already-bears-this-curse → grant nothing" guard from
   // blocking boons when two *different* devil events share a curse id).
+  // Distinct mechanical effects avoid silent stacking with curse_sloth / curse_famine.
   {
     id: 'curse_torpor', name: 'Curse of Torpor', icon: '🌿', rarity: 'legendary',
-    desc: '-30% move speed, permanently.',
-    curse: true, speedMult: 0.7,
+    desc: '-25% damage output, permanently.',
+    curse: true, damageMult: 0.75,
   },
   {
     id: 'curse_entropy', name: 'Curse of Entropy', icon: '⌛', rarity: 'legendary',
-    desc: '-40% XP gained, permanently.',
-    curse: true, xpMult: 0.6,
+    desc: '-55 max health, permanently.',
+    curse: true, maxHealthBonus: -55,
   },
 ];
 
