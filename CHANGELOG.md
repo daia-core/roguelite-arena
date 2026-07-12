@@ -6,7 +6,22 @@ portrait viewport).
 
 ---
 
-## 2026-07-12 (afternoon) — balance: active skills now scale with build specialization
+## 2026-07-12 (afternoon) — docs + qa: ARCHITECTURE sync + smoke-test flakiness fix · `1f2285e`
+
+**No player-visible change.** Two maintenance items:
+
+- **ARCHITECTURE.md synced** — Steps 13–16 were all complete but the doc still listed 13+14
+  as future work and had Game.ts at 6,840 lines (actual: 3,670). Updated: steps 13 (HUDRenderer),
+  14 (executeSkill→ActiveSkillSystem), 15 (updatePlaying sub-methods), 16 (PlayingRenderer) all
+  marked ✅ DONE; file-size table reflects current catalog (5,001 lines / 1,899 items); system
+  architecture diagram extended with extracted-from-Game.ts column.
+- **qa-live-smoke flakiness fixed** — the old loadout had no raw-damage items; ~60% of seeds
+  spawned waves the player couldn't clear in the 180s window, causing false failures. Replaced with
+  glass_cannon_t4 (+100% dmg) + head_battle_crown (+50% dmg +30% crit) + nova_core_t3 + orbit_orb.
+  Verified PASS across 5 consecutive seeds on live `index-BuJKybh0.js`. Live game was healthy —
+  this was purely a test brittleness issue.
+
+## 2026-07-12 (afternoon) — balance: active skills now scale with build specialization · `1bfa849` · live `index-BuJKybh0.js` ✓
 
 **Player-visible — active skills feel impactful on any build:**
 Active skill damage previously used `getDamage()` — the global damage value that excludes
@@ -23,6 +38,9 @@ skills now deal damage proportional to the player's built weapon type.
 One-line change in `executeSkill()` (`ActiveSkillSystem.ts:484`):
 `getDamage()` → `Math.max(getRangedDamage(), getMeleeDamage())`.
 All 34 skill variants affected. No change to multiplier values, cooldowns, or radius.
+
+**QA:** qa-live-smoke PASS (live-smoke uses reliable loadout from fix above), qa-damagetype PASS,
+qa-stat-caps PASS, qa-catalog-integrity PASS, qa-balance-probe PASS.
 
 ---
 
