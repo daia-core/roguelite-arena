@@ -6,6 +6,19 @@ portrait viewport).
 
 ---
 
+## 2026-07-12 (early morning) — fix: stale cap thresholds in shop item filter · `29a32bd` · live `index-CfaCRNKk.js` ✓
+
+**Bug fix (shop item filtering):** Three stat caps had been lowered in their getter methods but
+`cappedFieldsMaxed()` still used the old values. Result: `isItemFullyCapped()` never suppressed
+maxed shop-discount/reroll-discount/luck items from shop offers — those items kept appearing as
+viable choices when they'd already hit their ceiling, wasting offer slots.
+
+- `shopDiscount` threshold 0.5 → 0.3 (matches `getShopDiscount()` cap)
+- `rerollDiscount` threshold 0.9 → 0.6 (matches `getRerollDiscount()` cap; cap was lowered from 0.9 but threshold wasn't updated)
+- `luck` threshold 2.0 → 1.0 (matches `getLuck()` cap)
+
+Internal fix only; no new content. TypeScript clean, live-build verified.
+
 ## 2026-07-12 (early morning) — Step 4: T3 pure-melee weapons + 2 melee passives · `9340fff` · live `index-CQlgciFM.js` ✓
 
 **New items (1894 → 1899):**
