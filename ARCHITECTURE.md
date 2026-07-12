@@ -1,6 +1,6 @@
 # Roguelite Arena — Architecture Overview
 
-> **Last updated: 2026-07-12** — Step 4 melee pass shipped: 3 T3 pure-melee weapons (War Glaive/Siege Lance/Seismic Maul) + 2 melee passives (Blooddrinker/Earthshaker Band). Live: `9340fff` / `index-CQlgciFM.js`. Catalog: 1899 items. QA: catalog-integrity CLEAN, melee-stack PASS, melee-styles PASS, live-smoke PASS. Game.ts 3,670 lines. Next: R1 remainder (gloves/gauntlets `hands` slot — needs Felix) or item-uniqueness pass (step 2 — needs Felix steering).
+> **Last updated: 2026-07-12** — Architecture doc sync: Steps 13–16 all DONE. Game.ts 3,670 lines (was 7,031). Step 13: HUDRenderer.ts (drawHUD + updateMobileSkillButtons). Step 14: executeSkill() → ActiveSkillSystem.ts (34 active skills). Step 15: updatePlaying() decomposed into 7 private sub-methods (orchestrator now ~25 lines). Step 16: drawPlaying() → PlayingRenderer.ts. Catalog: 1,899 items. QA: 22/22 PASS. Next content: R1 remainder (gloves/gauntlets `hands` slot — needs Felix) or item-uniqueness pass (step 2 — needs Felix steering).
 
 ---
 
@@ -170,23 +170,25 @@ same numeric constant in `qa-stats-parity.mjs` `expected()` and update it.
 
 Core Loop               Extended Systems          Meta / UI
 ──────────────          ────────────────          ─────────────
-Game.ts (~3.7k lines)   StatusEffectEngine         AchievementSystem
-Player.ts               ActiveSkillSystem           MetaProgression
-Enemy.ts (2k)           ArtifactSystem              SkillTree (~185 nodes)
-WaveManager.ts          EventSystem                 SaveManager
-ItemSystem.ts (1.5k)    DuoSystem                   MapSystem
-Projectile.ts           EvolutionSystem             VillageScene (876 lines)
+Game.ts (3.7k lines)    StatusEffectEngine         AchievementSystem
+Player.ts               ActiveSkillSystem (1.1k)   MetaProgression
+Enemy.ts (2.2k)         ArtifactSystem             SkillTree (~185 nodes)
+WaveManager.ts          EventSystem                SaveManager
+ItemSystem.ts (1.6k)    DuoSystem                  MapSystem
+Projectile.ts           EvolutionSystem            VillageScene (877 lines)
 AoeZone.ts              TransformationSystem
 
-Rendering / UX          Utilities
-───────────────         ─────────────────
-Renderer.ts             Quadtree.ts
-Particle.ts             EntityCuller.ts
-ScreenEffects.ts        ObjectPool.ts
-UISprites.ts            PathfindingSystem.ts
-StardewBackground.ts    QualityManager.ts
-ParticleBatchRenderer   PerformanceMonitor.ts
-SpawnTelegraph.ts       OffscreenCanvasCache.ts
+Extracted from Game.ts  Rendering / UX          Utilities
+──────────────────────  ───────────────         ─────────────────
+HUDRenderer.ts (step13) Renderer.ts             Quadtree.ts
+PlayingRenderer (step16)Particle.ts             EntityCuller.ts
+MapScene (step 3)       ScreenEffects.ts        ObjectPool.ts
+EventScene (step 4)     UISprites.ts            PathfindingSystem.ts
+RestScene (step 5)      StardewBackground.ts    QualityManager.ts
+ShopScene (step 6)      ParticleBatchRenderer   PerformanceMonitor.ts
+AchievementsScene (s8)  SpawnTelegraph.ts       OffscreenCanvasCache.ts
+ClassSelectScene (s9)
+SkillTreeScene (s12)
 ```
 
 ## Game State Machine
@@ -410,10 +412,9 @@ enter(items: (Item | null)[], lockedIndices: Set<number>, lastInterest: number):
 
 ---
 
-### Step 13 — `drawHUD` + `updateMobileSkillButtons` → `HUDRenderer.ts` (next recommended pull)
+### Step 13 — `drawHUD` + `updateMobileSkillButtons` → `HUDRenderer.ts` ✅ DONE
 
-> **Quick win (~238 lines, LOW risk)** — pure render/DOM methods, no mutation of core game state.
-> Read this before attempting; then extract, compile-check, and deploy.
+> **DONE (2026-07-08).** `HUDRenderer.ts` (269 lines). Game.ts −~238 lines. QA PASS.
 
 **Methods to move:**
 
@@ -464,10 +465,9 @@ interface HUDRendererDeps {
 
 ---
 
-### Step 14 — `useActiveSkill` → merged into `ActiveSkillSystem.ts` (MEDIUM complexity)
+### Step 14 — `useActiveSkill` → `executeSkill()` in `ActiveSkillSystem.ts` ✅ DONE
 
-> **~645 lines** (lines ~1944–2589 in current Game.ts). Higher risk than HUD extraction —
-> touches enemies/player/combat infrastructure. Plan carefully; do after step 13.
+> **DONE (2026-07-08).** `executeSkill()` lives in `ActiveSkillSystem.ts`. Game.ts `useActiveSkill()` is now a thin wrapper (~30 lines) that builds the context and delegates. ActiveSkillSystem.ts grew to 1,124 lines (owns both defs and dispatch). Game.ts −~645 lines.
 
 `useActiveSkill` is a large `switch(skill.effect)` block dispatching 34 active skill effects.
 `ActiveSkillSystem.ts` already owns the skill *definitions* (ACTIVE_SKILLS array, `getActiveSkillById`).
@@ -675,25 +675,26 @@ ArtifactSystem.ts
 ```
 File                        Lines    Role
 ────────────────────────────────────────────────────────
-Game.ts                      ~6840   Main game loop + all game state (shrinking via Scene splits)
-items/catalog.ts             4388    Item definitions (1335+ items)
-Enemy.ts                     2192    Enemy types, AI, status-effect visuals
-ItemSystem.ts                1582    Item aggregation + shop logic
-sprites.ts                   1685    Sprite/asset data
-WaveManager.ts                964    Wave spawning + difficulty
-VillageScene.ts               876    Village / home base UI
-EventScene.ts                ~235    Event/choice screen (extracted step 4)
-MapScene.ts                   167    Map / node-routing screen (extracted step 3)
-RestScene.ts                 ~155    Campfire heal/train screen (extracted step 5)
-Renderer.ts                   690    Canvas draw primitives
-StatusEffectEngine.ts         668    Status effect stacks + damage math
-SkillTree.ts                  653    Skill tree render + unlock logic
-UISprites.ts                  509    HUD/UI sprite rendering
-Player.ts                     487    Movement + shooting
-Particle.ts                   469    Particles + floating numbers
-ActiveSkillSystem.ts          446    34 active skill definitions
+Game.ts                      3,670   Main game loop + game state (7,031 original; shrunk via steps 3–16)
+items/catalog.ts             5,001   Item definitions (1,899+ items)
+Enemy.ts                     2,203   Enemy types, AI, status-effect visuals
+sprites.ts                   1,771   Sprite/asset data
+ItemSystem.ts                1,584   Item aggregation + shop logic
+ActiveSkillSystem.ts         1,124   34 active skill defs + executeSkill() dispatch (step 14)
+WaveManager.ts                 964   Wave spawning + difficulty
+VillageScene.ts                877   Village / home base UI
+SkillTree.ts                   668   Skill tree render + unlock logic
+StatusEffectEngine.ts          668   Status effect stacks + damage math
+Renderer.ts                    691   Canvas draw primitives
+Player.ts                      518   Movement + shooting
+UISprites.ts                   509   HUD/UI sprite rendering
+HUDRenderer.ts                 269   drawHUD + updateMobileSkillButtons (step 13)
+PlayingRenderer.ts             240   drawPlaying() render pipeline (step 16)
+EventScene.ts                  279   Event/choice screen (step 4)
+RestScene.ts                   155   Campfire heal/train screen (step 5)
+MapScene.ts                    155   Map / node-routing screen (step 3)
 ──────────────────────────────────────
-Total source (all files)    ~26,350
+Total source (all .ts files) ~28,600  (catalog growth is the main driver)
 ```
 
 ---
@@ -734,10 +735,14 @@ as a method called from `Game.ts` update loop or hit resolution.
 
 ---
 
-## Step 15 Planning Guide — updatePlaying() Sub-method Decomposition
+## Step 15 — updatePlaying() Sub-method Decomposition ✅ DONE
 
-> Written 2026-07-08 (post step-14 QA pass) as the pre-planned guide for the next extraction.
-> Game.ts is 3,695 lines; `updatePlaying()` occupies lines **908–1845** (937 lines).
+> **DONE (2026-07-08).** All 7 private sub-methods extracted. `updatePlaying()` is now a ~25-line orchestrator (lines 949–973). Game.ts total unchanged (~3,670 lines — same code, better organized). QA PASS.
+
+### Original planning guide (retained for context)
+
+> Written 2026-07-08 (post step-14 QA pass).
+> Game.ts was 3,695 lines; `updatePlaying()` occupied lines **908–1845** (937 lines).
 
 ### Why NOT a CombatSystem class
 
