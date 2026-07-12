@@ -1087,8 +1087,24 @@ class CombatEngine {
 
 ```
 Source:  work/roguelite-game/frontend/
-Build:   npm run build → dist/
-Deploy:  Vercel (daiacore team, project roguelite-game-blush)
+Build:   cd frontend && npx vercel build --prod --yes --token="$VERCEL_API_TOKEN"
+         (NOT npm run build — that writes dist/ only, not .vercel/output; --prebuilt reads .vercel/output)
+Deploy:  cd /workspace/work/roguelite-game && npx vercel deploy --prebuilt --prod --yes --token="$VERCEL_API_TOKEN"
 Live:    roguelite-game-blush.vercel.app
 Note:    [[Roguelite-Arena]] memory note tracks current bundle hash + commit
 ```
+
+**⚠️ Post-deploy cleanup (REQUIRED — I-22 prevention):**
+After every successful deploy, delete the build artifacts from the workspace. These are
+gitignored but still cause `git add -A` to time out on the host snapshot (343 MB / 100k+ files).
+
+```bash
+rm -rf /workspace/work/roguelite-game/frontend/node_modules
+rm -rf /workspace/work/roguelite-game/backend/node_modules
+rm -rf /workspace/work/roguelite-game/api/node_modules
+rm -rf /workspace/work/roguelite-game/.vercel/output
+```
+
+All are regenerable: `npm install` in each sub-directory before the next build; `npx vercel build`
+recreates `.vercel/output`. Failing to clean these causes `Workspace snapshot failed` (SIGTERM on
+`git add -A`) — see `memory/system/known-issues.md` § I-22.

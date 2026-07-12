@@ -706,6 +706,70 @@ export const ITEM_CATALOG: Item[] = [
       swingCooldownMult: 0.75 // 33% faster swings
     },
     {
+      // WAR GLAIVE: T3 arc/cleave — upgrade from Brawler's Cleaver. Wide fast arc,
+      // bleeding swings. Melee-only (suppresses gun). Fills the gap between T2 Uncommon
+      // and the T4 Legendary Chaos Blade.
+      id: 'melee_glaive_t3',
+      name: 'War Glaive',
+      description: 'Melee only: wide sweeping arc, fast swings that leave enemies bleeding',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 68,
+      icon: '⚔️',
+      unlocked: true,
+      tags: ['melee'],
+      weaponType: 'melee',
+      meleeStyle: 'arc',
+      meleeDamageMult: 3.5,
+      swingArcBonus: Math.PI * 0.4,
+      swingCooldownMult: 0.78,
+      swingRangeBonus: 30,
+      bleed: 0.18,
+      knockback: 150
+    },
+    {
+      // SIEGE LANCE: T3 thrust — upgrade from Piercing Lance. Longer reach, more
+      // piercing, execute threshold. Melee-only (suppresses gun).
+      id: 'melee_siege_lance_t3',
+      name: 'Siege Lance',
+      description: 'Melee only: long crushing thrust — runs through enemies and finishes the weak',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 72,
+      icon: '🔱',
+      unlocked: true,
+      tags: ['melee'],
+      weaponType: 'melee',
+      meleeStyle: 'thrust',
+      meleeDamageMult: 4.2,
+      swingRangeBonus: 110,
+      swingCooldownMult: 1.15,
+      piercing: 4,
+      executeThreshold: 0.12,
+      knockback: 120
+    },
+    {
+      // SEISMIC MAUL: T3 slam — upgrade from Crashing Maul. Bigger AOE disc, burns
+      // the earth on impact. Melee-only (suppresses gun). Slow but devastating.
+      id: 'melee_seismic_maul_t3',
+      name: 'Seismic Maul',
+      description: 'Melee only: a ground-shaking slam that scorches the earth — slow but devastating',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 75,
+      icon: '🔨',
+      unlocked: true,
+      tags: ['melee', 'elemental'],
+      weaponType: 'melee',
+      meleeStyle: 'slam',
+      meleeDamageMult: 4.8,
+      swingRangeBonus: 30,
+      swingAoe: 95,
+      burn: 0.28,
+      swingCooldownMult: 1.7,
+      knockback: 280
+    },
+    {
       id: 'orbital_weapon_t3',
       name: 'Satellite Orbs',
       description: 'Orbs orbit around you',
@@ -4156,6 +4220,8 @@ export const ITEM_CATALOG: Item[] = [
     { id: 'melee_dmg_t2', name: "Slayer's Band", description: '+35% melee damage only', rarity: 'rare', tier: ItemTier.Uncommon, cost: 28, icon: '⚔️', unlocked: true, tags: ['melee'], meleeDamageMult: 1.35 },
     { id: 'melee_dmg_t3', name: "Slayer's Sigil", description: '+55% melee damage, +10% bleed', rarity: 'epic', tier: ItemTier.Rare, cost: 62, icon: '🗡️', unlocked: true, tags: ['melee'], meleeDamageMult: 1.55, bleed: 0.10 },
     { id: 'melee_dmg_t4', name: "Slayer's Mark", description: '+90% melee damage, +20% bleed, execute at 12%', rarity: 'legendary', tier: ItemTier.Legendary, cost: 140, icon: '⚔️', unlocked: true, tags: ['melee'], meleeDamageMult: 1.90, bleed: 0.20, executeThreshold: 0.12 },
+    { id: 'melee_drain_t2', name: 'Blooddrinker', description: '+38% melee damage and +12% lifesteal, 12% faster swings', rarity: 'rare', tier: ItemTier.Uncommon, cost: 42, icon: '🩸', unlocked: true, tags: ['melee'], meleeDamageMult: 1.38, lifesteal: 0.12, swingCooldownMult: 0.88 },
+    { id: 'melee_quake_t2', name: 'Earthshaker Band', description: 'Swings erupt a shockwave on impact, +22% melee damage — each slam costs a heartbeat', rarity: 'rare', tier: ItemTier.Uncommon, cost: 38, icon: '🌋', unlocked: true, tags: ['melee'], slot: 'ring', swingAoe: 48, meleeDamageMult: 1.22, swingCooldownMult: 1.12 },
     { id: 'ranged_dmg_t2', name: "Sniper's Ring", description: '+35% ranged damage only', rarity: 'rare', tier: ItemTier.Uncommon, cost: 28, icon: '🎯', unlocked: true, tags: ['ranged'], rangedDamageMult: 1.35 },
     { id: 'ranged_dmg_t3', name: "Sniper's Mark", description: '+55% ranged damage, +10% crit', rarity: 'epic', tier: ItemTier.Rare, cost: 62, icon: '🔭', unlocked: true, tags: ['ranged'], rangedDamageMult: 1.55, critChance: 0.10 },
     { id: 'ranged_dmg_t4', name: 'Deadshot', description: '+90% ranged damage, +20% crit, homing shots', rarity: 'legendary', tier: ItemTier.Legendary, cost: 140, icon: '🎯', unlocked: true, tags: ['ranged'], rangedDamageMult: 1.90, critChance: 0.20, homing: true },
