@@ -6,6 +6,25 @@ portrait viewport).
 
 ---
 
+## 2026-07-13 (night) — fix: cross-event devil-deal curse blocking · `41a6670` · live `index-Q3tS4jpC.js` ✓
+
+**Bug fix — two devil events silently blocked by shared curse IDs:**
+When `devil_rot_crown` and `devil_bargain` both used `curse_sloth`, taking the
+bargain's speed-for-gold pact first would cause "Wear the crown" (rot crown) to grant
+*nothing* — the already-held-curse guard fired and voided the +80 max HP and artifact.
+Same issue: `cursed_reliquary` shared `curse_famine` with `devil_starving_god`.
+
+- `devil_rot_crown` → **curse_torpor** (🌿 -30% move speed; same magnitude as sloth but unique id)
+- `cursed_reliquary` → **curse_entropy** (⌛ -40% XP; same as famine but unique id)
+- Both curses added to `ArtifactSystem`, excluded from random reward pools
+- Each devil event now has a unique curse id — cross-event boon blocking is impossible
+- `qa-devildeal` extended: 5-curse CURSE_IDS, wider malus check (xpMult/maxHp/crit),
+  3 new assertions (rotCrownUniqueCurse, reliquaryUniqueCurse, crossCurseNoBlock) — **25/25 PASS**
+
+**QA:** qa-devildeal 25/25 PASS, qa-catalog-integrity CLEAN, qa-live-smoke PASS.
+
+---
+
 ## 2026-07-13 (night) — balance: Devil's Bargain now guarantees an epic+ artifact · `0eec8a0`
 
 **Player-visible — "Trade your skin for strength" is now a real choice:**
