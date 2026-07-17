@@ -6,6 +6,26 @@ portrait viewport).
 
 ---
 
+## 2026-07-17 — fix(qa): crossCurseNoBlock assertion non-deterministic · `943569b` · live `index-ChHEzTI5.js` ✓
+
+**Player-visible:** none — QA-only fix.
+
+**What broke:** `qa-devildeal.mjs` check 8b (`crossCurseNoBlock`) was comparing `maxHealth === maxHpBefore + 80` after applying `devil_rot_crown`, which grants +80 maxHp AND a random artifact. That artifact can carry its own `maxHealthBonus` (e.g. `giants_vigor` +70, `berserkers_roar` −20), making the exact equality fail non-deterministically.
+
+**Fix:** Sum the `maxHealthBonus` of all newly-granted artifacts after the option and include that delta in the expected value. The check is now `maxHealth === maxHpBefore + 80 + grantedMaxHpDelta` — deterministic regardless of which artifact rolls. 25/25 confirmed ×3.
+
+---
+
+## 2026-07-13 (night, 01:12) — fix: differentiate curse_torpor and curse_entropy · `f43d692` · live `index-DV8c8omk.js` ✓
+
+**Balance/design fix — duplicate-effect curses differentiated:**
+`curse_torpor` (devil_rot_crown) was mechanically identical to `curse_sloth` (-30% speed), and `curse_entropy` (cursed_reliquary) identical to `curse_famine` (-40% XP). A player who took both events would silently stack the same penalty (e.g. -51% effective speed).
+
+- `curse_torpor` → **-25% damage output** ("sluggish strikes"; damageMult 0.75). Devil rot crown's flavour shifts from speed-drain to force-drain.
+- `curse_entropy` → **-55 max health** ("decaying vitality"; maxHealthBonus -55). Reliquary still gives 2 artifacts; cost is now survivability, not levelling speed.
+- Lore text updated: rot_crown event description changed from "leaden legs" to "leaden arm"; reliquary result now mentions HP drain instead of XP drain.
+- QA extended: `qa-devildeal` recognises `damageMult < 1` as a valid curse malus — **25/25 PASS**.
+
 ## 2026-07-13 (night) — fix: cross-event devil-deal curse blocking · `41a6670` · live `index-Q3tS4jpC.js` ✓
 
 **Bug fix — two devil events silently blocked by shared curse IDs:**
