@@ -6,6 +6,22 @@ portrait viewport).
 
 ---
 
+## 2026-07-18 (night) — fix(game): Overcharge Battery nova no longer self-damages the player · live `index-BuJm3B1u.js` ✓
+
+**Player-visible:** Overcharge Battery artifact now works correctly. Every 6th shot fires a nova
+burst that damages enemies — previously the nova was silently dealing damage to the **player** instead
+(a leftover `AoeZone(damage=ocDmg)` hit the player per the ARCHITECTURE.md AoeZone constraint, which
+only applies enemy damage). Affected all Overcharge Battery runs since the artifact launched.
+
+**Fix:** `Game.ts` — changed `AoeZone(damage=ocDmg)` → `AoeZone(damage=0)` (visual telegraph only)
+and added `pendingDmg.push({r: 130, dmg: ocDmg, ...})` for actual enemy damage, consistent with the
+11 active-skill AoeZone self-hit fixes shipped Jul 8.
+
+**QA:** `qa-overcharge.mjs` (new) — 4/4 checks: artifact method exists, new AoeZone has damage=0,
+pendingDmg entry with r=130 added, player HP unchanged after nova. PASS.
+
+---
+
 ## 2026-07-17 (evening) — fix(qa): qa-live-smoke flakiness · `(qa-only)` · live `index-ChHEzTI5.js` ✓
 
 **Player-visible:** none — QA-only fix (no game code changed, no redeploy needed).

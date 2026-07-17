@@ -1683,9 +1683,12 @@ export class Game {
         this.overchargeShotCount++;
         if (this.overchargeShotCount % ocEvery === 0) {
           const ocDmg = this.playerStats.getDamage() * 3;
-          this.spawnAoeZone(new AoeZone(this.player.x, this.player.y, 130, ocDmg, 0.0, {
+          // Visual telegraph only (damage=0) — AoeZone hits the PLAYER not enemies.
+          // Enemy damage goes through pendingDmg (see ARCHITECTURE.md AoeZone constraint).
+          this.spawnAoeZone(new AoeZone(this.player.x, this.player.y, 130, 0, 0.0, {
             color: '#ffd43b', activeTime: 0.2, singleHit: true,
           }));
+          this.pendingDmg.push({ x: this.player.x, y: this.player.y, r: 130, dmg: ocDmg, delay: 0, color: '#ffd43b' });
           this.audio.playHit();
         }
       }
