@@ -192,9 +192,14 @@ const result = await page.evaluate(() => {
   const maxHpBefore = g.player.maxHealth;
   const artifactsBefore = g.artifacts.held.length;
   const rotResult = g.applyEventOption(rotCrownOpt);
+  // The rot_crown option grants +80 maxHp AND a random artifact (which may have its own
+  // maxHealthBonus) AND curse_torpor (no maxHealthBonus). Sum up newly-granted artifacts'
+  // maxHealthBonus contributions so the HP check is deterministic regardless of the roll.
+  const newlyGranted = g.artifacts.held.slice(artifactsBefore);
+  const grantedMaxHpDelta = newlyGranted.reduce((s, a) => s + (a.maxHealthBonus ?? 0), 0);
   out.crossCurseNoBlock =
     !(/already bear/i.test(rotResult?.resultText ?? '')) &&
-    g.player.maxHealth === maxHpBefore + 80 &&
+    g.player.maxHealth === maxHpBefore + 80 + grantedMaxHpDelta &&
     g.artifacts.held.length > artifactsBefore;
 
   return out;
