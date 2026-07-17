@@ -6,13 +6,13 @@ portrait viewport).
 
 ---
 
-## 2026-07-17 — fix(qa): crossCurseNoBlock assertion non-deterministic · `943569b` · live `index-ChHEzTI5.js` ✓
+## 2026-07-17 — fix(qa): two stale QA assertions · `943569b` `35e3c54` · live `index-ChHEzTI5.js` ✓
 
-**Player-visible:** none — QA-only fix.
+**Player-visible:** none — QA-only fixes.
 
-**What broke:** `qa-devildeal.mjs` check 8b (`crossCurseNoBlock`) was comparing `maxHealth === maxHpBefore + 80` after applying `devil_rot_crown`, which grants +80 maxHp AND a random artifact. That artifact can carry its own `maxHealthBonus` (e.g. `giants_vigor` +70, `berserkers_roar` −20), making the exact equality fail non-deterministically.
+**qa-devildeal (943569b):** `crossCurseNoBlock` was comparing `maxHealth === maxHpBefore + 80` after `devil_rot_crown`, which also grants a random artifact that may have its own `maxHealthBonus`. Non-deterministic. Fix: sum all newly-granted artifacts' `maxHealthBonus` into the expected delta. 25/25 ×3.
 
-**Fix:** Sum the `maxHealthBonus` of all newly-granted artifacts after the option and include that delta in the expected value. The check is now `maxHealth === maxHpBefore + 80 + grantedMaxHpDelta` — deterministic regardless of which artifact rolls. 25/25 confirmed ×3.
+**qa-zoom-xporbs (35e3c54):** `peakEnemies >= 8` was stale. `SpawnTelegraph.DURATION = 2.0s` means only 2 of the 4-second test window sees live enemies; steady wave-1 reliably peaks at 7. Floor lowered to `>= 6` (buffer of 1) with explanatory comment.
 
 ---
 
