@@ -103,7 +103,7 @@ const pass = result && !result.fatal
   && result.orbSum > 0
   && result.orbsLeft === 0
   && result.xpGranted
-  && result.peakEnemies >= 8
+  && result.peakEnemies >= 6  // telegraphed spawns (2s delay) limit 4s window to ~7; floor = 6
   && errors.length === 0;
 console.log('\nRESULT:', pass ? 'PASS ✅' : 'FAIL ❌');
 process.exit(pass ? 0 : 1);
