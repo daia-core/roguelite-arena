@@ -6,6 +6,29 @@ portrait viewport).
 
 ---
 
+## 2026-07-17 (evening) — fix(qa): qa-live-smoke flakiness · `(qa-only)` · live `index-ChHEzTI5.js` ✓
+
+**Player-visible:** none — QA-only fix (no game code changed, no redeploy needed).
+
+**Root cause:** `qa-live-smoke.mjs` was giving the test player items via `s.items.push(it)`, which
+bypasses `invalidateAgg()`. The aggregate cache (`_aggDirty`) is set to `false` during
+`g.startNewGame()` when `new Player(stats)` calls `stats.getMaxHealth()` → `ensureAgg()`. Any items
+pushed after that point have zero effect on combat stats (damage, speed, etc.) because the cache is
+never revalidated. The player fought with base stats only: 100 HP, 25 damage/shot.
+
+**Symptom:** flaky — sometimes passed (player survived 23.5s → wave-timer fires, all enemies die),
+sometimes failed (bad random seed: enemies killed 100 HP player before the 23.5s fallback). Three
+runs before fix: FAIL (16 kills), FAIL (24 kills), PASS (54 kills).
+
+**Fix:** switched to `s.addItem(it)` which calls `rebuildActiveItems()` → `invalidateAgg()` →
+`_aggDirty=true`, so stats are correctly recomputed on next combat query. Also replaced `glass_cannon_t4`
+(+100% dmg, -40 HP) with `shield_t3` in the loadout — the HP penalty was irrelevant when items had
+no effect, but with proper stat application a -40 HP penalty made the player die before the wave
+timer in harder seeds. New loadout: `head_battle_crown` + `shield_t3` + `nova_core_t3` +
+`orbit_orb_swarm_t3`. Three runs after fix: PASS (55 kills), PASS (42 kills), PASS (55 kills).
+
+---
+
 ## 2026-07-17 — fix(qa): two stale QA assertions · `943569b` `35e3c54` · live `index-ChHEzTI5.js` ✓
 
 **Player-visible:** none — QA-only fixes.

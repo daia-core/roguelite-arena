@@ -53,14 +53,20 @@ const result = await page.evaluate(async () => {
   // The real user flow starts on the Slay-the-Spire node map, not directly in combat.
   const startState = g.state; // expected 'map'
 
-  // Strong offensive loadout — chosen for reliable wave-clear across all random seeds.
-  // Items must directly boost DPS so the player clears wave 1 regardless of enemy composition.
-  // Previous loadout (whirl_blades/orbit/bomb/nova) had no raw damage boosts → flaky vs harder seeds.
-  // glass_cannon_t4 (+100% dmg) + battle_crown (head, +50% dmg +30% crit) guarantee fast kills;
-  // rapid_fire_module_t3 (fire rate) and nova_core_t3 (AoE) add burst. Max health penalty irrelevant in headless.
+  // Survivability-DPS loadout — chosen for reliable wave-clear across all random seeds.
+  // Items must boost DPS AND keep the player alive long enough for the 23.5s wave timer to fire
+  // (wave 1 timer = 22 + 1*1.5 = 23.5s; when it fires all non-boss enemies die instantly).
+  // No HP-penalty items (glass_cannon_t4 reduces 100→60 HP → player dies before timer on hard seeds).
+  // head_battle_crown (+50% dmg, +30% crit) + nova_core_t3 (AoE) + orbit_orb_swarm_t3 (2 extra orbs)
+  // = strong DPS; shield_t3 adds an extra HP layer so the player survives to the timer on any seed.
+  //
+  // IMPORTANT: use addItem() not items.push(). s.items.push() bypasses invalidateAgg() and leaves
+  // _aggDirty=false (set by new Player(stats) calling getMaxHealth() → ensureAgg()), so pushed items
+  // have zero effect on combat stats. addItem() calls rebuildActiveItems() → invalidateAgg() →
+  // _aggDirty=true, so the next getDamage()/getMaxHealth() call sees the correct boosted values.
   const s = g.playerStats;
-  const give = (id) => { const it = DB.getItemById(id); if (it) { s.items.push(it); return true; } return false; };
-  const wanted = ['glass_cannon_t4','head_battle_crown','nova_core_t3','orbit_orb_swarm_t3'];
+  const give = (id) => { const it = DB.getItemById(id); if (it) { s.addItem(it); return true; } return false; };
+  const wanted = ['head_battle_crown','shield_t3','nova_core_t3','orbit_orb_swarm_t3'];
   const granted = wanted.filter(give);
 
   // Navigate the map toward a combat node (battle/elite/boss), the real user path.
