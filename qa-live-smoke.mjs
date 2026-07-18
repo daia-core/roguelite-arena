@@ -106,6 +106,12 @@ const result = await page.evaluate(async () => {
   // → shop/reward proves the whole core loop end-to-end.
   if (g.state === 'playing') {
     combatEntered = true;
+    // Make the player unkillable for the QA run — we test the wave-loop mechanics,
+    // not survivability. Without this, a bad random seed (many fast-damage enemies)
+    // can kill the player before the 23.5s wave timer fires, giving a false FAIL.
+    // invincibilityTimer decrements by dt each frame; Infinity - dt = Infinity, so
+    // this stays active for the entire test (no change to game source needed).
+    if (g.player) g.player.invincibilityTimer = Infinity;
     let lastState = g.state, stuck = 0;
     for (let i = 0; i < 180 * 60; i++) {
       if (g.state === 'playing') {
