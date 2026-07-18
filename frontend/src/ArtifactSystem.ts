@@ -46,6 +46,7 @@ export interface Artifact {
   critChanceBonus?: number;
   critMultMult?: number;
   xpMult?: number;
+  cdMult?: number;        // multiply active skill cooldown durations (0.7 = −30% CDR)
   // ---- rule-changing behaviour ----
   flags?: ArtifactFlag[];
   // Tuning knobs read by the hooks (all optional, sensible defaults in Game).
@@ -189,6 +190,11 @@ export const ARTIFACTS: Artifact[] = [
   { id: 'oracles_eye', name: "Oracle's Eye", icon: '🔮', rarity: 'rare', desc: '+50% XP and +12% fire rate.', xpMult: 1.5, fireRateMult: 1.12 },
   { id: 'titanforged_aegis', name: 'Titanforged Aegis', icon: '🛡️', rarity: 'legendary', desc: '+120 max health, but -15% fire rate.', maxHealthBonus: 120, fireRateMult: 0.85 },
   { id: 'reapers_harvest', name: "Reaper's Harvest", icon: '🌾', rarity: 'legendary', desc: 'Kills heal 4 HP, and +25% move speed.', flags: ['vampiric'], vampHeal: 4, speedMult: 1.25 },
+  {
+    id: 'temporal_hourglass', name: 'Temporal Hourglass', icon: '⏳', rarity: 'epic',
+    desc: 'Active skill cooldowns reduced by 30%.',
+    cdMult: 0.7,
+  },
 
   // ---- CURSES (devil-deal downsides — never in the random pool) ----
   {
@@ -265,7 +271,7 @@ export class ArtifactSystem {
    * this is idempotent and safe to call after any change (grant / restore).
    */
   applyStatic(stats: PlayerStats): void {
-    let dmg = 1, fire = 1, spd = 1, hp = 0, critC = 0, critM = 1, xp = 1;
+    let dmg = 1, fire = 1, spd = 1, hp = 0, critC = 0, critM = 1, xp = 1, cd = 1;
     for (const a of this.held) {
       if (a.damageMult) dmg *= a.damageMult;
       if (a.fireRateMult) fire *= a.fireRateMult;
@@ -274,6 +280,7 @@ export class ArtifactSystem {
       if (a.critChanceBonus) critC += a.critChanceBonus;
       if (a.critMultMult) critM *= a.critMultMult;
       if (a.xpMult) xp *= a.xpMult;
+      if (a.cdMult) cd *= a.cdMult;
     }
     stats.artifactDamageMult = dmg;
     stats.artifactFireRateMult = fire;
@@ -282,6 +289,7 @@ export class ArtifactSystem {
     stats.artifactCritChanceBonus = critC;
     stats.artifactCritMultMult = critM;
     stats.artifactXpMult = xp;
+    stats.artifactCdMult = cd;
   }
 
   // ---- Hook parameters read by Game.ts at combat sites ----

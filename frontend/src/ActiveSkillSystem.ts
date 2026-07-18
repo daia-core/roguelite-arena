@@ -481,7 +481,7 @@ export function executeSkill(skillId: string, slot: 'q' | 'e', ctx: ActiveSkillC
   const skill = getActiveSkillById(skillId);
   if (!skill) return;
 
-  ctx.setCooldown(slot, skill.cooldown);
+  ctx.setCooldown(slot, skill.cooldown * ctx.playerStats.artifactCdMult);
   // BALANCE FIX 2026-07-12: skills previously used getDamage() which excludes
   // type-specific multipliers. A ranged build with 5× ranged items saw no benefit
   // from those items on skill casts — skills fell further behind auto-attack as the

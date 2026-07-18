@@ -452,6 +452,7 @@ export class PlayerStats {
   artifactCritChanceBonus: number = 0;
   artifactCritMultMult: number = 1;
   artifactXpMult: number = 1;
+  artifactCdMult: number = 1;  // cooldown duration multiplier (Temporal Hourglass: 0.7 = −30% CDR)
   // Per-frame runtime multipliers for context-sensitive artifacts (momentum, berserk).
   // Game.ts recomputes these each frame; identity when the artifact isn't held.
   runtimeDamageMult: number = 1;
