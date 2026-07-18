@@ -46,14 +46,37 @@ const result = await page.evaluate(async () => {
   if (!g) return { fatal: 'no __game handle' };
   g.startNewGame();
   const s = g.playerStats;
-  const give = (id) => { const it = DB.getItemById(id); if (it) { s.items.push(it); return true; } return false; };
+  const give = (id) => { const it = DB.getItemById(id); if (it) { s.addItem(it); return true; } return false; };
   // A diverse stacked loadout: all four aux systems (real ids) + move speed.
   const wanted = ['whirl_blades_t2','orbit_orb_t2','orbit_orb_swarm_t3','bomb_bandolier_t2','nova_core_t3','swift_blade_t2'];
   const granted = wanted.filter(give);
   g.player.gold = 0;
 
+  // Navigate the map to reach a combat node (same pattern as qa-live-smoke.mjs).
+  // startNewGame() lands in 'map' state — the player must pick a node to enter combat.
+  const routeToCombat = () => {
+    const ms = g.mapSystem;
+    const reach = (ms.reachable && ms.reachable()) || [];
+    if (!reach.length) return false;
+    const typeOf = (id) => ms.nodeById && ms.nodeById(id)?.type;
+    const combat = reach.find(id => ['battle','elite','boss'].includes(typeOf(id)));
+    const target = combat || reach[0];
+    g.onMapNodePicked(target);
+    return g.state === 'playing';
+  };
+  let mapPicks = 0;
+  while (g.state !== 'playing' && mapPicks < 12) {
+    if (g.state === 'map') { mapPicks++; routeToCombat(); }
+    else break;
+  }
+  if (g.state !== 'playing') return { fatal: `still in state '${g.state}' after map nav` };
+
+  // Make the player unkillable — this test measures swarm density + frame budget,
+  // not survivability. Without this, a base-stat player can die before the wave fills.
+  if (g.player) g.player.invincibilityTimer = Infinity;
+
   // Drive the REAL update loop and STOP mid-swarm (while still playing) so we
-  // measure/scree​nshot under combat load, not in the post-wave shop. Track the
+  // measure/screenshot under combat load, not in the post-wave shop. Track the
   // worst single-frame cost across the whole run = true peak-load frame time.
   const dt = 1/60;
   let peakEnemies = 0, worstFrameMs = 0;
@@ -66,7 +89,7 @@ const result = await page.evaluate(async () => {
     if (n > peakEnemies) peakEnemies = n;
     // Stop once we're deep in a filled wave-1 swarm, still in combat.
     if (g.state === 'playing' && n >= 22) break;
-    if (g.state !== 'playing' && i > 60) break; // died or shop — stop
+    if (g.state !== 'playing') break; // wave cleared → shop/reward
   }
 
   const enemies = (g.enemies || []).filter(e => !e.dead);
