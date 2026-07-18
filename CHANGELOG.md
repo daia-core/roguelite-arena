@@ -6,6 +6,18 @@ portrait viewport).
 
 ---
 
+## 2026-07-19 (night) — feat(artifact): lifesteal artifacts — Bloodmage's Seal + Crimson Covenant · `4b8e207`
+
+**Player-visible:** Two new artifacts available on map nodes:
+- **Bloodmage's Seal** (epic) — +8% lifesteal. Every hit restores HP proportional to damage dealt. First artifact on the lifesteal axis; items/skill-tree lifesteal was already in the game but no artifact gave it.
+- **Crimson Covenant** (legendary) — +15% lifesteal and +25% damage. Synergises with high-damage glass-cannon builds: deal more → heal more.
+
+Also adds missing pixel art glyphs for `temporal_hourglass` (added Jul 18 without a glyph) and both new artifacts. Includes `qa-lifesteal-artifacts.mjs` (7/7 ✅ — catalog, stat folding, `getLifesteal()` inclusion, damage boost, heal-on-hit).
+
+**Commit:** `4b8e207` | **Bundle:** `index-CjyRx7tr.js` | **Live:** roguelite-game-blush.vercel.app ✓
+
+---
+
 ## 2026-07-18 (afternoon) — fix(qa): qa-mobile-playthrough now reaches combat · `92828ea` · (qa-only, no redeploy)
 
 **Player-visible:** none.
