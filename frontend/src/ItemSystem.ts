@@ -453,6 +453,7 @@ export class PlayerStats {
   artifactCritMultMult: number = 1;
   artifactXpMult: number = 1;
   artifactCdMult: number = 1;  // cooldown duration multiplier (Temporal Hourglass: 0.7 = −30% CDR)
+  artifactLifestealAdd: number = 0;  // additive lifesteal fraction (Bloodmage's Seal, Crimson Covenant)
   // Per-frame runtime multipliers for context-sensitive artifacts (momentum, berserk).
   // Game.ts recomputes these each frame; identity when the artifact isn't held.
   runtimeDamageMult: number = 1;
@@ -962,6 +963,8 @@ export class PlayerStats {
     lifesteal += this.duos.getTotalBonuses().lifesteal;
     // SKILL TREE contribution (Sanguine Pact keystone / vitality vampire nodes)
     lifesteal += this.skillLifestealAdd;
+    // ARTIFACT contribution (Bloodmage's Seal, Crimson Covenant)
+    lifesteal += this.artifactLifestealAdd;
     // Cap at 100% — a dedicated vampire build can fully convert damage to healing,
     // but overheal beyond that is wasted (heal() clamps to maxHP anyway) and an
     // uncapped value made a heavy-lifesteal build trivially unkillable.

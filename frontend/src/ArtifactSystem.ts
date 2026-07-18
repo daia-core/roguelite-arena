@@ -47,6 +47,7 @@ export interface Artifact {
   critMultMult?: number;
   xpMult?: number;
   cdMult?: number;        // multiply active skill cooldown durations (0.7 = −30% CDR)
+  lifestealAdd?: number;  // additive lifesteal fraction (0.08 = +8% lifesteal)
   // ---- rule-changing behaviour ----
   flags?: ArtifactFlag[];
   // Tuning knobs read by the hooks (all optional, sensible defaults in Game).
@@ -195,6 +196,16 @@ export const ARTIFACTS: Artifact[] = [
     desc: 'Active skill cooldowns reduced by 30%.',
     cdMult: 0.7,
   },
+  {
+    id: 'bloodmages_seal', name: "Bloodmage's Seal", icon: '🩸', rarity: 'epic',
+    desc: '+8% lifesteal — every hit restores health based on damage dealt.',
+    lifestealAdd: 0.08,
+  },
+  {
+    id: 'crimson_covenant', name: 'Crimson Covenant', icon: '💉', rarity: 'legendary',
+    desc: '+15% lifesteal and +25% damage. High damage builds sustain themselves.',
+    lifestealAdd: 0.15, damageMult: 1.25,
+  },
 
   // ---- CURSES (devil-deal downsides — never in the random pool) ----
   {
@@ -271,7 +282,7 @@ export class ArtifactSystem {
    * this is idempotent and safe to call after any change (grant / restore).
    */
   applyStatic(stats: PlayerStats): void {
-    let dmg = 1, fire = 1, spd = 1, hp = 0, critC = 0, critM = 1, xp = 1, cd = 1;
+    let dmg = 1, fire = 1, spd = 1, hp = 0, critC = 0, critM = 1, xp = 1, cd = 1, ls = 0;
     for (const a of this.held) {
       if (a.damageMult) dmg *= a.damageMult;
       if (a.fireRateMult) fire *= a.fireRateMult;
@@ -281,6 +292,7 @@ export class ArtifactSystem {
       if (a.critMultMult) critM *= a.critMultMult;
       if (a.xpMult) xp *= a.xpMult;
       if (a.cdMult) cd *= a.cdMult;
+      if (a.lifestealAdd) ls += a.lifestealAdd;
     }
     stats.artifactDamageMult = dmg;
     stats.artifactFireRateMult = fire;
@@ -290,6 +302,7 @@ export class ArtifactSystem {
     stats.artifactCritMultMult = critM;
     stats.artifactXpMult = xp;
     stats.artifactCdMult = cd;
+    stats.artifactLifestealAdd = ls;
   }
 
   // ---- Hook parameters read by Game.ts at combat sites ----
