@@ -109,10 +109,18 @@ const result = await page.evaluate(() => {
     stack(s, 'gold_bonus_t2', 40);
     ok('pure-gold fully capped at max', s.isItemFullyCapped(goldItem) === true, `gold=${s.getGoldBonus()}`);
 
-    // Draw the shop many times WITH stats → capped items must never appear;
-    // an uncapped combat item still can.
+    // Deterministic: the offer-eligible pool must include the uncapped damage item
+    // and must exclude both fully-capped items. This is a direct filter check that
+    // doesn't depend on random sampling.
+    const eligiblePool = DB.getUnlockedItems().filter(i => !s.isItemFullyCapped(i));
+    ok('uncapped damage item in eligible pool', eligiblePool.some(i => i.id === 'damage_t1'), 'pool check');
+    ok('capped dodge item NOT in eligible pool', !eligiblePool.some(i => i.id === 'dodge_t2'), 'pool check');
+    ok('capped gold item NOT in eligible pool', !eligiblePool.some(i => i.id === 'gold_bonus_t2'), 'pool check');
+
+    // Statistical: draw the shop many times WITH stats → capped items must never appear.
+    // Use 3000 draws (18k slots) so E[hits for any specific common] > 18 → P(0) < 1e-8.
     let sawDodge = 0, sawGold = 0, sawDamage = 0, totalOffers = 0;
-    for (let d = 0; d < 300; d++) {
+    for (let d = 0; d < 3000; d++) {
       const offers = DB.getWeightedShopItems(6, 15, s.items, s.getLuck(), s);
       totalOffers += offers.length;
       for (const o of offers) {
@@ -123,7 +131,7 @@ const result = await page.evaluate(() => {
     }
     ok('capped dodge item never offered (with stats)', sawDodge === 0, `sawDodge=${sawDodge}/${totalOffers}`);
     ok('capped gold item never offered (with stats)', sawGold === 0, `sawGold=${sawGold}/${totalOffers}`);
-    ok('uncapped damage item still offered', sawDamage > 0, `sawDamage=${sawDamage}/${totalOffers}`);
+    ok('uncapped damage item still offered (3000 draws)', sawDamage > 0, `sawDamage=${sawDamage}/${totalOffers}`);
 
     // Without stats → old behaviour, capped item can still appear (filter is opt-in).
     let sawDodgeNoStats = 0;
