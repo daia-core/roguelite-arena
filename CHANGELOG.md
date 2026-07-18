@@ -6,6 +6,27 @@ portrait viewport).
 
 ---
 
+## 2026-07-18 (afternoon) — fix(qa): qa-mobile-playthrough now reaches combat · `92828ea` · (qa-only, no redeploy)
+
+**Player-visible:** none.
+
+**Root cause:** `startNewGame()` lands in the Slay-the-Spire node map (`state='map'`), not directly
+in combat. The QA never called `g.onMapNodePicked()`, so the update loop triggered the `state !==
+'playing' && i > 60` early-exit after 60 frames — zero enemies, FPS measured against an empty arena.
+Same class of bug as the Jul-17 `qa-live-smoke` fix (items pushed via `items.push()` instead of
+`addItem()`; both bypassed the game's real initialization path).
+
+**Fix:** Added `routeToCombat()` (mirrors `qa-live-smoke.mjs`) — iteratively calls
+`g.onMapNodePicked()` targeting battle/elite/boss nodes until `g.state === 'playing'` (cap 12
+picks). Also sets `g.player.invincibilityTimer = Infinity` so the player can't die before the swarm
+fills (test measures density + perf, not survivability). Switched `items.push` → `addItem()` for
+proper stat initialization.
+
+**Before:** `state=map`, peak 0 enemies, FPS against empty arena. **After:** `state=playing`, peak
+22 enemies, 334 FPS under real swarm load. Both ✅ verdicts now actually test what they claim.
+
+---
+
 ## 2026-07-18 (morning) — feat(artifact): Temporal Hourglass — −30% active skill cooldowns · `c6fedd4` · live `index-CrKFaMxP.js` ✓
 
 **Player-visible:** New epic artifact **Temporal Hourglass ⏳** reduces all active skill cooldowns by
