@@ -6,6 +6,21 @@ portrait viewport).
 
 ---
 
+## 2026-07-18 (morning) — feat(artifact): Temporal Hourglass — −30% active skill cooldowns · `c6fedd4` · live `index-CrKFaMxP.js` ✓
+
+**Player-visible:** New epic artifact **Temporal Hourglass ⏳** reduces all active skill cooldowns by
+30%. A 5-second Frost Nova becomes 3.5 seconds; an 8-second Meteor becomes 5.6 seconds. Stacks
+multiplicatively with itself (via the artifact system) if multiple instances were ever awarded.
+
+**Implementation:** New `cdMult` stat axis — `Artifact.cdMult` folds into `PlayerStats.artifactCdMult`
+via `ArtifactSystem.applyStatic()`. `executeSkill()` multiplies `skill.cooldown × artifactCdMult` on
+every cast. First artifact to touch the skill-cooldown dimension.
+
+**QA:** `qa-temporal-hourglass.mjs` 4/4 — catalog check, stat-after-grant (1.0 → 0.7), frost_nova
+cooldown with artifact (3.5s), frost_nova without artifact (5.0s control). Live smoke PASS.
+
+---
+
 ## 2026-07-18 (night) — fix(game): Overcharge Battery nova no longer self-damages the player · live `index-BuJm3B1u.js` ✓
 
 **Player-visible:** Overcharge Battery artifact now works correctly. Every 6th shot fires a nova
