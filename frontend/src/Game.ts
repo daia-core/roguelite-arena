@@ -1400,7 +1400,7 @@ export class Game {
             // Dazed debuff raises effective crit chance against this enemy
             const sfxBonusCrit = enemy.statusFX.getBonusCritChanceReceived();
             const isCrit = this.player.rollCrit() || (sfxBonusCrit > 0 && Math.random() < sfxBonusCrit);
-            let damage = isCrit ? this.player.getCritDamage(proj.damage) : proj.damage;
+            let damage = isCrit ? this.player.getCritDamage(proj.damage) : PlayerStats.finalDamageKnee(proj.damage);
             // Disoriented debuff amplifies crit damage received
             if (isCrit) {
               const bonusCritDmg = enemy.statusFX.getBonusCritDamageReceived();
@@ -1526,7 +1526,7 @@ export class Game {
         if (melee.isPointInArc(enemy.x, enemy.y)) {
           const sfxBonusCritM = enemy.statusFX.getBonusCritChanceReceived();
           const isCrit = this.player.rollCrit() || (sfxBonusCritM > 0 && Math.random() < sfxBonusCritM);
-          let damage = isCrit ? this.player.getCritDamage(melee.damage) : melee.damage;
+          let damage = isCrit ? this.player.getCritDamage(melee.damage) : PlayerStats.finalDamageKnee(melee.damage);
           if (isCrit) {
             const bonusCritDmgM = enemy.statusFX.getBonusCritDamageReceived();
             if (bonusCritDmgM > 0) damage *= (1 + bonusCritDmgM);
@@ -2045,7 +2045,7 @@ export class Game {
   private dealAuxDamage(enemy: Enemy, baseDamage: number, hitColor: string): void {
     if (!this.player || enemy.dead) return;
     const isCrit = this.player.rollCrit();
-    let damage = isCrit ? this.player.getCritDamage(baseDamage) : baseDamage;
+    let damage = isCrit ? this.player.getCritDamage(baseDamage) : PlayerStats.finalDamageKnee(baseDamage);
     if (enemy.typeData.isBoss) damage *= this.metaProgression.getBossDamageMultiplier();
 
     const splits = enemy.takeDamage(damage);

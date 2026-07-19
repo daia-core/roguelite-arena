@@ -68,16 +68,23 @@ const out = await page.evaluate(() => {
   // getCritDamage(), so the raw product BYPASSES it and over-reports a maxed build by
   // ~8,900× (2.44B vs the real ~275k the enemy actually takes). rawCritHit is kept
   // alongside so the knee's compression is explicit.
+  // Mirrors PlayerStats.finalDamageKnee (FINAL_DMG_KNEE=100k, EXP=0.10) — after the
+  // 2026-07-19 Game.ts fix, non-crit shots ALSO go through this ceiling so the non-crit
+  // path can no longer bypass the balance ceiling that crits have always had.
+  const finalKnee = (d) => { const K = 100000, E = 0.10; return d > K ? K * Math.pow(d / K, E) : d; };
+
   const snap = () => {
     const ps = g.playerStats;
     const ranged = ps.getRangedDamage();
     const cc = Math.min(1, ps.getCritChance());
     const cm = ps.getCritMultiplier();
-    const critHit = g.player.getCritDamage(ranged);          // real hit path (knee applied)
+    const critHit = g.player.getCritDamage(ranged);          // real crit path (knee applied)
     const rawCritHit = ranged * cm;                          // pre-knee product (diagnostic)
+    const nonCritHit = finalKnee(ranged);                    // actual in-game non-crit (Game.ts fix)
     return { ranged: Math.round(ranged), critChance: +(cc).toFixed(3), critMult: Math.round(cm),
              critHit: Math.round(critHit), rawCritHit: Math.round(rawCritHit),
-             effective: Math.round(ranged + cc * (critHit - ranged)) };
+             nonCritHit: Math.round(nonCritHit),
+             effective: Math.round(nonCritHit + cc * (critHit - nonCritHit)) };
   };
 
   // Snapshot damage at "light", "medium", "heavy" and "critHeavy" build states.
@@ -162,9 +169,10 @@ const out = await page.evaluate(() => {
 console.log('\n=== BALANCE PROBE — player damage vs enemy HP (crit-aware) ===');
 if (out.fatal) { console.log('FATAL:', out.fatal); process.exit(1); }
 console.log(`Catalog: ${out.dmgItemCount} dmg-mult + ${out.rangedItemCount} ranged + ${out.critChanceItemCount} crit-chance + ${out.critMultItemCount} crit-mult items`);
-console.log('\nBuild states — ranged shot vs REALIZED crit (real getCritDamage path, final knee applied):');
+console.log('\nBuild states — in-game damage paths (final knee applied to BOTH crit and non-crit since 2026-07-19):');
+console.log('  (rawShot = getRangedDamage input; nonCrit/critHit = what enemy actually takes in-game)');
 for (const [k, s] of Object.entries(out.states)) {
-  console.log(`  ${k.padEnd(9)}: shot=${s.ranged.toLocaleString().padStart(12)} | crit ${(s.critChance*100).toFixed(0)}% @ ${s.critMult.toLocaleString()}x => critHit=${s.critHit.toLocaleString().padStart(12)} (pre-knee ${s.rawCritHit.toLocaleString()}) | eff/shot=${s.effective.toLocaleString()}`);
+  console.log(`  ${k.padEnd(9)}: rawShot=${s.ranged.toLocaleString().padStart(12)} | nonCrit=${s.nonCritHit.toLocaleString().padStart(9)} | crit ${(s.critChance*100).toFixed(0)}% @ ${s.critMult.toLocaleString()}x => critHit=${s.critHit.toLocaleString().padStart(12)} (pre-knee ${s.rawCritHit.toLocaleString()}) | eff/shot=${s.effective.toLocaleString()}`);
 }
 const H = out.states.heavy, C = out.states.critHeavy;
 console.log(`\n  >> final knee (bounds the realized crit product all axes escaped):`);
