@@ -1891,11 +1891,16 @@ export class Enemy {
       ctx.globalAlpha = 0.5 + 0.5 * blink;
       ctx.fillStyle = urgency > 0.7 ? '#ff5cf0' : '#a83bff';
       const px = 2;
+      // Snap glyph origin to an even world coord so each px×px cell maps to exactly one
+      // whole canvas pixel (ctx is scaled at 1/WORLD_SCALE=0.5; an odd world coord gives a
+      // half-pixel canvas position that anti-aliases and dilutes the purple colour signal).
+      const gox = Math.floor((dcx - 5) / 2) * 2;
+      const goy = Math.floor((dcy - 4) / 2) * 2;
       const glyph = ['01110', '10101', '11111', '01010'];
       for (let gy = 0; gy < glyph.length; gy++) {
         for (let gx = 0; gx < glyph[gy].length; gx++) {
           if (glyph[gy][gx] === '1') {
-            ctx.fillRect(Math.floor(dcx - 5 + gx * px), Math.floor(dcy - 4 + gy * px), px, px);
+            ctx.fillRect(gox + gx * px, goy + gy * px, px, px);
           }
         }
       }
