@@ -6,6 +6,24 @@ portrait viewport).
 
 ---
 
+## 2026-07-20 (night) — fix(render): doom status rune now paints correctly · `3572fb0`
+
+**Player-visible:** The **doom** status-effect rune (a purple blinking glyph above enemies
+marked for a stored-damage detonation) was nearly invisible in practice. It rendered at
+sub-pixel canvas positions — because `ctx.scale(0.5)` maps odd world-coords to fractional
+canvas pixels, which the browser anti-aliases and dilutes — leaving only a faint purple blur.
+
+Fix: the glyph origin is now snapped to the nearest even world coordinate before drawing, so
+every 2×2 world-pixel cell maps cleanly to a 1×1 whole canvas pixel with no fractional blending.
+The rune is now sharp and fully readable at all enemy positions.
+
+**QA:** `qa-status-visuals` before: doom 24px/6pk → FAIL (threshold >25). After: 130px/13pk
+(= 13 lit glyph cells exactly) → PASS ✅. All 5 core suites green.
+
+**Commit:** `3572fb0` | **Bundle:** `index-CQjo7Xqw.js` | **Live:** roguelite-game-blush.vercel.app ✓
+
+---
+
 ## 2026-07-19 (night) — feat(artifact): lifesteal artifacts — Bloodmage's Seal + Crimson Covenant · `4b8e207`
 
 **Player-visible:** Two new artifacts available on map nodes:
