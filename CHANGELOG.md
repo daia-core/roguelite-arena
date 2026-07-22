@@ -6,6 +6,30 @@ portrait viewport).
 
 ---
 
+## 2026-07-22 (morning) — test(qa): qa-active-skill-aoe-safety · (qa-only, no redeploy)
+
+**Player-visible:** none.
+
+**Root cause / gap closed:** Three active-skill AoeZone self-hit bugs were found and fixed in
+Jul 2026 (plague_bomb Jul 9, Overcharge Battery Jul 18) — and three dedicated point tests were
+added (spectral_dash, divine_wrath, plague_bomb). Rather than adding 31 more individual tests,
+this adds a single comprehensive sweep that fires all 34 active skills and asserts:
+any spawned `AoeZone` has `damage === 0` (the player-hit guard). Runs in one browser session.
+
+**New harness — `qa-active-skill-aoe-safety.mjs` (34/34 skills, 0 failures):**
+- 29 skills PASS: each spawns AoeZones, all verified `damage === 0`
+- 5 skills SKIP: arcane_barrage, blade_storm, bone_spear, chain_lightning, phoenix_beam — spawn
+  no AoeZones, so carry no self-hit risk
+- 0 skills FAIL: no regressions across the full active-skill library
+
+Fake enemy stub made comprehensive (typeData, statusFX.apply, takeDamage) so all skill execution
+paths complete without crashing. Add a new skill → re-run this file; any AoeZone with damage>0
+fails immediately.
+
+**Commit:** (see git log)
+
+---
+
 ## 2026-07-22 (morning) — test(qa): qa-plague-bomb-skill · (qa-only, no redeploy)
 
 **Player-visible:** none.
@@ -26,7 +50,7 @@ is queued with correct radius/lifetime, enemy poison is applied at cast time, an
 - `poisonApplied` — enemy inside radius at cast gets `poisonTimer ≥ 6.0`
 - `cooldownSet` — `activeSkillCooldown ≈ 8.0s` (base cooldown)
 
-**Commit:** see below.
+**Commit:** `2d54b8c`
 
 ---
 
