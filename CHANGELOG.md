@@ -6,6 +6,49 @@ portrait viewport).
 
 ---
 
+## 2026-07-23 (night) — feat(audio): atmospheric background music loop · `4ce071b` · live `index-CIMO4ivs.js` ✓
+
+**Player-visible:** atmospheric Am-key ambient loop plays throughout combat.
+
+The game had 18 procedural SFX (all Web Audio API) but no background track. This adds a
+16-second looping ambient layer — three synthesized layers, zero external audio files:
+
+- **Sub-bass drone** — A1 (55 Hz) + A2 (110 Hz) sine waves, slow fade-in/out, very quiet.
+  Provides the low-end gravity that makes the loop feel rooted.
+- **Dark filtered pad** — Am chord (A3/C4/E4) sawtooth waves through a slowly-opening lowpass
+  filter (100 Hz → 260 Hz over 3.5s), quiet swell. Creates the harmonic atmosphere.
+- **Low pulse accents** — E2 (82 Hz) sine hits at 4s and 12s in the loop, with a 1.8s decay.
+  Gives the loop a heartbeat quality without a drum.
+
+Total volume is very quiet (≈5% of masterGain) so SFX stay dominant. Loop is seamless
+(next iteration is scheduled 100ms before end for crossfade).
+
+`AudioManager` API additions:
+- `startMusic()` — starts the loop; idempotent (no-op if already playing)
+- `stopMusic()` — stops the loop and clears the scheduler
+- `musicPlaying` — boolean getter for QA state checks
+- `toggle()` — now also calls `stopMusic()` when muting (was a silent no-op before)
+
+Wired in `Game.ts`:
+- `startMusic()` in `startNextWave()` (map→combat transition; idempotent so each wave is a no-op)
+- `startMusic()` in `continueGame()` (save-restore path)
+- `stopMusic()` in `gameOver()` and `openClassSelect()` (death and return-to-menu)
+
+Closes DEEP-REVIEW-2026-07-03.md P3-8 — the last open gap from the original deep review.
+
+**QA — `qa-background-music.mjs` (7/7 ✅):**
+- `musicOffByDefault` — musicPlaying false before any call
+- `musicOnAfterStart` — musicPlaying true after startMusic()
+- `doubleStartIdempotent` — no-op + no throw on second startMusic()
+- `musicOffAfterStop` — musicPlaying false after stopMusic()
+- `toggleStopsMusic` — muting while playing sets musicPlaying false
+- `gameStartsMusic` — beginRun() + startNextWave() → musicPlaying true
+- `menuReturnStopsMusic` — openClassSelect() → musicPlaying false
+
+**Commit:** `4ce071b` · **Vercel:** `dpl_E3W7cGAxbqJzmiyUfp2EoWBbgXKr` READY+PROMOTED
+
+---
+
 ## 2026-07-22 (morning) — test(qa): qa-active-skill-aoe-safety · (qa-only, no redeploy)
 
 **Player-visible:** none.
