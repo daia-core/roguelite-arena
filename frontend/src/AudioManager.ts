@@ -5,6 +5,11 @@ export class AudioManager {
   private masterGain: GainNode;
   private enabled: boolean = true;
 
+  // ── Background music state ────────────────────────────────────────────────
+  private _musicPlaying: boolean = false;
+  private _musicLoopTimeout: ReturnType<typeof setTimeout> | null = null;
+  private readonly MUSIC_LOOP_SECS = 16; // seconds per atmospheric loop
+
   constructor() {
     this.ctx = new AudioContext();
     this.masterGain = this.ctx.createGain();
@@ -290,8 +295,126 @@ export class AudioManager {
     setTimeout(() => this.playTone(1047, 0.1, 'sine', 0.15), 60);
   }
 
+  // ── Background music API ─────────────────────────────────────────────────
+
+  /** Start the atmospheric combat loop. No-op if already playing. */
+  startMusic(): void {
+    if (this._musicPlaying || !this.enabled) return;
+    this._musicPlaying = true;
+    this._scheduleMusicLoop();
+  }
+
+  /** Stop the atmospheric loop (on game-over, class-select return, or mute). */
+  stopMusic(): void {
+    this._musicPlaying = false;
+    if (this._musicLoopTimeout !== null) {
+      clearTimeout(this._musicLoopTimeout);
+      this._musicLoopTimeout = null;
+    }
+  }
+
+  /** Whether the ambient loop is currently active (for QA / state checks). */
+  get musicPlaying(): boolean { return this._musicPlaying; }
+
+  private _scheduleMusicLoop(): void {
+    if (!this._musicPlaying || !this.enabled) return;
+
+    const now = this.ctx.currentTime;
+    const DUR = this.MUSIC_LOOP_SECS;
+
+    this._playMusicBassLayer(now, DUR);
+    this._playMusicPadLayer(now, DUR);
+    this._playMusicPulseAccents(now, DUR);
+
+    // Schedule next loop ~100ms before end for seamless crossfade
+    this._musicLoopTimeout = setTimeout(() => {
+      this._scheduleMusicLoop();
+    }, (DUR - 0.1) * 1000);
+  }
+
+  /**
+   * Layer 1 — sub bass + root bass (A minor root: A1=55Hz, A2=110Hz, sine).
+   * Very quiet; provides the low-end gravity of the loop.
+   */
+  private _playMusicBassLayer(start: number, dur: number): void {
+    const bassConfigs: Array<{ freq: number; peak: number }> = [
+      { freq: 55,  peak: 0.055 }, // A1 — sub
+      { freq: 110, peak: 0.035 }, // A2 — root
+    ];
+    for (const { freq, peak } of bassConfigs) {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, start);
+      gain.gain.linearRampToValueAtTime(peak, start + 1.5);
+      gain.gain.setValueAtTime(peak, start + dur - 1.5);
+      gain.gain.linearRampToValueAtTime(0, start + dur);
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+      osc.start(start);
+      osc.stop(start + dur);
+    }
+  }
+
+  /**
+   * Layer 2 — dark filtered pad (A minor chord: A3/C4/E4, sawtooth through a
+   * slowly-opening lowpass filter). Creates the harmonic atmosphere.
+   */
+  private _playMusicPadLayer(start: number, dur: number): void {
+    const chordFreqs = [220, 261.63, 329.63]; // A3, C4, E4
+    for (const freq of chordFreqs) {
+      const osc  = this.ctx.createOscillator();
+      const filt = this.ctx.createBiquadFilter();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'sawtooth';
+      osc.frequency.value = freq;
+
+      filt.type = 'lowpass';
+      filt.frequency.setValueAtTime(100, start);
+      filt.frequency.linearRampToValueAtTime(260, start + 5);
+      filt.frequency.setValueAtTime(260, start + dur - 4);
+      filt.frequency.linearRampToValueAtTime(100, start + dur);
+      filt.Q.value = 1.8;
+
+      gain.gain.setValueAtTime(0, start);
+      gain.gain.linearRampToValueAtTime(0.022, start + 3.5);
+      gain.gain.setValueAtTime(0.022, start + dur - 3);
+      gain.gain.linearRampToValueAtTime(0, start + dur);
+
+      osc.connect(filt);
+      filt.connect(gain);
+      gain.connect(this.masterGain);
+      osc.start(start);
+      osc.stop(start + dur);
+    }
+  }
+
+  /**
+   * Layer 3 — two low pulse accents at 4s and 12s into the 16s loop (E2=82Hz,
+   * sine). Gives the loop a subtle heartbeat without a drum.
+   */
+  private _playMusicPulseAccents(start: number, dur: number): void {
+    const beatTimes = [4, 12];
+    for (const bt of beatTimes) {
+      if (bt >= dur) continue;
+      const osc  = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = 82.41; // E2 — adds minor-quality tension under A
+      gain.gain.setValueAtTime(0.07, start + bt);
+      gain.gain.exponentialRampToValueAtTime(0.001, start + bt + 1.8);
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+      osc.start(start + bt);
+      osc.stop(start + bt + 1.8);
+    }
+  }
+
   toggle(): void {
     this.enabled = !this.enabled;
+    if (!this.enabled) this.stopMusic();
   }
 
   isEnabled(): boolean {

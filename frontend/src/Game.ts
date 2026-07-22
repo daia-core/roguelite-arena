@@ -663,6 +663,7 @@ export class Game {
 
   /** Open the class-select screen (user-facing entry: menu button, retry, embark). */
   openClassSelect(): void {
+    this.audio.stopMusic();
     this.state = 'classselect';
   }
 
@@ -898,6 +899,7 @@ export class Game {
     this.waveManager.reset();
     this.waveManager.startWave(wave);
 
+    this.audio.startMusic();
     this.state = 'playing';
   }
 
@@ -3224,6 +3226,7 @@ export class Game {
     // reads as named/themed, even the plain ones with no modifier.
     this.phaseBannerText = this.waveManager.phaseText;
     this.phaseBannerTimer = 2.6;
+    this.audio.startMusic(); // idempotent: no-op if music is already playing
     this.state = 'playing';
 
     // Reset mouse state to prevent accidental clicks
@@ -3531,6 +3534,7 @@ export class Game {
 
   private gameOver(): void {
     this.state = 'gameover';
+    this.audio.stopMusic();
     this.audio.playGameOver();
 
     // Capture personal best BEFORE updating it so the screen can compare
