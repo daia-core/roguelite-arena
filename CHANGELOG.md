@@ -6,6 +6,50 @@ portrait viewport).
 
 ---
 
+## 2026-07-22 (morning) — test(qa): qa-divine-wrath-skill · (qa-only, no redeploy)
+
+**Player-visible:** none.
+
+**Root cause / gap closed:** Divine Wrath is a tier-4 active skill that grants 2s invincibility
+and hits all enemies with 3 screen-wide pushPendingDmg waves (r=900 each), using AoeZone(damage=0)
+for visuals. The same AoeZone(damage>0) pattern previously caused player self-hits in plague_bomb
+and Overcharge Battery. This test closes that gap for divine_wrath and confirms the i-frame grant.
+
+**New harness — `qa-divine-wrath-skill.mjs` (7/7 ✅):**
+- `scrollExists` — `scroll_divine_wrath` in catalog with `activatesSkill 'divine_wrath'`
+- `skillEquipped` — after `addItem(scroll)`, `getEquippedSkillIdQ()` returns `'divine_wrath'`
+- `iFramesGranted` — `invincibilityTimer` ≥ 1.9s immediately after cast (grants 2.0s)
+- `aoeZonesDamageZero` — all 3 new AoeZones have `damage === 0` (no player self-hit)
+- `pendingDmgQueued` — 3 new `pendingDmg` entries queued (one per wave)
+- `pendingDmgRadius` — all 3 pendingDmg entries have `r = 900` (full screen coverage)
+- `cooldownSet` — `activeSkillCooldown = 16.0s` (base cooldown, no cdMult artifact)
+
+Debug snapshot: iFrames=2.0; cooldown=16; 3 zones damage=[0,0,0]; 3 pending r=[900,900,900].
+
+---
+
+## 2026-07-22 (night) — test(qa): qa-spectral-dash-skill · `c3c9953` · (qa-only, no redeploy)
+
+**Player-visible:** none.
+
+**Root cause / gap closed:** Spectral Dash was the only player-teleportation skill (and one of the few AoZone(damage=0) + pushPendingDmg skills) with no dedicated QA harness. The exact same pattern had bugs in two prior cases — plague_bomb and Overcharge Battery both silently hurt the player instead of enemies. This test closes that gap for spectral_dash.
+
+**New harness — `qa-spectral-dash-skill.mjs` (8/8 ✅):**
+- `scrollExists` — `scroll_spectral_dash` in catalog with `activatesSkill 'spectral_dash'`
+- `skillEquipped` — after `addItem(scroll)`, `getEquippedSkillIdQ()` returns `'spectral_dash'`
+- `playerMoves` — player teleports away from starting position on fire
+- `playerNearLastTarget` — player lands at the 5th (last) target position
+- `iFramesGranted` — `invincibilityTimer` ≥ 0.5s right after cast
+- `aoeZonesDamageZero` — all 5 new AoeZones have `damage === 0` (no player self-hit)
+- `pendingDmgQueued` — 5 new `pendingDmg` entries queued (one per target, r=60)
+- `cooldownSet` — `activeSkillCooldown ≈ 9.0s` (base cooldown, no cdMult artifact)
+
+Debug snapshot: player (200,200) → (300,200); iFrames=0.6; cooldown=9.0; 5 zones damage=[0,0,0,0,0]; 5 pending r=[60,60,60,60,60].
+
+**Commit:** `c3c9953` | **Live build:** `index-CQjo7Xqw.js` (unchanged) ✓
+
+---
+
 ## 2026-07-20 (night) — fix(render): doom status rune now paints correctly · `3572fb0`
 
 **Player-visible:** The **doom** status-effect rune (a purple blinking glyph above enemies
