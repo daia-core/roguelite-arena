@@ -6,6 +6,30 @@ portrait viewport).
 
 ---
 
+## 2026-07-22 (morning) — test(qa): qa-plague-bomb-skill · (qa-only, no redeploy)
+
+**Player-visible:** none.
+
+**Root cause / gap closed:** Plague Bomb had a documented bug fixed 2026-07-09 where the visual
+AoeZone had `damage=baseDmg/5` instead of 0, causing the player to be hit by their own bomb
+(AoeZones are player-damage constructs). The fix added `pushActiveDmgZone` for enemy DoT instead.
+This test closes the regression-guard gap: asserts `AoeZone.damage === 0`, the persistent DoT zone
+is queued with correct radius/lifetime, enemy poison is applied at cast time, and cooldown is set.
+
+**New harness — `qa-plague-bomb-skill.mjs` (8/8 ✅):**
+- `scrollExists` — `scroll_plague_bomb` in catalog with `activatesSkill 'plague_bomb'`
+- `skillEquipped` — after `addItem(scroll)`, `getEquippedSkillIdQ()` returns `'plague_bomb'`
+- `aoeZoneDamageZero` — the visual AoeZone has `damage === 0` (REGRESSION GUARD for Jul-09 bug)
+- `activeDmgZoneQueued` — `activeDmgZones` has ≥1 new persistent DoT zone entry
+- `activeDmgZoneRadius` — zone radius ≈ 140 (skill.radius default)
+- `activeDmgZoneLifetime` — zone remaining ≈ 8.0s (plague_bomb duration)
+- `poisonApplied` — enemy inside radius at cast gets `poisonTimer ≥ 6.0`
+- `cooldownSet` — `activeSkillCooldown ≈ 8.0s` (base cooldown)
+
+**Commit:** see below.
+
+---
+
 ## 2026-07-22 (morning) — test(qa): qa-divine-wrath-skill · (qa-only, no redeploy)
 
 **Player-visible:** none.
