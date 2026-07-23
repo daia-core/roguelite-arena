@@ -74,11 +74,13 @@ async function run(label, viewport, shotPrefix) {
   await page.screenshot({ path: path.join(OUT, `${shotPrefix}-paused.png`) });
 
   // 2. Sound toggle flips the audio flag + label (button index 1).
+  // screenScale / pausedTopY / columnRects moved from Game → PauseScene (TS private, JS-accessible).
   const sound = await page.evaluate(() => {
     const g = window.__game;
+    const ps = g.scenes.paused;
     const before = g.audio.isEnabled();
-    const { s, W, isMobile } = g.screenScale();
-    const r = g.columnRects(5, g.pausedTopY(s, isMobile), s, W, isMobile)[1];
+    const { s, W, isMobile } = ps.screenScale();
+    const r = ps.columnRects(5, ps.pausedTopY(s, isMobile), s, W, isMobile)[1];
     g.input.mouseX = r.x + r.width / 2; g.input.mouseY = r.y + r.height / 2; g.input.mouseDown = true;
     return { before };
   });
@@ -90,10 +92,11 @@ async function run(label, viewport, shotPrefix) {
   //    banking is observable (souls = wave + bossKills*10).
   const endRun = await page.evaluate(() => {
     const g = window.__game;
+    const ps = g.scenes.paused;
     g.waveManager.currentWave = 7;
     const soulsBefore = g.metaProgression.souls;
-    const { s, W, isMobile } = g.screenScale();
-    const r = g.columnRects(5, g.pausedTopY(s, isMobile), s, W, isMobile)[2];
+    const { s, W, isMobile } = ps.screenScale();
+    const r = ps.columnRects(5, ps.pausedTopY(s, isMobile), s, W, isMobile)[2];
     g.input.mouseX = r.x + r.width / 2; g.input.mouseY = r.y + r.height / 2; g.input.mouseDown = true;
     return { soulsBefore, wave: 7 };
   });
@@ -113,41 +116,46 @@ async function run(label, viewport, shotPrefix) {
   await sleep(150);
   await page.evaluate(() => {
     const g = window.__game;
-    const { s, W, isMobile } = g.screenScale();
-    const r = g.columnRects(5, g.pausedTopY(s, isMobile), s, W, isMobile)[3]; // Restart Run
+    const ps = g.scenes.paused;
+    const { s, W, isMobile } = ps.screenScale();
+    const r = ps.columnRects(5, ps.pausedTopY(s, isMobile), s, W, isMobile)[3]; // Restart Run
     g.input.mouseX = r.x + r.width / 2; g.input.mouseY = r.y + r.height / 2; g.input.mouseDown = true;
   });
   await sleep(200);
   const restartState = await page.evaluate(() => window.__game.state);
-  check('Restart Run resets to map', restartState === 'map', `state=${restartState}`);
+  check('Restart Run opens class select', restartState === 'classselect', `state=${restartState}`);
 
   // 5. Event that grants an artifact shows the reward card.
+  // currentEvent / eventResultText / eventReward + wrapText / columnRects / rewardCardHeight
+  // moved from Game → EventScene (TS private, JS-accessible via g.scenes.event).
   await page.evaluate(() => {
     const g = window.__game;
+    const es = g.scenes.event;
     g.startNewGame(); g.state = 'playing';
-    g.currentEvent = { title: 'Test Shrine', text: 'A shrine hums with power.', options: [{ label: 'Touch it', result: 'Power flows into you!', effects: [{ kind: 'artifact' }] }] };
-    g.eventResultText = null; g.eventReward = null; g.state = 'event';
+    es.currentEvent = { title: 'Test Shrine', text: 'A shrine hums with power.', options: [{ label: 'Touch it', result: 'Power flows into you!', effects: [{ kind: 'artifact' }] }] };
+    es.eventResultText = null; es.eventReward = null; g.state = 'event';
   });
   await sleep(150);
   // Tap option 0 using the exact geometry updateEvent recomputes.
   await page.evaluate(() => {
     const g = window.__game;
-    const { s, W, isMobile } = g.screenScale();
-    const ev = g.currentEvent;
+    const es = g.scenes.event;
+    const { s, W, isMobile } = es.screenScale();
+    const ev = es.currentEvent;
     const contentW = Math.min(W - s(24), s(isMobile ? 372 : 560));
     const titlePx = s(isMobile ? 14 : 18);
-    const titleLines = g.wrapText(ev.title, contentW - s(24), titlePx).length;
+    const titleLines = es.wrapText(ev.title, contentW - s(24), titlePx).length;
     let y = s(isMobile ? 26 : 34) + titleLines * (titlePx + s(4)) + s(isMobile ? 6 : 8);
     const bodyPx = s(isMobile ? 9 : 11);
-    y += g.wrapText(ev.text, contentW - s(24), bodyPx).length * (bodyPx + s(5));
+    y += es.wrapText(ev.text, contentW - s(24), bodyPx).length * (bodyPx + s(5));
     y += s(10);
-    const r = g.columnRects(ev.options.length, y, s, W, isMobile)[0];
+    const r = es.columnRects(ev.options.length, y, s, W, isMobile)[0];
     g.input.mouseX = r.x + r.width / 2; g.input.mouseY = r.y + r.height / 2; g.input.mouseDown = true;
   });
   await sleep(200);
   const evReward = await page.evaluate(() => {
-    const g = window.__game;
-    return { hasReward: !!g.eventReward, reward: g.eventReward, resultText: g.eventResultText };
+    const es = window.__game.scenes.event;
+    return { hasReward: !!es.eventReward, reward: es.eventReward, resultText: es.eventResultText };
   });
   check('event grants + captures a reward card', evReward.hasReward, evReward.reward ? `${evReward.reward.name} (${evReward.reward.rarity})` : 'none');
   check('event result text set', !!evReward.resultText, evReward.resultText || '');
@@ -156,28 +164,30 @@ async function run(label, viewport, shotPrefix) {
   // Continue clears the card + returns to map.
   await page.evaluate(() => {
     const g = window.__game;
-    const { s, W, H, isMobile } = g.screenScale();
-    const ev = g.currentEvent;
+    const es = g.scenes.event;
+    const { s, W, H, isMobile } = es.screenScale();
+    const ev = es.currentEvent;
     const contentW = Math.min(W - s(24), s(isMobile ? 372 : 560));
     const titlePx = s(isMobile ? 14 : 18);
-    const titleLines = g.wrapText(ev.title, contentW - s(24), titlePx).length;
+    const titleLines = es.wrapText(ev.title, contentW - s(24), titlePx).length;
     let y = s(isMobile ? 26 : 34) + titleLines * (titlePx + s(4)) + s(isMobile ? 6 : 8);
     const bodyPx = s(isMobile ? 9 : 11);
-    y += g.wrapText(ev.text, contentW - s(24), bodyPx).length * (bodyPx + s(5));
+    y += es.wrapText(ev.text, contentW - s(24), bodyPx).length * (bodyPx + s(5));
     y += s(10);
-    y += g.wrapText(g.eventResultText, contentW - s(24), bodyPx).length * (bodyPx + s(5)) + s(10);
+    y += es.wrapText(es.eventResultText, contentW - s(24), bodyPx).length * (bodyPx + s(5)) + s(10);
     const cardW = contentW - s(16);
-    if (g.eventReward) y += g.eventRewardCardHeight(cardW, s, isMobile);
+    if (es.eventReward) y += es.rewardCardHeight(cardW, s, isMobile);
     y += s(12);
-    const r = g.columnRects(1, y, s, W, isMobile)[0];
+    const r = es.columnRects(1, y, s, W, isMobile)[0];
     g.input.mouseX = r.x + r.width / 2; g.input.mouseY = r.y + r.height / 2; g.input.mouseDown = true;
     void H;
   });
   await sleep(200);
-  const afterContinue = await page.evaluate(() => ({ state: window.__game.state, reward: window.__game.eventReward }));
+  const afterContinue = await page.evaluate(() => ({ state: window.__game.state, reward: window.__game.scenes.event.eventReward }));
   check('event Continue -> map, card cleared', afterContinue.state === 'map' && !afterContinue.reward, `state=${afterContinue.state}`);
 
   // 6. Reward screen Skip declines without granting.
+  // columnRects for the reward screen → RewardScene (TS private, JS-accessible via g.scenes.reward).
   await page.evaluate(() => { const g = window.__game; g.startNewGame(); g.state = 'playing'; });
   await sleep(150);
   // offerArtifactReward is private but reachable at runtime; drive it directly.
@@ -192,13 +202,14 @@ async function run(label, viewport, shotPrefix) {
   await sleep(150); // let the disarm clear while released
   await page.evaluate(() => {
     const g = window.__game;
-    const { s, W, isMobile } = g.screenScale();
+    const rs = g.scenes.reward;
+    const { s, W, isMobile } = rs.screenScale();
     const cardW = Math.min(W - s(32), s(isMobile ? 340 : 460)); void cardW;
     const cardH = s(isMobile ? 74 : 68);
     const gap = s(12);
     const topY = s(isMobile ? 72 : 92);
     const skipY = topY + g.rewardChoices.length * (cardH + gap) + s(4);
-    const r = g.columnRects(1, skipY, s, W, isMobile)[0];
+    const r = rs.columnRects(1, skipY, s, W, isMobile)[0];
     g.input.mouseX = r.x + r.width / 2; g.input.mouseY = r.y + r.height / 2; g.input.mouseDown = true;
   });
   await sleep(200);
