@@ -3,11 +3,15 @@
 //
 // Felix (2026-07-05): "rework the level-up system so it uses a skill tree instead."
 // New contract: a level-up during a wave fires its juice but does NOT pause the fight —
-// it banks 1 skill point (g.skillTree.availablePoints). Points are spent on the
+// it banks 1 skill point (g.skillTree.availablePoints). Points are allocated on the
 // between-waves skill-tree screen: enterShop opens 'skilltree' ON TOP of the staged shop
-// when points are banked; spending a point applies its bonus to the live stats and
+// when points are banked; allocating a node applies its bonus to the live stats and
 // Continue (finishSkillTree) lands the player on the SHOP. The SKILLS shop button reopens
 // the tree. A new run resets the tree (no leak between runs).
+//
+// SkillTree API (post-rework): spend()→allocate(), canSpend()→canAllocate(),
+// rankOf()→isAllocated() [nodes are boolean: either allocated or not, no multi-rank],
+// isUnlocked()→isReachable(). Node IDs are arm-keyed: 'might_gate', 'might_a1', etc.
 //
 // TS `private` is compile-time only, so g.grantXP / g.enterShop / g.skillTree / g.state /
 // g.openSkillTree / g.finishSkillTree are reachable at runtime. Boots a real wave.
@@ -73,21 +77,22 @@ const result = await page.evaluate(() => {
   g.enterShop();
   out.shopOpensSkillTree = g.state === 'skilltree';            // opened on top of staged shop
 
-  // --- 3) Spending a point on the first offense node applies its damage bonus live. ---
+  // --- 3) Allocating a node (might_gate, adjacent to start_gunner) applies damage bonus. ---
+  // might arm primary kind = 'dmg': delta { field:'damageMult', mul:1.04 } = +4% damage.
   const dmgBefore = g.playerStats.getDamage();
-  const spent = g.skillTree.spend('sharpened');               // +8% damage / rank
+  const spent = g.skillTree.allocate('might_gate');
   g.skillTree.recomputeInto(g.playerStats);
   out.spendSucceeded = spent === true;
   out.pointConsumed = g.skillTree.availablePoints === 1;       // 2 → 1
-  out.rankRecorded = g.skillTree.rankOf('sharpened') === 1;
+  out.nodeAllocated = g.skillTree.isAllocated('might_gate') === true;
   const dmgAfter = g.playerStats.getDamage();
-  out.damageBonusApplied = dmgAfter > dmgBefore * 1.05;        // ~+8%
+  out.damageBonusApplied = dmgAfter > dmgBefore * 1.02;        // +4% from dmg minor
 
-  // --- 4) A locked node cannot be bought until its prerequisite has a rank. ---
-  // 'deadeye' requires 'rapidfire' >= 1, which we haven't bought.
-  out.lockedNodeUnbuyable = g.skillTree.canSpend('deadeye') === false;
-  g.skillTree.spend('rapidfire');                              // unlock its child chain a step
-  out.childUnlocksAfterParent = g.skillTree.isUnlocked('deadeye') === true;
+  // --- 4) A node not adjacent to any allocated node cannot be bought. ---
+  // 'might_nA' is adjacent to 'might_a1', which is NOT yet allocated.
+  out.lockedNodeUnbuyable = g.skillTree.canAllocate('might_nA') === false;
+  g.skillTree.allocate('might_a1');                            // now might_nA becomes reachable
+  out.childUnlocksAfterParent = g.skillTree.isReachable('might_nA') === true;
 
   // --- 5) Continue (finishSkillTree) with points still banked lands on the SHOP. ---
   g.finishSkillTree();
@@ -98,15 +103,17 @@ const result = await page.evaluate(() => {
   out.reopensFromShop = g.state === 'skilltree';
   g.finishSkillTree();
 
-  // --- 7) maxRank cap: spending past a node's max is rejected. ---
-  // sharpened maxRank 5, currently rank 1. Give plenty of points and over-spend.
-  g.skillTree.availablePoints = 20;
-  for (let i = 0; i < 10; i++) g.skillTree.spend('sharpened');
-  out.respectsMaxRank = g.skillTree.rankOf('sharpened') === 5;
+  // --- 7) Double-allocate: re-allocating an already-allocated node is rejected. ---
+  // might_gate is already in tree.allocated; allocate() must return false and not
+  // decrease availablePoints (which is now 0 after steps 3+4, so reset it first).
+  g.skillTree.availablePoints = 5;
+  const pointsBefore = g.skillTree.availablePoints;
+  const doubleResult = g.skillTree.allocate('might_gate');     // already allocated
+  out.doubleAllocateBlocked = doubleResult === false && g.skillTree.availablePoints === pointsBefore;
 
   // --- 8) A new run resets the tree (no leak between runs). ---
   g.startNewGame();
-  out.newRunResetsTree = g.skillTree.availablePoints === 0 && g.skillTree.rankOf('sharpened') === 0;
+  out.newRunResetsTree = g.skillTree.availablePoints === 0 && g.skillTree.isAllocated('might_gate') === false;
   // And the reset pushed identity bonuses back into stats.
   out.bonusesResetToIdentity = g.playerStats.skillDamageMult === 1;
 
@@ -139,9 +146,9 @@ errors.forEach(e => console.log('  ', e));
 console.log('Screenshots →', OUT);
 
 const checks = ['leveledOnce','noScreenMidWave','pointBanked','fightKeptRunning','twoBanked',
-  'shopOpensSkillTree','spendSucceeded','pointConsumed','rankRecorded','damageBonusApplied',
+  'shopOpensSkillTree','spendSucceeded','pointConsumed','nodeAllocated','damageBonusApplied',
   'lockedNodeUnbuyable','childUnlocksAfterParent','continueLandsOnShop','reopensFromShop',
-  'respectsMaxRank','newRunResetsTree','bonusesResetToIdentity'];
+  'doubleAllocateBlocked','newRunResetsTree','bonusesResetToIdentity'];
 const pass = result && !result.fatal && checks.every(k => result[k] === true) && errors.length === 0;
 console.log(`\n${checks.filter(k => result && result[k] === true).length}/${checks.length} checks passed`);
 console.log('RESULT:', pass ? 'PASS ✅' : 'FAIL ❌');
