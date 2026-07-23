@@ -6,6 +6,26 @@ portrait viewport).
 
 ---
 
+## 2026-07-24 (night) — feat(shop): transformation progress hints on shop cards · `378f1b2` · live `index-BAM5TyH_.js` ✓
+
+**Player-visible:** shop cards now telegraph transformation progress so players can plan their builds instead of discovering synergies by accident.
+
+Transformations are powerful threshold bonuses (e.g. Berserker Rage: collect 3 melee items → +50% damage, +20% speed). Previously invisible until they fired — a player could buy melee items and get the transformation without knowing it was coming, missing the strategic dimension entirely.
+
+**What shows now:**
+- **Purple border** on any shop card that would unlock a transformation this purchase (2/3 → 3/3)
+- **"✦ BERSERKER RAGE"** text indicator (lavender, right-aligned in the synergy row) on completion cards
+- **"2/3 BERSERKER"** style progress text (violet) for intermediate steps — shown only once you own ≥1 item in the set (spoiler-conscious: zero-progress sets stay hidden until you've started one)
+- COMBOS overlay legend updated with purple border explanation
+
+**Border priority (high → low):** Gold (completes duo) → Purple (unlocks transformation) → Orange (evolution) → Blue (duplicate/stacks) → Green (tag synergy)
+
+Implementation: new `getCardTransformInfo()` method in `ShopScene.ts` queries `ps.transformations.getProgress(tag)` for each item tag, filtering already-active transformations and zero-progress sets. No deps interface changes needed — `PlayerStats.transformations` is already public.
+
+TypeScript: tsc clean. QA: qa-live-smoke PASS, qa-catalog-integrity CLEAN.
+
+---
+
 ## 2026-07-23 (evening) — fix(audio): AudioContext mobile suspended-state guard · `71b3e21` · live `index-DO5Dd45J.js` ✓
 
 **Player-visible:** audio (SFX + background music) now unlocks correctly on iOS Safari and Chrome mobile.
