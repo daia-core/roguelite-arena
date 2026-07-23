@@ -62,7 +62,9 @@ await pg.evaluate(() => {
 await frame();
 
 const read = () => pg.evaluate(() => ({
-  zoom: window.__game.stZoom,
+  // SkillTreeScene.zoom is TS-private but accessible at runtime via scenes.skilltree.
+  // window.__game.stZoom was never wired → always undefined → fixed here.
+  zoom: window.__game.scenes?.skilltree?.zoom,
   state: window.__game.state,
   spent: window.__game.skillTree.spentCount(),
 }));
