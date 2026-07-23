@@ -17,9 +17,19 @@ export class AudioManager {
     this.masterGain.gain.value = 0.3; // Lower default volume
   }
 
+  /**
+   * Resume the AudioContext if it's suspended (required on iOS Safari and
+   * Chrome mobile — context starts suspended until a user-gesture unlock).
+   * No-op if already running. Called before any audio output.
+   */
+  private _ensureRunning(): void {
+    if (this.ctx.state === 'suspended') void this.ctx.resume();
+  }
+
   // Play a simple beep sound
   private playTone(frequency: number, duration: number, type: OscillatorType = 'sine', volume: number = 0.3): void {
     if (!this.enabled) return;
+    this._ensureRunning();
 
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
@@ -300,6 +310,7 @@ export class AudioManager {
   /** Start the atmospheric combat loop. No-op if already playing. */
   startMusic(): void {
     if (this._musicPlaying || !this.enabled) return;
+    this._ensureRunning();
     this._musicPlaying = true;
     this._scheduleMusicLoop();
   }
