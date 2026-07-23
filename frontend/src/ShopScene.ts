@@ -20,6 +20,7 @@ import { AudioManager } from './AudioManager';
 import { pointInRect, formatShort } from './utils';
 import { drawPanel, DARK_WOOD_THEME } from './pixel/panel';
 import { DUO_COMBOS } from './DuoSystem';
+import { TRANSFORMATIONS } from './TransformationSystem';
 import { SkillTree } from './SkillTree';
 import type { Evolution } from './EvolutionSystem';
 
@@ -653,6 +654,25 @@ export class ShopScene implements Scene {
     return null;
   }
 
+  /** Returns progress toward the best-fitting locked transformation this item contributes to.
+   *  Only shown when the player has ≥1 item in the set already (so it's a meaningful hint). */
+  private getCardTransformInfo(item: Item): { name: string; current: number; required: number; wouldComplete: boolean } | null {
+    const ps = this.deps.getPlayerStats();
+    let best: { name: string; current: number; required: number; wouldComplete: boolean } | null = null;
+    for (const tag of item.tags) {
+      const xf = Object.values(TRANSFORMATIONS).find(t => t.requiredTag === tag);
+      if (!xf) continue;
+      if (ps.transformations.hasTransformation(xf.id)) continue; // already active
+      const { current, required } = ps.transformations.getProgress(tag);
+      if (current === 0) continue; // no progress yet — don't spoil it
+      const wouldComplete = current + 1 >= required;
+      if (!best || (wouldComplete && !best.wouldComplete) || current > best.current) {
+        best = { name: xf.name, current, required, wouldComplete };
+      }
+    }
+    return best;
+  }
+
   // ─── Draw ─────────────────────────────────────────────────────────────────
 
   private drawShop(): void {
@@ -879,10 +899,12 @@ export class ShopScene implements Scene {
       const duoInfo = this.getCardDuoInfo(item);
       const completesDuo = duoInfo?.completes ?? false;
       const evoInfo = this.getCardEvolutionInfo(item);
+      const transformInfo = this.getCardTransformInfo(item);
 
       drawPanel(ctx, x, y, itemWidth, itemHeight, DARK_WOOD_THEME, 4, i);
       let borderColor = rarityColor;
       if (completesDuo) borderColor = '#ffd43b';
+      else if (transformInfo?.wouldComplete) borderColor = '#a855f7';
       else if (evoInfo) borderColor = '#ff9f43';
       else if (isDuplicate) borderColor = '#4a9eff';
       else if (hasTagMatch || hasSynergy) borderColor = '#7bd94a';
@@ -976,12 +998,20 @@ export class ShopScene implements Scene {
         isTrinket ? '#c084fc' : '#4ec9b0',
       );
 
-      if (completesDuo || evoInfo || duoInfo || hasTagMatch || hasSynergy) {
+      if (completesDuo || evoInfo || transformInfo || duoInfo || hasTagMatch || hasSynergy) {
         let indicatorText = '';
         let indicatorColor = '#7bd94a';
         if (completesDuo && duoInfo) { indicatorText = duoInfo.name.toUpperCase(); indicatorColor = '#ffd43b'; }
         else if (evoInfo) { indicatorText = `EVO: ${evoInfo.name.toUpperCase()}`; indicatorColor = '#ff9f43'; }
+        else if (transformInfo?.wouldComplete) {
+          indicatorText = `✦ ${transformInfo.name.toUpperCase()}`;
+          indicatorColor = '#c084fc';
+        }
         else if (duoInfo) { indicatorText = `+ ${duoInfo.partner}`; indicatorColor = '#74c0fc'; }
+        else if (transformInfo) {
+          indicatorText = `${transformInfo.current + 1}/${transformInfo.required} ${transformInfo.name.split(' ')[0].toUpperCase()}`;
+          indicatorColor = '#a78bfa';
+        }
         else if (hasTagMatch) { indicatorText = `${matchingTags.map(t => t.toUpperCase()).join('/')} FIT`; indicatorColor = '#7bd94a'; }
         else if (hasSynergy) { indicatorText = 'GOOD FIT'; indicatorColor = '#7bd94a'; }
         if (indicatorText) {
@@ -1423,6 +1453,7 @@ export class ShopScene implements Scene {
 
     const legend: Array<[string, string]> = [
       ['#ffd43b', 'Gold border = completes a COMBO'],
+      ['#a855f7', 'Purple border = unlocks a TRANSFORMATION'],
       ['#7bd94a', 'Green border = fits your build (tag synergy)'],
       ['#4a9eff', 'Blue border = you already own it (stacks)'],
     ];

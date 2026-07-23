@@ -64,7 +64,9 @@ const out = await page.evaluate(async () => {
     for (let i = 0; i < steps; i++) {
       g.update(dt);
       if (g.projectiles) g.projectiles.length = 0;         // no player offense
+      if (g.enemies) g.enemies.length = 0;                 // no enemy attacks (pacing test; waveEnemiesRemaining tracks pledges, not live count)
       if (g.player) g.player.health = g.player.maxHealth;  // stay alive
+      if (g.state === 'gameover') g.state = 'playing';     // recover from player death mid-frame
       const elapsed = 1 - Math.max(0, wm.waveTimer) / dur;
       // released fraction = pledged (out of budget) so far
       const rel = 1 - Math.max(0, wm.waveEnemiesRemaining) / total;
