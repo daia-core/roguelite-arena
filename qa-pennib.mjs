@@ -114,13 +114,16 @@ const result = await page.evaluate(() => {
   g.startNewGame();
   if (item) g.playerStats.addItem(item);
   out.loadedHeld = g.playerStats.hasLoadedShot() === true;
+  // Capture base ranged damage BEFORE the drive so the triple-damage check doesn't depend
+  // on shot 9 being separately recorded — with dt=0.3 shots 9+10 can land in the same frame,
+  // leaving dmgAtShot[9] undefined and making the old "shot9 * 3" comparison false.
+  const baseDamage = g.playerStats.getRangedDamage();
   const held = driveShots(21);
   out.cadenceCorrect =
     held.loadedAtShot[10] === true && held.loadedAtShot[20] === true &&
     [1,2,3,4,5,6,7,8,9,11,12,13,14,15,16,17,18,19].every(n => held.loadedAtShot[n] === false);
-  // triple damage: shot 10 (loaded) vs shot 9 (normal)
-  out.tripleDamage = !!held.dmgAtShot[9] && !!held.dmgAtShot[10] &&
-    near(held.dmgAtShot[10], held.dmgAtShot[9] * 3);
+  // triple damage: loaded shot (shot 10) == 3 × base ranged damage
+  out.tripleDamage = !!held.dmgAtShot[10] && near(held.dmgAtShot[10], baseDamage * 3);
   out.piercesAll = (held.pierceAtShot[10] || 0) >= 999;
 
   // === 7. Control: no item -> no loaded shots, counter never ticks. ===
