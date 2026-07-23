@@ -6,6 +6,17 @@ portrait viewport).
 
 ---
 
+## 2026-07-23 (evening) — fix(audio): AudioContext mobile suspended-state guard · `71b3e21` · live `index-DO5Dd45J.js` ✓
+
+**Player-visible:** audio (SFX + background music) now unlocks correctly on iOS Safari and Chrome mobile.
+
+On mobile browsers, `AudioContext` starts suspended and must be resumed after a user gesture —
+without this, all audio silently failed on mobile. Fix: `_ensureRunning()` private helper calls
+`ctx.resume()` when the context is suspended, invoked from `startMusic()` (user taps "Start Wave")
+and `playTone()` (all tone-based SFX). No gameplay changes. QA: 7/7 music tests pass.
+
+---
+
 ## 2026-07-23 (night) — feat(audio): atmospheric background music loop · `4ce071b` · live `index-CIMO4ivs.js` ✓
 
 **Player-visible:** atmospheric Am-key ambient loop plays throughout combat.
