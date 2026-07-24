@@ -6,6 +6,24 @@ portrait viewport).
 
 ---
 
+## 2026-07-25 (night) — fix(feel): projectile hurtbox forgiveness · `(pending)` · live `(pending)` ✓
+
+**Player-visible:** dense bullet waves now feel fair — near-misses from enemy projectiles no longer punish you for skillful kiting.
+
+Enemy bullets previously used the full 15px body radius for collision, meaning a projectile grazing the edge of your sprite would connect. Genre convention (Brotato, Vampire Survivors, Enter the Gungeon, Binding of Isaac) uses a **smaller "true hitbox"** inside the visual sprite so near-misses read as skill, not cheating RNG.
+
+**What changed:**
+- Enemy **projectile** hits now test against **9.75px** (65% of body radius) rather than the full 15px. A bullet has to cross ~5px past the edge of the visual sprite to actually hit.
+- **Contact damage** (enemies touching you) stays at full 15px — body contact is intentional and unambiguous.
+- **Pickup radius** (health orbs) stays at full 15px — generous collection area is good UX.
+- **AoE zone damage** (poison clouds, etc.) stays at full 15px — you're standing in it, it should hit.
+
+Implementation: `Game.PLAYER_PROJ_HURTBOX = 0.65` constant, applied only to the `segmentCircleHit` check in the enemy-projectile→player branch. One constant, one line change. TypeScript clean; live smoke PASS.
+
+This was flagged in `DESIGN-BUILD-DIVERSITY-2026-07-02.md` §Part 1 as "Low-risk, high feel payoff" and is the last open find from that hitbox review.
+
+---
+
 ## 2026-07-24 (night) — feat(shop): transformation progress hints on shop cards · `378f1b2` · live `index-BAM5TyH_.js` ✓
 
 **Player-visible:** shop cards now telegraph transformation progress so players can plan their builds instead of discovering synergies by accident.

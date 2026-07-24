@@ -230,6 +230,11 @@ export class Game {
   // unavoidable contact hits pierce less. (Felix, 2026-07-05: ranged felt like 1 HP.)
   private static readonly RANGED_ARMOR_PEN = 0.5;
   private static readonly CONTACT_ARMOR_PEN = 0.25;
+  // Projectile-only hurtbox forgiveness (genre convention — Isaac, Brotato, VS all do this):
+  // enemy bullets use a smaller true hitbox than the visual sprite so near-misses feel fair
+  // in dense bullet waves. Contact damage and pickup radius stay at full body radius (15px).
+  // At 0.65: true hurtbox ≈ 9.75px; 5px past the visual edge is forgiven.
+  static readonly PLAYER_PROJ_HURTBOX = 0.65;
 
   // Active Skill System — dual-slot cooldowns (Q = primary, E = secondary).
   private activeSkillCooldown: number = 0;   // slot Q
@@ -1481,8 +1486,9 @@ export class Game {
           }
         }
       } else {
-        // Enemy projectile hits player
-        if (segmentCircleHit(px0, py0, proj.x, proj.y, this.player.x, this.player.y, this.player.radius + proj.radius)) {
+        // Enemy projectile hits player — use the reduced hurtbox so near-misses feel fair.
+        // Contact damage (enemies touching the player) stays at full body radius.
+        if (segmentCircleHit(px0, py0, proj.x, proj.y, this.player.x, this.player.y, this.player.radius * Game.PLAYER_PROJ_HURTBOX + proj.radius)) {
           const damaged = this.player.takeDamage(proj.damage, Game.RANGED_ARMOR_PEN);
           if (damaged) {
             this.applyThorns(proj.damage);
