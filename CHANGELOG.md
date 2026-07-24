@@ -6,7 +6,7 @@ portrait viewport).
 
 ---
 
-## 2026-07-25 (night) — fix(feel): projectile hurtbox forgiveness · `(pending)` · live `(pending)` ✓
+## 2026-07-25 (night) — fix(feel): projectile hurtbox forgiveness · `c98065d` · live `index-CV6_JR0N.js` ✓
 
 **Player-visible:** dense bullet waves now feel fair — near-misses from enemy projectiles no longer punish you for skillful kiting.
 
