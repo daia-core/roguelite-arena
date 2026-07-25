@@ -2885,6 +2885,23 @@ export class Game {
         this.renderer.addImpactFlash(nearest.x, nearest.y);
       }
     }
+    // Burn-spread (Funeral Pyre): a burning enemy that dies spreads fire to the nearest
+    // non-burning neighbor, keeping the chain alive one hop at a time.
+    if (enemy.burnSpreads && enemy.burnTimer > 0) {
+      let nearest: Enemy | null = null;
+      let bd = 140 * 140;
+      for (const other of this.enemies) {
+        if (other === enemy || other.dead || other.burnTimer > 0) continue;
+        const d = (other.x - enemy.x) ** 2 + (other.y - enemy.y) ** 2;
+        if (d < bd) { bd = d; nearest = other; }
+      }
+      if (nearest) {
+        nearest.burnTimer = 2.0;
+        nearest.burnSpreads = true; // keep the chain going
+        nearest.daggerDot = enemy.daggerDot;
+        this.renderer.addImpactFlash(nearest.x, nearest.y);
+      }
+    }
     // Re-entrancy guard for the async path: if the killing DoT/doom was a dagger's, don't
     // spawn a fresh generation of daggers — mirrors the synchronous proc-kill guard.
     this.handleEnemyKill(enemy, enemy.daggerDot);
@@ -2944,6 +2961,7 @@ export class Game {
     // Burn (Ignite): short, fast fire DoT.
     if (this.playerStats.rollProc(this.playerStats.getBurnChance())) {
       enemy.burnTimer = Math.max(enemy.burnTimer, 2.0);
+      if (this.playerStats.hasBurnSpread()) enemy.burnSpreads = true;
       enemy.daggerDot = fromDagger;
     }
 

@@ -407,6 +407,7 @@ export interface Item {
   bleed?: number; // chance to Bleed: DoT that hits harder while the enemy is moving (punishes rushers)
   slow?: number; // Chill/Slow strength (0..0.65): reduces enemy movement speed on hit (steady control, not a proc)
   poisonSpread?: boolean; // a poisoned enemy that dies infects the nearest enemy (chain plague)
+  burnSpread?: boolean;   // a burning enemy that dies spreads burn to the nearest non-burning enemy (funeral pyre)
   doom?: number; // chance to mark with Doom: stores a share of damage, then detonates — executes if stored >= current HP
   wound?: number; // chance on-hit to Wound: amplifies ALL damage-over-time already on that enemy (DoT multiplier)
   // New-architecture status-effect procs (StatusEffectEngine)

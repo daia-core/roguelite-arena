@@ -251,7 +251,7 @@ interface ItemAgg {
   // wave-end economy: gold-per-wave multiplier (additive across copies)
   warChest: number;
   // boolean
-  explosionOnHit: boolean; shield: boolean; homing: boolean; poison: boolean; poisonSpread: boolean;
+  explosionOnHit: boolean; shield: boolean; homing: boolean; poison: boolean; poisonSpread: boolean; burnSpread: boolean;
   auxMelee: boolean; bombDrop: boolean; novaPulse: boolean; fourleafCharm: boolean;
   soulTithe: boolean; loadedShot: boolean;
 }
@@ -277,7 +277,7 @@ function freshAgg(): ItemAgg {
     executeThreshold: 0,
     daggerCount: 0,
     warChest: 0,
-    explosionOnHit: false, shield: false, homing: false, poison: false, poisonSpread: false,
+    explosionOnHit: false, shield: false, homing: false, poison: false, poisonSpread: false, burnSpread: false,
     auxMelee: false, bombDrop: false, novaPulse: false, fourleafCharm: false,
     soulTithe: false, loadedShot: false,
   };
@@ -579,6 +579,7 @@ export class PlayerStats {
       if (item.homing) a.homing = true;
       if (item.poison) a.poison = true;
       if (item.poisonSpread) a.poisonSpread = true;
+      if (item.burnSpread) a.burnSpread = true;
       if (item.auxMelee) a.auxMelee = true;
       if (item.bombDrop) a.bombDrop = true;
       if (item.novaPulse) a.novaPulse = true;
@@ -1119,6 +1120,10 @@ export class PlayerStats {
     return this.ensureAgg().poisonSpread;
   }
 
+  hasBurnSpread(): boolean {
+    return this.ensureAgg().burnSpread;
+  }
+
   getDoomChance(): number {
     return Math.min(1, this.ensureAgg().doom);
   }
@@ -1278,7 +1283,7 @@ export class PlayerStats {
     'brittleChance', 'dazedChance', 'disorientedChance',
   ];
   private static readonly OFFER_BOOL_FIELDS: (keyof Item)[] = [
-    'explosionOnHit', 'shield', 'homing', 'poison', 'poisonSpread', 'auxMelee',
+    'explosionOnHit', 'shield', 'homing', 'poison', 'poisonSpread', 'burnSpread', 'auxMelee',
     'bombDrop', 'novaPulse',
   ];
 

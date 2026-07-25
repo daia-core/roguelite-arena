@@ -582,6 +582,8 @@ export class Enemy {
   bleedTimer: number = 0;
   /** Poison on this enemy spreads to a neighbor on death (set when a poison-spread build applies poison). */
   poisonSpreads: boolean = false;
+  /** Burn on this enemy spreads to the nearest non-burning enemy on death (Funeral Pyre item). */
+  burnSpreads: boolean = false;
   /**
    * True when the DoT/doom currently on this enemy was applied by a Ceremonial Dagger. Read by
    * killByDot so a dagger's delayed (DoT/doom) kill does NOT spawn a fresh generation of daggers —

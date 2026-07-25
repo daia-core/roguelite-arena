@@ -1037,6 +1037,19 @@ export const ITEM_CATALOG: Item[] = [
       armor: -3
     },
     {
+      id: 'funeral_pyre_t2',
+      name: 'Funeral Pyre',
+      description: '50% chance to Ignite; burning enemies spread fire to the nearest enemy on death',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 38,
+      icon: '🪦',
+      unlocked: true,
+      tags: ['elemental'],
+      burn: 0.5,
+      burnSpread: true
+    },
+    {
       id: 'serrated_edge_t2',
       name: 'Serrated Edge',
       description: '35% chance to Bleed — hits harder while the enemy is moving',
