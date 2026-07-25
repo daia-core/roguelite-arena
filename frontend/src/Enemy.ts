@@ -785,6 +785,8 @@ export class Enemy {
   bossAoeCooldown: number = 3;
   /** Rotating index for multi-part telegraphed patterns (e.g. cross slams). */
   bossAoePhase: number = 0;
+  /** Flamefiend phase-3: timer for dropping fire-trail hazard zones behind the boss. */
+  flameTrailTimer: number = 0;
 
   // MINIBOSS: a scaled, styled elite version of a regular enemy (set by
   // WaveManager). It gets a menacing tint, a larger body, and its own
@@ -1353,6 +1355,23 @@ export class Enemy {
           } else if (this.bossPhase === 3) {
             this.typeData.speed = 95;
             this.typeData.shootRate = 2.8;
+            // Phase 3 — fire trail: drop a small burning zone at the Flamefiend's current
+            // position every 0.55s. Brief telegraph (0.3s) so it's technically dodgeable
+            // but punishes standing still. The "floor is lava" mechanic that distinguishes
+            // this boss from just "a faster Flamefiend".
+            this.flameTrailTimer -= dt;
+            if (this.flameTrailTimer <= 0) {
+              aoeAttacks = aoeAttacks ?? [];
+              aoeAttacks.push({
+                x: this.x,
+                y: this.y,
+                radius: 50,
+                damage: this.typeData.damage * 1.4,
+                telegraph: 0.3,
+                color: '#ff4800'
+              });
+              this.flameTrailTimer = 0.55;
+            }
           }
         }
 
