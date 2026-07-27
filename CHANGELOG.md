@@ -6,6 +6,19 @@ portrait viewport).
 
 ---
 
+## 2026-07-27 (evening) — fix(feel): visual overlays for 4 previously-invisible status effects · `235783d` · live `index-Cm8zclUT.js` ✓
+
+**Player-visible:** Four status effects that had real combat impact but zero visual representation now show pixel-art overlays on affected enemies:
+
+- **STUN** — white cross-spark pixels orbit the enemy at high speed (faster than dazed's yellow squares, clearly "electric"). Stun completely stops enemy movement and actions.
+- **SHATTERED** — dark gray shard chips fall downward off the enemy body (armor being stripped away). Stacks up to 4 visible chips.
+- **DEBILITATED** — a small downward dark-red arrow appears above the enemy's head (enemy offense weakened). Clear "reduced power" signal.
+- **CRIPPLED** — brown chain-link pixels appear on each side of the enemy, slightly swaying (attack range reduced).
+
+Previously these four mechanics triggered correctly in the simulation but were invisible to the player — you'd apply a stun item and the enemy would freeze with no visual signal that the CC landed. All 17 status-effect types now have distinct visual representation. Also expanded the `drawStatusEffects` fast-reject guard to skip the render loop correctly when none of the new effects are active. TypeScript strict clean; catalog-integrity CLEAN (1900 items); status-engines PASS; live-smoke PASS (0 errors, 30+ kills).
+
+---
+
 ## 2026-07-27 (late afternoon) — fix(feel): boss health bar phase threshold markers · `e8f7e27` · live `index-EzwAYat4.js` ✓
 
 **Player-visible:** The boss health bar now shows thin white tick marks at the 66% and 33% HP boundaries — exactly where Phase 2 and Phase 3 trigger. When the boss approaches a threshold (within 10% HP), the tick mark pulses slightly to warn the player that a behavior change is imminent.
