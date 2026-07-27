@@ -6,6 +6,35 @@ portrait viewport).
 
 ---
 
+## 2026-07-27 (afternoon) — fix(feel): transformation unlocks now flash + toast · `dea841c` · pending verify
+
+**Player-visible:** Unlocking a transformation now shows the same visual fanfare as a duo unlock — a screen flash in the transformation's color + a shop toast with the transformation icon and name (e.g. "⚔️ Berserker Rage!"). Previously, transformations only triggered the audio cue with no visual feedback, even though duos got audio + screen flash + console log.
+
+Transformations (collect 3 items from a tag set → permanent stat bonus) are described as "a once-per-run milestone" in the code, but their unlock felt underwhelming. Fix: import TRANSFORMATIONS in Game.ts, use the transformation's own `glowColor` for the flash (alpha 0.5, stronger than the duo 0.3), and show a shop toast. TypeScript clean.
+
+---
+
+## 2026-07-26 (night) — feat(boss): Flamefiend phase-3 fire trail · `8698953` · live `index-w4dguaW9.js` ✓
+
+**Player-visible:** The Flame Fiend's phase 3 now leaves burning hazard zones in its wake — the "floor is lava" mechanic that makes this boss feel distinct from just "a faster, harder shooter."
+
+Previously, the Flamefiend's only phase 3 escalation was higher speed (95) and faster fire rate (2.8/s). This made it mechanically the weakest of the 5 bosses: the other four all have unique pattern changes (Necrolord circles + teleport dashes; Voidbeast teleports + void rings; Stormking lightning dashes; Ancientgolem stomp slams). Flamefiend just rushed faster.
+
+**What changes now:**
+- Phase 3 only: every 0.55s the Flamefiend drops a 50px burning zone at its current position
+- Brief 0.3s telegraph (short but visible — the boss's position is predictable, so the pattern is legible)
+- Zone damage = boss damage × 1.4 (respects wave scaling)
+- Orange-red color distinct from the larger telegraphed AoE pattern
+- Creates a "fire trail" of hazard zones that force the player to stay mobile and think ahead about the boss's path, not just dodge incoming projectiles
+
+**Why it works:** the player can always see where the Flamefiend is moving, making the trail patterns a skill test (read the boss's trajectory, don't stand where it's been) rather than random punishment. It rewards aggressive play (close pressure changes the boss's heading) while taxing passive kiting.
+
+**Implementation:** one new `flameTrailTimer: number = 0` field on Enemy; 12 lines in the Flamefiend phase-3 block pushing a short-telegraph AoE into the standard `aoeAttacks` return channel. No new systems, no interface changes.
+
+TypeScript: tsc clean. QA: qa-live-smoke PASS (38 kills, full wave cleared), qa-catalog-integrity CLEAN (1900 items). Live production build sha `8698953` confirmed on `frontend-sepia-kappa-19.vercel.app` serving `index-w4dguaW9.js`.
+
+---
+
 ## 2026-07-25 (night) — fix(feel): projectile hurtbox forgiveness · `c98065d` · live `index-CV6_JR0N.js` ✓
 
 **Player-visible:** dense bullet waves now feel fair — near-misses from enemy projectiles no longer punish you for skillful kiting.
