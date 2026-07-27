@@ -262,6 +262,8 @@ export class Game {
     className: '',
     runDurationMs: 0,
     itemsBought: [],
+    duosActive: [],
+    transformationsActive: [],
   };
 
   // Wave modifier announcement
@@ -3593,6 +3595,10 @@ export class Game {
       className: getClassById(this.selectedClassId)?.name ?? '',
       runDurationMs: this.runStartTime > 0 ? Date.now() - this.runStartTime : 0,
       itemsBought: this.playerStats.items.map(item => ({ icon: item.icon, rarity: item.rarity })),
+      transformationsActive: this.playerStats.transformations.getActiveTransformations()
+        .map(t => ({ icon: t.icon, name: t.name, glowColor: t.glowColor })),
+      duosActive: this.playerStats.getActiveDuos()
+        .map(d => ({ icon: d.icon, name: d.name, glowColor: d.glowColor ?? '#a855f7' })),
     };
 
     // Evaluate achievements for this run — any newly earned unlock their reward item immediately

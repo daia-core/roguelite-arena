@@ -30,6 +30,10 @@ export interface GameOverStats {
   runDurationMs: number;
   /** Snapshot of the items the player had when the run ended (icon + rarity for display). */
   itemsBought: Array<{ icon: string; rarity: 'common' | 'rare' | 'epic' | 'legendary' }>;
+  /** Active duo synergies earned this run (icon + name + color for display). */
+  duosActive: Array<{ icon: string; name: string; glowColor: string }>;
+  /** Active transformations unlocked this run (icon + name + color for display). */
+  transformationsActive: Array<{ icon: string; name: string; glowColor: string }>;
 }
 
 // ─── Deps ─────────────────────────────────────────────────────────────────────
@@ -111,6 +115,14 @@ export class GameOverScene implements Scene {
     const newAch = this.deps.getNewAchievements();
     const isMobile = this.canvas.width < 800;
 
+    // Synergy data (transformations first — more impressive — then duos)
+    const synergies = [
+      ...(stats.transformationsActive ?? []),
+      ...(stats.duosActive ?? []),
+    ];
+    const hasSynergies = synergies.length > 0;
+    const synRowH = hasSynergies ? (isMobile ? 42 : 38) : 0;
+
     // Dramatic dark overlay
     ctx.save();
     ctx.globalAlpha = 0.85;
@@ -147,9 +159,9 @@ export class GameOverScene implements Scene {
       });
     }
 
-    // Stats panel — taller to fit Bosses stat + personal best
+    // Stats panel — taller to fit Bosses stat + personal best + optional synergy row
     const panelWidth = isMobile ? Math.min(380, this.canvas.width - 40) : 500;
-    const panelHeight = isMobile ? 460 : 390;
+    const panelHeight = (isMobile ? 460 : 390) + synRowH;
     const panelX = (this.canvas.width - panelWidth) / 2;
     const panelY = isMobile ? 140 : 170;
 
@@ -268,8 +280,55 @@ export class GameOverScene implements Scene {
       }
     }
 
-    // Souls earned (highlighted prominently)
-    const soulsY = statsY + lineSpacing * 5 + 20;
+    // Synergy badges (duos + transformations earned this run)
+    if (hasSynergies) {
+      const synY = itemRowY + (isMobile ? 42 : 38); // below item strip
+      const badgeFontSize = isMobile ? 13 : 12;
+      const badgePadH = isMobile ? 8 : 6;
+      const badgePadV = isMobile ? 5 : 4;
+      const badgeGap = 8;
+      ctx.font = `bold ${badgeFontSize}px Arial`;
+
+      // Measure all badges so we can centre the row
+      const badges = synergies.map(s => {
+        const label = `${s.icon} ${s.name}`;
+        const textW = ctx.measureText(label).width;
+        return { label, textW, color: s.glowColor };
+      });
+      const totalW = badges.reduce((acc, b) => acc + b.textW + badgePadH * 2, 0)
+        + badgeGap * (badges.length - 1);
+      let bx2 = Math.round(this.canvas.width / 2 - totalW / 2);
+
+      for (const badge of badges) {
+        const bw = badge.textW + badgePadH * 2;
+        const bh = badgeFontSize + badgePadV * 2;
+        const by = synY - badgeFontSize - badgePadV;
+        // Background
+        ctx.save();
+        ctx.globalAlpha = 0.25;
+        ctx.fillStyle = badge.color;
+        ctx.fillRect(bx2, by, bw, bh);
+        ctx.restore();
+        // Border
+        ctx.save();
+        ctx.globalAlpha = 0.7;
+        ctx.strokeStyle = badge.color;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(bx2, by, bw, bh);
+        ctx.restore();
+        // Text
+        ctx.save();
+        ctx.font = `bold ${badgeFontSize}px Arial`;
+        ctx.fillStyle = badge.color;
+        ctx.textBaseline = 'alphabetic';
+        ctx.fillText(badge.label, bx2 + badgePadH, synY - badgePadV);
+        ctx.restore();
+        bx2 += bw + badgeGap;
+      }
+    }
+
+    // Souls earned (highlighted prominently) — pushed down when synergy row is present
+    const soulsY = statsY + lineSpacing * 5 + 20 + synRowH;
     ctx.save();
     ctx.shadowBlur = 25;
     ctx.shadowColor = '#9370db';
