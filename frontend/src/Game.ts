@@ -8,6 +8,7 @@ import { MeleeAttack } from './MeleeAttack';
 import { Particle, DamageNumber } from './Particle';
 import { WaveManager } from './WaveManager';
 import { PlayerStats, ItemDatabase, ItemTier, classifyItemSlot, type Item } from './ItemSystem';
+import { TRANSFORMATIONS, type TransformationId } from './TransformationSystem';
 import { STARTING_CLASSES, getClassById, type StartingClass } from './Classes';
 import { SaveManager } from './SaveManager';
 import { Input } from './Input';
@@ -3142,6 +3143,14 @@ export class Game {
     // GAME FEEL: Transformation (tag-mastery) fanfare — a once-per-run milestone
     if (newTransformations.length > 0) {
       this.audio.playTransformation();
+      for (const tid of newTransformations) {
+        const xf = TRANSFORMATIONS[tid as TransformationId];
+        if (xf) {
+          this.screenEffects.flash(xf.glowColor, 0.5); // stronger than a duo unlock
+          this.shopScene?.showToast(`${xf.icon} ${xf.name}!`);
+          console.log(`🌟 TRANSFORMATION: ${xf.name} — ${xf.description}`);
+        }
+      }
     }
 
     // Update player max health if needed
