@@ -153,6 +153,20 @@ export class HUDRenderer {
         size: s(9), align: 'center', color: '#ff6b6b'
       });
       drawBar(bx, by, bw, bh, boss.health / boss.maxHealth, '#e03131', '#3c0000');
+      // Phase threshold tick marks at 66% and 33% HP — telegraph the phase
+      // transitions so players can prepare. Pulse slightly when the boss is
+      // within 10% of crossing a threshold.
+      const healthFrac = boss.health / boss.maxHealth;
+      for (const threshold of [2 / 3, 1 / 3]) {
+        const mx = bx + Math.round(bw * threshold);
+        const approaching = healthFrac > threshold && healthFrac < threshold + 0.10;
+        const pulse = approaching ? 0.6 + 0.4 * Math.abs(Math.sin(Date.now() / 280)) : 0.55;
+        ctx.save();
+        ctx.globalAlpha = pulse;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(mx - 1, by - s(2), 2, bh + s(4));
+        ctx.restore();
+      }
     }
 
     // --- Active Skill indicators (bottom-left, below the status panel) ---
