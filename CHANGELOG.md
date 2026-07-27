@@ -6,6 +6,22 @@ portrait viewport).
 
 ---
 
+## 2026-07-27 (evening) — feat(gameover): item build strip on game over screen · `0248797` · live `index-C6KACG0_.js` ✓
+
+**Player-visible:** The game over screen now shows a row of pixel-art item icons representing exactly what build you ran — replacing the old "Items: N" count text.
+
+Each icon shows the item's rarity via a coloured background and border (gray for common, blue for rare, purple for epic, gold for legendary). If more items were collected than fit in a single row, a "+N more" label appears at the end.
+
+**Why it matters:** The roguelite identity is "what crazy build did I make?" — but until now the game over screen gave you only a number. Seeing the actual icons makes the run feel memorable and rewards build-crafting. A full Berserker + bleed + poison hybrid looks very different from a pure ranged build, and now you can see that at a glance.
+
+- `GameOverStats` interface gains `itemsBought: Array<{ icon, rarity }>` — a snapshot taken at the moment the run ends.
+- `Game.gameOver()` maps `playerStats.items` to this snapshot.
+- `GameOverScene.draw()` renders the icon strip (maxPerRow = panelWidth-driven, so it adapts to portrait/landscape and mobile/desktop). Falls back gracefully to text if the array is empty (saves from older browsers without the new field).
+
+TypeScript strict clean. Live smoke PASS (0 errors, 45 kills, shop purchase confirmed). Live at `roguelite-game-blush.vercel.app`.
+
+---
+
 ## 2026-07-27 (evening) — fix(feel): visual overlays for 4 previously-invisible status effects · `235783d` · live `index-Cm8zclUT.js` ✓
 
 **Player-visible:** Four status effects that had real combat impact but zero visual representation now show pixel-art overlays on affected enemies:
