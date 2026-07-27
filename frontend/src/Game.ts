@@ -260,7 +260,8 @@ export class Game {
     soulsEarned: 0,
     personalBest: 0,
     className: '',
-    runDurationMs: 0
+    runDurationMs: 0,
+    itemsBought: [],
   };
 
   // Wave modifier announcement
@@ -3590,7 +3591,8 @@ export class Game {
       soulsEarned: this.soulsEarnedThisRun,
       personalBest: previousBest,
       className: getClassById(this.selectedClassId)?.name ?? '',
-      runDurationMs: this.runStartTime > 0 ? Date.now() - this.runStartTime : 0
+      runDurationMs: this.runStartTime > 0 ? Date.now() - this.runStartTime : 0,
+      itemsBought: this.playerStats.items.map(item => ({ icon: item.icon, rarity: item.rarity })),
     };
 
     // Evaluate achievements for this run — any newly earned unlock their reward item immediately

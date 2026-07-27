@@ -28,6 +28,8 @@ export interface GameOverStats {
   className: string;
   /** Run wall-clock duration in milliseconds. */
   runDurationMs: number;
+  /** Snapshot of the items the player had when the run ended (icon + rarity for display). */
+  itemsBought: Array<{ icon: string; rarity: 'common' | 'rare' | 'epic' | 'legendary' }>;
 }
 
 // ─── Deps ─────────────────────────────────────────────────────────────────────
@@ -207,12 +209,64 @@ export class GameOverScene implements Scene {
       color: '#ffd700'
     });
 
-    this.renderer.drawText(`Items: ${stats.itemsCollected}`, this.canvas.width / 2, statsY + lineSpacing * 4, {
-      size: statSize,
-      bold: true,
-      align: 'center',
-      color: '#a855f7'
-    });
+    // Items row — icon strip if items are available, text fallback if not
+    const itemRowY = statsY + lineSpacing * 4;
+    const ownedItems = stats.itemsBought ?? [];
+    if (ownedItems.length === 0) {
+      // Fallback: plain text count (pre-patch save or empty run)
+      this.renderer.drawText(`Items: ${stats.itemsCollected}`, this.canvas.width / 2, itemRowY, {
+        size: statSize,
+        bold: true,
+        align: 'center',
+        color: '#a855f7'
+      });
+    } else {
+      // Icon strip: coloured rarity background + pixel-art icon, up to maxPerRow
+      const boxSize = isMobile ? 36 : 32;
+      const gap = 4;
+      const stripPad = 16;
+      const maxPerRow = Math.floor((panelWidth - stripPad * 2) / (boxSize + gap));
+      const displayItems = ownedItems.slice(0, maxPerRow);
+      const overflow = ownedItems.length - displayItems.length;
+      const totalW = displayItems.length * (boxSize + gap) - gap;
+      const stripStartX = Math.round(this.canvas.width / 2 - totalW / 2);
+      const stripY = Math.round(itemRowY - boxSize / 2 + statSize / 2); // vertically centre in row
+
+      const rarityBg: Record<string, string> = {
+        common: '#6b7280', rare: '#3b82f6', epic: '#a855f7', legendary: '#ffd700',
+      };
+
+      displayItems.forEach((item, i) => {
+        const ix = stripStartX + i * (boxSize + gap);
+        const col = rarityBg[item.rarity] ?? '#6b7280';
+        // Rarity tint background
+        ctx.save();
+        ctx.globalAlpha = 0.28;
+        ctx.fillStyle = col;
+        ctx.fillRect(ix, stripY, boxSize, boxSize);
+        ctx.restore();
+        // Pixel-art icon (centred in box)
+        this.renderer.drawItemIcon(item.icon, ix + boxSize / 2, stripY, boxSize);
+        // Rarity border
+        ctx.save();
+        ctx.strokeStyle = col;
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(ix, stripY, boxSize, boxSize);
+        ctx.restore();
+      });
+
+      // "+N more" label if items were clipped
+      if (overflow > 0) {
+        const labelX = stripStartX + displayItems.length * (boxSize + gap) + 2;
+        const labelY = stripY + boxSize / 2;
+        this.renderer.drawText(`+${overflow}`, labelX, labelY, {
+          size: 13,
+          bold: true,
+          align: 'left',
+          color: '#9ca3af',
+        });
+      }
+    }
 
     // Souls earned (highlighted prominently)
     const soulsY = statsY + lineSpacing * 5 + 20;
