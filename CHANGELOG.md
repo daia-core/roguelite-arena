@@ -6,6 +6,23 @@ portrait viewport).
 
 ---
 
+## 2026-07-28 (night) — feat(gameover): synergy badges (duos + transformations) on game over screen · `81cca27` · live `index-D3x9thki.js` ✓
+
+**Player-visible:** The game over screen now shows a horizontal badge row for every duo synergy and transformation you unlocked during the run — sitting between the item icon strip and the Souls Earned tally.
+
+Each badge shows the synergy's emoji icon + name, tinted in its own glow color (e.g. Berserker Rage in crimson, Master Marksman in royal blue, Storm Surge in light blue). Transformations appear first (they're the rarer milestone), then duos. The stats panel auto-expands to fit the row; runs with no synergies see no layout change.
+
+**Why it matters:** Duos and transformations are the most build-defining outcomes in any run — the moment "oh I actually got the Storm Surge duo" is what a roguelite player replays for. But the game over screen previously showed only item counts (and as of yesterday, the item icon strip) with no indication of which synergies fired. Now the run autopsy is complete: you can see exactly what your build achieved.
+
+**What changed:**
+- `GameOverStats` gains `duosActive` and `transformationsActive` snapshot arrays (icon + name + glowColor).
+- `Game.gameOver()` populates both from `playerStats.getActiveDuos()` and `playerStats.transformations.getActiveTransformations()`.
+- `GameOverScene.draw()` renders the badge row with coloured backgrounds + borders.
+- New `qa-synergy-gameover.mjs`: injects 2 transformations + 2 duos, forces gameover state, asserts all 4 glow colors appear on-canvas. PASS (0 errors, 19k+ red, 767+ blue, 206+ storm-blue, 197+ lime pixels).
+- Live smoke PASS (0 errors, 37 kills).
+
+---
+
 ## 2026-07-27 (evening) — feat(gameover): item build strip on game over screen · `0248797` · live `index-C6KACG0_.js` ✓
 
 **Player-visible:** The game over screen now shows a row of pixel-art item icons representing exactly what build you ran — replacing the old "Items: N" count text.
