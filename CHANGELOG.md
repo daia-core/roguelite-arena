@@ -6,6 +6,16 @@ portrait viewport).
 
 ---
 
+## 2026-07-27 (late afternoon) — fix(feel): boss health bar phase threshold markers · `e8f7e27` · live `index-EzwAYat4.js` ✓
+
+**Player-visible:** The boss health bar now shows thin white tick marks at the 66% and 33% HP boundaries — exactly where Phase 2 and Phase 3 trigger. When the boss approaches a threshold (within 10% HP), the tick mark pulses slightly to warn the player that a behavior change is imminent.
+
+Bosses have a 3-phase system (behavior escalates at 66% and 33% HP with a banner and stat change), but the health bar previously gave no advance notice of where those transitions occur. This change makes phase thresholds *legible* at a glance — a player can now plan their aggression around "push hard before the Phase 2 marker" rather than discovering the transition mid-fight.
+
+Implementation: two vertical `fillRect` stripes (2px wide, extending s(2) above/below the bar) drawn at `bx + bw × (2/3)` and `bx + bw × (1/3)` in `HUDRenderer.ts`, after the health bar fill. When `healthFrac` is within 10% of a threshold, the marker pulses (alpha 0.6–1.0 at 280ms). Normal state: alpha 0.55, always visible. Markers respect the bar's s()-scaling for all viewport sizes. TypeScript clean; qa-live-smoke PASS (0 errors).
+
+---
+
 ## 2026-07-27 (afternoon) — fix(feel): transformation unlocks now flash + toast · `dea841c` · live `index-CcbvmnqH.js` ✓
 
 **Player-visible:** Unlocking a transformation now shows the same visual fanfare as a duo unlock — a screen flash in the transformation's color + a shop toast with the transformation icon and name (e.g. "⚔️ Berserker Rage!"). Previously, transformations only triggered the audio cue with no visual feedback, even though duos got audio + screen flash + console log.
