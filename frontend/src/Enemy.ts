@@ -1804,7 +1804,9 @@ export class Enemy {
       this.slowTimer <= 0 && !this.statusFX.has('fragility') &&
       !this.statusFX.has('exposed') && !this.statusFX.has('condemned') &&
       !this.statusFX.has('brittle') && !this.statusFX.has('dazed') &&
-      !this.statusFX.has('disoriented')
+      !this.statusFX.has('disoriented') && !this.statusFX.has('stun') &&
+      !this.statusFX.has('shattered') && !this.statusFX.has('debilitated') &&
+      !this.statusFX.has('crippled')
     ) return;
 
     const r = this.typeData.radius;
@@ -2007,6 +2009,59 @@ export class Enemy {
       ctx.arc(this.x, this.y, r + 4 + disoriented.stacks * 0.5, 0, Math.PI * 2);
       ctx.stroke();
       ctx.globalAlpha = 1;
+    }
+
+    // STUN — white electric cross-sparks orbiting the enemy (harder CC than slow/daze)
+    const stun = this.statusFX.get('stun');
+    if (stun && stun.stacks > 0) {
+      ctx.fillStyle = '#ffffff';
+      const count = 5;
+      for (let i = 0; i < count; i++) {
+        const angle = (t / 200 + (i * Math.PI * 2) / count) + seed;
+        const sx3 = Math.floor(this.x + Math.cos(angle) * (r + 7));
+        const sy3 = Math.floor(this.y + Math.sin(angle) * (r + 7));
+        ctx.fillRect(sx3 - 2, sy3, 5, 1);   // horizontal bar of the +
+        ctx.fillRect(sx3, sy3 - 2, 1, 5);   // vertical bar of the +
+      }
+    }
+
+    // SHATTERED — dark-gray shard fragments falling (armor stripped away)
+    const shattered = this.statusFX.get('shattered');
+    if (shattered && shattered.stacks > 0) {
+      ctx.fillStyle = '#7a7070';
+      const count = Math.min(4, shattered.stacks);
+      for (let i = 0; i < count; i++) {
+        const ph = t / 420 + seed + i * 2.5;
+        const fall = ph % 1;
+        const sx4 = Math.floor(this.x + (i - count * 0.5 + 0.5) * r * 0.45);
+        const sy4 = Math.floor(this.y + r * 0.25 + fall * r * 1.3);
+        ctx.fillRect(sx4 - 2, sy4 - 1, 4, 3);  // shard chip
+      }
+    }
+
+    // DEBILITATED — downward dark-red arrow above head (enemy offense weakened)
+    const debilitated = this.statusFX.get('debilitated');
+    if (debilitated && debilitated.stacks > 0) {
+      const ax = Math.floor(this.x);
+      const ay = Math.floor(this.y - r - 18);
+      ctx.fillStyle = '#cc3333';
+      ctx.fillRect(ax - 1, ay, 2, 4);       // shaft
+      ctx.fillRect(ax - 3, ay + 4, 6, 1);   // head row 1 (widest)
+      ctx.fillRect(ax - 2, ay + 5, 4, 1);   // head row 2
+      ctx.fillRect(ax - 1, ay + 6, 2, 1);   // tip
+    }
+
+    // CRIPPLED — brown chain-link pixels flanking the enemy (range cut)
+    const crippled = this.statusFX.get('crippled');
+    if (crippled && crippled.stacks > 0) {
+      ctx.fillStyle = '#7a5c2a';
+      const sway = Math.floor(Math.sin(t / 650 + seed) * 2);
+      // Left link
+      ctx.fillRect(Math.floor(this.x - r - 5), Math.floor(this.y - 2 + sway), 4, 4);
+      ctx.fillRect(Math.floor(this.x - r - 6), Math.floor(this.y - 1 + sway), 6, 2);
+      // Right link
+      ctx.fillRect(Math.floor(this.x + r + 1), Math.floor(this.y - 2 + sway), 4, 4);
+      ctx.fillRect(Math.floor(this.x + r), Math.floor(this.y - 1 + sway), 6, 2);
     }
 
     ctx.restore();
