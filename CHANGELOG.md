@@ -6,7 +6,7 @@ portrait viewport).
 
 ---
 
-## 2026-07-27 (afternoon) — fix(feel): transformation unlocks now flash + toast · `dea841c` · pending verify
+## 2026-07-27 (afternoon) — fix(feel): transformation unlocks now flash + toast · `dea841c` · live `index-CcbvmnqH.js` ✓
 
 **Player-visible:** Unlocking a transformation now shows the same visual fanfare as a duo unlock — a screen flash in the transformation's color + a shop toast with the transformation icon and name (e.g. "⚔️ Berserker Rage!"). Previously, transformations only triggered the audio cue with no visual feedback, even though duos got audio + screen flash + console log.
 
