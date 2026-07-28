@@ -6,6 +6,22 @@ portrait viewport).
 
 ---
 
+## 2026-07-28 (evening) — fix(visual): shattered status effect correct color + spawn position · `98fa792` · live `index-hdt6j2n5.js` ✓
+
+**Player-visible:** The `shattered` status effect (armour stripped) now renders as crisp ice-blue shard chips falling downward from the top of the enemy, instead of dark-grey chips spawning inside the enemy body.
+
+**What was wrong:**
+- Color was `#7a7070` (dark brownish-grey) instead of `#b0d8f8` (ice-blue), the color defined in `StatusEffectDefs.shattered`.
+- Spawn Y was `this.y + r*0.25 + fall*r*1.3` — starting partway through the body, so chips appeared to fall from inside the enemy rather than raining down on it.
+
+**Fix (`Enemy.ts` `drawStatusEffects()`):**
+- Color → `#b0d8f8` to match `StatusEffectDefs`.
+- Spawn Y → `this.y - r*0.8 + fall*r*2.5` — starts above/at the top of the enemy sprite, falls through the full body height.
+
+**QA:** `qa-status-visuals.mjs` PASS (shattered registered=true, correct blue chips visible, 0 errors). Live smoke PASS (0 errors, 43 kills).
+
+---
+
 ## 2026-07-28 (night) — feat(gameover): synergy badges (duos + transformations) on game over screen · `81cca27` · live `index-D3x9thki.js` ✓
 
 **Player-visible:** The game over screen now shows a horizontal badge row for every duo synergy and transformation you unlocked during the run — sitting between the item icon strip and the Souls Earned tally.
