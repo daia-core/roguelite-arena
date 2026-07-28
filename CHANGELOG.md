@@ -6,6 +6,30 @@ portrait viewport).
 
 ---
 
+## 2026-07-29 (night) — feat(items): highHpFireRate — Overflow Battery + Pristine Engine · `aba15da` · live `index-V5JqE5q_.js` ✓
+
+**Player-visible:** Two new items unlock the fire-rate axis of the high-HP build family:
+
+- **Overflow Battery** (rare, ⚡): +35% fire rate while at full HP (≥ 90% max). Rewards unhurt play with overwhelming shot speed. Stacks additively across copies.
+- **Pristine Engine** (epic, ⚡): +55% fire rate **and** +25% damage while at full HP — the "stay perfect" combo item. Stacks both high-HP axes on one pickup.
+
+Both bonuses cut off instantly the moment you take a hit that drops you below 90% HP, same threshold as Juggernaut (damage-at-full-HP). A build stacking all three items — Juggernaut + Overflow Battery + Pristine Engine — gets a large combined FR/DMG burst for clean play.
+
+**Design:** Completes the HP-threshold build family:
+- Low HP: Last Stand (+dmg + +FR below 35%)
+- High HP, damage: Juggernaut / Pristine Engine
+- High HP, fire rate: Overflow Battery / Pristine Engine
+
+**Implementation:**
+- `Item.highHpFireRate?: number` added to type
+- `PlayerStats` aggregate: additive sum × upgradeLevel; `getHighHpFireRate()` getter
+- `Game.updateRuntimeModifiers`: `fr *= 1 + highHpFr` when `hpFrac >= 0.90`
+- Fire rate is downstream-capped at `FIRE_RATE_CAP` so stacking is safe
+
+**QA:** `qa-overflow-battery.mjs` 13/13 PASS (catalog presence, getter aggregation × 1 and × 2, full-HP FR bonus, sub-threshold no-bonus, Pristine Engine dual-bonus at full HP, both drop when hurt, control with no items). Live smoke PASS (0 errors, 49 kills, full wave cleared).
+
+---
+
 ## 2026-07-28 (evening) — fix(visual): shattered status effect correct color + spawn position · `98fa792` · live `index-hdt6j2n5.js` ✓
 
 **Player-visible:** The `shattered` status effect (armour stripped) now renders as crisp ice-blue shard chips falling downward from the top of the enemy, instead of dark-grey chips spawning inside the enemy body.
