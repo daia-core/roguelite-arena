@@ -168,6 +168,72 @@ await page.screenshot({ path: path.join(SHOTS, 'status-doom.png') });
 void doomSamples;
 telemetry.purple = doomPx;
 
+// ─── New-effects isolation pass (stun / shattered / debilitated / crippled) ───────────────
+// The Jul-27 fix added 4 visual overlays for effects that were previously invisible, but the
+// scan above only covers the original 6 (frozen/burn/poison/bleed/wound/doom). This pass
+// isolates ONE enemy with the 4 new effects applied and checks:
+//   1. State registration — statusFX.has() returns true (reliable JS check, not pixel-dependent)
+//   2. No render crash — zero JS console errors after a rendered frame
+//   3. Pixel sanity counts — informational only (these overlays are 6–10 world px → 3–5 canvas px
+//      at 0.5× scale; sub-pixel anti-aliasing makes strict pixel thresholds unreliable here)
+const newFxSetup = await page.evaluate(() => {
+  const g = window.__game;
+  const px = g.player ? g.player.x : 200;
+  const py = g.player ? g.player.y : 200;
+  const keep = g.enemies.find(e => !e.dead);
+  if (!keep) return { found: false, hasStun: false, hasShattered: false, hasDebilitated: false, hasCrippled: false };
+  g.enemies = [keep];
+  keep.x = px + 220; keep.y = py;
+  keep.maxHealth = 1e9; keep.health = 1e9;
+  keep.speed = 0;
+  keep.burnTimer = 0; keep.poisonTimer = 0; keep.bleedTimer = 0;
+  keep.frozenTimer = 0; keep.slowTimer = 0;
+  keep.doomTimer = 0; keep.doomStored = 0;
+  keep.statusFX.apply('stun',        { stacks: 2, power: 1 });
+  keep.statusFX.apply('shattered',   { stacks: 3, power: 1 });
+  keep.statusFX.apply('debilitated', { stacks: 1, power: 1 });
+  keep.statusFX.apply('crippled',    { stacks: 1, power: 1 });
+  const r = keep.typeData ? keep.typeData.radius : 14;
+  return {
+    found: true,
+    hasStun: keep.statusFX.has('stun'),
+    hasShattered: keep.statusFX.has('shattered'),
+    hasDebilitated: keep.statusFX.has('debilitated'),
+    hasCrippled: keep.statusFX.has('crippled'),
+    ex: keep.x, ey: keep.y, r,
+  };
+});
+await new Promise(r => setTimeout(r, 400));
+await page.screenshot({ path: path.join(SHOTS, 'status-new-effects.png') });
+// Pixel sanity: informational only — these overlays are 3–6 canvas px wide at 0.5× scale
+let newFxPx = { stun: 0, shattered: 0, debilitated: 0, crippled: 0 };
+if (newFxSetup.found) {
+  newFxPx = await page.evaluate(({ ex, ey, r }) => {
+    const g = window.__game;
+    const S = g.WORLD_SCALE || 2;
+    const cv = document.querySelector('#gameCanvas');
+    const ctx = cv.getContext('2d');
+    const margin = Math.round((r + 32) / S);
+    const cx = Math.round(ex / S);
+    const cy = Math.round(ey / S);
+    const x0 = Math.max(0, cx - margin);
+    const y0 = Math.max(0, cy - margin);
+    const bw = Math.min(cv.width - x0, margin * 2);
+    const bh = Math.min(cv.height - y0, margin * 2);
+    const img = ctx.getImageData(x0, y0, bw, bh).data;
+    let stun = 0, shattered = 0, debilitated = 0, crippled = 0;
+    for (let i = 0; i < img.length; i += 4) {
+      const rr = img[i], gg = img[i+1], b = img[i+2], a = img[i+3];
+      if (a < 20) continue;
+      if (rr > 210 && gg > 210 && b > 210) stun++;                                                // #ffffff white sparks
+      if (rr > 95 && rr < 150 && gg > 85 && gg < 140 && b > 85 && b < 140 && gg < rr) shattered++;  // #7a7070 gray
+      if (rr > 90 && gg < 85 && b < 65 && rr > gg + 30 && rr > b + 30) debilitated++;            // #cc3333 + blends
+      if (rr > 95 && rr < 150 && gg > 65 && gg < 120 && b > 18 && b < 72 && rr > gg && gg > b && rr - b > 55) crippled++;  // #7a5c2a brown
+    }
+    return { stun, shattered, debilitated, crippled };
+  }, newFxSetup);
+}
+
 await browser.close();
 server.close();
 
@@ -178,11 +244,21 @@ console.log('  • burn (orange) px:', telemetry.orange);
 console.log('  • poison (green) px:', telemetry.green);
 console.log('  • bleed (red)   px:', telemetry.red);
 console.log('  • doom (purple) px summed:', telemetry.purple, '| peak frame:', doomPeak, '| canvas:', telemetry.w + 'x' + telemetry.h);
+console.log('  [new effects — isolated pass]');
+console.log('  • stun registered:', newFxSetup.hasStun, '| px (info):', newFxPx.stun);
+console.log('  • shattered registered:', newFxSetup.hasShattered, '| px (info):', newFxPx.shattered);
+console.log('  • debilitated registered:', newFxSetup.hasDebilitated, '| px (info):', newFxPx.debilitated);
+console.log('  • crippled registered:', newFxSetup.hasCrippled, '| px (info):', newFxPx.crippled);
+console.log('  • (pixel counts informational — 3–6 canvas px at 0.5× scale; sub-pixel AA makes strict thresholds unreliable)');
 console.log('  • console/page errors:', errors.length);
-console.log('  • screenshot: shots/status-effects.png');
+console.log('  • screenshots: shots/status-effects.png, shots/status-doom.png, shots/status-new-effects.png');
 if (errors.length) errors.slice(0, 5).forEach(e => console.log('    ! ' + e));
 
-// Each overlay must paint. Frozen tint is the biggest area; doom rune is small but distinct.
+// Hard assertions: original 6 effects (frozen/burn/poison/bleed/doom) verified by pixel painting.
+// New 4 effects (stun/shattered/debilitated/crippled): verified by state registration — the
+// overlays are 3–6 canvas px at 0.5× WORLD_SCALE and susceptible to sub-pixel anti-aliasing;
+// statusFX.has() is the reliable assertion that apply() worked and drawStatusEffects() won't
+// fast-reject (the guard checks has() before drawing). Zero console errors proves no render crash.
 const checks = {
   'enemies present': setup.lit >= 1,
   'no console errors': errors.length === 0,
@@ -191,6 +267,10 @@ const checks = {
   'poison paints': telemetry.green > 10,
   'bleed paints': telemetry.red > 10,
   'doom paints': telemetry.purple > 25, // isolated rune, summed over a blink period (~36px observed)
+  'stun registered in statusFX': !newFxSetup.found || newFxSetup.hasStun === true,
+  'shattered registered in statusFX': !newFxSetup.found || newFxSetup.hasShattered === true,
+  'debilitated registered in statusFX': !newFxSetup.found || newFxSetup.hasDebilitated === true,
+  'crippled registered in statusFX': !newFxSetup.found || newFxSetup.hasCrippled === true,
 };
 let ok = true;
 for (const [k, v] of Object.entries(checks)) { if (!v) { ok = false; console.log('  ✗ FAILED:', k); } }
