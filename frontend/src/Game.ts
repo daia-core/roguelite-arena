@@ -3407,6 +3407,13 @@ export class Game {
     if (highHp > 0 && hpFrac >= Game.HIGH_HP_THRESHOLD) {
       dmg *= 1 + highHp;
     }
+    // Overflow Battery: while at/over the high-HP threshold, +fire rate. Complements
+    // Juggernaut (+dmg) — both reward pristine play, different axes. Stack freely since
+    // fire rate is capped downstream at PlayerStats.FIRE_RATE_CAP.
+    const highHpFr = this.playerStats.getHighHpFireRate();
+    if (highHpFr > 0 && hpFrac >= Game.HIGH_HP_THRESHOLD) {
+      fr *= 1 + highHpFr;
+    }
     // Miser's Hoard: +dmg scaling with unspent gold on hand (capped), so hoarding for
     // power trades against spending in the shop — a real, ongoing decision.
     const goldScale = this.playerStats.getGoldScaleDamage();

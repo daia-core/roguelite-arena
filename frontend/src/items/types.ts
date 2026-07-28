@@ -437,6 +437,7 @@ export interface Item {
   lowHpPower?: number;       // Last Stand: while HP is low, +dmg AND +fire rate
   killStackDamage?: number;  // Killing Spree: each kill adds a decaying +dmg stack
   highHpPower?: number;      // Juggernaut: while HP is high (unhurt), +dmg
+  highHpFireRate?: number;   // Overflow Battery: while HP is high (unhurt), +fire rate
   goldScaleDamage?: number;  // Miser's Hoard: +dmg scaling with unspent gold on hand
 
   // ---- ON-KILL MILESTONE (Soul Tithe) ----

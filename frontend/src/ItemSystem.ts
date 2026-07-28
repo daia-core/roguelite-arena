@@ -243,7 +243,7 @@ interface ItemAgg {
   brittleChance: number; dazedChance: number; disorientedChance: number;
   // conditional/triggered (additive rates; paid out at runtime by Game when the condition holds)
   waveRampDamage: number; lowHpPower: number; killStackDamage: number;
-  highHpPower: number; goldScaleDamage: number;
+  highHpPower: number; highHpFireRate: number; goldScaleDamage: number;
   // execute: highest threshold wins (max, not sum)
   executeThreshold: number;
   // on-kill proc: daggers spawned per kill (additive across copies)
@@ -273,7 +273,7 @@ function freshAgg(): ItemAgg {
     fragileChance: 0, exposedChance: 0, condemnedChance: 0,
     brittleChance: 0, dazedChance: 0, disorientedChance: 0,
     waveRampDamage: 0, lowHpPower: 0, killStackDamage: 0,
-    highHpPower: 0, goldScaleDamage: 0,
+    highHpPower: 0, highHpFireRate: 0, goldScaleDamage: 0,
     executeThreshold: 0,
     daggerCount: 0,
     warChest: 0,
@@ -567,6 +567,7 @@ export class PlayerStats {
       if (item.lowHpPower) a.lowHpPower += item.lowHpPower * lv;
       if (item.killStackDamage) a.killStackDamage += item.killStackDamage * lv;
       if (item.highHpPower) a.highHpPower += item.highHpPower * lv;
+      if (item.highHpFireRate) a.highHpFireRate += item.highHpFireRate * lv;
       if (item.goldScaleDamage) a.goldScaleDamage += item.goldScaleDamage * lv;
       // Execute: take the strongest threshold, never sum (no compounding to full-HP kills)
       if (item.executeThreshold) a.executeThreshold = Math.max(a.executeThreshold, item.executeThreshold);
@@ -1226,6 +1227,7 @@ export class PlayerStats {
   getLowHpPower(): number { return this.ensureAgg().lowHpPower; }
   getKillStackDamage(): number { return this.ensureAgg().killStackDamage; }
   getHighHpPower(): number { return this.ensureAgg().highHpPower; }
+  getHighHpFireRate(): number { return this.ensureAgg().highHpFireRate; }
   getGoldScaleDamage(): number { return this.ensureAgg().goldScaleDamage; }
   getExecuteThreshold(): number {
     // SKILL TREE contribution (Cull the Weak keystone) — max-stacks with items.
