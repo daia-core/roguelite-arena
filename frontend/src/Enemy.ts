@@ -2025,16 +2025,16 @@ export class Enemy {
       }
     }
 
-    // SHATTERED — dark-gray shard fragments falling (armor stripped away)
+    // SHATTERED — ice-blue shard fragments falling from top of enemy (armor stripped away)
     const shattered = this.statusFX.get('shattered');
     if (shattered && shattered.stacks > 0) {
-      ctx.fillStyle = '#7a7070';
+      ctx.fillStyle = '#b0d8f8';  // matches StatusEffectDefs.shattered.color
       const count = Math.min(4, shattered.stacks);
       for (let i = 0; i < count; i++) {
         const ph = t / 420 + seed + i * 2.5;
         const fall = ph % 1;
         const sx4 = Math.floor(this.x + (i - count * 0.5 + 0.5) * r * 0.45);
-        const sy4 = Math.floor(this.y + r * 0.25 + fall * r * 1.3);
+        const sy4 = Math.floor(this.y - r * 0.8 + fall * r * 2.5);  // start at top, fall through body
         ctx.fillRect(sx4 - 2, sy4 - 1, 4, 3);  // shard chip
       }
     }
