@@ -6,6 +6,18 @@ portrait viewport).
 
 ---
 
+## 2026-07-29 (night) — fix(items): addItem no longer mutates catalog objects · `1d47be1` · live `index-CYpDluA0.js` ✓
+
+**Player-visible:** Invisible bug fix — class starting weapons and meta-progression items could accumulate
+upgrade-level state from previous browser sessions. Concretely: if you upgraded your class weapon in one
+run, the next run's class weapon would silently start already-upgraded. The fix clones every item inside
+`addItem()` before writing any instance state, matching the safe pattern the shop has used since the
+upgrade system shipped.
+
+Also removed the QA-helper workaround in `qa-overflow-battery.mjs` that patched around the same bug.
+
+---
+
 ## 2026-07-29 (night) — feat(items): highHpFireRate — Overflow Battery + Pristine Engine · `aba15da` · live `index-V5JqE5q_.js` ✓
 
 **Player-visible:** Two new items unlock the fire-rate axis of the high-HP build family:
