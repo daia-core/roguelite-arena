@@ -7,6 +7,7 @@
 //   E. Poison-spread  — a poisoned+spread enemy that dies from poison infects a live neighbor.
 //   F. Multicast      — a bonus volley fires the same frame (more projectiles than fireRate alone).
 //   G. Melee applies statuses — a swing (no gun kills) puts a burn on an enemy it hits.
+//   H. Burn-spread (Funeral Pyre) — a burning+spread enemy that dies from burn infects a neighbor.
 // Uses the __game / __ItemDatabase hooks and steps the deterministic g.update(dt) loop.
 import http from 'node:http';
 import fs from 'node:fs';
@@ -55,7 +56,7 @@ const result = await page.evaluate(() => {
     const e = {
       id: Math.floor(Math.random()*1e6), type: 'slime', x, y,
       radius: 14, dead: false, health: hp, hp,
-      frozenTimer: 0, poisonTimer: 0, burnTimer: 0, bleedTimer: 0, poisonSpreads: false, woundMult: 1, doomTimer: 0, doomStored: 0, lastX: x, lastY: y,
+      frozenTimer: 0, poisonTimer: 0, burnTimer: 0, bleedTimer: 0, poisonSpreads: false, burnSpreads: false, woundMult: 1, doomTimer: 0, doomStored: 0, lastX: x, lastY: y,
       contactCooldown: 999, usePathfinding: false,
       typeData: { isBoss:false, damage:5, xpValue:1, goldValue:1, radius:14 },
       knockbackVelocityX:0, knockbackVelocityY:0, hitFlashTimer:0,
@@ -155,6 +156,16 @@ const result = await page.evaluate(() => {
     for (let i=0;i<600 && !sawBurnFromMelee;i++){ g.update(1/60); if (ring.some(e=>e.burnTimer>0)) sawBurnFromMelee = true; }
     out.meleeAppliesStatus = sawBurnFromMelee; }
 
+  // === H. BURN-SPREAD (Funeral Pyre): a burning enemy that dies infects a nearby neighbor ===
+  // The spread fires in killByDot when (burnSpreads && burnTimer > 0) at time of death.
+  g.startNewGame(); forcePlaying();
+  { const dying = dummy(g.player.x + 5000, g.player.y + 5000, 5); // low HP so burn kills it quickly
+    dying.burnTimer = 3.0; dying.burnSpreads = true;
+    const neighbor = dummy(g.player.x + 5060, g.player.y + 5000, 1e9); // 60px away — within 140px radius
+    let sawSpread = false;
+    for (let i=0;i<180 && !sawSpread;i++){ g.update(1/60); if (neighbor.burnTimer > 0) sawSpread = true; }
+    out.burnSpread = sawSpread; }
+
   return out;
 });
 
@@ -175,6 +186,7 @@ const pass = result && !result.fatal
   && result.poisonSpread === true
   && result.multicastFiresMore === true
   && result.meleeAppliesStatus === true
+  && result.burnSpread === true
   && errors.length === 0;
 console.log('\nRESULT:', pass ? 'PASS ✅' : 'FAIL ❌');
 process.exit(pass ? 0 : 1);
