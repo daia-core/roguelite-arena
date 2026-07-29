@@ -662,7 +662,10 @@ export class PlayerStats {
       };
     }
 
-    // Ensure a fresh instance starts at level 1 (defensive — callers usually clone).
+    // Clone so we never mutate the catalog object — callers don't always clone.
+    // (Shop purchases deep-clone before calling; class weapons and meta-progression
+    //  starting items do not — this ensures upgradeLevel mutations stay local to the run.)
+    item = { ...item } as Item;
     if (item.upgradeLevel === undefined) item.upgradeLevel = 1;
 
     if (slot === 'trinket') {

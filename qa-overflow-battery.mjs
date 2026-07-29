@@ -62,10 +62,7 @@ const result = await page.evaluate(() => {
   const giveItem = (id) => {
     const item = DB.getItemById(id);
     if (!item) return false;
-    // addItem stores items by reference and sets upgradeLevel on the catalog object.
-    // Reset it before each call so cross-test mutation doesn't carry upgradeLevel forward.
-    delete item.upgradeLevel;
-    g.playerStats.addItem(item);
+    g.playerStats.addItem(item); // addItem clones internally — catalog is not mutated
     return true;
   };
   const fresh = () => {
