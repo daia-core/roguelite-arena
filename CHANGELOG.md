@@ -6,6 +6,27 @@ portrait viewport).
 
 ---
 
+## 2026-08-01 (afternoon) — fix(hud): 90% HP threshold tick mark for high-HP bonus items · `5819eb6` · live `index-B2ulQL2H.js` ✓
+
+**Player-visible:** When you have Juggernaut, Overflow Battery, or Pristine Engine equipped, a
+small tick mark now appears at the 90% position of your HP bar — gold when the bonus is active
+(HP ≥ 90%), white when it has been lost (HP < 90%). Pulses when HP is dropping toward the
+threshold (80–89%) as a warning that the bonus is about to cut off.
+
+**Why:** The high-HP bonus items were mechanically invisible — there was no on-screen feedback
+for when the +35%/+55% fire rate or +25% damage bonus was active or lost. Now the threshold is
+explicit, matching the same visual pattern as the boss phase-threshold tick marks at 66%/33%.
+
+**What changed:**
+- `HUDRenderer.ts`: after drawing the HP bar, checks `playerStats.getHighHpFireRate() > 0 ||
+  playerStats.getHighHpPower() > 0`; if true, draws a 2px-wide tick at `barWidth × 0.90`.
+- Tick is gold (`#fbbf24`) when active, white when not. Pulses at 0.5 + 0.5×|sin(t/280)| when
+  approaching (80–89%).
+
+**QA:** Live smoke PASS (0 errors, 51 kills, full wave cleared). Live at roguelite-game-blush.vercel.app.
+
+---
+
 ## 2026-07-29 (night) — fix(items): addItem no longer mutates catalog objects · `1d47be1` · live `index-CYpDluA0.js` ✓
 
 **Player-visible:** Invisible bug fix — class starting weapons and meta-progression items could accumulate
