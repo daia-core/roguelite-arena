@@ -82,8 +82,24 @@ export class HUDRenderer {
     const hpFrac = player.health / player.maxHealth;
     const heart = UISprites.getIcon('heart');
     if (heart) ctx.drawImage(heart, x0, y, iconS, iconS);
-    drawBar(barX, y + Math.round((iconS - barH) / 2), barW, barH, hpFrac,
+    const hpBarY = y + Math.round((iconS - barH) / 2);
+    drawBar(barX, hpBarY, barW, barH, hpFrac,
       hpFrac > 0.6 ? '#4ade80' : hpFrac > 0.3 ? '#fbbf24' : '#ef4444', '#3c0000');
+    // High-HP threshold tick mark — appears when the player has any 90%-HP bonus
+    // (Juggernaut / Overflow Battery / Pristine Engine). Gold when bonus is active;
+    // pulses when HP is dropping toward the threshold. Mirrors boss-phase marker pattern.
+    const ps = this.deps.getPlayerStats();
+    if (ps.getHighHpFireRate() > 0 || ps.getHighHpPower() > 0) {
+      const tx = barX + Math.round(barW * 0.90);
+      const atThreshold = hpFrac >= 0.90;
+      const approaching = hpFrac >= 0.80 && !atThreshold;
+      const tickAlpha = approaching ? 0.5 + 0.5 * Math.abs(Math.sin(Date.now() / 280)) : 1.0;
+      ctx.save();
+      ctx.globalAlpha = tickAlpha;
+      ctx.fillStyle = atThreshold ? '#fbbf24' : '#ffffff'; // gold = bonus active, white = lost
+      ctx.fillRect(tx - 1, hpBarY - s(2), 2, barH + s(4));
+      ctx.restore();
+    }
     this.deps.renderer.drawText(
       `${formatShort(Math.ceil(player.health))}/${formatShort(player.maxHealth)}`,
       textX, y + Math.round(iconS / 2), { size: textS, baseline: 'middle', color: '#ffffff' }
