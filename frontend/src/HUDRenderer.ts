@@ -100,6 +100,21 @@ export class HUDRenderer {
       ctx.fillRect(tx - 1, hpBarY - s(2), 2, barH + s(4));
       ctx.restore();
     }
+    // Low-HP threshold tick mark — appears when the player has any lowHpPower bonus
+    // (Last Stand / Berserker family). Red when bonus is active (HP ≤ 35%); white
+    // when bonus is not yet active; pulses when HP is approaching the threshold.
+    if (ps.getLowHpPower() > 0) {
+      const LOW_HP_THRESHOLD = 0.35;
+      const tx = barX + Math.round(barW * LOW_HP_THRESHOLD);
+      const atThreshold = hpFrac <= LOW_HP_THRESHOLD;
+      const approaching = hpFrac > LOW_HP_THRESHOLD && hpFrac < LOW_HP_THRESHOLD + 0.10;
+      const tickAlpha = approaching ? 0.5 + 0.5 * Math.abs(Math.sin(Date.now() / 280)) : 1.0;
+      ctx.save();
+      ctx.globalAlpha = tickAlpha;
+      ctx.fillStyle = atThreshold ? '#ef4444' : '#ffffff'; // red = bonus active, white = not yet
+      ctx.fillRect(tx - 1, hpBarY - s(2), 2, barH + s(4));
+      ctx.restore();
+    }
     this.deps.renderer.drawText(
       `${formatShort(Math.ceil(player.health))}/${formatShort(player.maxHealth)}`,
       textX, y + Math.round(iconS / 2), { size: textS, baseline: 'middle', color: '#ffffff' }
