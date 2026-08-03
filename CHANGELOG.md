@@ -6,6 +6,24 @@ portrait viewport).
 
 ---
 
+## 2026-08-03 (evening) — fix(rest): boss-wave-incoming warning at campfire · `2837321` · live `index-DoEdtUuL.js` ✓
+
+**Player-visible**
+- The campfire rest screen now warns you when the next wave is a boss wave. A red
+  `⚠ BOSS WAVE N INCOMING — rest up!` line appears above the choice buttons (Rest vs Train).
+  Previously the campfire gave you no advance notice before a boss fight — you could train
+  (+15 max HP) and then face a boss at depleted health. Now the warning nudges you toward the
+  smart play: heal, not train, when a boss is next.
+
+**Under the hood**
+- `RestSceneDeps`: added optional `getWave?: () => number`
+- `RestScene`: new `bossWaveNext()` helper used in both `draw()` (renders warning text, shifts
+  buttons down) and `update()` (accounts for same y-shift so click hitboxes stay aligned)
+- `Game.ts`: passes `getWave: () => this.waveManager.currentWave` to RestScene
+- Live smoke PASS; shop layout QA 8/8 PASS; catalog CLEAN (1902)
+
+---
+
 ## 2026-08-03 (evening) — fix(shop): boss-wave-incoming warning · `c5a1375` · live `index-CU5LiRW_.js` ✓
 
 **Player-visible**
