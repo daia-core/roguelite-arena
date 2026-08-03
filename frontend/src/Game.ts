@@ -290,6 +290,10 @@ export class Game {
   hitPauseTimer: number = 0;
   private static readonly HIT_PAUSE_MAX = 0.13; // hard ceiling — gameplay never freezes longer
 
+  // Wave-clear celebration: 0.8s banner shown between last kill and shop transition.
+  private waveClearTimer: number = 0;
+  private waveClearPending: boolean = false;
+
   constructor(canvas: HTMLCanvasElement) {
     // Dev/QA hook: lets tooling (screenshot scripts, the shots-qa harness)
     // inspect and force game state. Not a public API.
@@ -576,6 +580,7 @@ export class Game {
       getWaveModifierTimer: () => this.waveModifierTimer,
       getPhaseBannerTimer: () => this.phaseBannerTimer,
       getPhaseBannerText: () => this.phaseBannerText,
+      getWaveClearTimer: () => this.waveClearTimer,
     });
 
     this.setupUI();
@@ -755,6 +760,8 @@ export class Game {
     this.resetAuxWeapons();
     this.kills = 0;
     this.hitPauseTimer = 0;
+    this.waveClearTimer = 0;
+    this.waveClearPending = false;
     this.bossKills = 0;
     this.soulsEarnedThisRun = 0;
     this.runStartTime = Date.now();
@@ -904,6 +911,8 @@ export class Game {
     this.resetAuxWeapons();
     this.kills = 0;
     this.hitPauseTimer = 0;
+    this.waveClearTimer = 0;
+    this.waveClearPending = false;
 
     const wave = save.wave ?? 1;
     this.waveManager.reset();
@@ -1930,18 +1939,27 @@ export class Game {
     this.resolvePendingDmg(dt);
     this.resolveActiveDmgZones(dt);
 
-    // Check wave completion
-    if (this.waveManager.isWaveComplete()) {
-      // VS-style weapon evolution: if a committed weapon+catalyst build has come of
-      // age (wave 8+), upgrade the weapon in-place before the reward/shop screens.
+    // Check wave completion — arm the celebration timer on first detection.
+    if (this.waveManager.isWaveComplete() && !this.waveClearPending) {
+      // VS-style weapon evolution: upgrade before any reward/shop screens.
       this.checkWeaponEvolution();
       if (this.pendingWaveArtifact) {
-        // Elite / boss nodes grant guaranteed spoils: an artifact pick, then the
-        // usual shop. Extra gold is added here so the reward feels distinct.
+        // Elite / boss nodes: immediate VICTORY SPOILS reward, then shop — no banner.
         this.pendingWaveArtifact = false;
         this.player.addGold(40);
         this.offerArtifactReward('VICTORY SPOILS', () => this.enterShop());
       } else {
+        // Standard wave clear: 0.8s "WAVE X CLEARED!" banner before the shop.
+        this.waveClearPending = true;
+        this.waveClearTimer = 0.8;
+      }
+    }
+    // Tick the celebration timer; transition to shop when it expires.
+    if (this.waveClearPending) {
+      this.waveClearTimer -= dt;
+      if (this.waveClearTimer <= 0) {
+        this.waveClearPending = false;
+        this.waveClearTimer = 0;
         this.enterShop();
       }
     }

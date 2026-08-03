@@ -58,6 +58,8 @@ export interface PlayingRendererDeps {
   getWaveModifierTimer(): number;
   getPhaseBannerTimer(): number;
   getPhaseBannerText(): string;
+  /** Wave-clear celebration timer (0.8 → 0): show "WAVE X CLEARED!" banner while > 0. */
+  getWaveClearTimer(): number;
 }
 
 export class PlayingRenderer {
@@ -236,5 +238,32 @@ export class PlayingRenderer {
 
     // GAME FEEL: Render flash effect (must be after ctx.restore to cover whole screen)
     this.deps.screenEffects.renderFlash(ctx, this.deps.canvas.width, this.deps.canvas.height);
+
+    // Wave-clear celebration banner: "WAVE X CLEARED!" fades in then out over 0.8s.
+    const wct = this.deps.getWaveClearTimer();
+    if (wct > 0) {
+      const TOTAL = 0.8;
+      const FADE = 0.15; // fade-in and fade-out window
+      const alpha =
+        wct > TOTAL - FADE ? (TOTAL - wct) / FADE :   // fade in
+        wct < FADE         ? wct / FADE                // fade out
+                           : 1.0;                      // hold
+
+      const W = this.deps.canvas.width;
+      const H = this.deps.canvas.height;
+      const zoom = W / (this.deps.canvas.clientWidth || W);
+      const s = (v: number) => Math.round(v * zoom);
+
+      const waveNum = this.deps.waveManager.currentWave;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      this.deps.renderer.drawText(
+        `WAVE ${waveNum} CLEARED!`,
+        W / 2,
+        H / 2 - s(20),
+        { size: s(20), align: 'center', color: '#4ade80', bold: true }
+      );
+      ctx.restore();
+    }
   }
 }
