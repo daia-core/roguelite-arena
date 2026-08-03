@@ -1090,6 +1090,20 @@ export class ShopScene implements Scene {
       });
     }
 
+    // Boss-wave-incoming warning — shown when the next wave is a boss wave (wave % 10 === 0).
+    // Gives the player advance notice so they can spend defensively before the fight.
+    const nextWave = wave + 1;
+    const isBossNext = nextWave % 10 === 0;
+    if (isBossNext) {
+      const warnSize = s(isMobile ? 8 : 7);
+      const warnY = continueY - s(isMobile ? 10 : 8);
+      this.deps.renderer.drawText(
+        `⚠ BOSS WAVE ${nextWave} INCOMING — spend wisely!`,
+        canvas.width / 2, warnY,
+        { size: warnSize, align: 'center', color: '#ff6b6b' }
+      );
+    }
+
     // Buttons.
     this.deps.renderer.drawButton(
       canvas.width / 2 - buttonWidth / 2, continueY, buttonWidth, buttonHeight,
