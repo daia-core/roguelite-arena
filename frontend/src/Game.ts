@@ -424,6 +424,7 @@ export class Game {
       input: this.input,
       onChoose: (choice) => this.applyRestChoice(choice),
       onDone: () => { this.state = 'map'; },
+      getWave: () => this.waveManager.currentWave,
     });
 
     // Step 7: GameOverScene.

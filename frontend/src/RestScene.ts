@@ -17,6 +17,8 @@ export interface RestSceneDeps {
   onChoose: (choice: 'rest' | 'train') => string;
   /** Called when the player clicks "Continue" — returns control to the map. */
   onDone: () => void;
+  /** Returns the current wave number so we can warn when a boss wave is next. */
+  getWave?: () => number;
 }
 
 /**
@@ -33,6 +35,7 @@ export class RestScene implements Scene {
   private readonly input: Input;
   private readonly onChoose: (choice: 'rest' | 'train') => string;
   private readonly onDone: () => void;
+  private readonly getWave?: () => number;
 
   private restResolved: boolean = false;
   private restResultText: string = '';
@@ -43,6 +46,14 @@ export class RestScene implements Scene {
     this.input = deps.input;
     this.onChoose = deps.onChoose;
     this.onDone = deps.onDone;
+    this.getWave = deps.getWave;
+  }
+
+  /** Returns boss-wave-next info for use in both draw() and update(). */
+  private bossWaveNext(): { is: boolean; waveNum: number } {
+    const w = this.getWave ? this.getWave() : 0;
+    const next = w + 1;
+    return { is: w > 0 && next % 10 === 0, waveNum: next };
   }
 
   enter(_prev: GameState): void {
@@ -61,6 +72,9 @@ export class RestScene implements Scene {
 
     if (!this.restResolved) {
       y += s(isMobile ? 18 : 22);
+      // Boss-wave warning shifts the button row down — keep in sync with draw().
+      const bwn = this.bossWaveNext();
+      if (bwn.is) y += s(isMobile ? 8 : 7) + s(6);
       const rects = this.columnRects(2, y, s, W, isMobile);
       if (pointInRect(mx, my, rects[0])) {
         this.input.mouseDown = false;
@@ -104,6 +118,18 @@ export class RestScene implements Scene {
     if (!this.restResolved) {
       this.renderer.drawText('Take a moment. Choose one.', W / 2, y, { size: bodyPx, align: 'center', color: '#d8c9a8' });
       y += s(isMobile ? 18 : 22);
+      // Boss-wave-incoming warning — shown when the next combat wave is a boss wave (wave % 10 === 0).
+      // Rest is the smarter choice when a boss looms: survive to spend, not train to die.
+      const bwn = this.bossWaveNext();
+      if (bwn.is) {
+        const warnSize = s(isMobile ? 8 : 7);
+        this.renderer.drawText(
+          `⚠ BOSS WAVE ${bwn.waveNum} INCOMING — rest up!`,
+          W / 2, y,
+          { size: warnSize, align: 'center', color: '#ff6b6b' }
+        );
+        y += warnSize + s(6);
+      }
       const rects = this.columnRects(2, y, s, W, isMobile);
       this.renderer.drawButton(rects[0].x, rects[0].y, rects[0].width, rects[0].height, 'Rest — heal 40% HP', false, true, isMobile);
       this.renderer.drawButton(rects[1].x, rects[1].y, rects[1].width, rects[1].height, 'Train — +15 max HP', false, true, isMobile);
