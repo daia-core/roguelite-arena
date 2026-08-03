@@ -6,6 +6,21 @@ portrait viewport).
 
 ---
 
+## 2026-08-03 (evening) — fix(shop): boss-wave-incoming warning · `c5a1375` · live `index-CU5LiRW_.js` ✓
+
+**Player-visible**
+- The shop now warns you when the next combat wave is a boss wave (every 10th wave). A red
+  `⚠ BOSS WAVE N INCOMING — spend wisely!` line appears above the "Next Wave" button when
+  `currentWave + 1` is a multiple of 10. Previously there was no advance notice — you'd enter
+  the boss fight without knowing it was coming until the wave banner appeared mid-combat.
+
+**Under the hood**
+- `ShopScene.drawShop()`: added a 3-line guard after the item grid. `nextWave = wave + 1`;
+  when `nextWave % 10 === 0`, renders the warning text just above `continueY`.
+- Shop layout QA 11/11 PASS (all form factors); live smoke PASS; catalog integrity CLEAN (1902 items).
+
+---
+
 ## 2026-08-01 (afternoon) — fix(hud): 90% HP threshold tick mark for high-HP bonus items · `5819eb6` · live `index-B2ulQL2H.js` ✓
 
 **Player-visible:** When you have Juggernaut, Overflow Battery, or Pristine Engine equipped, a
