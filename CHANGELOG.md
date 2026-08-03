@@ -6,6 +6,28 @@ portrait viewport).
 
 ---
 
+## 2026-08-04 (early hours) — feat(feel): 0.8s WAVE X CLEARED celebration banner · `d881011` · live `index-CHnDGBTd.js` ✓
+
+**Player-visible**
+- When the last enemy of a standard wave dies, **WAVE X CLEARED!** now fades in over the arena
+  for 0.8 seconds before the shop opens. Previously the screen flashed green and cut immediately
+  to the shop — the kill landing had no moment to land. The banner fades in over 0.15 s, holds,
+  then fades out, giving the clear a satisfying beat of acknowledgment.
+- Boss/elite reward waves bypass the banner — they already show the VICTORY SPOILS reward
+  screen, which is its own celebration moment.
+
+**Under the hood**
+- `Game.ts`: `waveClearTimer` (0.8 → 0, counts down) + `waveClearPending` (guard against
+  double-trigger). Wave completion arms the timer instead of calling `enterShop()` immediately;
+  the timer tick in `updatePickupsAndCleanup` calls `enterShop()` when it expires. Timer reset
+  on every new run and on save-restore load.
+- `PlayingRenderer.ts`: banner drawn after the flash overlay (always on top) using `waveManager.currentWave`
+  already on the renderer; alpha computed from the timer position for smooth fade-in and fade-out.
+- All QA passes: catalog CLEAN (1902), stats-parity PASS, shop-layout 8/8, synergy PASS, live-smoke
+  PASS (wave → shop transition still fires correctly through the 0.8 s window).
+
+---
+
 ## 2026-08-03 (evening) — fix(rest): boss-wave-incoming warning at campfire · `2837321` · live `index-DoEdtUuL.js` ✓
 
 **Player-visible**
