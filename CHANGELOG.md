@@ -6,7 +6,7 @@ portrait viewport).
 
 ---
 
-## 2026-08-04 (night) — fix(gameover): sort item strip by rarity on game-over screen · pending deploy
+## 2026-08-04 (night) — fix(gameover): sort item strip by rarity on game-over screen · `7244eb8` · live `index-8h-Ufbcm.js` ✓
 
 **Player-visible**
 - On the game-over screen, your items now appear in rarity order — **legendary → epic → rare → common** — rather than the order you bought them. If you have more items than fit in the strip, the most impressive ones (by rarity, then name) are visible, not the most recently purchased ones. The "+N more" count still applies to any overflow. Secondary sort by icon name keeps same-rarity items stable across runs.
