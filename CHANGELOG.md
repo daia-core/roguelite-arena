@@ -6,6 +6,18 @@ portrait viewport).
 
 ---
 
+## 2026-08-04 (night) — fix(gameover): sort item strip by rarity on game-over screen · pending deploy
+
+**Player-visible**
+- On the game-over screen, your items now appear in rarity order — **legendary → epic → rare → common** — rather than the order you bought them. If you have more items than fit in the strip, the most impressive ones (by rarity, then name) are visible, not the most recently purchased ones. The "+N more" count still applies to any overflow. Secondary sort by icon name keeps same-rarity items stable across runs.
+
+**Under the hood**
+- `Game.ts` (`gameOver()` stats block): added a `.sort(...)` to the `itemsBought` map that sorts by a `{ legendary: 0, epic: 1, rare: 2, common: 3 }` lookup, with `icon.localeCompare` as the tiebreaker.
+- No change to any render logic, item data, or game mechanics — pure display ordering.
+- QA: catalog CLEAN (1902), stats-parity PASS, wave-clear-banner PASS, live-smoke PASS, shop-layout 8/8, synergy PASS. Build clean (`index-8h-Ufbcm.js`, 1,039.50 kB gzip 194.91 kB).
+
+---
+
 ## 2026-08-04 (early hours) — feat(feel): 0.8s WAVE X CLEARED celebration banner · `d881011` · live `index-CHnDGBTd.js` ✓
 
 **Player-visible**
@@ -25,6 +37,7 @@ portrait viewport).
   already on the renderer; alpha computed from the timer position for smooth fade-in and fade-out.
 - All QA passes: catalog CLEAN (1902), stats-parity PASS, shop-layout 8/8, synergy PASS, live-smoke
   PASS (wave → shop transition still fires correctly through the 0.8 s window).
+- `qa-wave-clear-banner.mjs` added (9/9 pass): no banner mid-wave, arms at 0.8 s, clears to shop on expiry.
 
 ---
 

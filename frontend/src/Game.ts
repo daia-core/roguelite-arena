@@ -3620,7 +3620,13 @@ export class Game {
       personalBest: previousBest,
       className: getClassById(this.selectedClassId)?.name ?? '',
       runDurationMs: this.runStartTime > 0 ? Date.now() - this.runStartTime : 0,
-      itemsBought: this.playerStats.items.map(item => ({ icon: item.icon, rarity: item.rarity })),
+      itemsBought: this.playerStats.items
+        .map(item => ({ icon: item.icon, rarity: item.rarity }))
+        .sort((a, b) => {
+          const order: Record<string, number> = { legendary: 0, epic: 1, rare: 2, common: 3 };
+          const rd = (order[a.rarity] ?? 4) - (order[b.rarity] ?? 4);
+          return rd !== 0 ? rd : a.icon.localeCompare(b.icon);
+        }),
       transformationsActive: this.playerStats.transformations.getActiveTransformations()
         .map(t => ({ icon: t.icon, name: t.name, glowColor: t.glowColor })),
       duosActive: this.playerStats.getActiveDuos()
