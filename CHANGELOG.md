@@ -6,6 +6,20 @@ portrait viewport).
 
 ---
 
+## 2026-08-06 (night) — fix(ux): CLICK not TAP on desktop stat panel and skill-tree · `18f7d01` · live `roguelite-game-blush.vercel.app` ✓
+
+**Player-visible**
+- The stats panel in the shop now reads **"CLICK FOR ALL STATS ▸"** on desktop instead of "TAP FOR ALL STATS ▸". Desktop users click; the tap label was jarring on a mouse-driven screen.
+- The skill-tree allocation prompt now reads **"CLICK TO ALLOCATE"** on desktop instead of "TAP TO ALLOCATE". Mobile still shows the touch label unchanged.
+
+**Under the hood**
+- `ShopScene.ts`: non-mobile stat-panel hint string → `'CLICK FOR ALL STATS ▸'`.
+- `SkillTreeScene.ts`: node-action label → `isMobile ? 'TAP TO ALLOCATE' : 'CLICK TO ALLOCATE'`.
+- TypeScript clean (noEmit), catalog CLEAN (1902), shop-layout 11/11 PASS, skill-tree 36/36 PASS, live-smoke PASS.
+- Build `index-qhiWhE2I.js` (1,041.48 kB gzip 195.46 kB). Deploy sha `18f7d01` ✓.
+
+---
+
 ## 2026-08-05 (night 3) — fix(gameover): buttons anchor below stats panel · `e40a1b5` · live `index-CHc7NdCK.js` ✓
 
 **Player-visible**
