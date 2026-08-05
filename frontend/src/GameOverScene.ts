@@ -84,9 +84,21 @@ export class GameOverScene implements Scene {
     const buttonWidth = isMobile ? Math.min(300, this.canvas.width - 60) : 260;
     const buttonHeight = isMobile ? 70 : 60;
     const spacing = 18;
-    // On desktop, shift all buttons up one slot to make room for the 4th "View Achievements" button.
+    // Compute panel dimensions (must mirror draw() exactly for click-zone alignment).
+    const updateStats = this.deps.getStats();
+    const updateSynergies = [...(updateStats.transformationsActive ?? []), ...(updateStats.duosActive ?? [])];
+    const updateSynRowH = updateSynergies.length > 0 ? (isMobile ? 42 : 38) : 0;
+    const updatePanelH = (isMobile ? 460 : 390) + updateSynRowH;
+    const updatePanelY = isMobile ? 140 : 170;
+    const panelBottom = updatePanelY + updatePanelH;
+    // On mobile: anchor buttons just below the panel to eliminate dead-space gap.
+    // On desktop: keep legacy bottom-anchor (with extraSlot for 4th ach button).
     const extraSlot = (!isMobile && hasNewAch) ? buttonHeight + spacing : 0;
-    const startY = this.canvas.height - (isMobile ? 240 : 220) - extraSlot;
+    const buttonBlockH = (buttonHeight + spacing) * 3 - spacing;
+    const mobileNatural = panelBottom + 56;
+    const startY = (isMobile && mobileNatural + buttonBlockH + 20 <= this.canvas.height)
+      ? mobileNatural
+      : this.canvas.height - (isMobile ? 240 : 220) - extraSlot;
     const bx = this.canvas.width / 2 - buttonWidth / 2;
 
     const retryBtn    = { x: bx, y: startY,                                width: buttonWidth, height: buttonHeight };
@@ -362,8 +374,15 @@ export class GameOverScene implements Scene {
     const buttonHeight = isMobile ? 70 : 60;
     const spacing = 18;
     const hasNewAch = newAch.length > 0;
+    // On mobile: anchor buttons just below the panel to eliminate the dead-space gap.
+    // On desktop: keep legacy bottom-anchor (extraSlot reserves room for 4th ach button).
     const extraSlot = (!isMobile && hasNewAch) ? buttonHeight + spacing : 0;
-    const startY = this.canvas.height - (isMobile ? 240 : 220) - extraSlot;
+    const panelBottomDraw = panelY + panelHeight;
+    const buttonBlockHDraw = (buttonHeight + spacing) * 3 - spacing;
+    const mobileNaturalDraw = panelBottomDraw + 56;
+    const startY = (isMobile && mobileNaturalDraw + buttonBlockHDraw + 20 <= this.canvas.height)
+      ? mobileNaturalDraw
+      : this.canvas.height - (isMobile ? 240 : 220) - extraSlot;
     const bx = this.canvas.width / 2 - buttonWidth / 2;
 
     this.renderer.drawButton(bx, startY, buttonWidth, buttonHeight, 'Try Again', false, true, isMobile);
