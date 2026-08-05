@@ -6,6 +6,19 @@ portrait viewport).
 
 ---
 
+## 2026-08-05 (evening 2) — fix(stat): game-over shows total gold EARNED not remaining gold · `a9f412b` · live `index-tci9fyB4.js` ✓
+
+**Player-visible**
+- The **Gold** stat on the game-over screen now shows the total gold you **collected** during the run — every coin, interest payment, and event reward added up — instead of whatever gold happened to be left in your wallet when you died. If you spent everything on items, the old stat showed "Gold: 0". The new stat shows, e.g., "Gold: 340" — a real productivity signal you can compare across runs.
+
+**Under the hood**
+- `Player.ts`: added `totalGoldEarned: number = 0`; `addGold()` increments it for every positive gold gain.
+- `SaveManager.ts`: added optional `totalGoldEarned?: number` to `SaveData` so the counter survives mid-run page refreshes.
+- `Game.ts` (`autoSave`): saves `totalGoldEarned` to run-save; `loadRun`: restores it. `gameOver()`: uses `player.totalGoldEarned` instead of `player.gold`.
+- TypeScript clean (noEmit), qa-live-smoke PASS. Build `index-tci9fyB4.js` (1,041.22 kB, gzip 195.37 kB).
+
+---
+
 ## 2026-08-05 (evening) — fix(feel): green +N HP number on health orb pickup · `a9ab4c5` · live `index-IeHOFA0V.js` ✓
 
 **Player-visible**
