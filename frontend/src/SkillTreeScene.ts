@@ -257,7 +257,7 @@ export class SkillTreeScene implements Scene {
       const selReach  = skillTree.isReachable(sel.id);
       const status    = sel.type === 'start' ? 'START'
         : selAlloc  ? 'ALLOCATED'
-        : selCan    ? 'TAP TO ALLOCATE'
+        : selCan    ? (isMobile ? 'TAP TO ALLOCATE' : 'CLICK TO ALLOCATE')
         : selReach  ? (pts > 0 ? '' : 'NEED A POINT')
         : 'LOCKED';
       const armColor  = sel.arm === 'core' ? '#ffd700' : (ARM_COLOR[sel.arm] || '#c8b998');

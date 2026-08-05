@@ -796,7 +796,7 @@ export class ShopScene implements Scene {
         size: s(5.5), color: '#ffe08a', align: 'right'
       });
     } else {
-      this.deps.renderer.drawText('TAP FOR ALL STATS ▸', statPanelX + statPanelWidth / 2, statPanelY + statPanelHeight - s(9), {
+      this.deps.renderer.drawText('CLICK FOR ALL STATS ▸', statPanelX + statPanelWidth / 2, statPanelY + statPanelHeight - s(9), {
         size: s(7), color: '#ffe08a', align: 'center'
       });
     }
