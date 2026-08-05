@@ -6,6 +6,17 @@ portrait viewport).
 
 ---
 
+## 2026-08-05 (night 3) — fix(gameover): buttons anchor below stats panel · `e40a1b5` · live `index-CHc7NdCK.js` ✓
+
+**Player-visible**
+- The game-over screen no longer shows ~300 CSS px of dead empty black between your stats and the action buttons on a typical phone. The buttons (Try Again / View Upgrades / Main Menu) now sit directly below the stats panel with a short breathing gap, so the whole screen reads as one cohesive block — stats → buttons — instead of content floating at the top and buttons marooned at the bottom.
+
+**Under the hood**
+- `GameOverScene.ts`: replaced the fixed `canvas.height - 240` bottom-anchor with `panelBottom + 56px` on mobile (same gap on both desktop and short-screen fallback to prevent button overflow). Both `update()` and `draw()` use the identical formula so click-zones stay aligned with drawn buttons.
+- QA: synergy-gameover PASS, live-smoke PASS. Build `index-CHc7NdCK.js` (1,041.46 kB gzip 195.45 kB).
+
+---
+
 ## 2026-08-05 (evening 2) — fix(stat): game-over shows total gold EARNED not remaining gold · `a9f412b` · live `index-tci9fyB4.js` ✓
 
 **Player-visible**
