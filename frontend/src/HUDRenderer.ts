@@ -23,6 +23,7 @@ export interface HUDRendererDeps {
   getActiveSkillCooldownE(): number;
   getGearButtonRect(): { x: number; y: number; width: number; height: number };
   getSafeAreaTop(zoom: number): number;
+  getSkillTreePoints(): number;
 }
 
 export class HUDRenderer {
@@ -274,6 +275,20 @@ export class HUDRenderer {
       this.deps.renderer.drawText(`${specialization.toUpperCase()} +20%`, s(10), statusY, {
         size: s(8), color: specialization === 'melee' ? '#ff8c42' : '#5ee0e0'
       });
+      statusY += s(14);
+    }
+    // Banked skill points — pulse gold to remind the player that the skill tree will open
+    // at the next wave-end. Appears mid-wave the moment a level-up banks a point.
+    const pendingSkillPts = this.deps.getSkillTreePoints();
+    if (pendingSkillPts > 0) {
+      const pulse = 0.65 + 0.35 * Math.abs(Math.sin(Date.now() / 520));
+      ctx.save();
+      ctx.globalAlpha = pulse;
+      this.deps.renderer.drawText(
+        `⬆ ${pendingSkillPts} SKILL PT${pendingSkillPts > 1 ? 'S' : ''}`,
+        s(10), statusY, { size: s(8), color: '#ffd700' }
+      );
+      ctx.restore();
     }
   }
 

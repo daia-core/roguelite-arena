@@ -548,6 +548,7 @@ export class Game {
       getActiveSkillCooldownE: () => this.activeSkillCooldownE,
       getGearButtonRect: () => this.gearButtonRect(),
       getSafeAreaTop: (zoom) => this.safeAreaTop(zoom),
+      getSkillTreePoints: () => this.skillTree.availablePoints,
     });
 
     this.playingRenderer = new PlayingRenderer({
