@@ -429,6 +429,7 @@ export class Game {
       onChoose: (choice) => this.applyRestChoice(choice),
       onDone: () => { this.state = 'map'; },
       getWave: () => this.waveManager.currentWave,
+      getPlayerHp: () => ({ current: Math.round(this.player?.health ?? 0), max: this.player?.maxHealth ?? 0 }),
     });
 
     // Step 7: GameOverScene.

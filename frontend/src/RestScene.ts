@@ -19,6 +19,8 @@ export interface RestSceneDeps {
   onDone: () => void;
   /** Returns the current wave number so we can warn when a boss wave is next. */
   getWave?: () => number;
+  /** Returns current and max player HP so the scene can show concrete heal value. */
+  getPlayerHp?: () => { current: number; max: number };
 }
 
 /**
@@ -36,6 +38,7 @@ export class RestScene implements Scene {
   private readonly onChoose: (choice: 'rest' | 'train') => string;
   private readonly onDone: () => void;
   private readonly getWave?: () => number;
+  private readonly getPlayerHp?: () => { current: number; max: number };
 
   private restResolved: boolean = false;
   private restResultText: string = '';
@@ -47,6 +50,7 @@ export class RestScene implements Scene {
     this.onChoose = deps.onChoose;
     this.onDone = deps.onDone;
     this.getWave = deps.getWave;
+    this.getPlayerHp = deps.getPlayerHp;
   }
 
   /** Returns boss-wave-next info for use in both draw() and update(). */
@@ -71,7 +75,10 @@ export class RestScene implements Scene {
     let y = s(isMobile ? 30 : 40) + s(isMobile ? 22 : 28);
 
     if (!this.restResolved) {
-      y += s(isMobile ? 18 : 22);
+      // Keep in sync with draw(): HP line (if available) + subtitle line.
+      const hp = this.getPlayerHp ? this.getPlayerHp() : null;
+      if (hp) { y += s(isMobile ? 13 : 16); }   // HP: X / Y line
+      y += s(isMobile ? 15 : 18);                 // "Take a moment" subtitle
       // Boss-wave warning shifts the button row down — keep in sync with draw().
       const bwn = this.bossWaveNext();
       if (bwn.is) y += s(isMobile ? 8 : 7) + s(6);
@@ -116,8 +123,24 @@ export class RestScene implements Scene {
     const bodyPx = s(isMobile ? 9 : 11);
 
     if (!this.restResolved) {
-      this.renderer.drawText('Take a moment. Choose one.', W / 2, y, { size: bodyPx, align: 'center', color: '#d8c9a8' });
-      y += s(isMobile ? 18 : 22);
+      // Show current HP so the player can make an informed rest-vs-train call.
+      const hp = this.getPlayerHp ? this.getPlayerHp() : null;
+      // HP colour: red when wounded (<50%), yellow when partial, white when healthy.
+      const hpColor = hp && hp.current < hp.max * 0.5
+        ? '#ff6b6b'
+        : hp && hp.current < hp.max
+          ? '#ffe066'
+          : '#d8c9a8';
+      if (hp) {
+        // Show HP on its own line so it doesn't clip on narrow mobile viewports.
+        this.renderer.drawText(`HP: ${hp.current} / ${hp.max}`, W / 2, y, { size: bodyPx, align: 'center', color: hpColor });
+        y += s(isMobile ? 13 : 16);
+        this.renderer.drawText('Take a moment. Choose one.', W / 2, y, { size: s(isMobile ? 7 : 9), align: 'center', color: '#d8c9a8' });
+      } else {
+        this.renderer.drawText('Take a moment. Choose one.', W / 2, y, { size: bodyPx, align: 'center', color: '#d8c9a8' });
+      }
+      y += s(isMobile ? 15 : 18);
+
       // Boss-wave-incoming warning — shown when the next combat wave is a boss wave (wave % 10 === 0).
       // Rest is the smarter choice when a boss looms: survive to spend, not train to die.
       const bwn = this.bossWaveNext();
@@ -130,8 +153,17 @@ export class RestScene implements Scene {
         );
         y += warnSize + s(6);
       }
+
+      // Compute the concrete rest heal amount for the button label (no Unicode arrows — pixel font).
+      const healAmt = hp ? Math.round(0.4 * hp.max) : null;
+      const restLabel = hp && hp.current >= hp.max
+        ? 'Rest — already at full HP'
+        : healAmt !== null
+          ? `Rest — +${Math.min(healAmt, hp!.max - hp!.current)} HP`
+          : 'Rest — heal 40% HP';
+
       const rects = this.columnRects(2, y, s, W, isMobile);
-      this.renderer.drawButton(rects[0].x, rects[0].y, rects[0].width, rects[0].height, 'Rest — heal 40% HP', false, true, isMobile);
+      this.renderer.drawButton(rects[0].x, rects[0].y, rects[0].width, rects[0].height, restLabel, false, true, isMobile);
       this.renderer.drawButton(rects[1].x, rects[1].y, rects[1].width, rects[1].height, 'Train — +15 max HP', false, true, isMobile);
     } else {
       for (const line of this.wrapText(this.restResultText, contentW - s(24), bodyPx)) {
