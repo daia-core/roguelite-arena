@@ -6,6 +6,34 @@ portrait viewport).
 
 ---
 
+## 2026-08-05 (evening) — fix(feel): green +N HP number on health orb pickup · `a9ab4c5` · live `index-IeHOFA0V.js` ✓
+
+**Player-visible**
+- Picking up a health orb now shows a green **+N HP** floating number at the orb — e.g. "+20 HP" — exactly like the damage numbers that appear on enemies.
+- If you're near-full and the orb only heals a partial amount, the number shows the actual healed HP (capped at max), not the orb's face value.
+- If you're already at full HP, no number appears (nothing to show).
+
+**Under the hood**
+- `Game.ts` (`updatePickupsAndCleanup`): compute `actualHeal = min(healAmount, maxHP - currentHP)` before the heal call; push a `createDamageNumber` in `#4dff7c` (bright green) when actualHeal > 0.
+- TypeScript clean (noEmit), qa-rest-hp 6/6 PASS, qa-live-smoke PASS.
+
+---
+
+## 2026-08-05 (morning) — fix(feel): campfire rest shows concrete HP and heal amount · `144ea65` · live `index-CZAdufUi.js` ✓
+
+**Player-visible**
+- The campfire screen now shows your current HP before you choose: **HP: 60 / 100** (yellow when wounded, red when critical, white when full).
+- The Rest button now shows the exact heal you'll get: **Rest — +40 HP** instead of the vague "heal 40% HP". At full HP it reads "already at full HP".
+- These two lines give you enough information to actually make the rest-vs-train decision instead of guessing.
+
+**Under the hood**
+- `RestSceneDeps`: added optional `getPlayerHp?: () => { current: number; max: number }`.
+- `RestScene.draw()` + `update()`: HP line + subtitle on separate lines (avoids narrow-mobile clipping); y-positions kept in sync; heal amount computed from live HP rather than from a percentage string.
+- `Game.ts`: wired `getPlayerHp: () => ({ current: Math.round(this.player?.health ?? 0), max: this.player?.maxHealth ?? 0 })`.
+- `qa-rest-hp.mjs` added (6/6 pass): verifies dep wiring, wounded-HP read, exact heal amount, cap-at-max, no console errors.
+
+---
+
 ## 2026-08-05 (night 2) — fix(hud): banked skill-point counter in HUD status area · `ad3bf56` · live `index-BNGyv85T.js` ✓
 
 **Player-visible**
