@@ -6,6 +6,18 @@ portrait viewport).
 
 ---
 
+## 2026-08-05 (night) — fix(shop): ×N owned count badge on stackable trinket cards · `81fd96e` · live `index-DYKhi8XP.js` ✓
+
+**Player-visible**
+- Shop cards for trinkets you already own now show a small blue **×N** badge at the bottom-right of the item icon — e.g. "×3" if you own three copies of an item. Makes it easy to track how deep your stacks are without opening the loadout panel.
+- Only shown for stackable trinkets; gear-slot items (rings, armour, weapons) are not stacked so they don't get the badge.
+
+**Under the hood**
+- `ShopScene.ts`: imported `isTrinket` (aliased `isItemTrinket` to avoid local shadowing), computed owned count with `ps.items.filter(i => i.id === item.id).length`, draws a dark-background `×N` pill at `iconLeft + iconBox - badgeW` when count ≥ 1 and item is a trinket.
+- All QA clean: catalog CLEAN (1902), stats-parity 2175/0 mismatches PASS, shop-layout 11/11 PASS, live-smoke PASS, wave-clear-banner PASS. Build `index-DYKhi8XP.js` (1,039.91 kB, gzip 194.99 kB).
+
+---
+
 ## 2026-08-04 (night) — fix(gameover): sort item strip by rarity on game-over screen · `7244eb8` · live `index-8h-Ufbcm.js` ✓
 
 **Player-visible**
