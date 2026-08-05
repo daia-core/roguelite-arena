@@ -899,6 +899,7 @@ export class Game {
       this.player.xpToNextLevel = xpReq;
     }
     if (save.gold !== undefined) this.player.gold = save.gold;
+    if (save.totalGoldEarned !== undefined) this.player.totalGoldEarned = save.totalGoldEarned;
     if (save.health !== undefined) this.player.health = save.health;
 
     this.enemies = [];
@@ -3623,7 +3624,7 @@ export class Game {
       wavesReached: this.waveManager.currentWave,
       enemiesKilled: this.kills,
       bossesDefeated: this.bossKills,
-      goldEarned: this.player?.gold ?? 0,
+      goldEarned: this.player?.totalGoldEarned ?? 0,
       itemsCollected: this.playerStats.items.length,
       soulsEarned: this.soulsEarnedThisRun,
       personalBest: previousBest,
@@ -3669,6 +3670,7 @@ export class Game {
       xp: this.player.xp,
       level: this.player.level,
       gold: this.player.gold,
+      totalGoldEarned: this.player.totalGoldEarned,
       health: this.player.health,
       items: this.playerStats.items.map(item => item.id),
       artifactIds: this.artifacts.held.map(a => a.id),

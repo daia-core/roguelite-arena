@@ -6,6 +6,7 @@ export interface SaveData {
   xp: number;
   level: number;
   gold: number;
+  totalGoldEarned?: number; // lifetime gold collected this run (for game-over stat)
   health: number;
   items: string[]; // Item IDs
   artifactIds: string[]; // Held artifact IDs (map-granted run modifiers)

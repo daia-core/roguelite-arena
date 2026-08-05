@@ -23,6 +23,7 @@ export class Player {
 
   // Gold
   gold: number = 0;
+  totalGoldEarned: number = 0; // running total for the game-over "Gold earned" stat
 
   // Combat
   shootCooldown: number = 0;
@@ -359,6 +360,7 @@ export class Player {
 
   addGold(amount: number): void {
     this.gold += amount;
+    if (amount > 0) this.totalGoldEarned += amount;
   }
 
   private levelUp(): void {
