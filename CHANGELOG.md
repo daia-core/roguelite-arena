@@ -6,6 +6,19 @@ portrait viewport).
 
 ---
 
+## 2026-08-05 (night 2) — fix(hud): banked skill-point counter in HUD status area · `ad3bf56` · live `index-BNGyv85T.js` ✓
+
+**Player-visible**
+- When you level up during a wave and bank a skill point (to spend at the next shop/skill-tree break), a pulsing gold **⬆ N SKILL PT(S)** callout now appears in the bottom-left HUD status area (below SHIELD ACTIVE / MELEE +20% if those are showing). It pulses gently to draw the eye, and disappears the moment you spend your points in the skill tree.
+- Also fixed a pre-existing overlap bug: if both SHIELD ACTIVE and a MELEE/RANGED specialisation callout were active simultaneously, the two lines rendered on top of each other. Both now stack vertically as intended.
+
+**Under the hood**
+- `HUDRenderer.ts`: added `getSkillTreePoints(): number` to `HUDRendererDeps`; pulsing gold callout in `drawHUD()` status section; added missing `statusY += s(14)` after specialisation callout.
+- `Game.ts`: wired `getSkillTreePoints: () => this.skillTree.availablePoints` at HUDRenderer construction.
+- TypeScript clean (noEmit), catalog CLEAN (1902), stats-parity PASS, shop-layout PASS, wave-clear-banner PASS, live-smoke PASS.
+
+---
+
 ## 2026-08-05 (night) — fix(shop): ×N owned count badge on stackable trinket cards · `81fd96e` · live `index-DYKhi8XP.js` ✓
 
 **Player-visible**
