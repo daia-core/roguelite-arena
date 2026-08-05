@@ -1825,8 +1825,15 @@ export class Game {
 
       // Check pickup collision
       if (orb.collidesWith(this.player.x, this.player.y, this.player.radius)) {
+        const actualHeal = Math.min(orb.healAmount, this.player.maxHealth - this.player.health);
         this.player.heal(orb.healAmount);
         orb.dead = true;
+        // Green floating number so the player knows exactly how much HP they got.
+        if (actualHeal > 0) {
+          this.damageNumbers.push(this.createDamageNumber(
+            orb.x, orb.y - 20, `+${Math.round(actualHeal)} HP`, false, '#4dff7c'
+          ));
+        }
         // PERFORMANCE: Use pooled particles
         for (let i = 0; i < 12; i++) {
           const angle = Math.random() * Math.PI * 2;
