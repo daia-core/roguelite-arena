@@ -12,7 +12,7 @@
 import type { Scene } from './scenes/Scene';
 import type { GameState } from './Game';
 import { type Item, type EquipHolderKey, ItemDatabase, PlayerStats,
-  classifyItemSlot, slotLabel, itemStatSegments, descRestatesStats, getItemKinds } from './ItemSystem';
+  classifyItemSlot, slotLabel, itemStatSegments, descRestatesStats, getItemKinds, isTrinket as isItemTrinket } from './ItemSystem';
 import { Player } from './Player';
 import { Input } from './Input';
 import { Renderer } from './Renderer';
@@ -949,6 +949,26 @@ export class ShopScene implements Scene {
       ctx.restore();
       const spriteSize = Math.round(iconBox * 0.74);
       this.deps.renderer.drawItemIcon(item.icon, iconCX, iconCY - spriteSize / 2, spriteSize, 'center');
+
+      // Owned-count badge — bottom-right of icon box when player holds ≥1 copy.
+      // Only for trinkets (stackable items); gear slots show a single distinct piece.
+      const ownedCount = ps.items.filter(owned => owned.id === item.id).length;
+      if (ownedCount > 0 && isItemTrinket(item)) {
+        const badgeText = `×${ownedCount}`;
+        const badgeFs = Math.max(s(7), Math.round(iconBox * 0.22));
+        const badgeW = Math.round(badgeText.length * badgeFs * 0.62) + s(4);
+        const badgeH = badgeFs + s(4);
+        const badgeX = iconLeft + iconBox - badgeW - s(1);
+        const badgeY = iconTop + iconBox - badgeH - s(1);
+        ctx.save();
+        ctx.globalAlpha = 0.88;
+        ctx.fillStyle = '#1a1a2e';
+        ctx.fillRect(badgeX, badgeY, badgeW, badgeH);
+        ctx.restore();
+        this.deps.renderer.drawText(badgeText, badgeX + badgeW / 2, badgeY + s(2), {
+          size: badgeFs, align: 'center', color: '#4a9eff',
+        });
+      }
 
       const textX = iconLeft + iconBox + pad;
       const textRight = x + itemWidth - cardInset;
