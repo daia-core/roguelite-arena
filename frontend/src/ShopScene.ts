@@ -477,7 +477,7 @@ export class ShopScene implements Scene {
 
     const anyEquipped = keys.some(k => eq[k]);
     if (anyEquipped) {
-      this.deps.renderer.drawText('tap gear ▸ inspect', x + width - s(2), stripBottom + s(2), {
+      this.deps.renderer.drawText(isMobile ? 'tap gear ▸ inspect' : 'click gear ▸ inspect', x + width - s(2), stripBottom + s(2), {
         size: s(5), color: '#7a6a44', align: 'right'
       });
     }
@@ -487,7 +487,7 @@ export class ShopScene implements Scene {
     if (stash.length > 0) {
       const rowY = stripBottom + s(4);
       const iconBox = isMobile ? s(18) : s(22);
-      this.deps.renderer.drawText(`STASH ${stash.length}/${PlayerStats.STASH_CAP} · tap ▸ equip`, x + s(2), rowY, {
+      this.deps.renderer.drawText(`STASH ${stash.length}/${PlayerStats.STASH_CAP} · ${isMobile ? 'tap' : 'click'} ▸ equip`, x + s(2), rowY, {
         size: s(5.5), color: '#9c8a5c', align: 'left'
       });
       const iconsY = rowY + s(8);

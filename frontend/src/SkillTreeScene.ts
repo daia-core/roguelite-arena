@@ -222,8 +222,8 @@ export class SkillTreeScene implements Scene {
     });
     this.renderer.drawText(
       pts > 0
-        ? `${pts} point${pts === 1 ? '' : 's'} · drag to pan · tap a lit node`
-        : 'drag to pan · tap a node to inspect',
+        ? `${pts} point${pts === 1 ? '' : 's'} · drag to pan · ${isMobile ? 'tap' : 'click'} a lit node`
+        : `drag to pan · ${isMobile ? 'tap' : 'click'} a node to inspect`,
       W / 2, s(isMobile ? 29 : 39), {
         size: s(isMobile ? 7 : 9), align: 'center',
         color: pts > 0 ? '#a8e063' : '#c8b998',
