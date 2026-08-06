@@ -78,7 +78,7 @@ export class AchievementsScene implements Scene {
 
     this.renderer.drawText('ACHIEVEMENTS', W / 2, s(isMobile ? 24 : 30), { size: s(isMobile ? 15 : 20), align: 'center', color: '#ffd700' });
     this.renderer.drawText(
-      `${AchievementSystem.earnedCount()} / ${ACHIEVEMENTS.length} earned  ·  tap an unlocked reward to enable/disable it`,
+      `${AchievementSystem.earnedCount()} / ${ACHIEVEMENTS.length} earned  ·  ${isMobile ? 'tap' : 'click'} an unlocked reward to enable/disable it`,
       W / 2, s(isMobile ? 24 : 30) + s(isMobile ? 16 : 20),
       { size: s(isMobile ? 7 : 9), align: 'center', color: '#c8b998', maxWidth: rowW }
     );
