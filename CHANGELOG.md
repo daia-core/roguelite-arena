@@ -6,6 +6,29 @@ portrait viewport).
 
 ---
 
+## 2026-08-06 (afternoon) — fix(ux): CLICK not TAP — achievements subtitle · `814d0ab` · live ✓
+
+**Player-visible**
+- Achievements screen subtitle: **"click an unlocked reward to enable/disable it"** on desktop (was hardcoded "tap"). Mobile unchanged.
+
+**Under the hood**
+- `AchievementsScene.ts`: subtitle string now gates on `isMobile`. Last remaining unguarded "tap" in user-facing drawText calls. TypeScript clean.
+
+---
+
+## 2026-08-06 (morning 2) — fix(ux): CLICK not TAP — equipment strip + skill-tree subtitle · `be768d6` · live ✓
+
+**Player-visible**
+- Shop equipment strip hints: **"click gear ▸ inspect"** and **"click ▸ equip"** on desktop (was hardcoded "tap"). Mobile unchanged.
+- Skill-tree subtitle bar (top of screen): **"click a lit node"** / **"click a node to inspect"** on desktop. Mobile unchanged.
+
+**Under the hood**
+- `ShopScene.ts`: 2 remaining hardcoded `'tap'` strings in `drawEquipmentStrip` now gate on `isMobile`.
+- `SkillTreeScene.ts`: subtitle template literals now use `isMobile ? 'tap' : 'click'` — the last two unguarded locations in that file.
+- TypeScript clean. Deploy `dpl_8QcEievetgsBgsVNaoc2utNiVKW2` · roguelite-game.vercel.app ✓
+
+---
+
 ## 2026-08-06 (morning) — feat(ux): item kind chips in shop footer · `a0877d3` · live ✓
 
 **Player-visible**
