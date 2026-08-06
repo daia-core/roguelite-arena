@@ -6,6 +6,19 @@ portrait viewport).
 
 ---
 
+## 2026-08-06 (night 2) — fix(ux): CLICK not TAP for all remaining desktop navigation hints · `d3a6ec8` · live ✓
+
+**Player-visible**
+- Map screen footer: **"Click a lit node to advance"** / **"Click a starting node"** on desktop (was "Tap…"). Mobile unchanged.
+- Skill-tree idle placeholder: **"Click a node to inspect it"** on desktop (was "Tap…"). Mobile unchanged.
+- ALL STATS and COMBOS GUIDE overlays: **"Click anywhere to close"** on desktop (was "Tap anywhere to close"). Mobile unchanged.
+
+**Under the hood**
+- `MapScene.ts`, `SkillTreeScene.ts`, `ShopScene.ts` (2 spots): all hint strings now gate on `isMobile`.
+- TypeScript clean, live-smoke PASS (43 kills, wave cleared, no dead-enemy cull leak). Deploy `d3a6ec8` ✓.
+
+---
+
 ## 2026-08-06 (night) — fix(ux): CLICK not TAP on desktop stat panel and skill-tree · `18f7d01` · live `roguelite-game-blush.vercel.app` ✓
 
 **Player-visible**
