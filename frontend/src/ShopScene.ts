@@ -1066,7 +1066,6 @@ export class ShopScene implements Scene {
       }
 
       // Footer row.
-      const kindColors: Record<string, string> = { weapon: '#f0637a', passive: '#6aa9ff', active: '#ffc14d' };
       const kinds = getItemKinds(item);
       const footerS = Math.max(s(6), Math.round(descSize * 0.82));
       const footerY = contentBottom - footerS;
@@ -1100,14 +1099,32 @@ export class ShopScene implements Scene {
         color: isCascade ? '#69db7c' : (canAfford ? '#ffd700' : '#ef4444'),
       });
 
-      // Category + tags.
-      const catLabel = kinds.map(k => k.toUpperCase()).join('/');
-      const footerText = item.tags.length ? `${catLabel}  ·  ${item.tags.join(' ')}` : catLabel;
-      this.deps.renderer.drawText(footerText, textX, footerY, {
-        size: footerS, align: 'left',
-        color: kinds.length === 1 ? kindColors[kinds[0]] : '#b7a888',
-        maxWidth: Math.max(s(20), textRight - priceW - s(6) - textX),
-      });
+      // Kind chips — one colored pill per functional kind (weapon/passive/active),
+      // consistent with the slot badge above. Multi-kind items get separate chips
+      // so each kind retains its own color (e.g. a weapon+passive ring shows both).
+      const kindBg:     Record<string, string> = { weapon: '#5a1a22', passive: '#1a2a5a', active: '#5a3a1a' };
+      const kindBorder: Record<string, string> = { weapon: '#f0637a', passive: '#6aa9ff', active: '#ffc14d' };
+      const kindTxt:    Record<string, string> = { weapon: '#ffe0e6', passive: '#e0f0ff', active: '#fff5e0' };
+      const chipMaxRight = textRight - priceW - s(6);
+      let chipX = textX;
+      for (const kind of kinds) {
+        if (chipX + s(10) >= chipMaxRight) break;
+        const chipW = drawPill(
+          chipX, footerY - s(3), kind.toUpperCase(), footerS,
+          kindTxt[kind] ?? '#ffffff',
+          kindBg[kind]  ?? '#333333',
+          kindBorder[kind] ?? '#888888',
+        );
+        chipX += chipW + s(3);
+      }
+      // Synergy tags as muted text after the chips.
+      if (item.tags.length && chipX < chipMaxRight) {
+        this.deps.renderer.drawText(
+          item.tags.join(' · '),
+          chipX + s(2), footerY,
+          { size: footerS, align: 'left', color: '#7a7070', maxWidth: chipMaxRight - chipX - s(2) },
+        );
+      }
     }
 
     // Boss-wave-incoming warning — shown when the next wave is a boss wave (wave % 10 === 0).
