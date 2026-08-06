@@ -6,6 +6,19 @@ portrait viewport).
 
 ---
 
+## 2026-08-06 (morning) — feat(ux): item kind chips in shop footer · `a0877d3` · live ✓
+
+**Player-visible**
+- The shop card footer now shows each item's functional kind as a **colored pill chip**: `WEAPON` in red, `PASSIVE` in blue, `ACTIVE` in orange — matching the slot badge style already used in row 2.
+- Multi-kind items (e.g. a ring that adds orbit orbs) show **separate chips**, each with its own color, instead of the previous single muted label.
+- Synergy tags (melee, ranged, etc.) follow the chips as small muted text, clearly separated.
+
+**Under the hood**
+- `ShopScene.ts`: replaced flat `drawText(catLabel)` footer with per-kind `drawPill()` calls (reuses the existing `drawPill` helper). Removed now-unused `kindColors` variable.
+- TypeScript clean, shop-layout 11/11 PASS, live-smoke PASS. Deploy `dpl_DjUy3WM54edgzUu3R8Rx69LuEwaF` · alias `roguelite-game-blush.vercel.app` ✓.
+
+---
+
 ## 2026-08-06 (night 2) — fix(ux): CLICK not TAP for all remaining desktop navigation hints · `d3a6ec8` · live ✓
 
 **Player-visible**
