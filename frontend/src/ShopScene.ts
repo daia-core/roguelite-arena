@@ -1359,7 +1359,7 @@ export class ShopScene implements Scene {
     let y = s(isMobile ? 20 : 28);
     this.deps.renderer.drawText('ALL STATS & BONUSES', W / 2, y, { size: headSize, align: 'center', color: '#ffd700' });
     y += headSize + s(5);
-    this.deps.renderer.drawText('Tap anywhere to close', W / 2, y, { size: s(7), align: 'center', color: '#9a8a6a' });
+    this.deps.renderer.drawText(isMobile ? 'Tap anywhere to close' : 'Click anywhere to close', W / 2, y, { size: s(7), align: 'center', color: '#9a8a6a' });
     y += s(7) + s(10);
 
     const cols = isMobile ? 1 : 2;
@@ -1424,7 +1424,7 @@ export class ShopScene implements Scene {
 
     this.deps.renderer.drawText('COMBOS GUIDE', W / 2, y, { size: headSize, align: 'center', color: '#ffd700' });
     y += headSize + s(6);
-    this.deps.renderer.drawText('Tap anywhere to close', W / 2, y, { size: s(7), align: 'center', color: '#9a8a6a' });
+    this.deps.renderer.drawText(isMobile ? 'Tap anywhere to close' : 'Click anywhere to close', W / 2, y, { size: s(7), align: 'center', color: '#9a8a6a' });
     y += s(7) + s(12);
 
     this.deps.renderer.drawText('ACTIVE NOW', x0, y, { size: bodySize, align: 'left', color: '#8ce99a' });

@@ -138,7 +138,9 @@ export class MapScene implements Scene {
     }
 
     this.renderer.drawText(
-      map.currentId ? 'Tap a lit node to advance' : 'Tap a starting node',
+      map.currentId
+        ? (isMobile ? 'Tap a lit node to advance' : 'Click a lit node to advance')
+        : (isMobile ? 'Tap a starting node' : 'Click a starting node'),
       W / 2, H - s(22), { size: s(isMobile ? 8 : 9), align: 'center', color: '#c8b998' },
     );
   }

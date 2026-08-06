@@ -272,7 +272,7 @@ export class SkillTreeScene implements Scene {
         color: selAlloc ? '#a8e063' : selCan ? '#ffd700' : '#c8a15a',
       });
     } else {
-      this.renderer.drawText('Tap a node to inspect it', V.btnX + V.btnW / 2, V.infoY + V.infoH / 2 + s(3), {
+      this.renderer.drawText(isMobile ? 'Tap a node to inspect it' : 'Click a node to inspect it', V.btnX + V.btnW / 2, V.infoY + V.infoH / 2 + s(3), {
         size: s(isMobile ? 8 : 9), align: 'center', color: '#c8b998',
       });
     }
