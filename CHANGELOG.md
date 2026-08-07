@@ -6,6 +6,27 @@ portrait viewport).
 
 ---
 
+## 2026-08-08 (night 2) — feel(vignette): pulsing red screen-edge vignette below 30% HP · `521a657` · live `index-DXxEyNgv.js` ✓
+
+**Player-visible**
+- **Low-health vignette:** when HP drops to or below 30%, the screen edges pulse red.
+  Intensity and pulse rate both scale with severity — at 10% HP the edges throb urgently,
+  at 25% just a faint warning blush. Fills in the single most common "I didn't notice I was
+  dying" moment in longer runs.
+
+**Under the hood**
+- `PlayingRenderer.ts`: new `drawLowHealthVignette(ctx, player)` private method. Drawn just
+  before the outer `ctx.restore()` so it sits in screen space above HUD and world but below
+  the screen-flash layer. Radial gradient (`rgba(160,0,0,0)` centre → `rgba(210,20,20,α)`
+  corners); inner radius 35% of corner distance to keep centre clear. Pulse period scales
+  from 800ms at 30% HP → 350ms at 0% HP; base alpha 0.12 → 0.57; combined peak ≈0.57.
+- QA: `tsc --noEmit` PASS, `qa-catalog-integrity` CLEAN (1903), `qa-shop-chips` VALID,
+  `qa-node-map` 51/51 PASS.
+- Deployed: Vercel `dpl_5maByiqZhgCMg51Ua5K12NeaGXYb`, `READY`, alias `roguelite-game-blush.vercel.app`.
+  Live bundle `index-DXxEyNgv.js` confirmed to contain `rgba(210` and `Math.hypot`.
+
+---
+
 ## 2026-08-08 (night) — feel(waveclear): particle burst + enemy count banner · `7d512c4` · live `index-C2SkH5IU.js` ✓
 
 **Player-visible**
