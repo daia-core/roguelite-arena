@@ -69,6 +69,43 @@ export class PlayingRenderer {
     this.deps = deps;
   }
 
+  /**
+   * Draws a pulsing red vignette at the screen edges when the player is critically low on HP.
+   * Activates below 30% HP; pulse rate and intensity scale with severity.
+   */
+  private drawLowHealthVignette(ctx: CanvasRenderingContext2D, player: Player): void {
+    const hpFrac = player.health / player.maxHealth;
+    if (hpFrac >= 0.30) return;
+
+    const W = this.deps.canvas.width;
+    const H = this.deps.canvas.height;
+
+    // Severity: 0 at 30% HP → 1 at 0% HP
+    const severity = 1 - hpFrac / 0.30;
+
+    // Pulse rate: 800ms at 30% HP (barely noticeable) → 350ms at 0% HP (urgent)
+    const pulseRate = 800 - severity * 450;
+    const pulse = 0.45 + 0.55 * Math.abs(Math.sin(Date.now() / pulseRate));
+
+    // Alpha envelope: subtle at 30%, punishing at 0%
+    const baseAlpha = 0.12 + severity * 0.45;
+    const alpha = baseAlpha * pulse;
+
+    // Radial gradient: transparent center → red edges
+    const cx = W / 2;
+    const cy = H / 2;
+    const innerR = Math.hypot(cx, cy) * 0.35;
+    const outerR = Math.hypot(cx, cy);
+    const grad = ctx.createRadialGradient(cx, cy, innerR, cx, cy, outerR);
+    grad.addColorStop(0, 'rgba(160, 0, 0, 0)');
+    grad.addColorStop(1, `rgba(210, 20, 20, ${alpha.toFixed(3)})`);
+
+    ctx.save();
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+  }
+
   draw(): void {
     if (!this.deps.getPlayer()) return;
     const player = this.deps.getPlayer()!;
@@ -232,6 +269,9 @@ export class PlayingRenderer {
       visibleEntities: visibleCount,
       culledEntities: culledCount
     });
+
+    // GAME FEEL: Low-health vignette (pulsing red screen edges when HP ≤ 30%)
+    this.drawLowHealthVignette(ctx, player);
 
     // GAME FEEL: Restore context after screen effects
     ctx.restore();
