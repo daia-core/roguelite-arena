@@ -6,6 +6,43 @@ portrait viewport).
 
 ---
 
+## 2026-08-07 (night) — test(qa): skill tree structural gate · `qa-node-map.ts` · 51/51 ✅
+
+**Player-visible:** none (QA-only addition).
+
+**Under the hood**
+- New `qa-node-map.ts` — static structural gate for the PoE-style skill tree expansion. Prescribed by `skilltree-expansion-plan.md` (Jul 7) but never written until now. No browser needed; runs via `npx tsx`.
+- 51 checks: total node count ≥180, all 4 node types present, ≥4 notables + ≥3 keystones per arm, ≥6 cross-arm bridge notables, ≥4 global keystones, BFS reachability from all 7 class starts, global keystone ≤3 hops from Gunner hub / ≤4 hops from non-Gunner starts, no isolated nodes, single connected component, `tsc --noEmit` clean.
+- **Result: 185 nodes, 306 edges, 51/51 pass.** Tree is structurally sound.
+
+---
+
+## 2026-08-06 (evening) — QA verification pass · no new commits · all green ✅
+
+**QA run (19:58 CEST)** — content budget exhausted (1 feat commit today); fix/verify only.
+
+Verification scope: 9 commits from today's sessions (feat kind-chips + 8 CLICK/TAP fixes across AchievementsScene, ShopScene, SkillTreeScene, MapScene, stat panel, skill-tree, combos overlay).
+
+| Check | Result |
+|-------|--------|
+| Live smoke (live build) | PASS — 45 kills, wave cleared, 0 dead-leak, 0 console errors |
+| qa-shop-chips (static) | PASS — 1902 items, all have valid kinds (weapon 27% / passive 92% / active 4%) |
+| qa-catalog-integrity | PASS — no duplicate ids/names, no invalid fields |
+| qa-stats-parity | PASS |
+| qa-damagetype | PASS |
+| qa-synergy | PASS |
+| qa-triggered-items | PASS — 21/21 |
+| qa-equipment-manage | PASS — 32/32 |
+| qa-achievements | PASS — 0 console errors |
+| qa-transformation-hints | PASS — 36/36 |
+| qa-classselect | PASS |
+| qa-xp-coin-shop | PASS |
+| qa-village | PASS |
+| AchievementsScene source | `isMobile ? 'tap' : 'click'` guard confirmed on line 81 |
+
+**No regressions found.** All today's fixes are live and functional.
+
+
 ## 2026-08-06 (afternoon) — fix(ux): CLICK not TAP — achievements subtitle · `814d0ab` · live ✓
 
 **Player-visible**
