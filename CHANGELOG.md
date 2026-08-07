@@ -6,6 +6,29 @@ portrait viewport).
 
 ---
 
+## 2026-08-08 (night) — feel(waveclear): particle burst + enemy count banner · `7d512c4` · live `index-C2SkH5IU.js` ✓
+
+**Player-visible**
+- **Wave-clear feel upgrade:** clearing a wave now triggers a green/gold confetti burst at the
+  player — 22 particles arc outward with an upward bias (900–1400ms lifetime). Gives the wave
+  clear the same satisfying pop as a level-up.
+- **Enemy count sub-line on banner:** "WAVE X CLEARED!" now has a second line below it —
+  "N ENEMIES DEFEATED" — pulled from `waveManager.totalEnemiesInWave`, so the player sees a
+  concrete count of what they just cleared before the shop transition.
+
+**Under the hood**
+- `Game.ts`: new `spawnWaveClearBurst()` called when `waveClearPending` is set. Green/gold
+  palette (`#4ade80 / #22c55e / #a3e635 / #fbbf24 / #86efac / #ffffff`); lighter than
+  level-up burst (no audio, no hit-flash — `enterShop()` already plays wave-complete).
+- `PlayingRenderer.ts`: banner main text shifted from `H/2−20px` to `H/2−28px` to make
+  vertical room; sub-line drawn at `H/2+4px`, size 9, color `#86efac`. Guards `totalEnemies > 0`.
+- QA: `tsc --noEmit` PASS, `qa-catalog-integrity` CLEAN (1903), `qa-shop-chips` VALID,
+  `qa-node-map` 51/51 PASS.
+- Deployed: Vercel `dpl_A5yzBH7K1cMNtHB9gp8gzzFjPvs6`, `READY + PROMOTED`, sha `7d512c4`.
+  Live bundle `index-C2SkH5IU.js` confirmed to contain "ENEMIES DEFEATED" via curl.
+
+---
+
 ## 2026-08-07 (night 2) — feat(item): Maelstrom Disc — T4 legendary auxMelee · `49c2b1b` · live `index-Dl8n6y0V.js` ✓
 
 **Player-visible**
