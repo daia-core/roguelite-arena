@@ -6,6 +6,26 @@ portrait viewport).
 
 ---
 
+## 2026-08-07 (night 2) — feat(item): Maelstrom Disc — T4 legendary auxMelee · `49c2b1b` · live `index-Dl8n6y0V.js` ✓
+
+**Player-visible**
+- New **Legendary** item: **Maelstrom Disc** (🌑, cost 140) — the T4 capstone of the spinning-blade chain (Whirl Blade → Razor Disc → Death Disc → **Maelstrom Disc**).
+  - +2.6× aux-blade damage (jump from T3's ×1.6 — big legendary payoff)
+  - +30 swing range (bigger blade reach)
+  - 25% bleed on each pass (DoT synergy with Fourleaf Charm / Wound stacks)
+  - Trade-off: −10% fire rate (the constant whirl taxes your gun rhythm)
+
+**Under the hood**
+- `catalog.ts` line 4216: single-line item entry after `aux_blade_t3`, matching chain style. All four
+  `bleed` hits confirmed live via `applyOnHitEffects` path (melee swings proc bleed, verified at
+  `Game.ts:1610`). `auxMeleeDamageMult` affects swing via `getSwingDamage()` aggregation (ItemSystem.ts:1518).
+- Kinds: `['weapon', 'passive']` (auxMelee triggers `isWeapon`; `fireRateMultiplier` triggers `isPassive`).
+- QA: `qa-catalog-integrity` PASS (1903 items, CLEAN), `qa-shop-chips` PASS (all kinds valid), `tsc --noEmit` PASS.
+- Deployed: Vercel `dpl_94tPAKdzLUeD4nsZ7waGKcC6AhXX`, `READY + PROMOTED`, alias `roguelite-game-blush.vercel.app`.
+  Live bundle `index-Dl8n6y0V.js` confirmed to contain "Maelstrom Disc" via curl.
+
+---
+
 ## 2026-08-07 (night) — test(qa): skill tree structural gate · `qa-node-map.ts` · 51/51 ✅
 
 **Player-visible:** none (QA-only addition).
