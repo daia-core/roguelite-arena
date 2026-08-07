@@ -255,14 +255,24 @@ export class PlayingRenderer {
       const s = (v: number) => Math.round(v * zoom);
 
       const waveNum = this.deps.waveManager.currentWave;
+      const totalEnemies = this.deps.waveManager.totalEnemiesInWave;
       ctx.save();
       ctx.globalAlpha = alpha;
       this.deps.renderer.drawText(
         `WAVE ${waveNum} CLEARED!`,
         W / 2,
-        H / 2 - s(20),
+        H / 2 - s(28),
         { size: s(20), align: 'center', color: '#4ade80', bold: true }
       );
+      // Sub-line: enemies defeated — gives the player a satisfying count of what they cleared.
+      if (totalEnemies > 0) {
+        this.deps.renderer.drawText(
+          `${totalEnemies} ENEMIES DEFEATED`,
+          W / 2,
+          H / 2 + s(4),
+          { size: s(9), align: 'center', color: '#86efac' }
+        );
+      }
       ctx.restore();
     }
   }

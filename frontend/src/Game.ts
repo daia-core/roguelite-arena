@@ -1962,6 +1962,7 @@ export class Game {
         // Standard wave clear: 0.8s "WAVE X CLEARED!" banner before the shop.
         this.waveClearPending = true;
         this.waveClearTimer = 0.8;
+        this.spawnWaveClearBurst();
       }
     }
     // Tick the celebration timer; transition to shop when it expires.
@@ -2364,6 +2365,29 @@ export class Game {
     // skill-tree screen at the next natural break, the between-waves shop (see enterShop()).
     // A per-level baseline stat bump already happens in Player.levelUp().
     this.skillTree.grantPoints(1);
+  }
+
+  /** Wave-clear juice — green/gold particle burst at the player when the wave ends.
+   *  Lighter than the level-up burst (no audio cue — that fires later in enterShop()),
+   *  just a confetti pop to make the clear feel satisfying before the banner fades. */
+  private spawnWaveClearBurst(): void {
+    if (!this.player) return;
+    const colors = ['#4ade80', '#22c55e', '#a3e635', '#fbbf24', '#86efac', '#ffffff'];
+    const count = this.getParticleCount(22);
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 90 + Math.random() * 220;
+      this.particles.push(this.createParticle({
+        x: this.player.x,
+        y: this.player.y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 90,
+        color: colors[i % colors.length],
+        size: 7 + Math.random() * 8,
+        lifetime: 900 + Math.random() * 500,
+        gravity: -70
+      }));
+    }
   }
 
   /** Vampire-Survivors level-up juice — sound, flash, and a burst of confetti. */
