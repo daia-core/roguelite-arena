@@ -6,6 +6,33 @@ portrait viewport).
 
 ---
 
+## 2026-08-09 (night) — feel(death): thematic enemy death particles · `33dc943` · live `index-CI1ApO-E.js` ✓
+
+**Player-visible**
+- **Enemy death particles now match each enemy's color.** Slimes explode green, wraiths purple,
+  skeletons white, imps dark-red, wisps teal — alternating with white sparks for crunch. Previous
+  behavior was generic red/yellow/orange for every kill regardless of type.
+
+**Under the hood**
+- `Game.ts` `handleEnemyKill`: kill particle color changed from random `#ff0000/#ffff00/#ff6600`
+  to `i%2===0 ? enemy.typeData.color : '#ffffff'` — uses the pre-existing per-type color field
+- tsc CLEAN, no QA assertions on particle colors ✅
+
+---
+
+## 2026-08-08 (afternoon-2) — feel(malice): Growing Malice stack popup · `94a8891` · live `index-gWYAJxk0.js` ✓
+
+**Player-visible**
+- **Growing Malice feedback:** every time a new 15s stack is earned, an amber ⏳+X% floater
+  appears at the player — previously the bonus applied silently. Mechanic now feels tangible.
+
+**Under the hood**
+- `Game.ts`: `lastTimeRampNotifiedStacks` tracks last notified stack; detect new stacks in
+  `updateRuntimeModifiers`, push `damageNumbers` float (amber `#ffa726`)
+- tsc CLEAN, 25/25 QA PASS, catalog CLEAN (1907 items) ✅
+
+---
+
 ## 2026-08-08 (afternoon) — feat(content): Growing Malice — time-ramp damage · `53cd1c6` · live `index-DognsdtL.js` ✓
 
 **Player-visible**
