@@ -6,6 +6,66 @@ portrait viewport).
 
 ---
 
+## 2026-08-08 (afternoon) — feat(content): Growing Malice — time-ramp damage · `53cd1c6` · live `index-DognsdtL.js` ✓
+
+**Player-visible**
+- **Growing Malice mechanic:** new class of item — permanent +damage every 15 seconds of run time.
+  Survival itself becomes a damage build: the longer you stay alive, the harder you hit.
+- **4 new items across tiers:**
+  - **Patience Charm** (Uncommon ⏳, 28g) — +2%/15s
+  - **Growing Malice** (Uncommon ⏳, 42g) — +3%/15s
+  - **Malice Engine** (Epic ⏳, 62g) — +5%/15s
+  - **Eternal Malice** (Legendary ⏳, 150g) — +8%/15s AND +10%/wave (compound survival stack)
+- Examples: one Growing Malice at 45s → +9%; at 5min → +60%; at 10min → +120%.
+  Stacks cleanly with wave-ramp (Grindstone) for exponential late-game builds.
+
+**Under the hood**
+- `items/types.ts`: `timeRampDamage?: number`
+- `ItemSystem.ts`: aggregation + `getTimeRampDamage()` getter
+- `Game.ts`: `runPlaySeconds` timer + `TIME_RAMP_INTERVAL = 15`, folded into `updateRuntimeModifiers`
+- `qa-triggered-items.mjs`: 4 new Growing Malice assertions; 25/25 PASS ✅
+
+---
+
+## 2026-08-08 (mid-morning) — fix(feel): enemy hit flash extended to 0.05s · `bef772c` · live `index-CI1ApO-E.js` ✓
+
+**Player-visible**
+- **Enemy hit flash now visible on mobile:** when an enemy is hit, the white silhouette flash
+  now shows for 2 frames at 30fps (mobile) and 3 frames at 60fps (desktop). Previously the flash
+  was 0 frames on mobile — the timer (0.032s) was smaller than a typical 30fps frame dt (0.033s),
+  so the timer decayed to zero inside `updateEnemies()` before the render check ever ran.
+  At 60fps the flash was only 1 frame (not 2 as the comment claimed). Now hit feedback is
+  consistent and readable across all devices.
+
+**Under the hood**
+- `Enemy.ts:1605`: `hitFlashTimer = 0.032` → `hitFlashTimer = 0.05`. The timer is set inside
+  `takeDamage()` (called from `updateProjectileCollisions()`), which runs AFTER `updateEnemies()`
+  (which decrements the timer). So the flash survives to the render call, then lingers into the
+  next N frames based on the timer value vs dt.
+- QA: `tsc --noEmit` PASS.
+- Deployed: Vercel `dpl_FccX33n2hHEeXTeDf1ob1gy8cNGV`, `READY`, alias `roguelite-game-blush.vercel.app`.
+  Live bundle `index-CI1ApO-E.js` confirmed on live site.
+
+---
+
+## 2026-08-08 (morning) — feel(damage): player hit flash changed from white to red · `4600e6d` · live `index-Cv5-xzBw.js` ✓
+
+**Player-visible**
+- **Red hit flash:** when the player takes damage, the screen now flashes red instead of white.
+  White was used for both positive events (level-up, wave-complete) and damage — red is the
+  standard game-design convention for "player took a hit" and reads unambiguously at a glance.
+  Flash density also slightly increased (0.3 → 0.5 dither scale) for better visibility.
+
+**Under the hood**
+- `Renderer.ts`: `hitFlash` overlay color changed from `#ffffff` to `#ff2222`; dither density
+  scale from `0.3 * 4` to `0.5 * 4`. The positive-event flash in `ScreenEffects.ts` is a
+  separate system and remains white (intentional contrast).
+- QA: `tsc --noEmit` PASS.
+- Deployed: Vercel `dpl_B68j5hVu7nZoUBCXFbwgRcBXojyt`, `READY`, alias `roguelite-game-blush.vercel.app`.
+  Live bundle `index-Cv5-xzBw.js` confirmed to contain `#ff2222`.
+
+---
+
 ## 2026-08-08 (night 2) — feel(vignette): pulsing red screen-edge vignette below 30% HP · `521a657` · live `index-DXxEyNgv.js` ✓
 
 **Player-visible**
