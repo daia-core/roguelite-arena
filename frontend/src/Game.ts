@@ -294,6 +294,9 @@ export class Game {
   private waveClearTimer: number = 0;
   private waveClearPending: boolean = false;
 
+  // Death-moment effect guard — ensures the red-flash + particle burst fires exactly once per run.
+  private deathEffectFired: boolean = false;
+
   constructor(canvas: HTMLCanvasElement) {
     // Dev/QA hook: lets tooling (screenshot scripts, the shots-qa harness)
     // inspect and force game state. Not a public API.
@@ -764,6 +767,7 @@ export class Game {
     this.hitPauseTimer = 0;
     this.waveClearTimer = 0;
     this.waveClearPending = false;
+    this.deathEffectFired = false;
     this.bossKills = 0;
     this.soulsEarnedThisRun = 0;
     this.runStartTime = Date.now();
@@ -916,6 +920,7 @@ export class Game {
     this.hitPauseTimer = 0;
     this.waveClearTimer = 0;
     this.waveClearPending = false;
+    this.deathEffectFired = false;
 
     const wave = save.wave ?? 1;
     this.waveManager.reset();
@@ -1977,6 +1982,28 @@ export class Game {
 
     // Check game over
     if (this.player.dead) {
+      if (!this.deathEffectFired) {
+        this.deathEffectFired = true;
+        // Death-moment juice: red flash + collapsing particle burst (mirrors spawnLevelupBurst)
+        this.renderer.addHitFlash(0.6);
+        this.screenEffects.flash('#ff0000', 0.5);
+        const colors = ['#ff0000', '#ff3300', '#cc0000', '#880000', '#ff6600'];
+        const count = this.getParticleCount(16);
+        for (let i = 0; i < count; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = 100 + Math.random() * 200;
+          this.particles.push(this.createParticle({
+            x: this.player.x,
+            y: this.player.y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed + 60,
+            color: colors[i % colors.length],
+            size: 7 + Math.random() * 6,
+            lifetime: 700 + Math.random() * 400,
+            gravity: 200,
+          }));
+        }
+      }
       this.gameOver();
     }
 
