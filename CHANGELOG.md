@@ -6,6 +6,20 @@ portrait viewport).
 
 ---
 
+## 2026-08-09 (night-2) — feel(boss): spectacular boss death burst · `234f8c6` · live `index-5vpUh_Co.js` ✓
+
+**Player-visible**
+- **Boss kills now trigger a spectacular second particle burst.** 50 extra particles erupt on top
+  of the normal 20 — larger (7–19px vs 5–11px), slower gravity, longer lifetime (~1.0–1.8s vs
+  0.6–1.0s), gold/thematic/white tri-color with fade-out. Normal enemy deaths unchanged.
+
+**Under the hood**
+- `Game.ts` `handleEnemyKill`: added boss-gated second loop after base kill burst;
+  `getParticleCount(50)` gold `#ffd700` + `enemy.typeData.color` + white, gravity 120 + fadeOut
+- tsc CLEAN ✅
+
+---
+
 ## 2026-08-09 (night) — feel(death): thematic enemy death particles · `33dc943` · live `index-CI1ApO-E.js` ✓
 
 **Player-visible**
