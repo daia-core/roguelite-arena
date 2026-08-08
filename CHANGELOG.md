@@ -6,6 +6,21 @@ portrait viewport).
 
 ---
 
+## 2026-08-09 (night-5) — feel(soul-tithe): 👻+1% label + purple flash on milestone stack · `e5267dc` · live `index-BttL5B4p.js` ✓
+
+**Player-visible**
+- **Soul Tithe's every-50th-kill permanent damage milestone now has visible feedback.** A ghost-purple
+  "👻+1%" floater appears at the player and a subtle purple screen flash (alpha 0.12) fires the
+  moment the stack is banked. Previously this milestone was completely silent — the permanent damage
+  bonus applied with zero indication, making the Soul Tithe mechanic feel unrewarding.
+
+**Under the hood**
+- `Game.ts` `handleEnemyKill`: when `soulTitheKills % SOUL_TITHE_DMG_EVERY === 0`, push
+  `createDamageNumber(player.x, player.y-40, '👻+1%', false, '#a855f7')` + `screenEffects.flash('#9b5cf6', 0.12)`
+- tsc CLEAN ✅
+
+---
+
 ## 2026-08-09 (night-4) — feel(levelup): LEVEL UP floating label + brighter flash · `483108c` · live `index-v67lq-58.js` ✓
 
 **Player-visible**
