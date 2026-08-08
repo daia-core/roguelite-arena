@@ -2574,7 +2574,7 @@ export class Game {
         y: enemy.y,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
-        color: Math.random() > 0.5 ? '#ff0000' : Math.random() > 0.5 ? '#ffff00' : '#ff6600',
+        color: i % 2 === 0 ? enemy.typeData.color : '#ffffff',
         size: 5 + Math.random() * 6,
         lifetime: 600 + Math.random() * 400,
         gravity: 300
