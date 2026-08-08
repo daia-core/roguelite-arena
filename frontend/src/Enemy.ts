@@ -1602,7 +1602,7 @@ export class Enemy {
 
     // GAME FEEL: Trigger white hit flash (no hitstun — enemies never freeze,
     // impact is conveyed by knockback + flash + particles to keep motion fluid)
-    this.hitFlashTimer = 0.032; // 2 frames at 60fps
+    this.hitFlashTimer = 0.05; // 3 frames at 60fps, 2 at 30fps (mobile)
 
     // Phaser has chance to phase on hit
     if (this.type === 'phaser' && !this.phaserInvincible && Math.random() < this.phaserPhaseOnHitChance) {
