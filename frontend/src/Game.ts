@@ -1005,6 +1005,13 @@ export class Game {
     this.updateMeleeCollisions(dt);
 
     this.updatePickupsAndCleanup(dt);
+
+    // GAME FEEL: Second Wind save — dramatic golden rescue flash (checked after all
+    // damage sources so the flag is guaranteed set for this frame).
+    if (this.player.secondWindTriggered) {
+      this.player.secondWindTriggered = false;
+      this.spawnSecondWindBurst();
+    }
   }
 
   /** Step 15g — per-enemy pathfinding, DoT ticking (legacy + StatusEffectEngine), DoT-kill routing,
@@ -2419,6 +2426,36 @@ export class Game {
         size: 7 + Math.random() * 8,
         lifetime: 900 + Math.random() * 500,
         gravity: -70
+      }));
+    }
+  }
+
+  /** Second Wind near-death rescue — gold/cyan blast + screen flash + floating label.
+   *  Fires the frame secondWindTriggered is detected; the flag is immediately cleared so it
+   *  never double-fires even if two damage sources land the same frame. */
+  private spawnSecondWindBurst(): void {
+    if (!this.player) return;
+    // Dramatic gold flash — brighter than level-up (this is literally life-or-death)
+    this.screenEffects.flash('#ffd700', 0.45);
+    // Floating "SECOND WIND" label above the player
+    this.damageNumbers.push(
+      this.createDamageNumber(this.player.x, this.player.y - 32, 'SECOND WIND', false, '#ffd700')
+    );
+    // 35-particle burst: gold + cyan + white, high speed, flung upward
+    const colors = ['#ffd700', '#ffc200', '#00e5ff', '#ffffff', '#ffe066'];
+    const count = this.getParticleCount(35);
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 180 + Math.random() * 280;
+      this.particles.push(this.createParticle({
+        x: this.player.x,
+        y: this.player.y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 140,
+        color: colors[i % colors.length],
+        size: 8 + Math.random() * 9,
+        lifetime: 1000 + Math.random() * 600,
+        gravity: -80,
       }));
     }
   }
