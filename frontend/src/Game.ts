@@ -2577,6 +2577,14 @@ export class Game {
       }
       if (this.soulTitheKills % Game.SOUL_TITHE_DMG_EVERY === 0) {
         this.soulTitheStacks++;
+        // GAME FEEL: quiet ghost-purple flash + floating label so the player sees
+        // their permanent damage stack compound (was fully silent before).
+        if (this.player) {
+          this.damageNumbers.push(this.createDamageNumber(
+            this.player.x, this.player.y - 40, '👻+1%', false, '#a855f7'
+          ));
+          this.screenEffects.flash('#9b5cf6', 0.12);
+        }
       }
     }
 
