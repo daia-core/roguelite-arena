@@ -6,6 +6,25 @@ portrait viewport).
 
 ---
 
+## 2026-08-09 (night-3) — feel(second-wind): golden burst + flash when artifact saves you · `7f87f4b` · live `index-a2_OmLs6.js` ✓
+
+**Player-visible**
+- **Second Wind artifact now fires a dramatic visual when it saves your life.** A gold screen
+  flash (alpha 0.45 — brighter than level-up), a 35-particle gold/cyan/white burst flung upward,
+  and a floating "SECOND WIND" label appear the frame the artifact catches a lethal hit.
+  Previously `secondWindTriggered` was set in `Player.takeDamage()` but never read — the most
+  dramatic moment in the game (surviving death at 1 HP) had zero visual feedback.
+
+**Under the hood**
+- `Game.ts`: check `player.secondWindTriggered` at end of `updatePlaying()` after all damage
+  sources; dispatch `spawnSecondWindBurst()` + clear flag
+- `Game.ts`: new `private spawnSecondWindBurst()` — `screenEffects.flash('#ffd700', 0.45)`,
+  "SECOND WIND" damage-number, 35 particles (gold/cyan/white, gravity −80, flung upward at
+  180–460 px/s)
+- tsc CLEAN ✅
+
+---
+
 ## 2026-08-09 (night-2) — feel(boss): spectacular boss death burst · `234f8c6` · live `index-5vpUh_Co.js` ✓
 
 **Player-visible**
