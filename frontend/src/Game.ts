@@ -207,6 +207,9 @@ export class Game {
   private static readonly HIGH_HP_THRESHOLD = 0.90; // "high HP" = at/over 90% max
   private static readonly GOLD_SCALE_PER = 100;     // gold per +1 unit of goldScaleDamage
   private static readonly GOLD_SCALE_CAP = 2.0;     // cap the gold-scaling factor at +200% dmg
+  // Growing Malice: seconds of active play time this run (excludes pause/shop)
+  private runPlaySeconds: number = 0;
+  private static readonly TIME_RAMP_INTERVAL = 15;  // seconds between each Growing Malice stack
   // Soul Tithe: a run-long on-kill milestone counter (only ticks while the item is held).
   private soulTitheKills: number = 0;               // kills banked since owning Soul Tithe
   private soulTitheStacks: number = 0;              // permanent +dmg stacks earned this run
@@ -775,6 +778,7 @@ export class Game {
     this.wavesSurvived = 0;
     this.killStackCount = 0;
     this.killStackTimer = 0;
+    this.runPlaySeconds = 0;
     this.soulTitheKills = 0;
     this.soulTitheStacks = 0;
     this.shotsFired = 0;
@@ -3435,12 +3439,15 @@ export class Game {
    * multiplies into a running factor (identity 1 when not held / condition unmet), so
    * they stack cleanly and getDamage()/getFireRate() just read the product. Artifacts:
    * momentum (moving), berserk (low HP). Items: Grindstone (wave ramp), Last Stand
-   * (low HP), Killing Spree (kill streak), Juggernaut (high HP), Miser's Hoard (gold).
+   * (low HP), Killing Spree (kill streak), Juggernaut (high HP), Miser's Hoard (gold),
+   * Growing Malice (time ramp).
    */
   private updateRuntimeModifiers(dt: number, moving: boolean): void {
     if (!this.player) return;
     let dmg = 1;
     let fr = 1;
+    // Growing Malice timer: advance only during active play (not in menus/events).
+    this.runPlaySeconds += dt;
 
     const hpFrac = this.player.health / Math.max(1, this.player.maxHealth);
 
@@ -3506,6 +3513,13 @@ export class Game {
     // sanity cap). The stacks persist across frames; we just re-fold them each recompute.
     if (this.soulTitheStacks > 0) {
       dmg *= 1 + Game.SOUL_TITHE_DMG_PER * this.soulTitheStacks;
+    }
+    // Growing Malice: permanent +dmg every TIME_RAMP_INTERVAL seconds of play. Makes
+    // survival itself a damage build — the longer the run, the harder the player hits.
+    const timeRamp = this.playerStats.getTimeRampDamage();
+    if (timeRamp > 0) {
+      const stacks = Math.floor(this.runPlaySeconds / Game.TIME_RAMP_INTERVAL);
+      if (stacks > 0) dmg *= 1 + timeRamp * stacks;
     }
 
     this.playerStats.runtimeDamageMult = dmg;

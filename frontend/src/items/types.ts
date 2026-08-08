@@ -439,6 +439,7 @@ export interface Item {
   highHpPower?: number;      // Juggernaut: while HP is high (unhurt), +dmg
   highHpFireRate?: number;   // Overflow Battery: while HP is high (unhurt), +fire rate
   goldScaleDamage?: number;  // Miser's Hoard: +dmg scaling with unspent gold on hand
+  timeRampDamage?: number;   // Growing Malice: permanent +dmg every 15s of run time
 
   // ---- ON-KILL MILESTONE (Soul Tithe) ----
   // A run-long on-kill counter: every 10th kill while held drops a health orb, and

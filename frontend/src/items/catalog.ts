@@ -3122,6 +3122,18 @@ export const ITEM_CATALOG: Item[] = [
       goldScaleDamage: 0.08
     },
     {
+      id: 'growing_malice_t3',
+      name: 'Growing Malice',
+      description: 'Gain +3% damage for every 15 seconds you survive — the longer you live, the harder you hit',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 42,
+      icon: '⏳',
+      unlocked: true,
+      tags: ['melee', 'ranged'],
+      timeRampDamage: 0.03
+    },
+    {
       id: 'executioners_axe_t3',
       name: "Executioner's Axe",
       description: 'Instantly kill any non-boss enemy left at or below 15% HP by your hit',
@@ -4159,6 +4171,7 @@ export const ITEM_CATALOG: Item[] = [
     { id: 'miser_stone_t2', name: "Miser's Stone", description: 'Damage scales with your gold', rarity: 'rare', tier: ItemTier.Uncommon, cost: 28, icon: '💰', unlocked: true, tags: ['economic'], goldScaleDamage: 0.04 },
     { id: 'warchest_coin_t2', name: 'Warchest Coin', description: 'Earn gold per wave survived', rarity: 'rare', tier: ItemTier.Uncommon, cost: 26, icon: '📦', unlocked: true, tags: ['economic'], warChest: 0.5 },
     { id: 'grindstone_t2', name: 'Sharpening Stone', description: 'Permanent +damage per wave cleared', rarity: 'rare', tier: ItemTier.Uncommon, cost: 30, icon: '⚙️', unlocked: true, tags: ['ranged', 'melee'], waveRampDamage: 0.03 },
+    { id: 'growing_malice_t2', name: 'Patience Charm', description: '+2% damage per 15s survived — time is your weapon', rarity: 'rare', tier: ItemTier.Uncommon, cost: 28, icon: '⏳', unlocked: true, tags: ['ranged', 'melee'], timeRampDamage: 0.02 },
     { id: 'soul_bead_t2', name: 'Soul Bead', description: 'On-kill: drops health orbs, stacks damage', rarity: 'rare', tier: ItemTier.Uncommon, cost: 30, icon: '👻', unlocked: true, tags: ['melee', 'ranged'], soulTithe: true },
     { id: 'spectral_dagger_t2', name: 'Spectral Dagger', description: 'Each kill spawns a homing dagger', rarity: 'rare', tier: ItemTier.Uncommon, cost: 32, icon: '🗡️', unlocked: true, tags: ['melee'], ceremonialDaggers: 1 },
     { id: 'loaded_round_t2', name: 'Loaded Round', description: 'Every 10th shot: triple damage, full pierce', rarity: 'rare', tier: ItemTier.Uncommon, cost: 30, icon: '🔵', unlocked: true, tags: ['ranged'], loadedShot: true },
@@ -4179,6 +4192,7 @@ export const ITEM_CATALOG: Item[] = [
     { id: 'echo_cascade_t3', name: 'Echo Cascade', description: '+30% multicast, +20% fire rate — shots echo in waves', rarity: 'epic', tier: ItemTier.Rare, cost: 64, icon: '🔊', unlocked: true, tags: ['ranged'], multicast: 0.30, fireRateMultiplier: 1.20 },
     { id: 'spectral_swarm_t3', name: 'Spectral Swarm', description: 'Each kill spawns 2 homing daggers', rarity: 'epic', tier: ItemTier.Rare, cost: 62, icon: '👻', unlocked: true, tags: ['melee'], ceremonialDaggers: 2 },
     { id: 'grindstone_greater', name: 'Greater Grindstone', description: 'Stronger permanent damage ramp per wave', rarity: 'epic', tier: ItemTier.Rare, cost: 58, icon: '⚙️', unlocked: true, tags: ['ranged', 'melee'], waveRampDamage: 0.06 },
+    { id: 'malice_engine_t3', name: 'Malice Engine', description: '+5% damage per 15s — a survival build that never stops growing', rarity: 'epic', tier: ItemTier.Rare, cost: 62, icon: '⏳', unlocked: true, tags: ['ranged', 'melee'], timeRampDamage: 0.05 },
     { id: 'berserker_drive_t3', name: 'Berserker Drive', description: '+60% power when low HP, +5% lifesteal', rarity: 'epic', tier: ItemTier.Rare, cost: 64, icon: '🔴', unlocked: true, tags: ['melee', 'defensive'], lowHpPower: 0.60, lifesteal: 0.05 },
     { id: 'juggernaut_will_t3', name: "Juggernaut's Will", description: '+50% power when full HP, +20 max health', rarity: 'epic', tier: ItemTier.Rare, cost: 62, icon: '💪', unlocked: true, tags: ['defensive'], highHpPower: 0.50, maxHealthBonus: 20 },
     { id: 'pristine_engine_t3', name: 'Pristine Engine', description: '+55% fire rate and +25% power when at full HP — the "stay perfect" combo', rarity: 'epic', tier: ItemTier.Rare, cost: 68, icon: '⚡', unlocked: true, tags: ['ranged', 'defensive'], highHpFireRate: 0.55, highHpPower: 0.25 },
@@ -4201,6 +4215,7 @@ export const ITEM_CATALOG: Item[] = [
     { id: 'soul_apex_t4', name: 'Soul Apex', description: 'Soul Tithe, 3 daggers per kill, +30% kill stack damage', rarity: 'legendary', tier: ItemTier.Legendary, cost: 155, icon: '👁️', unlocked: true, tags: ['melee', 'ranged'], soulTithe: true, ceremonialDaggers: 3, killStackDamage: 0.10 },
     { id: 'gold_oracle_t4', name: 'Gold Oracle', description: '+10% dmg per gold, +50% gold drops, wave gold income — the greed apex', rarity: 'legendary', tier: ItemTier.Legendary, cost: 145, icon: '🪙', unlocked: true, tags: ['economic'], goldScaleDamage: 0.10, goldBonus: 1.50, warChest: 2.0 },
     { id: 'wave_conqueror_t4', name: 'Wave Conqueror', description: 'Permanent +15% damage per wave cleared — unstoppable late game', rarity: 'legendary', tier: ItemTier.Legendary, cost: 145, icon: '🌊', unlocked: true, tags: ['ranged', 'melee'], waveRampDamage: 0.15 },
+    { id: 'eternal_malice_t4', name: 'Eternal Malice', description: '+8% damage per 15s lived and +10% per wave cleared — time and survival compound without limit', rarity: 'legendary', tier: ItemTier.Legendary, cost: 150, icon: '⏳', unlocked: true, tags: ['ranged', 'melee'], timeRampDamage: 0.08, waveRampDamage: 0.10 },
     { id: 'lightning_god_t4', name: 'Lightning God', description: '+60% chain lightning, +50% elemental damage, +20% freeze', rarity: 'legendary', tier: ItemTier.Legendary, cost: 145, icon: '⚡', unlocked: true, tags: ['elemental'], chainLightning: 0.60, elementalDamageMult: 1.50, freeze: 0.20 },
     { id: 'inferno_god_t4', name: 'Inferno God', description: '+60% burn, +50% elemental damage — the fire apex', rarity: 'legendary', tier: ItemTier.Legendary, cost: 145, icon: '🔥', unlocked: true, tags: ['elemental'], burn: 0.60, elementalDamageMult: 1.50 },
     { id: 'execute_apex_t4', name: 'Execute Apex', description: 'Execute at 30% HP, soul tithe, +25% kill damage stacks', rarity: 'legendary', tier: ItemTier.Legendary, cost: 150, icon: '⚔️', unlocked: true, tags: ['melee', 'ranged'], executeThreshold: 0.30, soulTithe: true, killStackDamage: 0.12 },

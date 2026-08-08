@@ -164,6 +164,21 @@ const result = await page.evaluate(() => {
     out.execBossImmune = !!e && e.dead === false;
   }
 
+  // === 11. GROWING MALICE — time-ramp damage (timeRampDamage) ===
+  // TS `private` is compile-time only; runPlaySeconds is readable and writable at runtime.
+  out.growingMaliceItemsExist = ['growing_malice_t3','growing_malice_t2','malice_engine_t3','eternal_malice_t4']
+    .every(id => !!DB.getItemById(id));
+  // At 0s: no stacks yet (floor(0/15) = 0 → multiplier stays 1.0)
+  fresh(); giveItem('growing_malice_t3');                   // 0.03 per stack
+  g.runPlaySeconds = 0; step();
+  out.maliceAt0s = near(dMult(), 1.0);
+  // At 45s: 3 stacks → +9% (floor(45/15)=3)
+  g.runPlaySeconds = 45; step();
+  out.maliceAt45s = near(dMult(), 1 + 0.03 * 3);
+  // Without any time-ramp item, runPlaySeconds advancing does nothing
+  fresh(); g.runPlaySeconds = 120; step();
+  out.maliceNoItemIdentity = near(dMult(), 1.0);
+
   return out;
 });
 
@@ -178,7 +193,8 @@ errors.forEach(e => console.log('  ', e));
 const checks = ['itemsExist','grindWave1','grindWave6','lastStandFullHp','lastStandLowDmg','lastStandLowFr',
   'spree10','spreeDrains','juggFull','juggHurt','miser500','miserCap','noItemIdentity',
   'executeItemsExist','execThreshold15','execThresholdMax','execNoneZero',
-  'execKillsBelow','execFeedsKillPath','execControlSurvives','execBossImmune'];
+  'execKillsBelow','execFeedsKillPath','execControlSurvives','execBossImmune',
+  'growingMaliceItemsExist','maliceAt0s','maliceAt45s','maliceNoItemIdentity'];
 const pass = result && !result.fatal && checks.every(k => result[k] === true) && errors.length === 0;
 console.log(`\n${checks.filter(k => result && result[k] === true).length}/${checks.length} checks passed`);
 console.log('RESULT:', pass ? 'PASS ✅' : 'FAIL ❌');
