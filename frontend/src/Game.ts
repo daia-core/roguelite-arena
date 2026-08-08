@@ -2580,6 +2580,26 @@ export class Game {
         gravity: 300
       }));
     }
+    // GAME FEEL: Boss kills get a spectacular second burst — 50 extra particles,
+    // bigger and slower, with a gold accent to mark the milestone.
+    if (enemy.typeData.isBoss) {
+      const bossParticleCount = this.getParticleCount(50);
+      for (let i = 0; i < bossParticleCount; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 80 + Math.random() * 320;
+        this.particles.push(this.createParticle({
+          x: enemy.x,
+          y: enemy.y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          color: i % 3 === 0 ? '#ffd700' : (i % 3 === 1 ? enemy.typeData.color : '#ffffff'),
+          size: 7 + Math.random() * 12,
+          lifetime: 1000 + Math.random() * 800,
+          gravity: 120,
+          fadeOut: true
+        }));
+      }
+    }
     // XP particles
     for (let i = 0; i < 8; i++) {
       const angle = Math.random() * Math.PI * 2;
