@@ -2460,12 +2460,16 @@ export class Game {
     }
   }
 
-  /** Vampire-Survivors level-up juice — sound, flash, and a burst of confetti. */
+  /** Vampire-Survivors level-up juice — sound, flash, floating label, and a burst of confetti. */
   private spawnLevelupBurst(): void {
     if (!this.player) return;
     this.audio.playLevelUp();
     this.renderer.addHitFlash(0.4);
-    this.screenEffects.flash('#ffff00', 0.25);
+    this.screenEffects.flash('#ffff00', 0.30);
+    // Floating "LEVEL UP" label above the player (mirrors SECOND WIND pattern)
+    this.damageNumbers.push(
+      this.createDamageNumber(this.player.x, this.player.y - 40, 'LEVEL UP', false, '#ffff00')
+    );
     const colors = ['#ffff00', '#00ffff', '#ff00ff', '#ff6600', '#00ff00', '#ff0000', '#ffffff'];
     const levelUpParticleCount = this.getParticleCount(20);
     for (let i = 0; i < levelUpParticleCount; i++) {
