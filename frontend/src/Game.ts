@@ -209,6 +209,7 @@ export class Game {
   private static readonly GOLD_SCALE_CAP = 2.0;     // cap the gold-scaling factor at +200% dmg
   // Growing Malice: seconds of active play time this run (excludes pause/shop)
   private runPlaySeconds: number = 0;
+  private lastTimeRampNotifiedStacks: number = 0;   // last stack count we showed a popup for
   private static readonly TIME_RAMP_INTERVAL = 15;  // seconds between each Growing Malice stack
   // Soul Tithe: a run-long on-kill milestone counter (only ticks while the item is held).
   private soulTitheKills: number = 0;               // kills banked since owning Soul Tithe
@@ -779,6 +780,7 @@ export class Game {
     this.killStackCount = 0;
     this.killStackTimer = 0;
     this.runPlaySeconds = 0;
+    this.lastTimeRampNotifiedStacks = 0;
     this.soulTitheKills = 0;
     this.soulTitheStacks = 0;
     this.shotsFired = 0;
@@ -3520,6 +3522,14 @@ export class Game {
     if (timeRamp > 0) {
       const stacks = Math.floor(this.runPlaySeconds / Game.TIME_RAMP_INTERVAL);
       if (stacks > 0) dmg *= 1 + timeRamp * stacks;
+      // Notify the player on each new stack so the mechanic feels tangible.
+      if (this.player && stacks > this.lastTimeRampNotifiedStacks) {
+        const pct = Math.round(timeRamp * 100);
+        this.damageNumbers.push(
+          this.createDamageNumber(this.player.x, this.player.y - 30, `⏳+${pct}%`, false, '#ffa726')
+        );
+        this.lastTimeRampNotifiedStacks = stacks;
+      }
     }
 
     this.playerStats.runtimeDamageMult = dmg;
