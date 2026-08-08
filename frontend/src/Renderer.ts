@@ -192,13 +192,14 @@ export class Renderer {
     }
 
     // PURE PIXEL ART: Hit flash overlay with dithering instead of smooth alpha
+    // Red for player-takes-damage (white is for positive events like level-up)
     if (this.hitFlash > 0) {
       this.ctx.save();
       this.ctx.imageSmoothingEnabled = false;
-      this.ctx.fillStyle = '#ffffff';
+      this.ctx.fillStyle = '#ff2222';
 
       const ditherSize = 4;
-      const flashDensity = Math.ceil(this.hitFlash * 0.3 * 4); // 0-4 levels
+      const flashDensity = Math.ceil(this.hitFlash * 0.5 * 4); // 0-4 levels
 
       // Draw dithered pattern
       for (let x = 0; x < this.canvas.width; x += ditherSize) {
