@@ -6,6 +6,21 @@ portrait viewport).
 
 ---
 
+## 2026-08-09 (night-4) — feel(levelup): LEVEL UP floating label + brighter flash · `483108c` · live `index-v67lq-58.js` ✓
+
+**Player-visible**
+- **Every level-up now shows a "LEVEL UP" text popup** above the player — identical pattern to
+  "SECOND WIND" — so the moment reads clearly even in a busy fight. Flash brightened from 0.25
+  to 0.30 alpha (still lighter than Second Wind's 0.45 — intentionally less dramatic since
+  level-ups happen frequently).
+
+**Under the hood**
+- `Game.ts` `spawnLevelupBurst()`: added `damageNumbers.push(createDamageNumber(..., 'LEVEL UP',
+  false, '#ffff00'))` at y-40; bumped `screenEffects.flash` alpha 0.25 → 0.30
+- tsc CLEAN ✅
+
+---
+
 ## 2026-08-09 (night-3) — feel(second-wind): golden burst + flash when artifact saves you · `7f87f4b` · live `index-a2_OmLs6.js` ✓
 
 **Player-visible**
