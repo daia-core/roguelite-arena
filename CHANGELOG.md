@@ -6,7 +6,7 @@ portrait viewport).
 
 ---
 
-## 2026-08-10 (night) — feel(miniboss): orange flash + ⚔️ MINIBOSS SLAIN! label on miniboss kill · `PENDING` · live `PENDING`
+## 2026-08-10 (night) — feel(miniboss): orange flash + ⚔️ MINIBOSS SLAIN! label on miniboss kill · `3499e67` · live `index-BU6sUIZ0.js` ✓
 
 **Player-visible**
 - **Miniboss kills now feel like milestones.** Defeating a miniboss triggers an orange screen flash,
