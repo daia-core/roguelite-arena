@@ -6,6 +6,26 @@ portrait viewport).
 
 ---
 
+## 2026-08-09 (afternoon) — fix(stats): Trophy Rack crit bonus now visible in stats popup · `11fb8c4` · live `index-CbZwBkeD.js` ✓
+
+**Player-visible**
+- **Stats popup now shows the Trophy Rack dynamic crit bonus.** A new "Trophy Rack Crit" row
+  appears in the SPECIAL group (when you hold any Trophy Rack item) showing `+X% crit (N types)` —
+  the real, current bonus at this point in the run. Previously the popup only showed base crit
+  chance, so a player with Trophy Rack + 8 enemy types killed had no way to know their effective
+  crit rate beyond the base. The mechanic was opaque; now it's transparent.
+
+**Under the hood**
+- `ShopSceneDeps`: added `getKilledEnemyTypesCount(): number` to the interface
+- `Game.ts`: wires `getKilledEnemyTypesCount: () => this.killedEnemyTypes.size` into ShopScene init
+- `ShopScene.drawStatsPopup()`: computes `trophyBonusPerType = ps.getTrophyRackCritBonus(1)` (>0
+  iff player holds a Trophy Rack item) and `trophyBonus = ps.getTrophyRackCritBonus(trophyCount)`;
+  row visible only when player has at least one Trophy Rack item
+- tsc CLEAN ✅ · qa-stats-popup PASS ✅ · qa-triggered-items 30/30 ✅ · qa-soultithe 13/13 ✅
+  qa-levelup 17/17 ✅ · shop-chips 5/5 ✅
+
+---
+
 ## 2026-08-09 (night-6) — feat(content): Trophy Rack — +crit per unique enemy type killed · `8a9abfd` · live `index-C-ZiYGjF.js` ✓
 
 **Player-visible**
