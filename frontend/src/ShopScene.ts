@@ -38,6 +38,8 @@ export interface ShopSceneDeps {
   getSkillTree(): SkillTree;
   getWave(): number;
   getEvolutions(): Evolution[];
+  /** Number of unique enemy types killed this run — needed for Trophy Rack stat display. */
+  getKilledEnemyTypesCount(): number;
 
   // Shared mutable shop inventory (owned by Game.ts — pass by reference).
   getShopItems(): (Item | null)[];
@@ -1313,6 +1315,9 @@ export class ShopScene implements Scene {
     const mult = (v: number) => (v >= 1000 ? `${formatShort(v)}x` : `${v.toFixed(2)}x`);
     const rate = (v: number, dp: number, suf: string) =>
       `${v >= 1000 ? formatShort(v) : v.toFixed(dp)}${suf}`;
+    const trophyCount = this.deps.getKilledEnemyTypesCount();
+    const trophyBonusPerType = ps.getTrophyRackCritBonus(1); // >0 iff player has Trophy Rack
+    const trophyBonus = ps.getTrophyRackCritBonus(trophyCount);
     type Row = [string, string, boolean];
     const groups: Array<[string, string, Row[]]> = [
       ['OFFENSE', '#ffa94d', [
@@ -1349,6 +1354,7 @@ export class ShopScene implements Scene {
         ['Bank Interest', pct(ps.getInterestBonus()), ps.getInterestBonus() > 0],
       ]],
       ['SPECIAL', '#e599f7', [
+        ['Trophy Rack Crit', `+${pct(trophyBonus)} (${trophyCount} types)`, trophyBonusPerType > 0],
         ['Chain Lightning', pct(ps.getChainLightningChance()), ps.getChainLightningChance() > 0],
         ['Freeze', pct(ps.getFreezeChance()), ps.getFreezeChance() > 0],
         ['Poison', ps.hasPoison() ? 'YES' : '-', ps.hasPoison()],
