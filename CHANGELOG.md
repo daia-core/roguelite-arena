@@ -6,6 +6,34 @@ portrait viewport).
 
 ---
 
+## 2026-08-09 (night-6) — feat(content): Trophy Rack — +crit per unique enemy type killed · `8a9abfd` · live `index-C-ZiYGjF.js` ✓
+
+**Player-visible**
+- **New mechanic: Trophy Rack** — +crit% per unique enemy TYPE killed this run, hard-capped at 25%.
+  As the bestiary opens across waves (slimes → goblins → wraiths → elites → bosses), crits compound
+  automatically. A collector's scaling stat that rewards varied play and snowballs early purchases.
+- **3 new items** across tiers:
+  - **Trophy Rack** (Common 🏺, 18g) — +1% crit per type (cap 25%). Buy turn 1, profit by wave 10+.
+  - **Menagerie Charm** (Uncommon 🗺️, 42g) — +2% crit per type. Mid-tier crafter's anchor.
+  - **Hunter's Collection** (Rare 🦁, 68g) — +3% crit per type. With 8+ types = +24% crit alone.
+- Stacks ADDITIVELY with base crit (Keen Goggles + Trophy Rack = combined floor), and synergizes
+  with crit-damage multipliers (Visor of Wrath, Tactician's Sigil) for explosive late-game output.
+- Cap means two Hunter's Collections (6%/type) reach 25% at 9 types — predictable ceiling.
+
+**Under the hood**
+- `types.ts`: `trophyRack?: number` (crit bonus per type, additive across copies)
+- `ItemSystem`: `getTrophyRackCritBonus(typesCount: number): number` — applies the 0.25 cap; zero
+  if no Trophy Rack items held (fast-path in rollCritWithTrophy).
+- `Game.ts`: `killedEnemyTypes = new Set<string>()` tracks every unique `enemy.type` killed; cleared
+  on reset; always maintained so the bonus is live the frame an item is purchased. New
+  `rollCritWithTrophy()` method folds the dynamic bonus into all 3 primary crit-roll sites
+  (projectile hit, melee hit, aux-weapon hit) with a fast-path for no-trophy runs.
+- Catalog: 1907 → 1910 items; `qa-shop-chips` EXPECTED_COUNT updated.
+- tsc CLEAN ✅ · qa-shop-chips 5/5 ✅ · qa-triggered-items 25/25 ✅ · qa-soultithe 13/13 ✅
+  qa-daggers 11/11 ✅ · qa-levelup 17/17 ✅
+
+---
+
 ## 2026-08-09 (night-5) — feel(soul-tithe): 👻+1% label + purple flash on milestone stack · `e5267dc` · live `index-BttL5B4p.js` ✓
 
 **Player-visible**
