@@ -6,6 +6,26 @@ portrait viewport).
 
 ---
 
+## 2026-08-10 (night) — feel(miniboss): orange flash + ⚔️ MINIBOSS SLAIN! label on miniboss kill · `PENDING` · live `PENDING`
+
+**Player-visible**
+- **Miniboss kills now feel like milestones.** Defeating a miniboss triggers an orange screen flash,
+  a "⚔️ MINIBOSS SLAIN!" floating label above the player, and a 25-particle orange/fire burst at the
+  kill site. Previously a miniboss death was near-identical to a regular trash kill — just a 0.06s
+  freeze-frame, no flash, no label. Now it reads as a mid-tier milestone between fodder and boss.
+  Consistent with the SECOND WIND / LEVEL UP / 👻+1% feel pattern.
+
+**Under the hood**
+- `Game.ts` `onEnemyKilled()` miniboss branch:
+  - Hit pause extended 0.06 → 0.08s
+  - `screenEffects.flash('#ff6600', 0.25)` — orange wash, distinct from boss white
+  - `createDamageNumber(player.x, player.y - 40, '⚔️ MINIBOSS SLAIN!', false, '#ff8c00')` — above player
+  - 25-particle orange/fire burst after the standard 20 kill particles, with `fadeOut: true`
+- Pure feel addition on the existing `isMiniboss` path — no new states or flags
+- tsc CLEAN ✅
+
+---
+
 ## 2026-08-09 (afternoon) — fix(stats): Trophy Rack crit bonus now visible in stats popup · `11fb8c4` · live `index-CbZwBkeD.js` ✓
 
 **Player-visible**

@@ -2623,13 +2623,17 @@ export class Game {
     }
 
     // GAME FEEL: freeze-frame punch on impactful kills only. Bosses get a meaty
-    // stop (+ a white impact flash); elites/minibosses a lighter tap. Fodder gets
+    // stop (+ a white impact flash); minibosses an orange flash + label; fodder gets
     // nothing — a freeze on every trash kill would stutter the whole arena.
     if (enemy.typeData.isBoss) {
       this.triggerHitPause(0.12);
       this.screenEffects.flash('#ffffff', 0.3);
     } else if (enemy.isMiniboss) {
-      this.triggerHitPause(0.06);
+      this.triggerHitPause(0.08);
+      this.screenEffects.flash('#ff6600', 0.25);
+      this.damageNumbers.push(
+        this.createDamageNumber(this.player.x, this.player.y - 40, '⚔️ MINIBOSS SLAIN!', false, '#ff8c00')
+      );
     }
 
     this.audio.playKill();
@@ -2665,6 +2669,26 @@ export class Game {
           size: 7 + Math.random() * 12,
           lifetime: 1000 + Math.random() * 800,
           gravity: 120,
+          fadeOut: true
+        }));
+      }
+    }
+    // GAME FEEL: Miniboss kills get an orange second burst — 25 extra particles
+    // with an orange/fire accent to mark the mid-tier milestone.
+    if (enemy.isMiniboss) {
+      const minibossParticleCount = this.getParticleCount(25);
+      for (let i = 0; i < minibossParticleCount; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 80 + Math.random() * 240;
+        this.particles.push(this.createParticle({
+          x: enemy.x,
+          y: enemy.y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          color: i % 2 === 0 ? '#ff8c00' : enemy.typeData.color,
+          size: 6 + Math.random() * 8,
+          lifetime: 800 + Math.random() * 600,
+          gravity: 160,
           fadeOut: true
         }));
       }
