@@ -447,6 +447,14 @@ export interface Item {
   // itself becomes a scaling stat and a turn-1 pickup snowballs across the whole run.
   soulTithe?: boolean;
 
+  // ---- ON-KILL VARIETY RAMP (Trophy Rack) ----
+  // Adds +trophyRack% crit chance for each UNIQUE enemy TYPE killed this run (hard cap
+  // at 25%). A collector's scaling stat: buying it early and hunting varied waves compounds
+  // crits as the bestiary opens. Additive across copies (a second Trophy Rack doubles the
+  // per-type bonus). Tracked as a Set<string> in Game; ItemSystem exposes
+  // getTrophyRackCritBonus(setSize) to apply the cap. Feeds into the crit-roll sites.
+  trophyRack?: number; // +crit% per unique enemy type killed (additive per copy; cap 0.25)
+
   // ---- ON-KILL PROC (Ceremonial Daggers) ----
   // On every kill, spawn this many homing spectral daggers that seek nearby enemies,
   // turning kills into a self-sustaining chain that clears trash and snowballs dense

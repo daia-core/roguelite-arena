@@ -250,6 +250,8 @@ interface ItemAgg {
   daggerCount: number;
   // wave-end economy: gold-per-wave multiplier (additive across copies)
   warChest: number;
+  // on-kill variety ramp: +crit per unique enemy type killed (additive across copies)
+  trophyRack: number;
   // boolean
   explosionOnHit: boolean; shield: boolean; homing: boolean; poison: boolean; poisonSpread: boolean; burnSpread: boolean;
   auxMelee: boolean; bombDrop: boolean; novaPulse: boolean; fourleafCharm: boolean;
@@ -277,6 +279,7 @@ function freshAgg(): ItemAgg {
     executeThreshold: 0,
     daggerCount: 0,
     warChest: 0,
+    trophyRack: 0,
     explosionOnHit: false, shield: false, homing: false, poison: false, poisonSpread: false, burnSpread: false,
     auxMelee: false, bombDrop: false, novaPulse: false, fourleafCharm: false,
     soulTithe: false, loadedShot: false,
@@ -575,6 +578,7 @@ export class PlayerStats {
       // On-kill daggers: additive count across copies (× level)
       if (item.ceremonialDaggers) a.daggerCount += item.ceremonialDaggers * lv;
       if (item.warChest) a.warChest += item.warChest * lv;
+      if (item.trophyRack) a.trophyRack += item.trophyRack * lv;
       // Boolean (any item carries it)
       if (item.explosionOnHit) a.explosionOnHit = true;
       if (item.shield) a.shield = true;
@@ -926,6 +930,13 @@ export class PlayerStats {
     // SKILL TREE contribution
     chance += this.skillCritChanceBonus;
     return Math.min(1, chance);
+  }
+
+  /** Trophy Rack: dynamic crit bonus = perType * uniqueTypesKilled, capped at 25%. */
+  getTrophyRackCritBonus(uniqueTypesKilled: number): number {
+    const perType = this.ensureAgg().trophyRack;
+    if (!perType) return 0;
+    return Math.min(perType * uniqueTypesKilled, 0.25);
   }
 
   getCritMultiplier(): number {

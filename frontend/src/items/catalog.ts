@@ -5029,4 +5029,11 @@ export const ITEM_CATALOG: Item[] = [
     { id: 'sx4_juggernaut_6', name: "Bastion Band VI", description: "Kept whole and unhurt, you hit like a wall — the heavy plate slows your fire.", rarity: 'legendary', tier: ItemTier.Legendary, cost: 102, icon: '🛡️', unlocked: true, tags: ['defensive'], slot: 'legs', highHpPower: 0.38, armor: 5, fireRateMultiplier: 0.94 },
     { id: 'sx4_killstreak_6', name: "Bloodrush Charm VI", description: "Each kill stacks a decaying damage surge; chasing the streak thins your health.", rarity: 'legendary', tier: ItemTier.Legendary, cost: 143, icon: '🔥', unlocked: true, tags: ['melee', 'ranged'], slot: 'ring', killStackDamage: 0.11, fireRateMultiplier: 1.16, maxHealthBonus: -15 },
     { id: 'sx4_miser_6', name: "Hoarder Band VI", description: "Unspent gold sharpens your blows — but chasing coin makes each hit land lighter.", rarity: 'legendary', tier: ItemTier.Legendary, cost: 184, icon: '🪙', unlocked: true, tags: ['economic'], slot: 'ring', goldScaleDamage: 0.13, goldBonus: 1.19, damageMultiplier: 0.96 },
+
+    // ---- TROPHY RACK — on-kill variety ramp (crit per unique enemy type killed) ----
+    // The bestiary fills as waves deepen: every new species you fell sharpens your aim.
+    // Additive across copies; hard-capped at 25% bonus crit no matter how many stacks.
+    { id: 'trophy_rack_t1', name: 'Trophy Rack', description: '+1% crit for each unique enemy type killed this run (cap 25%). Hunt widely, hit harder.', rarity: 'common', tier: ItemTier.Common, cost: 18, icon: '🏺', unlocked: true, tags: ['ranged', 'melee'], trophyRack: 0.01 },
+    { id: 'trophy_rack_t2', name: "Menagerie Charm", description: '+2% crit per unique enemy type hunted this run (cap 25%). A wider bestiary sharpens your eye.', rarity: 'rare', tier: ItemTier.Uncommon, cost: 42, icon: '🗺️', unlocked: true, tags: ['ranged', 'melee'], trophyRack: 0.02 },
+    { id: 'trophy_rack_t3', name: "Hunter's Collection", description: '+3% crit per unique enemy type slain this run (cap 25%). A master hunter knows every creature\'s weak point.', rarity: 'epic', tier: ItemTier.Rare, cost: 68, icon: '🦁', unlocked: true, tags: ['ranged', 'melee'], trophyRack: 0.03 },
 ];

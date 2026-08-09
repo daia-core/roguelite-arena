@@ -217,6 +217,9 @@ export class Game {
   private static readonly SOUL_TITHE_ORB_EVERY = 10;   // drop a health orb every Nth kill
   private static readonly SOUL_TITHE_DMG_EVERY = 50;    // bank a permanent stack every Nth kill
   private static readonly SOUL_TITHE_DMG_PER = 0.01;    // +1% damage per banked stack (uncapped)
+  // Trophy Rack: unique enemy TYPE set — drives the dynamic crit bonus. Always tracked
+  // so the stat is live the moment the item is purchased mid-run. Set is cleared on reset.
+  private killedEnemyTypes = new Set<string>();
   // Ceremonial Daggers: on-kill homing spectral daggers. Bounded to one generation per
   // primary kill (a dagger's own kill never spawns more) so dense packs can't cascade.
   private static readonly DAGGER_DMG_MULT = 0.5;   // each dagger does 50% of current shot damage
@@ -783,6 +786,7 @@ export class Game {
     this.lastTimeRampNotifiedStacks = 0;
     this.soulTitheKills = 0;
     this.soulTitheStacks = 0;
+    this.killedEnemyTypes.clear();
     this.shotsFired = 0;
     this.overchargeShotCount = 0;
     this.activeSkillCooldown = 0;
@@ -1441,7 +1445,7 @@ export class Game {
           if (segmentCircleHit(px0, py0, proj.x, proj.y, enemy.x, enemy.y, enemy.typeData.radius + proj.radius)) {
             // Dazed debuff raises effective crit chance against this enemy
             const sfxBonusCrit = enemy.statusFX.getBonusCritChanceReceived();
-            const isCrit = this.player.rollCrit() || (sfxBonusCrit > 0 && Math.random() < sfxBonusCrit);
+            const isCrit = this.rollCritWithTrophy() || (sfxBonusCrit > 0 && Math.random() < sfxBonusCrit);
             let damage = isCrit ? this.player.getCritDamage(proj.damage) : PlayerStats.finalDamageKnee(proj.damage);
             // Disoriented debuff amplifies crit damage received
             if (isCrit) {
@@ -1568,7 +1572,7 @@ export class Game {
 
         if (melee.isPointInArc(enemy.x, enemy.y)) {
           const sfxBonusCritM = enemy.statusFX.getBonusCritChanceReceived();
-          const isCrit = this.player.rollCrit() || (sfxBonusCritM > 0 && Math.random() < sfxBonusCritM);
+          const isCrit = this.rollCritWithTrophy() || (sfxBonusCritM > 0 && Math.random() < sfxBonusCritM);
           let damage = isCrit ? this.player.getCritDamage(melee.damage) : PlayerStats.finalDamageKnee(melee.damage);
           if (isCrit) {
             const bonusCritDmgM = enemy.statusFX.getBonusCritDamageReceived();
@@ -2121,12 +2125,23 @@ export class Game {
     return null;
   }
 
+  /**
+   * Crit roll that folds in the Trophy Rack dynamic bonus (+crit per unique enemy type
+   * killed this run). Falls through to the plain rollCrit() fast-path when no Trophy
+   * Rack items are held (zero bonus → no extra Random call or getCritChance() lookup).
+   */
+  private rollCritWithTrophy(): boolean {
+    const trophyBonus = this.playerStats.getTrophyRackCritBonus(this.killedEnemyTypes.size);
+    if (trophyBonus === 0) return this.player!.rollCrit();
+    return Math.random() < (this.playerStats.getCritChance() + trophyBonus);
+  }
+
   // Apply damage from an auxiliary weapon to one enemy, reusing the same crit /
   // boss-mult / lifesteal / particle / kill flow the primary weapons use so the
   // stacked weapons feel identical in impact.
   private dealAuxDamage(enemy: Enemy, baseDamage: number, hitColor: string): void {
     if (!this.player || enemy.dead) return;
-    const isCrit = this.player.rollCrit();
+    const isCrit = this.rollCritWithTrophy();
     let damage = isCrit ? this.player.getCritDamage(baseDamage) : PlayerStats.finalDamageKnee(baseDamage);
     if (enemy.typeData.isBoss) damage *= this.metaProgression.getBossDamageMultiplier();
 
@@ -2587,6 +2602,10 @@ export class Game {
         }
       }
     }
+
+    // Trophy Rack: track unique enemy types killed — always maintained so the crit bonus
+    // is live the instant the item is purchased mid-run. Set is cleared in resetRun().
+    this.killedEnemyTypes.add(enemy.type);
 
     // Ceremonial Daggers: on kill, throw homing spectral daggers at nearby enemies.
     // RE-ENTRANCY GUARD: a dagger's OWN kill (fromDagger) never spawns more daggers, so
