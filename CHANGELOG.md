@@ -6,6 +6,23 @@ portrait viewport).
 
 ---
 
+## 2026-08-10 (night-2) — feel(boss): gold 👑 BOSS SLAIN! label on boss kill · `539fa56` · smoke PASS ✓
+
+**Player-visible**
+- **Boss kills now get a gold "👑 BOSS SLAIN!" floating label** above the player on death.
+  Previously bosses had white flash + 50-particle gold burst but no text label — the milestone
+  was visually impressive but silent. Now it reads at a glance as the highest-tier kill, sitting
+  one notch above the "⚔️ MINIBOSS SLAIN!" orange label.
+
+**Under the hood**
+- `Game.ts` `onEnemyKilled()` boss branch: `createDamageNumber(player.x, player.y - 48,
+  '👑 BOSS SLAIN!', false, '#ffd700')` — gold, 4px higher than miniboss label (y-48 vs y-40).
+- Kill hierarchy: fodder (no label) → miniboss (orange ⚔️) → boss (gold 👑)
+- Pure feel addition on the existing `isBoss` path — no state changes
+- Vercel READY + PROMOTED · smoke PASS ✅
+
+---
+
 ## 2026-08-10 (night) — feel(miniboss): orange flash + ⚔️ MINIBOSS SLAIN! label on miniboss kill · `3499e67` · live `index-BU6sUIZ0.js` ✓
 
 **Player-visible**
