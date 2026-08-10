@@ -479,6 +479,7 @@ export class Game {
       getWave: () => this.waveManager.currentWave,
       getEvolutions: () => this.evolutionSystem.getAllEvolutions(),
       getKilledEnemyTypesCount: () => this.killedEnemyTypes.size,
+      getSoulTitheStackCount: () => this.soulTitheStacks,
       getShopItems: () => this.shopItems,
       getLockedItems: () => this.lockedShopItems,
       getLastInterestGained: () => this.lastInterestGained,
