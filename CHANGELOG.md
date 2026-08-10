@@ -6,6 +6,23 @@ portrait viewport).
 
 ---
 
+## 2026-08-10 (morning) — feat(hud): Trophy Rack type counter · `450cda0` · smoke PENDING
+
+**Player-visible**
+- **New HUD overlay for Trophy Rack holders:** compact gold "🏆 N/X" counter appears below the
+  skill-tree points display, showing how many unique enemy types you've killed this run and how
+  many are needed to hit the 25% crit-bonus hard cap. Only visible when holding a Trophy Rack
+  family item — no noise for other builds.
+- Cap threshold is computed dynamically from your current per-type bonus, stays correct as you
+  stack or upgrade the item.
+
+**Under the hood**
+- `Game.ts`: exposed `getKilledEnemyTypesCount()` → `HUDRendererDeps` (delegates to `killedEnemyTypes.size`).
+- `HUDRenderer.ts`: Trophy Rack block in status overlay — guard `trophyPerType > 0` (reads
+  `getTrophyRackCritBonus(1)`), draws gold `#ffd24d` text at current `statusY`.
+
+---
+
 ## 2026-08-10 (night-2) — feel(boss): gold 👑 BOSS SLAIN! label on boss kill · `539fa56` · smoke PASS ✓
 
 **Player-visible**
