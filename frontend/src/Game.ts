@@ -561,6 +561,7 @@ export class Game {
       getGearButtonRect: () => this.gearButtonRect(),
       getSafeAreaTop: (zoom) => this.safeAreaTop(zoom),
       getSkillTreePoints: () => this.skillTree.availablePoints,
+      getKilledEnemyTypesCount: () => this.killedEnemyTypes.size,
     });
 
     this.playingRenderer = new PlayingRenderer({

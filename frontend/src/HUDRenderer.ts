@@ -24,6 +24,8 @@ export interface HUDRendererDeps {
   getGearButtonRect(): { x: number; y: number; width: number; height: number };
   getSafeAreaTop(zoom: number): number;
   getSkillTreePoints(): number;
+  /** Number of unique enemy types killed this run — for Trophy Rack HUD counter. */
+  getKilledEnemyTypesCount(): number;
 }
 
 export class HUDRenderer {
@@ -289,6 +291,21 @@ export class HUDRenderer {
         s(10), statusY, { size: s(8), color: '#ffd700' }
       );
       ctx.restore();
+      statusY += s(14);
+    }
+
+    // Trophy Rack type counter — only shown when the player holds at least one
+    // Trophy Rack family item. Shows "🏆 N/9" where 9 types × 3%/type = 27% hits
+    // the 25% cap (or the effective threshold for the player's per-type bonus).
+    const trophyPerType = playerStats.getTrophyRackCritBonus(1); // >0 iff item held
+    if (trophyPerType > 0) {
+      const typeCount = this.deps.getKilledEnemyTypesCount();
+      // Effective cap threshold: types needed to hit the 25% hard cap at current bonus/type.
+      const capThreshold = Math.ceil(0.25 / trophyPerType);
+      this.deps.renderer.drawText(
+        `\uD83C\uDFC6 ${typeCount}/${capThreshold}`,
+        s(10), statusY, { size: s(8), color: '#ffd24d' }
+      );
     }
   }
 
