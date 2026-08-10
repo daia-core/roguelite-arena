@@ -13,6 +13,9 @@
 //   4. Juggernaut Plating (highHpPower 0.4) — at/above 90% HP: +40% dmg; nothing when hurt.
 //   5. Miser's Hoard (goldScaleDamage 0.08) — +8% dmg per 100 gold, capped at +200%.
 //   6. No item held ⇒ runtime multipliers stay identity (no accidental always-on).
+//   7. Trophy Rack (trophyRack 0.01–0.03) — +crit per unique enemy type killed (cap 25%);
+//      reads getTrophyRackCritBonus(killedEnemyTypes.size) via JS runtime.
+//      HUD cap-threshold: Math.ceil(0.25 / perType) = 25/13/9 for t1/t2/t3.
 //
 // TS `private` is compile-time only, so g.wavesSurvived / g.killStackCount / the
 // runtime mults are all readable at runtime. Boots into a real wave and steps g.update.
@@ -179,6 +182,39 @@ const result = await page.evaluate(() => {
   fresh(); g.runPlaySeconds = 120; step();
   out.maliceNoItemIdentity = near(dMult(), 1.0);
 
+  // === 12. TROPHY RACK — unique-enemy-type crit bonus (trophyRack) ===
+  // killedEnemyTypes is TS `private` but JS-readable/writable at runtime (same pattern as
+  // wavesSurvived / killStackCount above). getTrophyRackCritBonus(n) = min(trophyRack * n, 0.25).
+  out.trophyRackItemsExist = ['trophy_rack_t1','trophy_rack_t2','trophy_rack_t3']
+    .every(id => !!DB.getItemById(id));
+  // 0 unique types → no bonus
+  fresh(); giveItem('trophy_rack_t3');   // 0.03 per unique type, cap 0.25
+  g.killedEnemyTypes = new Set();
+  out.trophyRackZeroTypes = near(g.playerStats.getTrophyRackCritBonus(0), 0);
+  // 5 unique types → 0.03 * 5 = 0.15 bonus
+  g.killedEnemyTypes = new Set(['wolf','bat','golem','slime','archer']);
+  out.trophyRack5Types = near(g.playerStats.getTrophyRackCritBonus(g.killedEnemyTypes.size), 0.15);
+  // Cap: 9 unique types → 0.03 * 9 = 0.27 → capped at 0.25
+  g.killedEnemyTypes = new Set(['a','b','c','d','e','f','g','h','i']);
+  out.trophyRackCap = near(g.playerStats.getTrophyRackCritBonus(g.killedEnemyTypes.size), 0.25);
+  // Without the item, getTrophyRackCritBonus always returns 0 regardless of kills
+  fresh();
+  g.killedEnemyTypes = new Set(['x','y','z']);
+  out.trophyRackNoItemZero = near(g.playerStats.getTrophyRackCritBonus(g.killedEnemyTypes.size), 0);
+
+  // === 13. TROPHY RACK HUD COUNTER — cap-threshold formula ===
+  // HUDRenderer shows "🏆 N/cap" where cap = Math.ceil(0.25 / trophyPerType).
+  // Verify the formula yields the correct threshold for each tier using real catalog values:
+  //   t1 (0.01/type) → ceil(25.0)  = 25   needs 25 unique types to hit 25% cap
+  //   t2 (0.02/type) → ceil(12.5)  = 13   needs 13 unique types
+  //   t3 (0.03/type) → ceil(8.33…) =  9   needs 9 unique types
+  fresh(); giveItem('trophy_rack_t1');
+  out.trophyRackHUDCapT1 = Math.ceil(0.25 / g.playerStats.getTrophyRackCritBonus(1)) === 25;
+  fresh(); giveItem('trophy_rack_t2');
+  out.trophyRackHUDCapT2 = Math.ceil(0.25 / g.playerStats.getTrophyRackCritBonus(1)) === 13;
+  fresh(); giveItem('trophy_rack_t3');
+  out.trophyRackHUDCapT3 = Math.ceil(0.25 / g.playerStats.getTrophyRackCritBonus(1)) === 9;
+
   return out;
 });
 
@@ -194,7 +230,9 @@ const checks = ['itemsExist','grindWave1','grindWave6','lastStandFullHp','lastSt
   'spree10','spreeDrains','juggFull','juggHurt','miser500','miserCap','noItemIdentity',
   'executeItemsExist','execThreshold15','execThresholdMax','execNoneZero',
   'execKillsBelow','execFeedsKillPath','execControlSurvives','execBossImmune',
-  'growingMaliceItemsExist','maliceAt0s','maliceAt45s','maliceNoItemIdentity'];
+  'growingMaliceItemsExist','maliceAt0s','maliceAt45s','maliceNoItemIdentity',
+  'trophyRackItemsExist','trophyRackZeroTypes','trophyRack5Types','trophyRackCap','trophyRackNoItemZero',
+  'trophyRackHUDCapT1','trophyRackHUDCapT2','trophyRackHUDCapT3'];
 const pass = result && !result.fatal && checks.every(k => result[k] === true) && errors.length === 0;
 console.log(`\n${checks.filter(k => result && result[k] === true).length}/${checks.length} checks passed`);
 console.log('RESULT:', pass ? 'PASS ✅' : 'FAIL ❌');
