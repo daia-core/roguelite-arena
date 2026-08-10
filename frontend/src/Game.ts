@@ -2623,11 +2623,14 @@ export class Game {
     }
 
     // GAME FEEL: freeze-frame punch on impactful kills only. Bosses get a meaty
-    // stop (+ a white impact flash); minibosses an orange flash + label; fodder gets
+    // stop (+ a white impact flash + gold label); minibosses an orange flash + label; fodder gets
     // nothing — a freeze on every trash kill would stutter the whole arena.
     if (enemy.typeData.isBoss) {
       this.triggerHitPause(0.12);
       this.screenEffects.flash('#ffffff', 0.3);
+      this.damageNumbers.push(
+        this.createDamageNumber(this.player.x, this.player.y - 48, '👑 BOSS SLAIN!', false, '#ffd700')
+      );
     } else if (enemy.isMiniboss) {
       this.triggerHitPause(0.08);
       this.screenEffects.flash('#ff6600', 0.25);
