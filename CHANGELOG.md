@@ -6,7 +6,7 @@ portrait viewport).
 
 ---
 
-## 2026-08-10 (morning) — feat(hud): Trophy Rack type counter · `450cda0` · smoke PENDING
+## 2026-08-10 (morning) — feat(hud): Trophy Rack type counter · `450cda0` · smoke PASS ✓
 
 **Player-visible**
 - **New HUD overlay for Trophy Rack holders:** compact gold "🏆 N/X" counter appears below the
