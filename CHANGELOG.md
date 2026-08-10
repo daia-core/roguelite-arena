@@ -6,6 +6,31 @@ portrait viewport).
 
 ---
 
+## 2026-08-11 (night) — fix(stats): hidden build mechanics now visible in stats popup · `86d131b` · smoke PASS ✓
+
+**Player-visible**
+- **Stats popup now shows 4 previously-hidden build mechanics** in the SPECIAL section:
+  - **Kill Stack Dmg: +X%/stack** — visible when holding Killing Spree items (Soul Bead, Execute
+    Apex, kill-stack variants). Previously the per-stack bonus was invisible; players couldn't tell
+    how much Killing Spree was worth relative to flat damage.
+  - **Soul Tithe Stacks: N (+X% dmg)** — the permanent +1%/stack damage earned every 50 kills
+    while holding Soul Tithe. After 10+ waves of Soul Tithe play, you'd have a meaningful permanent
+    bonus with no way to see it. Now it's explicit.
+  - **Daggers/Kill: N** — Ceremonial Daggers count. With 4 dagger items stacked, you throw 4
+    homing daggers per kill — relevant to build reading but wasn't shown.
+  - **Execute at: <X% HP** — the execute-threshold from execute items is now shown so you know
+    the HP band your instakill fires in.
+- All 4 rows are conditional (hidden when 0 / mechanic not held) — no noise for builds that don't
+  use them.
+
+**Under the hood**
+- `ShopScene.ts`: `getSoulTitheStackCount(): number` added to `ShopSceneDeps` interface; 4 rows
+  added to SPECIAL in `drawStatsPopup()` using the Trophy Rack pattern.
+- `Game.ts`: wired `getSoulTitheStackCount: () => this.soulTitheStacks` in ShopScene deps.
+- tsc CLEAN ✅ · verify-mechanics ALL PASS ✅ · Vercel READY + PROMOTED · sha `86d131b`
+
+---
+
 ## 2026-08-10 (morning) — feat(hud): Trophy Rack type counter · `450cda0` · smoke PASS ✓
 
 **Player-visible**
