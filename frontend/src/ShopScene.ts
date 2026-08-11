@@ -1335,6 +1335,7 @@ export class ShopScene implements Scene {
         ['Melee Dmg', mult(ps.getMeleeDamageMult()), ps.getMeleeDamageMult() > 1.001],
         ['Ranged Dmg', mult(ps.getRangedDamageMult()), ps.getRangedDamageMult() > 1.001],
         ['Elemental Dmg', mult(ps.getElementalDamageMult()), ps.getElementalDamageMult() > 1.001],
+        ['AOE Radius', mult(ps.getAoeRadiusMult()), ps.getAoeRadiusMult() > 1.001],
       ]],
       ['DEFENSE', '#74c0fc', [
         ['Max Health', num(ps.getMaxHealth()), true],
@@ -1374,8 +1375,10 @@ export class ShopScene implements Scene {
         ['Explode on Kill', ps.hasExplosionOnKill() ? 'YES' : '-', ps.hasExplosionOnKill()],
         ['Explode on Hit', ps.hasExplosionOnHit() ? 'YES' : '-', ps.hasExplosionOnHit()],
         ['Orbit Orbs', num(ps.getOrbitOrbCount()), ps.getOrbitOrbCount() > 0],
-        ['Bomb Drop', ps.hasBombDrop() ? 'YES' : '-', ps.hasBombDrop()],
-        ['Nova Pulse', ps.hasNova() ? 'YES' : '-', ps.hasNova()],
+        ['Bomb Dmg', num(ps.getBombDamage()), ps.hasBombDrop()],
+        ['Bomb CD', rate(ps.getBombCooldown(), 1, 's'), ps.hasBombDrop()],
+        ['Nova Dmg', num(ps.getNovaDamage()), ps.hasNova()],
+        ['Nova CD', rate(ps.getNovaCooldown(), 1, 's'), ps.hasNova()],
         ['Aux Melee', ps.hasAuxMelee() ? 'YES' : '-', ps.hasAuxMelee()],
       ]],
     ];
