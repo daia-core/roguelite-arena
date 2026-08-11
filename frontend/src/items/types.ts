@@ -191,6 +191,7 @@ export function itemStatSegments(item: Item, level: number = 1): ItemStatSegment
   frac(item.dazedChance, 'Dazed');
   frac(item.disorientedChance, 'Disoriented');
   frac(item.multicast, 'Multicast');
+  frac(item.ripostePower, 'Counter Dmg');
   // Capability flags
   flag(item.shield, 'Shield');
   flag(item.homing, 'Homing');
@@ -482,6 +483,13 @@ export interface Item {
   // a sum — cheap copies can't compound into "execute at full HP". The kill routes
   // through the normal kill path, so it still grants XP/gold and feeds Killing Spree.
   executeThreshold?: number; // e.g. 0.15 = execute enemies at/under 15% HP
+
+  // ---- RIPOSTE (on-dodge retaliatory nova burst) ----
+  // When held, each passive dodge-roll fires a retaliatory shockwave (like a mini-nova)
+  // centred on the player, dealing `ripostePower × base-damage`. Additive across copies
+  // (more stacks = a more powerful counter-burst); designed to turn dodge-chance items
+  // into an offensive scaling stat for evasion builds.
+  ripostePower?: number; // multiplier applied to player base damage (e.g. 0.80 = 80%)
 
   // ---- PROC LUCK (roll-twice-keep-better) ----
   // When held, every random on-hit STATUS proc (burn/bleed/freeze/chain/doom/wound/

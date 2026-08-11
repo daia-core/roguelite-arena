@@ -42,6 +42,8 @@ export class Player {
   invincibilityTimer: number = 0;
   /** Dodged hits waiting for a "DODGE" popup (consumed by Game). */
   pendingDodges: number = 0;
+  /** Riposte bursts waiting to fire (consumed by Game; incremented on dodge when ripostePower > 0). */
+  pendingRipostes: number = 0;
   invincibilityDuration: number = 0.5; // 500ms of i-frames
 
   // Abilities
@@ -292,6 +294,8 @@ export class Player {
     // "DODGE" popup so the miss is visible
     if (Math.random() < this.stats.getDodgeChance()) {
       this.pendingDodges++;
+      // Riposte: queue a retaliatory nova burst if the player holds a riposte item
+      if (this.stats.getRipostePower() > 0) this.pendingRipostes++;
       this.invincibilityTimer = this.invincibilityDuration * 0.5;
       return false;
     }

@@ -5036,4 +5036,31 @@ export const ITEM_CATALOG: Item[] = [
     { id: 'trophy_rack_t1', name: 'Trophy Rack', description: '+1% crit for each unique enemy type killed this run (cap 25%). Hunt widely, hit harder.', rarity: 'common', tier: ItemTier.Common, cost: 18, icon: '🏺', unlocked: true, tags: ['ranged', 'melee'], trophyRack: 0.01 },
     { id: 'trophy_rack_t2', name: "Menagerie Charm", description: '+2% crit per unique enemy type hunted this run (cap 25%). A wider bestiary sharpens your eye.', rarity: 'rare', tier: ItemTier.Uncommon, cost: 42, icon: '🗺️', unlocked: true, tags: ['ranged', 'melee'], trophyRack: 0.02 },
     { id: 'trophy_rack_t3', name: "Hunter's Collection", description: '+3% crit per unique enemy type slain this run (cap 25%). A master hunter knows every creature\'s weak point.', rarity: 'epic', tier: ItemTier.Rare, cost: 68, icon: '🦁', unlocked: true, tags: ['ranged', 'melee'], trophyRack: 0.03 },
+
+    // ---- RIPOSTE — on-dodge retaliatory nova burst ----
+    // Each passive dodge-roll fires a centred shockwave at 60-200% of player base damage
+    // (tighter than a nova, faster expansion). Stacks additively across copies; pairs
+    // naturally with high-dodge builds — the more you invest in dodge, the more often
+    // the counter fires. A new playstyle axis: dodge as OFFENSE, not just survival.
+    { id: 'riposte_t1', name: 'Counter Band',
+      description: 'On dodge, release a retaliatory burst dealing 60% of your base damage. +6% dodge.',
+      rarity: 'common', tier: ItemTier.Common, cost: 22, icon: '🌀', unlocked: true,
+      tags: ['utility', 'defensive'],
+      dodge: 0.06, ripostePower: 0.60 },
+    { id: 'riposte_t2', name: 'Mirror Bracers',
+      description: 'On dodge, release a retaliatory burst dealing 90% of your base damage. +10% dodge.',
+      rarity: 'rare', tier: ItemTier.Uncommon, cost: 44, icon: '🌀', unlocked: true,
+      tags: ['utility', 'defensive'],
+      dodge: 0.10, ripostePower: 0.90 },
+    { id: 'riposte_t3', name: 'Phantom Reflex',
+      description: 'On dodge, release a retaliatory burst dealing 130% of your base damage. +15% dodge.',
+      rarity: 'epic', tier: ItemTier.Rare, cost: 68, icon: '🌀', unlocked: true,
+      tags: ['utility', 'defensive'],
+      dodge: 0.15, ripostePower: 1.30 },
+    { id: 'riposte_keystone', name: 'Voidstep Cloak',
+      description: 'On dodge, release a punishing counter-burst for 200% base damage. +22% dodge, but frail — -20 max HP.',
+      rarity: 'legendary', tier: ItemTier.Legendary, cost: 90, icon: '👻', unlocked: true,
+      tags: ['utility', 'defensive'],
+      slot: 'amulet',
+      dodge: 0.22, ripostePower: 2.00, maxHealthBonus: -20 },
 ];

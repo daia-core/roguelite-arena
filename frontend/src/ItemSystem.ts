@@ -252,6 +252,8 @@ interface ItemAgg {
   warChest: number;
   // on-kill variety ramp: +crit per unique enemy type killed (additive across copies)
   trophyRack: number;
+  // on-dodge retaliatory nova burst power (additive across copies)
+  ripostePower: number;
   // boolean
   explosionOnHit: boolean; shield: boolean; homing: boolean; poison: boolean; poisonSpread: boolean; burnSpread: boolean;
   auxMelee: boolean; bombDrop: boolean; novaPulse: boolean; fourleafCharm: boolean;
@@ -280,6 +282,7 @@ function freshAgg(): ItemAgg {
     daggerCount: 0,
     warChest: 0,
     trophyRack: 0,
+    ripostePower: 0,
     explosionOnHit: false, shield: false, homing: false, poison: false, poisonSpread: false, burnSpread: false,
     auxMelee: false, bombDrop: false, novaPulse: false, fourleafCharm: false,
     soulTithe: false, loadedShot: false,
@@ -579,6 +582,7 @@ export class PlayerStats {
       if (item.ceremonialDaggers) a.daggerCount += item.ceremonialDaggers * lv;
       if (item.warChest) a.warChest += item.warChest * lv;
       if (item.trophyRack) a.trophyRack += item.trophyRack * lv;
+      if (item.ripostePower) a.ripostePower += item.ripostePower * lv;
       // Boolean (any item carries it)
       if (item.explosionOnHit) a.explosionOnHit = true;
       if (item.shield) a.shield = true;
@@ -1195,6 +1199,11 @@ export class PlayerStats {
   // ---- ON-WAVE-END ECONOMY (War Chest) ----
   getWarChest(): number {
     return this.ensureAgg().warChest;
+  }
+
+  /** Total riposte power — the fraction of base damage fired as a nova on each dodge. 0 = no riposte. */
+  getRipostePower(): number {
+    return this.ensureAgg().ripostePower;
   }
 
   /**

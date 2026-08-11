@@ -1686,6 +1686,22 @@ export class Game {
       );
     }
 
+    // Riposte: fire a retaliatory shockwave for each queued dodge-counter
+    // Damage = base damage × total ripostePower (additive per stack).
+    // Radius is tighter than a nova (130px base) so it reads as a sharp counter-burst,
+    // not a free area-clear — it needs evasion-build commitment to shine.
+    while (this.player.pendingRipostes > 0) {
+      this.player.pendingRipostes--;
+      const px = this.player.x;
+      const py = this.player.y;
+      const riposteDmg = this.playerStats.getDamage() * this.playerStats.getRipostePower();
+      const riposteRadius = 130 * this.playerStats.getAoeRadiusMult();
+      this.shockwaves.push(new Shockwave(px, py, riposteRadius, riposteDmg, 640));
+      this.damageNumbers.push(
+        this.createDamageNumber(px, py - 40, 'COUNTER!', false, '#e8b266')
+      );
+    }
+
     // Player shooting — the ranged weapon ALWAYS fires. Melee is a separate
     // stacking swing (see updatePlayerSwing in updateAuxWeapons), so a melee build
     // still shoots a weak gun instead of losing projectiles entirely.
