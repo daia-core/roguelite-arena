@@ -1375,11 +1375,15 @@ export class ShopScene implements Scene {
         ['Explode on Kill', ps.hasExplosionOnKill() ? 'YES' : '-', ps.hasExplosionOnKill()],
         ['Explode on Hit', ps.hasExplosionOnHit() ? 'YES' : '-', ps.hasExplosionOnHit()],
         ['Orbit Orbs', num(ps.getOrbitOrbCount()), ps.getOrbitOrbCount() > 0],
+        ['Orbit Orb Dmg', num(ps.getOrbitDamage()), ps.getOrbitOrbCount() > 0],
         ['Bomb Dmg', num(ps.getBombDamage()), ps.hasBombDrop()],
         ['Bomb CD', rate(ps.getBombCooldown(), 1, 's'), ps.hasBombDrop()],
         ['Nova Dmg', num(ps.getNovaDamage()), ps.hasNova()],
         ['Nova CD', rate(ps.getNovaCooldown(), 1, 's'), ps.hasNova()],
-        ['Aux Melee', ps.hasAuxMelee() ? 'YES' : '-', ps.hasAuxMelee()],
+        ['Aux Melee Dmg', num(ps.getAuxMeleeDamage()), ps.hasAuxMelee()],
+        ['Swing Dmg', num(ps.getSwingDamage()), ps.getMeleeDamageMult() > 1.001 || ps.hasAuxMelee() || ps.getSwingAoe() > 0],
+        ['Swing Interval', rate(ps.getSwingInterval(), 2, 's'), ps.getSwingInterval() < 0.849],
+        ['Swing AOE', `${num(ps.getSwingAoe())}px`, ps.getSwingAoe() > 0],
       ]],
     ];
 
