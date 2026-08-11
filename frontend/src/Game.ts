@@ -1690,6 +1690,7 @@ export class Game {
     // Damage = base damage × total ripostePower (additive per stack).
     // Radius is tighter than a nova (130px base) so it reads as a sharp counter-burst,
     // not a free area-clear — it needs evasion-build commitment to shine.
+    if (this.player.pendingRipostes > 0) this.audio.playRiposte();
     while (this.player.pendingRipostes > 0) {
       this.player.pendingRipostes--;
       const px = this.player.x;

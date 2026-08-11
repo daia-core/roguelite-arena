@@ -92,6 +92,39 @@ export class AudioManager {
     this.playTone(720, 0.08, 'triangle', 0.12);
   }
 
+  playRiposte(): void {
+    if (!this.enabled) return;
+    this._ensureRunning();
+
+    // Sharp metallic counter-strike: descending zing (reads as "clang!") +
+    // a brief low impact body so it has weight without overwhelming the mix.
+    // Intentionally louder than dodge (0.12) but much quieter than crit (0.3)
+    // — riposte fires on every dodge, so ear-fatigue discipline still applies.
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(1100, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(520, this.ctx.currentTime + 0.1);
+    gain.gain.value = 0.18;
+    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+    osc.start(this.ctx.currentTime);
+    osc.stop(this.ctx.currentTime + 0.1);
+
+    // Low impact body — gives the counter-strike tactile weight
+    const body = this.ctx.createOscillator();
+    const bodyGain = this.ctx.createGain();
+    body.connect(bodyGain);
+    bodyGain.connect(this.masterGain);
+    body.type = 'sine';
+    body.frequency.value = 210;
+    bodyGain.gain.value = 0.10;
+    bodyGain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.06);
+    body.start(this.ctx.currentTime);
+    body.stop(this.ctx.currentTime + 0.06);
+  }
+
   playBlast(): void {
     this.playTone(150, 0.3, 'sawtooth', 0.25);
   }
