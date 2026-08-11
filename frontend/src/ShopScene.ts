@@ -42,6 +42,12 @@ export interface ShopSceneDeps {
   getKilledEnemyTypesCount(): number;
   /** Permanent +1% damage stacks earned via Soul Tithe (every 50 kills). */
   getSoulTitheStackCount(): number;
+  /** Current Growing Malice stacks (floor(runPlaySeconds / 15)) — for stats popup. */
+  getGrowingMaliceStacks(): number;
+  /** Waves survived this run — for Grindstone stats popup row. */
+  getWavesSurvived(): number;
+  /** Player's current gold on hand — for Miser's Hoard stats popup row. */
+  getPlayerGold(): number;
 
   // Shared mutable shop inventory (owned by Game.ts — pass by reference).
   getShopItems(): (Item | null)[];
@@ -1321,6 +1327,9 @@ export class ShopScene implements Scene {
     const trophyBonusPerType = ps.getTrophyRackCritBonus(1); // >0 iff player has Trophy Rack
     const trophyBonus = ps.getTrophyRackCritBonus(trophyCount);
     const soulTitheStacks = this.deps.getSoulTitheStackCount();
+    const growingMaliceStacks = this.deps.getGrowingMaliceStacks();
+    const wavesSurvived = this.deps.getWavesSurvived();
+    const playerGold = this.deps.getPlayerGold();
     type Row = [string, string, boolean];
     const groups: Array<[string, string, Row[]]> = [
       ['OFFENSE', '#ffa94d', [
@@ -1384,6 +1393,12 @@ export class ShopScene implements Scene {
         ['Swing Dmg', num(ps.getSwingDamage()), ps.getMeleeDamageMult() > 1.001 || ps.hasAuxMelee() || ps.getSwingAoe() > 0],
         ['Swing Interval', rate(ps.getSwingInterval(), 2, 's'), ps.getSwingInterval() < 0.849],
         ['Swing AOE', `${num(ps.getSwingAoe())}px`, ps.getSwingAoe() > 0],
+        ['Malice Dmg', `+${pct(ps.getTimeRampDamage() * growingMaliceStacks)}`, ps.getTimeRampDamage() > 0],
+        ['Grindstone Dmg', `+${pct(ps.getWaveRampDamage() * Math.max(0, wavesSurvived - 1))}`, ps.getWaveRampDamage() > 0 && wavesSurvived > 1],
+        ['Juggernaut', `+${pct(ps.getHighHpPower())} if >90% HP`, ps.getHighHpPower() > 0],
+        ['Overflow Batt.', `+${pct(ps.getHighHpFireRate())} rate if >90%`, ps.getHighHpFireRate() > 0],
+        ['Last Stand', `+${pct(ps.getLowHpPower())} if <35% HP`, ps.getLowHpPower() > 0],
+        ["Miser's Hoard", `+${pct(Math.min(2, ps.getGoldScaleDamage() * playerGold / 100))} now`, ps.getGoldScaleDamage() > 0],
       ]],
     ];
 
