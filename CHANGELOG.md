@@ -6,6 +6,21 @@ portrait viewport).
 
 ---
 
+## 2026-08-11 (morning-3) — fix(stats): Orbit Orb Dmg, Aux Melee Dmg, Swing stats now visible · `577993b` · smoke PASS ✓
+
+**Player-visible**
+- **Orbit Orb Dmg: X** — actual damage per orb, shown alongside the orb count. Previously the stats popup told you how many orbs you had but not what they hit for.
+- **Aux Melee Dmg: X** — replaces the binary "YES" flag with the actual whirling-arc damage number, calculated from your melee scaling and aux-melee multipliers.
+- **Swing Dmg: X** — the auto-swing that fires every 0.85s against nearby enemies is now visible when you've invested melee items. Shows the real hit value so melee builds can gauge their ground truth damage.
+- **Swing Interval: Xs** — shown when cooldown items reduce your swing rate below baseline (0.85s). Previously invisible whether or not you had swing-speed items.
+- **Swing AOE: Xpx** — shown when swing-AOE items add a full-circle burst to each swing. Was entirely hidden.
+
+**Under the hood**
+- `ShopScene.ts`: 5 rows added/changed in the SPECIAL group; all conditional (shown only when relevant).
+- tsc CLEAN ✅ · qa-builddiv PASS ✅ · qa-catalog-integrity CLEAN (1910 items) ✅ · qa-stats-parity PASS ✅
+
+---
+
 ## 2026-08-11 (morning-2) — fix(stats): Bomb/Nova show actual values, AOE Radius added · `7263414` · smoke PASS ✓
 
 **Player-visible**
