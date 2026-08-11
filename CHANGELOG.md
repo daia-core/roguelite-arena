@@ -6,6 +6,24 @@ portrait viewport).
 
 ---
 
+## 2026-08-11 (afternoon) — fix(stats): 6 runtime-conditional mechanics now visible · `8171be0` · smoke PASS ✓
+
+**Player-visible**
+- **Malice Dmg: +X%** — total Growing Malice bonus accumulated so far this run (stacks × per-stack rate). Previously you'd see the ⏳+X% pop each interval but had no way to know your total. Now it's in the popup when you hold any time-ramp item.
+- **Grindstone Dmg: +X%** — total current bonus from wave-ramp items (Grindstone × waves survived). Shown from wave 2 onward; hidden at wave 1 where the bonus is 0.
+- **Juggernaut: +X% if >90% HP** — the potential damage bonus from Juggernaut items, so you can see what you stand to gain before deciding whether to keep HP high.
+- **Overflow Batt.: +X% rate if >90%** — same pattern for the fire-rate counterpart; both "stay pristine" mechanics are now legible in one glance.
+- **Last Stand: +X% if <35% HP** — the damage (+ fire rate) spike when you're dangerously wounded, now visible at the stat screen so you can weigh risk vs. reward.
+- **Miser's Hoard: +X% now** — live gold-scaling bonus at your current gold on hand, updating every time you open the popup.
+- All 6 rows are conditional: they appear only when you hold the relevant item, so there's no noise for builds that don't use them.
+
+**Under the hood**
+- `ShopSceneDeps`: 3 new callbacks — `getGrowingMaliceStacks()`, `getWavesSurvived()`, `getPlayerGold()` — wired in `Game.ts`.
+- `ShopScene.drawStatsPopup()`: 3 new constants + 6 rows appended to SPECIAL group.
+- tsc CLEAN ✅ · qa-builddiv PASS ✅ · qa-stats-parity PASS (2184 checks, 1910 items) ✅ · qa-stats-popup PASS ✅
+
+---
+
 ## 2026-08-11 (morning-3) — fix(stats): Orbit Orb Dmg, Aux Melee Dmg, Swing stats now visible · `577993b` · smoke PASS ✓
 
 **Player-visible**
