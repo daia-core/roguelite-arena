@@ -16,6 +16,9 @@
 //   7. Trophy Rack (trophyRack 0.01–0.03) — +crit per unique enemy type killed (cap 25%);
 //      reads getTrophyRackCritBonus(killedEnemyTypes.size) via JS runtime.
 //      HUD cap-threshold: Math.ceil(0.25 / perType) = 25/13/9 for t1/t2/t3.
+//   8. Riposte (ripostePower) — on passive dodge, fires a Shockwave nova for ripostePower×baseDmg.
+//      Additive across copies. pendingRipostes++ each dodge when power > 0.
+//      Items: Counter Band (0.60), Mirror Bracers (0.90), Phantom Reflex (1.30), Voidstep Cloak (2.00).
 //
 // TS `private` is compile-time only, so g.wavesSurvived / g.killStackCount / the
 // runtime mults are all readable at runtime. Boots into a real wave and steps g.update.
@@ -215,6 +218,37 @@ const result = await page.evaluate(() => {
   fresh(); giveItem('trophy_rack_t3');
   out.trophyRackHUDCapT3 = Math.ceil(0.25 / g.playerStats.getTrophyRackCritBonus(1)) === 9;
 
+  // === 14. RIPOSTE — on-dodge retaliatory nova burst (ripostePower) ===
+  // ripostePower is additive across copies (× upgradeLevel); 0 with no item.
+  // On passive dodge: pendingRipostes++ if getRipostePower() > 0.
+  out.riposteItemsExist = ['riposte_t1','riposte_t2','riposte_t3','riposte_keystone']
+    .every(id => !!DB.getItemById(id));
+
+  // 14a. No item → getRipostePower() = 0
+  fresh(); step();
+  out.ripostePowerZero = near(g.playerStats.getRipostePower(), 0);
+
+  // 14b. Single riposte_t3 (Phantom Reflex) → power = 1.30
+  fresh(); giveItem('riposte_t3');
+  out.ripostePower130 = near(g.playerStats.getRipostePower(), 1.30);
+
+  // 14c. Two copies of riposte_t2 (Mirror Bracers, 0.90 each) → 1.80 (additive stacking)
+  fresh(); giveItem('riposte_t2'); giveItem('riposte_t2');
+  out.ripostePowerStacks = near(g.playerStats.getRipostePower(), 1.80);
+
+  // 14d. pendingRipostes: with ripostePower > 0, a forced dodge queues a counter.
+  // Rig: zero dodge naturally, give riposte item, then force a dodge by setting health
+  // to maxHealth before the hit (so takeDamage runs) and temporarily forcing the dodge roll.
+  fresh(); giveItem('riposte_t3');
+  g.player.pendingRipostes = 0;
+  // Override Math.random to return 0 (< any positive dodgeChance → dodge fires)
+  const origRandom = Math.random;
+  Math.random = () => 0;
+  // Call takeDamage directly with a small hit
+  g.player.takeDamage(1, null);
+  Math.random = origRandom;
+  out.ripostePendingQueued = g.player.pendingRipostes >= 1;
+
   return out;
 });
 
@@ -232,7 +266,8 @@ const checks = ['itemsExist','grindWave1','grindWave6','lastStandFullHp','lastSt
   'execKillsBelow','execFeedsKillPath','execControlSurvives','execBossImmune',
   'growingMaliceItemsExist','maliceAt0s','maliceAt45s','maliceNoItemIdentity',
   'trophyRackItemsExist','trophyRackZeroTypes','trophyRack5Types','trophyRackCap','trophyRackNoItemZero',
-  'trophyRackHUDCapT1','trophyRackHUDCapT2','trophyRackHUDCapT3'];
+  'trophyRackHUDCapT1','trophyRackHUDCapT2','trophyRackHUDCapT3',
+  'riposteItemsExist','ripostePowerZero','ripostePower130','ripostePowerStacks','ripostePendingQueued'];
 const pass = result && !result.fatal && checks.every(k => result[k] === true) && errors.length === 0;
 console.log(`\n${checks.filter(k => result && result[k] === true).length}/${checks.length} checks passed`);
 console.log('RESULT:', pass ? 'PASS ✅' : 'FAIL ❌');
