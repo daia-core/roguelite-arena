@@ -6,6 +6,40 @@ portrait viewport).
 
 ---
 
+## 2026-08-11 (night) — feat(riposte): dodge-as-offense via retaliatory nova burst · `c979fc5` · smoke PASS ✓
+
+**Player-visible**
+- **New mechanic: Riposte.** When you passively dodge (Evasion Cloak and friends), every dodge
+  now fires a centred **"COUNTER!"** shockwave — a tight, fast energy burst dealing a fraction of
+  your base damage to all enemies caught in the radius. The burst reads in gold text so it's
+  immediately legible in the chaos.
+- **4 new items** introduce the riposte build path:
+  - **Counter Band** (Common, 22g) — +6% dodge, 60% counter damage on dodge.
+  - **Mirror Bracers** (Rare, 44g) — +10% dodge, 90% counter damage on dodge.
+  - **Phantom Reflex** (Epic, 68g) — +15% dodge, 130% counter damage on dodge.
+  - **Voidstep Cloak** (Legendary amulet, 90g) — +22% dodge, 200% counter damage, −20 max HP.
+    The glass-cannon capstone for a full evasion build; equipping the amulet slot puts real skin
+    in the game.
+- **New playstyle axis:** dodge is now *offensive*, not just defensive. Stacking riposte items
+  compounds two ways — higher dodge chance means more bursts trigger, and additive ripostePower
+  means each burst hits harder. Counter Band × 3 + high-dodge boots = a build that punishes
+  crowds with every evade.
+- **Synergises naturally with AOE Radius items** — the counter burst radius scales with
+  getAoeRadiusMult(), so bomb/nova/swing-AOE builds get wider counter bursts for free.
+
+**Under the hood**
+- `Item` interface: `ripostePower?: number` field; `itemStatSegments`: `Counter Dmg %` chip.
+- `ItemSystem`: `ripostePower` in `ItemAgg`, accumulated in `ensureAgg()`, exposed via
+  `getRipostePower()`.
+- `Player.ts`: `pendingRipostes` counter; set on each passive dodge-roll when `ripostePower > 0`.
+- `Game.ts`: processes `pendingRipostes` each frame → `Shockwave(r=130×AoE, dmg=base×power,
+  speed=640)` + gold `"COUNTER!"` float.
+- 4 catalog entries (ids `riposte_t1` … `riposte_keystone`).
+- tsc CLEAN ✅ · qa-catalog CLEAN (1914 items) ✅ · qa-builddiv PASS ✅ · qa-stats-parity PASS (2189 checks) ✅
+- Deployed `dpl_BdgUb5p3tjKY3pkk2SAYs5Ps7SRq`, aliased roguelite-game-blush.vercel.app, HTTP 200 ✓
+
+---
+
 ## 2026-08-11 (afternoon) — fix(stats): 6 runtime-conditional mechanics now visible · `8171be0` · smoke PASS ✓
 
 **Player-visible**
