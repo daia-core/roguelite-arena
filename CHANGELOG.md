@@ -6,6 +6,25 @@ portrait viewport).
 
 ---
 
+## 2026-08-11 (morning) — fix(stats): proc-chance mechanics now visible in stats popup · `29b1218` · smoke PASS ✓
+
+**Player-visible**
+- **Stats popup now shows 5 previously-hidden proc-chance mechanics** in the SPECIAL section:
+  - **Burn: X%** — on-hit burn chance; shown when any Burn item is held.
+  - **Bleed: X%** — stacks across all Bleed items; now visible at a glance.
+  - **Doom: X%** — marks enemies for amplified damage; proc rate was previously invisible.
+  - **Wound: X%** — reduces enemy healing; chance was hidden despite being tactically meaningful.
+  - **Multicast: X%** — chance to fire an extra projectile; previously completely opaque.
+- All 5 rows are conditional (hidden when 0) — no noise for builds that don't use them.
+- These complete the proc-chance group: Chain Lightning and Freeze were already shown;
+  Burn, Bleed, Doom, Wound, and Multicast now follow in the same format.
+
+**Under the hood**
+- `ShopScene.ts`: 5 rows added to SPECIAL section after Freeze, same conditional pattern.
+- tsc CLEAN ✅ · qa-builddiv PASS ✅ · qa-catalog-integrity CLEAN (1910 items) ✅
+
+---
+
 ## 2026-08-11 (night) — fix(stats): hidden build mechanics now visible in stats popup · `86d131b` · smoke PASS ✓
 
 **Player-visible**
