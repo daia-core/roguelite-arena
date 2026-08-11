@@ -6,6 +6,20 @@ portrait viewport).
 
 ---
 
+## 2026-08-11 (morning-2) — fix(stats): Bomb/Nova show actual values, AOE Radius added · `7263414` · smoke PASS ✓
+
+**Player-visible**
+- **Bomb Drop** entry replaced with two informative rows: **Bomb Dmg: X** and **Bomb CD: Xs** — players with bomb-drop builds can now see their actual burst damage and cooldown at a glance instead of a useless "YES".
+- **Nova Pulse** entry replaced with **Nova Dmg: X** and **Nova CD: Xs** — same improvement for nova builds.
+- **AOE Radius** multiplier now shown in the OFFENSE section when any area-of-effect items are held — this single stat controls nova, bomb, and swing AOE radius together; previously fully invisible.
+
+**Under the hood**
+- `ShopScene.ts`: Bomb Drop/Nova Pulse binary rows → 4 value rows; AOE Radius added to OFFENSE group.
+- All values conditional (shown only when the mechanic is active) — no noise for other builds.
+- tsc CLEAN ✅ · qa-builddiv PASS ✅ · qa-catalog-integrity CLEAN (1910 items) ✅ · qa-stats-parity PASS ✅
+
+---
+
 ## 2026-08-11 (morning) — fix(stats): proc-chance mechanics now visible in stats popup · `29b1218` · smoke PASS ✓
 
 **Player-visible**
