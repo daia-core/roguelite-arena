@@ -6,6 +6,33 @@ portrait viewport).
 
 ---
 
+## 2026-08-12 (morning-3) — fix(stats): 9 debuff mechanics now visible in stats popup · `65ecab6` · smoke PASS ✓
+
+**Player-visible**
+- **Debuff build? Now you can see your numbers.** Nine runtime-conditional mechanics that were
+  silently absent from the stats overlay now show up in the SPECIAL section when you actually
+  hold the relevant items:
+  - **Slow** — shows your steady-control strength as a percentage (capped at 65%)
+  - **Fragility** — proc chance % for armour-shred on hit
+  - **Exposed** — proc chance % for defence-strip on hit
+  - **Brittle** — proc chance % for damage-vulnerability on hit
+  - **Condemned** — proc chance % for doom-countdown on hit
+  - **Dazed** — proc chance % for attack-slow on hit
+  - **Disoriented** — proc chance % for aim-disruption on hit
+  - **Poison Spread** — shows `YES` when poison-spread is active (binary, like Homing)
+  - **Burn Spread** — shows `YES` when burn-spread is active
+  Each row is completely hidden if you don't hold the relevant items — zero noise for builds
+  that don't use debuffs.
+
+**Under the hood**
+- `ShopScene.drawStatsPopup()`: 9 conditional rows appended to SPECIAL group using the same
+  `[label, value, show]` pattern as Freeze/Burn/Bleed/Doom/Wound. Naming follows
+  `itemStatSegments()` convention (Fragility not Fragile).
+- tsc CLEAN ✅ · 38/38 triggered PASS ✅ · 2189+ stats-parity PASS ✅ · 1914 catalog CLEAN ✅
+- Deployed `dpl_BUGw1Kw39k9FTNEaYZna7v4CpfrL`, aliased roguelite-game-blush.vercel.app, hash `index-DER36SLu.js` verified live ✓
+
+---
+
 ## 2026-08-12 (morning-2) — fix(stats): Counter Dmg visible in stats popup when riposte is equipped · `c3313e8` · smoke PASS ✓
 
 **Player-visible**
