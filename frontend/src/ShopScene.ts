@@ -1393,6 +1393,7 @@ export class ShopScene implements Scene {
         ['Swing Dmg', num(ps.getSwingDamage()), ps.getMeleeDamageMult() > 1.001 || ps.hasAuxMelee() || ps.getSwingAoe() > 0],
         ['Swing Interval', rate(ps.getSwingInterval(), 2, 's'), ps.getSwingInterval() < 0.849],
         ['Swing AOE', `${num(ps.getSwingAoe())}px`, ps.getSwingAoe() > 0],
+        ['Counter Dmg', num(Math.round(ps.getDamage() * ps.getRipostePower())), ps.getRipostePower() > 0],
         ['Malice Dmg', `+${pct(ps.getTimeRampDamage() * growingMaliceStacks)}`, ps.getTimeRampDamage() > 0],
         ['Grindstone Dmg', `+${pct(ps.getWaveRampDamage() * Math.max(0, wavesSurvived - 1))}`, ps.getWaveRampDamage() > 0 && wavesSurvived > 1],
         ['Juggernaut', `+${pct(ps.getHighHpPower())} if >90% HP`, ps.getHighHpPower() > 0],
