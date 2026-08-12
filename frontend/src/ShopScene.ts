@@ -1400,6 +1400,7 @@ export class ShopScene implements Scene {
         ['Bomb CD', rate(ps.getBombCooldown(), 1, 's'), ps.hasBombDrop()],
         ['Nova Dmg', num(ps.getNovaDamage()), ps.hasNova()],
         ['Nova CD', rate(ps.getNovaCooldown(), 1, 's'), ps.hasNova()],
+        ['Opening Salvo', 'Wave nova + 1.5s freeze', ps.hasOpeningSalvo()],
         ['Aux Melee Dmg', num(ps.getAuxMeleeDamage()), ps.hasAuxMelee()],
         ['Swing Dmg', num(ps.getSwingDamage()), ps.getMeleeDamageMult() > 1.001 || ps.hasAuxMelee() || ps.getSwingAoe() > 0],
         ['Swing Interval', rate(ps.getSwingInterval(), 2, 's'), ps.getSwingInterval() < 0.849],
