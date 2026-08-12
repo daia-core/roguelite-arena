@@ -1365,6 +1365,7 @@ export class ShopScene implements Scene {
         ['Shop Discount', pct(ps.getShopDiscount()), ps.getShopDiscount() > 0],
         ['Reroll Discount', pct(ps.getRerollDiscount()), ps.getRerollDiscount() > 0],
         ['Bank Interest', pct(ps.getInterestBonus()), ps.getInterestBonus() > 0],
+        ['War Chest', `+${num(ps.getWarChest())}g × wave`, ps.getWarChest() > 0],
       ]],
       ['SPECIAL', '#e599f7', [
         ['Trophy Rack Crit', `+${pct(trophyBonus)} (${trophyCount} types)`, trophyBonusPerType > 0],
@@ -1402,6 +1403,8 @@ export class ShopScene implements Scene {
         ['Swing Dmg', num(ps.getSwingDamage()), ps.getMeleeDamageMult() > 1.001 || ps.hasAuxMelee() || ps.getSwingAoe() > 0],
         ['Swing Interval', rate(ps.getSwingInterval(), 2, 's'), ps.getSwingInterval() < 0.849],
         ['Swing AOE', `${num(ps.getSwingAoe())}px`, ps.getSwingAoe() > 0],
+        ['Loaded Shot', '1-in-10 = 3× + pierce', ps.hasLoadedShot()],
+        ['Status Luck', 'TWICE', ps.hasFourleafCharm()],
         ['Counter Dmg', num(Math.round(ps.getDamage() * ps.getRipostePower())), ps.getRipostePower() > 0],
         ['Malice Dmg', `+${pct(ps.getTimeRampDamage() * growingMaliceStacks)}`, ps.getTimeRampDamage() > 0],
         ['Grindstone Dmg', `+${pct(ps.getWaveRampDamage() * Math.max(0, wavesSurvived - 1))}`, ps.getWaveRampDamage() > 0 && wavesSurvived > 1],
