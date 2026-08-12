@@ -6,6 +6,24 @@ portrait viewport).
 
 ---
 
+## 2026-08-12 (morning-2) — fix(stats): Counter Dmg visible in stats popup when riposte is equipped · `c3313e8` · smoke PASS ✓
+
+**Player-visible**
+- **Counter Dmg now shows in the stats popup.** When you hold any riposte item (Counter Band,
+  Mirror Bracers, Phantom Reflex, Voidstep Cloak), the SPECIAL section of the stats overlay now
+  shows a **Counter Dmg** row with the realized burst damage per dodge — calculated live as
+  `baseDamage × ripostePower`. Previously you could see your Dodge % but had no way to tell how
+  hard each counter burst would hit without doing mental arithmetic.
+
+**Under the hood**
+- `ShopScene.drawStatsPopup()`: one conditional row added to SPECIAL — `['Counter Dmg',
+  num(Math.round(ps.getDamage() * ps.getRipostePower())), ps.getRipostePower() > 0]`.
+  Hidden entirely when no riposte power is held (zero noise for non-riposte builds).
+- tsc CLEAN ✅ · 38/38 triggered PASS ✅ · 2189 stats-parity PASS ✅ · 1914 catalog CLEAN ✅
+- Deployed `dpl_32jQzYoyJ2df9sq1F7NpJJbR3RkK`, aliased roguelite-game-blush.vercel.app, HTTP 200 ✓, hash `index-DNjpkAoK.js` matches local dist + "Counter Dmg" confirmed in live bundle.
+
+---
+
 ## 2026-08-12 (morning) — fix(visual): riposte shockwave renders in warm gold, not cyan · `4c03366` · smoke PASS ✓
 
 **Player-visible**
