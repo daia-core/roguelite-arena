@@ -4237,6 +4237,7 @@ export const ITEM_CATALOG: Item[] = [
     { id: 'nova_gem_t2', name: 'Nova Gem', description: 'Shockwave hits 30% harder, fires faster', rarity: 'rare', tier: ItemTier.Uncommon, cost: 30, icon: '🔷', unlocked: true, tags: ['elemental'], novaPulse: true, novaDamageMult: 1.30, novaCooldownMult: 0.80 },
     { id: 'nova_core_enhanced', name: 'Enhanced Nova Core', description: 'Shockwave hits 60% harder, fires 35% faster', rarity: 'epic', tier: ItemTier.Rare, cost: 62, icon: '🔹', unlocked: true, tags: ['elemental'], novaPulse: true, novaDamageMult: 1.60, novaCooldownMult: 0.65 },
     { id: 'nova_apex_t4', name: 'Nova Apex', description: 'Devastating shockwave — 120% more damage, 50% faster', rarity: 'legendary', tier: ItemTier.Legendary, cost: 140, icon: '💥', unlocked: true, tags: ['elemental'], novaPulse: true, novaDamageMult: 2.20, novaCooldownMult: 0.50 },
+    { id: 'opening_salvo_t4', name: 'Opening Salvo', description: 'At the start of each wave, unleash a massive orange shockwave that freezes every enemy it touches for 1.5s.', rarity: 'legendary', tier: ItemTier.Legendary, cost: 120, icon: '🌅', unlocked: true, tags: ['elemental', 'utility'], openingSalvo: true },
 
     // ---- MELEE BUILD TRINKETS ----
     { id: 'swing_amp_t1', name: 'Grip Wrap', description: '+20% melee swing damage', rarity: 'common', tier: ItemTier.Common, cost: 9, icon: '🥊', unlocked: true, tags: ['melee'], swingDamageMult: 1.20 },

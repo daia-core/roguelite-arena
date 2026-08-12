@@ -34,7 +34,7 @@ export function getItemKinds(item: Item): ItemKind[] {
     || item.multishot !== undefined || item.piercing !== undefined
     || item.homing === true || item.projectileSpeed !== undefined
     || item.multicast !== undefined;
-  const isActive = item.bombDrop === true || item.novaPulse === true;
+  const isActive = item.bombDrop === true || item.novaPulse === true || item.openingSalvo === true;
   const isPassive = !isWeapon && !isActive
     || item.damageMultiplier !== undefined || item.fireRateMultiplier !== undefined
     || item.critChance !== undefined || item.critDamageMultiplier !== undefined
@@ -200,6 +200,7 @@ export function itemStatSegments(item: Item, level: number = 1): ItemStatSegment
   flag(item.explosionOnHit, 'Explode on Hit');
   flag(item.bombDrop, 'Bomb Drop');
   flag(item.novaPulse, 'Nova Pulse');
+  flag(item.openingSalvo, 'Wave-Start Nova');
   flag(item.auxMelee, 'Orbit Blade');
   flat(item.orbitOrbs, 'Orbit Orbs');
   return segs;
@@ -355,6 +356,7 @@ export interface Item {
   novaPulse?: boolean; // periodic expanding shockwave from the player
   novaDamageMult?: number; // scales nova damage
   novaCooldownMult?: number; // <1 = novas fire faster
+  openingSalvo?: true; // fire a massive nova + freeze all enemies at wave start
 
   // MELEE SWING — every player has a default swing that auto-hits nearby enemies.
   // These fields let items shape it into distinct melee builds. The swing STACKS on

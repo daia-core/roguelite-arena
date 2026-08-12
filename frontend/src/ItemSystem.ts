@@ -257,7 +257,7 @@ interface ItemAgg {
   // boolean
   explosionOnHit: boolean; shield: boolean; homing: boolean; poison: boolean; poisonSpread: boolean; burnSpread: boolean;
   auxMelee: boolean; bombDrop: boolean; novaPulse: boolean; fourleafCharm: boolean;
-  soulTithe: boolean; loadedShot: boolean;
+  soulTithe: boolean; loadedShot: boolean; openingSalvo: boolean;
 }
 
 function freshAgg(): ItemAgg {
@@ -285,7 +285,7 @@ function freshAgg(): ItemAgg {
     ripostePower: 0,
     explosionOnHit: false, shield: false, homing: false, poison: false, poisonSpread: false, burnSpread: false,
     auxMelee: false, bombDrop: false, novaPulse: false, fourleafCharm: false,
-    soulTithe: false, loadedShot: false,
+    soulTithe: false, loadedShot: false, openingSalvo: false,
   };
 }
 
@@ -596,6 +596,7 @@ export class PlayerStats {
       if (item.fourleafCharm) a.fourleafCharm = true;
       if (item.soulTithe) a.soulTithe = true;
       if (item.loadedShot) a.loadedShot = true;
+      if (item.openingSalvo) a.openingSalvo = true;
     }
     this._agg = a;
     this._aggDirty = false;
@@ -1206,6 +1207,11 @@ export class PlayerStats {
   // ---- EVERY-Nth-SHOT (Pen Nib / Loaded Shot) ----
   hasLoadedShot(): boolean {
     return this.ensureAgg().loadedShot;
+  }
+
+  // ---- WAVE-START NOVA (Opening Salvo) ----
+  hasOpeningSalvo(): boolean {
+    return this.ensureAgg().openingSalvo;
   }
 
   // ---- ON-WAVE-END ECONOMY (War Chest) ----

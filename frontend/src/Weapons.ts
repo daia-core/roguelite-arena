@@ -149,15 +149,17 @@ export class Shockwave {
   band: number = 26; // ring thickness for the hit test
   dead: boolean = false;
   color: string;
+  freezeDuration: number = 0; // if > 0, freeze each hit enemy for this many seconds
   private hitEnemies: Set<number> = new Set();
 
-  constructor(x: number, y: number, maxRadius: number, damage: number, speed: number = 520, color: string = '#a0f0ff') {
+  constructor(x: number, y: number, maxRadius: number, damage: number, speed: number = 520, color: string = '#a0f0ff', freezeDuration: number = 0) {
     this.x = x;
     this.y = y;
     this.maxRadius = maxRadius;
     this.damage = damage;
     this.speed = speed;
     this.color = color;
+    this.freezeDuration = freezeDuration;
   }
 
   update(dt: number): void {

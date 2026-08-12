@@ -944,6 +944,15 @@ export class Game {
 
     this.audio.startMusic();
     this.state = 'playing';
+
+    // Opening Salvo: also fires on the initial wave start (resume path).
+    if (this.player && this.playerStats.hasOpeningSalvo()) {
+      const px = this.player.x, py = this.player.y;
+      const radius = 1300 * this.playerStats.getAoeRadiusMult();
+      const dmg = this.playerStats.getNovaDamage() * 3;
+      this.shockwaves.push(new Shockwave(px, py, radius, dmg, 420, '#ffb347', 1.5));
+      this.audio.playShoot();
+    }
   }
 
   update(dt: number): void {
@@ -2297,7 +2306,10 @@ export class Game {
         if (enemy.dead || !wave.canHit(enemy.id)) continue;
         if (wave.ringContains(enemy.x, enemy.y, enemy.radius)) {
           wave.markHit(enemy.id);
-          this.dealAuxDamage(enemy, wave.damage, '#a0f0ff');
+          this.dealAuxDamage(enemy, wave.damage, wave.color);
+          if (wave.freezeDuration > 0 && !enemy.dead) {
+            enemy.frozenTimer = Math.max(enemy.frozenTimer, wave.freezeDuration);
+          }
         }
       }
     }
@@ -3489,6 +3501,16 @@ export class Game {
     this.phaseBannerTimer = 2.6;
     this.audio.startMusic(); // idempotent: no-op if music is already playing
     this.state = 'playing';
+
+    // Opening Salvo: fire a massive nova + freeze all hit enemies at wave start.
+    // The Shockwave expands from the player, catching enemies as they spawn and rush in.
+    if (this.player && this.playerStats.hasOpeningSalvo()) {
+      const px = this.player.x, py = this.player.y;
+      const radius = 1300 * this.playerStats.getAoeRadiusMult();
+      const dmg = this.playerStats.getNovaDamage() * 3;
+      this.shockwaves.push(new Shockwave(px, py, radius, dmg, 420, '#ffb347', 1.5));
+      this.audio.playShoot(); // reuse the nova audio cue
+    }
 
     // Reset mouse state to prevent accidental clicks
     this.input.mouseDown = false;
