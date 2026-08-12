@@ -2,6 +2,21 @@
 
 ---
 
+## 2026-08-12 (night) — fix(stats): Opening Salvo now visible in stats popup · `7eab464` · smoke PASS ✓
+
+**Player-visible**
+- **Opening Salvo now shows in the ALL STATS popup.** When you own Opening Salvo, the SPECIAL
+  group shows **Opening Salvo: Wave nova + 1.5s freeze**, confirming the wave-start mechanic is
+  active. Previously the item was invisible in the stats summary despite being the most powerful
+  wave-opener in the game.
+
+**Under the hood**
+- `ShopScene.ts` `drawStatsPopup()`: added `['Opening Salvo', 'Wave nova + 1.5s freeze',
+  ps.hasOpeningSalvo()]` to the SPECIAL group after Nova CD. Follows the same conditional-row
+  pattern as Loaded Shot, Homing, Explode on Kill, etc.
+
+---
+
 ## 2026-08-12 (evening) — feat(wave): Opening Salvo — wave-start nova + freeze · `10119eb` · smoke PASS ✓
 
 **Player-visible**
