@@ -6,6 +6,27 @@ portrait viewport).
 
 ---
 
+## 2026-08-12 (morning-4) — fix(stats): War Chest, Loaded Shot, and Status Luck now visible in stats popup · `3b5d991` · smoke PASS ✓
+
+**Player-visible**
+- **War Chest now shows in ECONOMY.** If you hold any War Chest item (Warchest Coin, War Chest
+  III, War Chest I/II sets, etc.), a **War Chest** row appears showing your base rate: `+Xg × wave`.
+  At wave 10 with ×3 war chest, that's 30g earned at end of wave.
+- **Loaded Shot now shows in SPECIAL.** The Loaded Shot item's every-10th-shot mechanic was
+  invisible in the overlay. It now shows `1-in-10 = 3× + pierce` when you hold the item, so
+  you know exactly when to expect that penetrating burst.
+- **Status Luck (Fourleaf Charm) now shows in SPECIAL.** Lucky Clover, Lucky Dice, Oracle Tiara,
+  and God's Favor all grant "status procs roll twice, keep the better roll." That passive had no
+  popup visibility — it now shows **TWICE** so your double-rolling is immediately legible.
+
+**Under the hood**
+- `ShopScene.drawStatsPopup()`: 1 row added to ECONOMY (`War Chest`); 2 rows added to SPECIAL
+  (`Loaded Shot`, `Status Luck`). All hidden unless player holds relevant items — zero noise.
+- tsc CLEAN ✅ · stats-popup PASS ✅ · stats-parity 2189 PASS ✅ · catalog 1914 CLEAN ✅
+- Deployed `dpl_49TkL9bhjsV2GGCUz1gDqtxf5d7d`, aliased roguelite-game-blush.vercel.app, HTTP 200 ✓, hash `index-BiDyKTP1.js` + War Chest/Loaded Shot/Status Luck/TWICE confirmed in live bundle ✓
+
+---
+
 ## 2026-08-12 (morning-3) — fix(stats): 9 debuff mechanics now visible in stats popup · `65ecab6` · smoke PASS ✓
 
 **Player-visible**
