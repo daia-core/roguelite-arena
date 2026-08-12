@@ -1,7 +1,51 @@
 # Roguelite Arena — Changelog
 
+---
+
+## 2026-08-12 (evening) — feat(wave): Opening Salvo — wave-start nova + freeze · `10119eb` · smoke PASS ✓
+
+**Player-visible**
+- **New legendary item: Opening Salvo (🌅, 120g).** At the start of every wave, detonates a
+  massive orange shockwave that expands outward from you and **freezes every enemy it touches for
+  1.5 seconds.** The ring sweeps the full arena (1300px radius — bigger with AOE gear) and deals
+  3× your normal nova damage per hit. Pairs well with any nova or AOE build; the freeze window
+  lets you position before the wave rush hits.
+- **Shockwaves now use the correct color for damage number tinting.** Previously, all shockwaves
+  (including the warm-gold riposte ring) showed cyan `#a0f0ff` hit numbers. Each shockwave now
+  tints its numbers with its own color.
+
+**Under the hood**
+- `Weapons.ts` Shockwave class: new `freezeDuration` field + constructor param; when non-zero,
+  each enemy the ring passes through is frozen for that duration.
+- `Game.ts` shockwave hit loop: applies freeze + uses `wave.color` for damage numbers. Both
+  wave-start paths (map-node + resume/save) fire the Opening Salvo when `hasOpeningSalvo()`.
+- `ItemSystem.ts`: `openingSalvo: boolean` in aggregate, `freshAgg()`, aggregation loop, and
+  new `hasOpeningSalvo()` getter.
+- `types.ts`: `openingSalvo?: true` on Item; recognized as 'active' kind; 'Wave-Start Nova' label.
+- tsc CLEAN ✅ · qa-catalog-integrity 1915 CLEAN ✅ · qa-stats-parity 2190 PASS ✅
+  · qa-roguelite smoke 0 errors ✅
+- Deployed `dpl_6gaamBWF3xbHyVkbLu7sYroPEGAV`, aliased roguelite-game-blush.vercel.app,
+  `openingSalvo` + `Opening Salvo` confirmed in live bundle ✓
+
+---
+
 Newest first. One block per production deploy: player-visible changes first, the commit sha,
 and the live-build verification (Felix plays on his phone — every entry is verified at a mobile
+
+---
+
+## 2026-08-12 (afternoon-3) — fix(duos): Phantom Counter now boosts counter-burst dmg only · `9ba5f82` · smoke PASS ✓
+
+**Player-visible**
+- **Phantom Counter duo now actually does what it says.** The description read "+35% counter-burst damage" but the duo was wired to `damageMultiplier`, boosting ALL damage output by 35% — making it one of the strongest general DPS duos in the game. It now applies only to the riposte shockwave (counter-burst), which is the intended evasion payoff mechanic. If you relied on it for sustained damage, regular attacks are no longer amplified.
+
+**Under the hood**
+- `DuoSystem.ts`: New `riposteDamageMult?: number` field on `DuoCombo` interface + `riposteDamageMult` in `getTotalBonuses()` return. Phantom Counter changed from `damageMultiplier: 1.35` → `riposteDamageMult: 1.35`.
+- `ItemSystem.ts`: New `getRiposteDamageMult()` getter (reads duo bonuses directly, no ItemAgg intermediate).
+- `Game.ts`: Riposte shockwave damage now multiplied by `getRiposteDamageMult()`.
+- `ShopScene.ts`: Counter Dmg stat row now multiplies by `getRiposteDamageMult()` for correct display.
+- tsc CLEAN ✅ · qa-stats-parity 2189 PASS ✅ · qa-stats-popup PASS ✅
+- Deployed `dpl_6ZEatjyEEDkygdjmxsGy93CpzJFg`, aliased roguelite-game-blush.vercel.app, `getRiposteDamageMult` confirmed in live bundle ✓
 
 ---
 
