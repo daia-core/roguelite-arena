@@ -148,14 +148,16 @@ export class Shockwave {
   damage: number;
   band: number = 26; // ring thickness for the hit test
   dead: boolean = false;
+  color: string;
   private hitEnemies: Set<number> = new Set();
 
-  constructor(x: number, y: number, maxRadius: number, damage: number, speed: number = 520) {
+  constructor(x: number, y: number, maxRadius: number, damage: number, speed: number = 520, color: string = '#a0f0ff') {
     this.x = x;
     this.y = y;
     this.maxRadius = maxRadius;
     this.damage = damage;
     this.speed = speed;
+    this.color = color;
   }
 
   update(dt: number): void {
@@ -189,7 +191,7 @@ export class Shockwave {
       const a = (Math.PI * 2 * i) / steps;
       const rx = this.x + Math.cos(a) * this.radius;
       const ry = this.y + Math.sin(a) * this.radius;
-      ctx.fillStyle = i % 2 === 0 ? '#a0f0ff' : '#ffffff';
+      ctx.fillStyle = i % 2 === 0 ? this.color : '#ffffff';
       ctx.fillRect(Math.floor(rx - px / 2), Math.floor(ry - px / 2), px, px);
     }
     ctx.restore();

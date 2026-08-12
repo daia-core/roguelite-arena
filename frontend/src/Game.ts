@@ -1697,7 +1697,7 @@ export class Game {
       const py = this.player.y;
       const riposteDmg = this.playerStats.getDamage() * this.playerStats.getRipostePower();
       const riposteRadius = 130 * this.playerStats.getAoeRadiusMult();
-      this.shockwaves.push(new Shockwave(px, py, riposteRadius, riposteDmg, 640));
+      this.shockwaves.push(new Shockwave(px, py, riposteRadius, riposteDmg, 640, '#e8b266'));
       this.damageNumbers.push(
         this.createDamageNumber(px, py - 40, 'COUNTER!', false, '#e8b266')
       );
