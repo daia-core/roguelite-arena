@@ -1008,6 +1008,10 @@ export class PlayerStats {
     return this.baseProjectileSpeed * this.ensureAgg().projectileSpeedMult;
   }
 
+  getProjectileSpeedMult(): number {
+    return this.ensureAgg().projectileSpeedMult;
+  }
+
   getKnockback(): number {
     // SKILL TREE contribution (Immovable keystone / aegis force nodes)
     return this.ensureAgg().knockback + this.skillKnockbackAdd;

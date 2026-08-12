@@ -1340,7 +1340,7 @@ export class ShopScene implements Scene {
         ['Crit Damage', mult(ps.getCritMultiplier()), true],
         ['Piercing', num(ps.getPiercing()), ps.getPiercing() > 0],
         ['Knockback', num(ps.getKnockback()), ps.getKnockback() > 0],
-        ['Projectile Speed', num(ps.getProjectileSpeed()), false],
+        ['Proj Speed', mult(ps.getProjectileSpeedMult()), Math.abs(ps.getProjectileSpeedMult() - 1) > 0.01],
         ['Melee Dmg', mult(ps.getMeleeDamageMult()), ps.getMeleeDamageMult() > 1.001],
         ['Ranged Dmg', mult(ps.getRangedDamageMult()), ps.getRangedDamageMult() > 1.001],
         ['Elemental Dmg', mult(ps.getElementalDamageMult()), ps.getElementalDamageMult() > 1.001],
