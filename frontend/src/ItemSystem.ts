@@ -915,6 +915,8 @@ export class PlayerStats {
     health += this.ensureAgg().maxHealthBonus;
     // TRANSFORMATION BONUS
     health += this.transformations.getTotalBonuses().maxHealthBonus;
+    // DUO COMBO BONUS (ironhide, evergrowth, etc.)
+    health += this.duos.getTotalBonuses().maxHealthBonus;
     // ARTIFACT contribution
     health += this.artifactMaxHealthBonus;
     // SKILL TREE contribution
@@ -948,6 +950,8 @@ export class PlayerStats {
     mult *= this.ensureAgg().critDamageMult;
     // TRANSFORMATION BONUS
     mult *= this.transformations.getTotalBonuses().critDamageMultiplier;
+    // DUO COMBO BONUS (executioner's_dance, etc.)
+    mult *= this.duos.getTotalBonuses().critDamageMultiplier;
     // ARTIFACT contribution
     mult *= this.artifactCritMultMult;
     // SKILL TREE contribution
@@ -960,7 +964,8 @@ export class PlayerStats {
   }
 
   getHealthRegen(): number {
-    return this.ensureAgg().healthRegen + this.skillRegenBonus;
+    // DUO COMBO BONUS (evergrowth, etc.)
+    return this.ensureAgg().healthRegen + this.skillRegenBonus + this.duos.getTotalBonuses().healthRegen;
   }
 
   /** Flat armor from meta progression (set by Game at run start). */
@@ -973,6 +978,8 @@ export class PlayerStats {
     armor += this.ensureAgg().armor;
     // TRANSFORMATION BONUS
     armor += this.transformations.getTotalBonuses().armor;
+    // DUO COMBO BONUS (crippling_frost, ironhide, living_avalanche, etc.)
+    armor += this.duos.getTotalBonuses().armor;
     // SKILL TREE contribution
     armor += this.skillArmorBonus;
     return armor;
@@ -1036,7 +1043,8 @@ export class PlayerStats {
   }
 
   getDodgeChance(): number {
-    return Math.min(PlayerStats.DODGE_CAP, this.ensureAgg().dodge);
+    // DUO COMBO BONUS (phantom_rush, phantom_counter, etc.)
+    return Math.min(PlayerStats.DODGE_CAP, this.ensureAgg().dodge + this.duos.getTotalBonuses().dodge);
   }
 
   getChainLightningChance(): number {
@@ -1229,6 +1237,8 @@ export class PlayerStats {
     let discount = this.ensureAgg().shopDiscount;
     // TRANSFORMATION BONUS
     discount += this.transformations.getTotalBonuses().shopDiscount;
+    // DUO COMBO BONUS (infinite_wealth, etc.)
+    discount += this.duos.getTotalBonuses().shopDiscount;
     return Math.min(0.3, discount); // Max 30% discount (was 50% — combined with runaway gold it made the shop free)
   }
 
@@ -1270,7 +1280,8 @@ export class PlayerStats {
 
   hasExplosionOnHit(): boolean {
     // SKILL TREE contribution (Cataclysm keystone)
-    return this.ensureAgg().explosionOnHit || this.skillExplosionOnHit;
+    // DUO COMBO BONUS (explosive_barrage, frozen_apocalypse)
+    return this.ensureAgg().explosionOnHit || this.skillExplosionOnHit || this.duos.getTotalBonuses().explosionOnHit;
   }
 
   hasShield(): boolean {

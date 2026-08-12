@@ -264,7 +264,22 @@ export const DUO_COMBOS: DuoCombo[] = [
   { id: 'apex_predator', name: 'Apex Predator', description: 'Crit, lifesteal and speed = the perfect hunter', icon: '🎯🧛', item1Id: 'ss4_crit_0', item2Id: 'ss3_leech_0', critChance: 0.15, lifesteal: 0.12, glowColor: '#7f1d1d', specialEffect: 'Crits heal double' },
   { id: 'living_avalanche', name: 'Living Avalanche', description: 'Unstoppable mass crushes and freezes all', icon: '🧊🚂', item1Id: 'ss4_brute_0', item2Id: 'ss3_frostbite_0', damageMultiplier: 1.4, armor: 6, glowColor: '#bae6fd', specialEffect: 'Moving builds an ice trail that slows' },
   { id: 'goldstorm', name: 'Goldstorm', description: 'Fortune rains from every fallen foe', icon: '💰🌪️', item1Id: 'ss4_greed_0', item2Id: 'ss3_lucky_0', goldBonus: 1.5, glowColor: '#facc15', specialEffect: 'Kills drop bonus gold' },
-  { id: 'world_ender', name: 'World Ender', description: 'Every element at once, unleashed', icon: '🌈💥', item1Id: 'ss4_arcane_0', item2Id: 'ss3_stormcall_0', damageMultiplier: 1.6, chainLightning: 0.25, glowColor: '#e879f9', specialEffect: 'Applies every status on hit' }
+  { id: 'world_ender', name: 'World Ender', description: 'Every element at once, unleashed', icon: '🌈💥', item1Id: 'ss4_arcane_0', item2Id: 'ss3_stormcall_0', damageMultiplier: 1.6, chainLightning: 0.25, glowColor: '#e879f9', specialEffect: 'Applies every status on hit' },
+
+  // ==================== RIPOSTE DUOS ====================
+  {
+    id: 'phantom_counter',
+    name: 'Phantom Counter',
+    description: 'Phantom speed feeds the counter — every dodge strikes back harder',
+    icon: '👻🌀',
+    item1Id: 'riposte_t3',      // Phantom Reflex
+    item2Id: 'dodge_t3',        // Shadow Step
+    damageMultiplier: 1.35,     // counter bursts use getDamage() — amplifies them directly
+    dodge: 0.10,                // +10% dodge = more riposte triggers
+    speedMultiplier: 1.10,      // mobility fits both phantom/shadow themes
+    glowColor: '#a78bfa',
+    specialEffect: 'Counter bursts deal 35% more damage; speed feeds evasion frequency'
+  }
 ];
 
 /**
@@ -322,12 +337,17 @@ export class DuoTracker {
     speedMultiplier: number;
     maxHealthBonus: number;
     critChance: number;
+    critDamageMultiplier: number;
     lifesteal: number;
     piercing: number;
+    explosionOnHit: boolean;
     chainLightning: number;
     freeze: number;
     goldBonus: number;
     armor: number;
+    dodge: number;
+    healthRegen: number;
+    shopDiscount: number;
   } {
     const activeDuos = this.getActiveDuos();
 
@@ -339,10 +359,15 @@ export class DuoTracker {
       critChance: activeDuos.reduce((acc, duo) => acc + (duo.critChance || 0), 0),
       lifesteal: activeDuos.reduce((acc, duo) => acc + (duo.lifesteal || 0), 0),
       piercing: activeDuos.reduce((acc, duo) => acc + (duo.piercing || 0), 0),
+      explosionOnHit: activeDuos.some(duo => duo.explosionOnHit === true),
       chainLightning: activeDuos.reduce((acc, duo) => acc + (duo.chainLightning || 0), 0),
       freeze: activeDuos.reduce((acc, duo) => acc + (duo.freeze || 0), 0),
       goldBonus: activeDuos.reduce((acc, duo) => acc * (duo.goldBonus || 1), 1),
-      armor: activeDuos.reduce((acc, duo) => acc + (duo.armor || 0), 0)
+      armor: activeDuos.reduce((acc, duo) => acc + (duo.armor || 0), 0),
+      dodge: activeDuos.reduce((acc, duo) => acc + (duo.dodge || 0), 0),
+      healthRegen: activeDuos.reduce((acc, duo) => acc + (duo.healthRegen || 0), 0),
+      shopDiscount: activeDuos.reduce((acc, duo) => acc + (duo.shopDiscount || 0), 0),
+      critDamageMultiplier: activeDuos.reduce((acc, duo) => acc * (duo.critDamageMultiplier || 1), 1)
     };
   }
 
