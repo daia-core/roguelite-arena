@@ -6,6 +6,25 @@ portrait viewport).
 
 ---
 
+## 2026-08-12 (morning) — fix(visual): riposte shockwave renders in warm gold, not cyan · `4c03366` · smoke PASS ✓
+
+**Player-visible**
+- **Riposte counter-burst now pulses gold, not cyan.** When a passive dodge triggers the riposte
+  mechanic, the expanding ring shockwave renders in **warm gold (#e8b266 / white sparkle)** instead
+  of the same cyan/white as nova pulses. The gold matches the floating "COUNTER!" text so the
+  entire dodge-counter visual speaks the same language — you dodge → gold flash → COUNTER! — making
+  the evasion build legible at a glance even in a crowded fight.
+
+**Under the hood**
+- `Shockwave` class: new optional `color` param (default `'#a0f0ff'` — existing nova unchanged).
+  The `draw()` alternating-pixel loop uses `this.color` for even segments, `#ffffff` for odd.
+- `Game.ts`: riposte shockwave creation now passes `'#e8b266'` as the color; nova pulse and all
+  other shockwaves continue using the cyan default — no behaviour change to non-riposte paths.
+- tsc CLEAN ✅ · 38/38 triggered PASS ✅ · 2189 stats-parity PASS ✅ · 1914 catalog CLEAN ✅
+- Deployed `dpl_57jpBQwdz46rVEqUeErGG8s7q4U6`, aliased roguelite-game-blush.vercel.app, HTTP 200 ✓, hash `index-BjdjMqtA.js` matches local dist.
+
+---
+
 ## 2026-08-11 (night) — feat(riposte): dodge-as-offense via retaliatory nova burst · `c979fc5` · smoke PASS ✓
 
 **Player-visible**
