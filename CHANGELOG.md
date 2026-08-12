@@ -2,7 +2,57 @@
 
 Newest first. One block per production deploy: player-visible changes first, the commit sha,
 and the live-build verification (Felix plays on his phone — every entry is verified at a mobile
+
+---
+
+## 2026-08-12 (afternoon-1) — fix(stats): Proj Speed visible in stats popup when items alter it · `a029f39` · smoke PASS ✓
+
+**Player-visible**
+- **Seeker/Homing/Guided/Tracker items reduce projectile speed by ×0.90 each — and now you can see it.**
+  Stacking 3 seeker items means ×0.73x speed; 5 means ×0.59x. This tradeoff was completely invisible
+  in the stats overlay (hardcoded `false`). **Proj Speed** now appears in the OFFENSE group as a
+  multiplier (e.g. `0.81x`) whenever any item has shifted it more than 1% from base.
+  Items that *increase* speed (the two fast-shot items at ×1.8/×2.0) also now show.
+
+**Under the hood**
+- `ItemSystem.ts`: added `getProjectileSpeedMult()` getter (returns `ensureAgg().projectileSpeedMult`)
+- `ShopScene.ts`: `Projectile Speed` row changed from `false` show-condition to
+  `Math.abs(ps.getProjectileSpeedMult() - 1) > 0.01`; label shortened to `Proj Speed`, value shown
+  as multiplier via `mult(ps.getProjectileSpeedMult())`
+- tsc CLEAN ✅ · 38/38 triggered PASS ✅ · stats-parity 2189 PASS ✅ · catalog 1914 CLEAN ✅
+- Deployed `dpl_4iyk91vMUh3NeHMbBJgyNxmd4dvj`, aliased roguelite-game-blush.vercel.app, HTTP 200 ✓, `getProjectileSpeedMult` + `Proj Speed` confirmed in live bundle `index-BLBmOZjb.js` ✓
+
+---
 portrait viewport).
+
+---
+
+## 2026-08-12 (morning-5) — fix(duos): Duo stat bonuses for dodge/HP/regen/armor/crit now actually apply + Phantom Counter duo · `89fac77` · smoke PASS ✓
+
+**Player-visible**
+- **Duo combos that grant dodge, HP, armor, regen, crit damage, or shop discount now actually work.**
+  Six stat fields were declared in the Duo interface and set in every relevant combo, but were
+  silently dropped in `getTotalBonuses()` and never forwarded to the stat getters. Affected combos
+  and what was previously broken:
+  - **Phantom Rush** (swift_t3 + speed_t3) — +12% dodge was never applied
+  - **Evergrowth** (ss3_regen_0 + max_hp_t2) — +60 max HP and +3/s regen were never applied
+  - **Ironhide** (armor_t3 + max_hp_t2) — +40 max HP and +8 armor were never applied
+  - **Living Avalanche** (armor_t3 + heavy_t3) — +40 max HP and +6 armor were never applied
+  - **Crippling Frost** (freeze_t3 + slow_t3) — +6 armor was never applied
+  - **Infinite Wealth** (gold_t3 + luck_t3) — 15% shop discount was never applied
+  - **Executioner's Dance** (crit_t3 + blood_t3) — ×1.4 crit damage multiplier was never applied
+  - **Explosive Barrage** / **Frozen Apocalypse** — explosion-on-hit flag was already working; now double-confirmed
+- **New Duo: Phantom Counter** (Phantom Reflex + Shadow Step) — when you hold both riposte and dodge tier-3 items:
+  +35% counter-burst damage, +10% extra dodge, ×1.1 speed. Glows violet `#a78bfa`.
+
+**Under the hood**
+- `DuoSystem.ts` `getTotalBonuses()`: added `dodge`, `healthRegen`, `shopDiscount`,
+  `critDamageMultiplier`, `explosionOnHit` to return type + reduce computations (were silently dropped)
+- `ItemSystem.ts`: 7 stat getters now read `this.duos.getTotalBonuses().<field>` — `getDodgeChance`,
+  `getHealthRegen`, `getShopDiscount`, `getMaxHealth`, `getCritMultiplier`, `hasExplosionOnHit`, `getArmor`
+- `qa-stats-parity.mjs`: independent recomputation formulas updated to match corrected getters
+- tsc CLEAN ✅ · 38/38 triggered PASS ✅ · stats-parity 2189 PASS ✅ · catalog 1914 CLEAN ✅
+- Deployed `dpl_BdzfpXrFV7F7ojZdHKAF3o5o2y7b` (prebuilt), aliased roguelite-game-blush.vercel.app, HTTP 200 ✓, `index-DlUDKmnA.js` + `phantom_counter` confirmed in live bundle ✓
 
 ---
 
