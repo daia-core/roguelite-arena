@@ -5,6 +5,20 @@ and the live-build verification (Felix plays on his phone — every entry is ver
 
 ---
 
+## 2026-08-12 (afternoon-2) — fix(stats): Spec Bonus, Swing Range, Swing Arc now visible in stats popup · `efa5c6b` · smoke PASS ✓
+
+**Player-visible**
+- **Pure-build specialization bonus now disclosed.** If you equip only melee or only ranged weapons, you silently earned a +20% damage multiplier — now shown as **Spec Bonus: +20% (pure build)** in the OFFENSE group when active.
+- **Swing reach now shown when items extend it.** Spear/Longsword/Claymore/Warhammer add 20–70 px of reach; now visible as **Swing Range: Xpx** in SPECIAL when above the 70 px base.
+- **Swing arc now shown when meaningfully widened.** Items and multishot stack to widen the melee sweep (base ~126°); now visible as **Swing Arc: X°** when arc is above base and a melee context is active.
+
+**Under the hood**
+- `ShopScene.ts`: 3 new conditional rows — `Spec Bonus` (OFFENSE), `Swing Range` (SPECIAL), `Swing Arc` (SPECIAL). All use existing getters; no new code paths.
+- tsc CLEAN ✅ · qa-stats-parity 2189 PASS ✅ · qa-stats-popup PASS ✅
+- Deployed `dpl_6CQnpP8LT7zEfgiVSUrtqy1nWsQo`, aliased roguelite-game-blush.vercel.app, all 3 new labels confirmed in live bundle ✓
+
+---
+
 ## 2026-08-12 (afternoon-1) — fix(stats): Proj Speed visible in stats popup when items alter it · `a029f39` · smoke PASS ✓
 
 **Player-visible**
