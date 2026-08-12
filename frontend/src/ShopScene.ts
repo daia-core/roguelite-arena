@@ -1345,6 +1345,7 @@ export class ShopScene implements Scene {
         ['Ranged Dmg', mult(ps.getRangedDamageMult()), ps.getRangedDamageMult() > 1.001],
         ['Elemental Dmg', mult(ps.getElementalDamageMult()), ps.getElementalDamageMult() > 1.001],
         ['AOE Radius', mult(ps.getAoeRadiusMult()), ps.getAoeRadiusMult() > 1.001],
+        ['Spec Bonus', '+20% (pure build)', ps.getSpecializationBonus() > 1.001],
       ]],
       ['DEFENSE', '#74c0fc', [
         ['Max Health', num(ps.getMaxHealth()), true],
@@ -1403,6 +1404,8 @@ export class ShopScene implements Scene {
         ['Swing Dmg', num(ps.getSwingDamage()), ps.getMeleeDamageMult() > 1.001 || ps.hasAuxMelee() || ps.getSwingAoe() > 0],
         ['Swing Interval', rate(ps.getSwingInterval(), 2, 's'), ps.getSwingInterval() < 0.849],
         ['Swing AOE', `${num(ps.getSwingAoe())}px`, ps.getSwingAoe() > 0],
+        ['Swing Range', `${Math.round(ps.getSwingRange())}px`, ps.getSwingRange() > 70.5],
+        ['Swing Arc', `${Math.round(ps.getSwingArc() * 180 / Math.PI)}°`, ps.getSwingArc() > Math.PI * 0.701 && (ps.getSwingRange() > 70.5 || ps.getMeleeDamageMult() > 1.001 || ps.getSwingAoe() > 0)],
         ['Loaded Shot', '1-in-10 = 3× + pierce', ps.hasLoadedShot()],
         ['Status Luck', 'TWICE', ps.hasFourleafCharm()],
         ['Counter Dmg', num(Math.round(ps.getDamage() * ps.getRipostePower())), ps.getRipostePower() > 0],
