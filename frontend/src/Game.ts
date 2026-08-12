@@ -1687,15 +1687,16 @@ export class Game {
     }
 
     // Riposte: fire a retaliatory shockwave for each queued dodge-counter
-    // Damage = base damage × total ripostePower (additive per stack).
-    // Radius is tighter than a nova (130px base) so it reads as a sharp counter-burst,
-    // not a free area-clear — it needs evasion-build commitment to shine.
+    // Damage = base damage × total ripostePower (additive per stack) × riposteDamageMult
+    // (duo bonus — currently only Phantom Counter, ×1.35). Radius is tighter than a nova
+    // (130px base) so it reads as a sharp counter-burst, not a free area-clear — it needs
+    // evasion-build commitment to shine.
     if (this.player.pendingRipostes > 0) this.audio.playRiposte();
     while (this.player.pendingRipostes > 0) {
       this.player.pendingRipostes--;
       const px = this.player.x;
       const py = this.player.y;
-      const riposteDmg = this.playerStats.getDamage() * this.playerStats.getRipostePower();
+      const riposteDmg = this.playerStats.getDamage() * this.playerStats.getRipostePower() * this.playerStats.getRiposteDamageMult();
       const riposteRadius = 130 * this.playerStats.getAoeRadiusMult();
       this.shockwaves.push(new Shockwave(px, py, riposteRadius, riposteDmg, 640, '#e8b266'));
       this.damageNumbers.push(

@@ -33,6 +33,9 @@ export interface DuoCombo {
   dodge?: number;
   shopDiscount?: number;
 
+  // Riposte-specific damage multiplier (applies only to on-dodge counter-burst damage)
+  riposteDamageMult?: number;
+
   // Special effects
   specialEffect?: string; // Description of unique mechanic
   glowColor?: string;     // Visual feedback
@@ -274,7 +277,7 @@ export const DUO_COMBOS: DuoCombo[] = [
     icon: '👻🌀',
     item1Id: 'riposte_t3',      // Phantom Reflex
     item2Id: 'dodge_t3',        // Shadow Step
-    damageMultiplier: 1.35,     // counter bursts use getDamage() — amplifies them directly
+    riposteDamageMult: 1.35,    // counter-burst damage only — not general damage
     dodge: 0.10,                // +10% dodge = more riposte triggers
     speedMultiplier: 1.10,      // mobility fits both phantom/shadow themes
     glowColor: '#a78bfa',
@@ -348,6 +351,7 @@ export class DuoTracker {
     dodge: number;
     healthRegen: number;
     shopDiscount: number;
+    riposteDamageMult: number;
   } {
     const activeDuos = this.getActiveDuos();
 
@@ -367,7 +371,8 @@ export class DuoTracker {
       dodge: activeDuos.reduce((acc, duo) => acc + (duo.dodge || 0), 0),
       healthRegen: activeDuos.reduce((acc, duo) => acc + (duo.healthRegen || 0), 0),
       shopDiscount: activeDuos.reduce((acc, duo) => acc + (duo.shopDiscount || 0), 0),
-      critDamageMultiplier: activeDuos.reduce((acc, duo) => acc * (duo.critDamageMultiplier || 1), 1)
+      critDamageMultiplier: activeDuos.reduce((acc, duo) => acc * (duo.critDamageMultiplier || 1), 1),
+      riposteDamageMult: activeDuos.reduce((acc, duo) => acc * (duo.riposteDamageMult || 1), 1),
     };
   }
 

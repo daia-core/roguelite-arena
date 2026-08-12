@@ -1218,6 +1218,11 @@ export class PlayerStats {
     return this.ensureAgg().ripostePower;
   }
 
+  /** Counter-burst damage multiplier from duos (e.g. Phantom Counter ×1.35). 1 = no bonus. */
+  getRiposteDamageMult(): number {
+    return this.duos.getTotalBonuses().riposteDamageMult;
+  }
+
   /**
    * Roll a random on-hit STATUS proc. Single source of truth for burn/bleed/freeze/
    * chain/doom/wound/multicast rolls, so the Fourleaf Charm keystone can lift them all
