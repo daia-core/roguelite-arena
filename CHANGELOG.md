@@ -2,6 +2,23 @@
 
 ---
 
+## 2026-08-13 — fix(feel): Opening Salvo fires playBlast instead of playShoot · `b41baac` · smoke PASS ✓
+
+**Player-visible**
+- **Opening Salvo now has the right audio impact.** The wave-start 1300px legendary nova was
+  playing the same tiny blip (`playShoot` — 400Hz, 0.1s) as a regular projectile. Now it fires
+  a deep, heavy blast (`playBlast` — 150Hz sawtooth, 0.3s) that matches the visual scale of the
+  orange shockwave. The mechanic no longer sounds like any other shot — it feels like an opening
+  salvo.
+
+**Under the hood**
+- `Game.ts`: both Opening Salvo trigger sites (resume path line ~954, wave-start line ~3512) updated
+  from `audio.playShoot()` to `audio.playBlast()`.
+
+**Live:** https://roguelite-game-blush.vercel.app · sha `b41baac`
+
+---
+
 ## 2026-08-12 (night) — fix(stats): Opening Salvo now visible in stats popup · `7eab464` · smoke PASS ✓
 
 **Player-visible**
