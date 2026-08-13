@@ -951,7 +951,7 @@ export class Game {
       const radius = 1300 * this.playerStats.getAoeRadiusMult();
       const dmg = this.playerStats.getNovaDamage() * 3;
       this.shockwaves.push(new Shockwave(px, py, radius, dmg, 420, '#ffb347', 1.5));
-      this.audio.playShoot();
+      this.audio.playBlast(); // deep impact — matches the 1300px legendary wave nova
     }
   }
 
@@ -3509,7 +3509,7 @@ export class Game {
       const radius = 1300 * this.playerStats.getAoeRadiusMult();
       const dmg = this.playerStats.getNovaDamage() * 3;
       this.shockwaves.push(new Shockwave(px, py, radius, dmg, 420, '#ffb347', 1.5));
-      this.audio.playShoot(); // reuse the nova audio cue
+      this.audio.playBlast(); // deep impact — matches the 1300px legendary wave nova
     }
 
     // Reset mouse state to prevent accidental clicks
