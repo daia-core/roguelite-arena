@@ -138,9 +138,16 @@ const result = await page.evaluate(() => {
     eBleedBase.bleedTimer = 5.0; eBleedFrag.bleedTimer = 5.0;
     eBleedBase.burnTimer = 0; eBleedFrag.burnTimer = 0;
     eBleedBase.poisonTimer = 0; eBleedFrag.poisonTimer = 0;
-    // Pin lastX/lastY to zero movement (bleed hits harder when moving, we want no-move baseline).
+    // Pin lastX/lastY so movement = 0 at the start of the tick (bleed scales with movement).
     eBleedBase.lastX = eBleedBase.x; eBleedBase.lastY = eBleedBase.y;
     eBleedFrag.lastX = eBleedFrag.x; eBleedFrag.lastY = eBleedFrag.y;
+    // Cull all other enemies so no wave combat (projectiles, kill-explosions) contaminates
+    // the HP delta. The explosion-on-kill fix (1ee49ad) now dispatches AoE when other
+    // enemies die, which was adding stray damage to the test enemies during g.update().
+    for (const e of g.enemies) {
+      if (e !== eBleedBase && e !== eBleedFrag) e.dead = true;
+    }
+    g.enemies = g.enemies.filter(e => !e.dead);
     const hpBbBefore = eBleedBase.health;
     const hpBfBefore = eBleedFrag.health;
     g.update(1.0);
