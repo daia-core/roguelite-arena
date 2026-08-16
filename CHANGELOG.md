@@ -2,6 +2,28 @@
 
 ---
 
+## 2026-08-16 — fix(combat): DoT and Doom now respect Fragility · qa-dot-fragility 5/5 PASS ✓
+
+**Player-visible**
+- **Burn, bleed, and poison now benefit from Fragility stacks.** Ticking damage (DoTs) was
+  silently skipping Fragility's "+% all damage received" amplifier — meaning a debuffer/DoT
+  build that applied Fragility before stacking burn/bleed/poison got zero synergy from it.
+  Now all three DoTs are correctly amplified by Fragility.
+- **Doom detonations also respect Fragility.** The stored-damage detonation similarly skipped
+  the all-damage amplifier. Both now scale with Fragility stacks as the item description implies.
+
+**Under the hood**
+- `Game.ts` DoT tick: added `fragMult = statusFX.getIncomingDamageMult()` — applied to
+  `dotDamage * wm * fragMult` and the per-DoT display accumulators. Exposed/Brittle intentionally
+  excluded (per-direct-hit mechanics); Condemned excluded (DoTs don't crit).
+- `Game.ts` Doom detonation: payload multiplied by `statusFX.getIncomingDamageMult()`.
+- `qa-dot-fragility.mjs`: 5 regression checks (burn/doom/bleed/poison all amplified by
+  Fragility×5; control no-debuff=1.0). 5/5 PASS. Catalog 1915 CLEAN. Stats-parity 2190 PASS.
+
+**Live:** https://roguelite-game-blush.vercel.app
+
+---
+
 ## 2026-08-16 — fix(combat): aux weapons now respect enemy debuff amplifiers · qa-aux-status-amps 6/6 PASS ✓
 
 **Player-visible**
