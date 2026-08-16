@@ -2180,13 +2180,25 @@ export class Game {
   }
 
   // Apply damage from an auxiliary weapon to one enemy, reusing the same crit /
-  // boss-mult / lifesteal / particle / kill flow the primary weapons use so the
-  // stacked weapons feel identical in impact.
+  // boss-mult / debuff-amps / lifesteal / particle / kill flow the primary weapons use
+  // so stacked weapons feel identical in impact (mirrors projectile + melee paths).
   private dealAuxDamage(enemy: Enemy, baseDamage: number, hitColor: string): void {
     if (!this.player || enemy.dead) return;
-    const isCrit = this.rollCritWithTrophy();
+    // Dazed debuff raises effective crit chance against this enemy
+    const sfxBonusCrit = enemy.statusFX.getBonusCritChanceReceived();
+    const isCrit = this.rollCritWithTrophy() || (sfxBonusCrit > 0 && Math.random() < sfxBonusCrit);
     let damage = isCrit ? this.player.getCritDamage(baseDamage) : PlayerStats.finalDamageKnee(baseDamage);
+    // Disoriented debuff amplifies crit damage received
+    if (isCrit) {
+      const bonusCritDmg = enemy.statusFX.getBonusCritDamageReceived();
+      if (bonusCritDmg > 0) damage *= (1 + bonusCritDmg);
+    }
     if (enemy.typeData.isBoss) damage *= this.metaProgression.getBossDamageMultiplier();
+    // Status-effect amplifiers: Fragility (+%all dmg), Exposed (+%direct-hit), Brittle (+flat), Condemned
+    damage = damage * enemy.statusFX.getIncomingDamageMult() * enemy.statusFX.getDirectHitMult()
+             + enemy.statusFX.getFlatHitBonus();
+    const condemnedBonus = enemy.statusFX.checkCondemned(isCrit);
+    if (condemnedBonus > 0) damage *= condemnedBonus;
 
     const splits = enemy.takeDamage(damage);
     if (splits && splits.length > 0) this.enemies.push(...splits);

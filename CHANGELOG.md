@@ -2,6 +2,29 @@
 
 ---
 
+## 2026-08-16 — fix(combat): aux weapons now respect enemy debuff amplifiers · qa-aux-status-amps 6/6 PASS ✓
+
+**Player-visible**
+- **Orb/wave/bomb and active-skill hits now benefit from enemy debuffs.** Fragility stacks, Exposed,
+  Brittle, and Condemned — all the debuffs you stack on a tough enemy — were silently ignored by
+  every auxiliary weapon hit. A status-effect / hybrid build that layered Fragility on a boss then
+  finished with orbital orbs or plague bombs was getting zero amplification. Now it works correctly.
+- **Dazed and Disoriented debuffs also affect aux crits.** Dazed (raises crit chance vs that target)
+  and Disoriented (amplifies crit damage taken) were only consulted by projectile and melee hits.
+  Aux hits now roll the same debuff-boosted crit path, so crit-focused status builds proc correctly
+  across all weapon types.
+
+**Under the hood**
+- `Game.ts` `dealAuxDamage`: added Dazed/Disoriented crit check before roll; added
+  `getIncomingDamageMult` · `getDirectHitMult` · `getFlatHitBonus` · `checkCondemned` block
+  after boss multiplier — the same four-line amplifier block in the projectile and melee paths.
+- `qa-aux-status-amps.mjs`: 6 regression checks (multCallable, Fragility×2 > 1.0, Fragility×5
+  amplifies actual damage output, Dazed plumbing, Disoriented plumbing, control no-debuff=1.0).
+
+**Live:** https://roguelite-game-blush.vercel.app
+
+---
+
 ## 2026-08-16 — fix(combat): aux weapons now apply on-hit status effects · `abb656b` · qa-aux-onhit 6/6 PASS ✓
 
 **Player-visible**
