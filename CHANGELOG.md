@@ -2,6 +2,28 @@
 
 ---
 
+## 2026-08-16 — fix(combat): execute threshold fires in melee + aux-weapon paths · `67d50f4` · qa-execute 9/9 PASS ✓
+
+**Player-visible**
+- **Execute items now work in melee and hybrid builds.** Executioner's Blade, Executioner's Mark,
+  Executioner's Maul and every other item with an execute threshold (instant-kill at X% HP) previously
+  only triggered on projectile hits. Melee swings and aux-weapon hits (orbs, beams, explosions) skipped
+  the check entirely, making execute items dead weight in non-projectile builds.
+- **Both melee and aux-weapon hits now instant-kill enemies at or below the threshold**, with the
+  same boss/miniboss immunity that the projectile path already enforced. A melee berserker with
+  Executioner's Blade now executes low-HP enemies just like a ranged build does.
+
+**Under the hood**
+- `Game.ts` `updateMeleeCollisions`: execute-threshold check added after melee damage application.
+- `Game.ts` `applyAuxWeaponHit`: execute-threshold check added after aux-weapon damage application.
+- Both paths guard `!isBoss && !isMiniboss` — bosses remain immune.
+- `qa-execute.mjs`: 9 regression checks covering catalog integrity, threshold getter, Math.max
+  clamping, boss immunity, and — critically — the melee-execute regression gate (checks 7–8).
+
+**Live:** https://roguelite-game-blush.vercel.app · sha `67d50f4`
+
+---
+
 ## 2026-08-13 — fix(feel): Opening Salvo fires playBlast instead of playShoot · `b41baac` · smoke PASS ✓
 
 **Player-visible**
