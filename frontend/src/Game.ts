@@ -1070,13 +1070,17 @@ export class Game {
       enemy.lastX = enemy.x; enemy.lastY = enemy.y;
       if (dotDamage > 0) {
         const wm = enemy.woundMult;
-        enemy.health -= dotDamage * wm;
+        // Fragility (+%all dmg) applies to DoT just as it does to direct hits — DoTs are
+        // "all damage", not "direct hits", so we include getIncomingDamageMult() but NOT
+        // getDirectHitMult() (Exposed) or getFlatHitBonus() (Brittle, per-hit) or Condemned.
+        const fragMult = enemy.statusFX.getIncomingDamageMult();
+        enemy.health -= dotDamage * wm * fragMult;
         // GAME FEEL: Throttled colored damage numbers for DoT (max ~2/s per enemy)
         let ds = this._dotDisplay.get(enemy);
         if (!ds) { ds = { t: 0, burn: 0, bleed: 0, poison: 0 }; this._dotDisplay.set(enemy, ds); }
-        ds.burn += _burnDmg * wm;
-        ds.bleed += _bleedDmg * wm;
-        ds.poison += _poisonDmg * wm;
+        ds.burn += _burnDmg * wm * fragMult;
+        ds.bleed += _bleedDmg * wm * fragMult;
+        ds.poison += _poisonDmg * wm * fragMult;
         ds.t -= dt;
         if (ds.t <= 0) {
           const maxV = Math.max(ds.burn, ds.bleed, ds.poison);
@@ -1101,7 +1105,8 @@ export class Game {
       if (enemy.doomTimer > 0) {
         enemy.doomTimer -= dt;
         if (enemy.doomTimer <= 0 && enemy.doomStored > 0 && !enemy.dead) {
-          const payload = enemy.doomStored * enemy.woundMult;
+          // Doom detonation is a delayed hit — apply Wound + Fragility (all-dmg amplifier).
+          const payload = enemy.doomStored * enemy.woundMult * enemy.statusFX.getIncomingDamageMult();
           enemy.doomStored = 0;
           this.renderer.addImpactFlash(enemy.x, enemy.y);
           // GAME FEEL: Doom detonation — purple explosion burst + screen flash
