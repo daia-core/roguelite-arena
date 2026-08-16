@@ -157,6 +157,41 @@ const result = await page.evaluate(() => {
     out.meleeControl = ctrlThreshold === 0;
   }
 
+  // === 9. Aux execute: enemy at/below threshold dies after dealAuxDamage (item held). ===
+  // dealAuxDamage is private but accessible via compiled JS; QA convention from qa-aux-status-amps.
+  const auxExecEnemies = spawnEnemies(() => {
+    if (execA) g.playerStats.addItem(JSON.parse(JSON.stringify(execA)));
+  });
+  if (auxExecEnemies.length === 0) {
+    out.auxExecute = 'skipped-no-enemies';
+  } else if (!g.dealAuxDamage) {
+    out.auxExecute = 'skipped-dealAuxDamage-not-accessible';
+  } else {
+    const ae = auxExecEnemies[0];
+    ae.health = ae.maxHealth * 0.05;    // 5% — inside any threshold ≥ 0.06
+    ae.maxHealth = ae.maxHealth;        // pin so the threshold comparison uses the real max
+    const wasDead = ae.dead;
+    // Minimal damage (1 pt) so the hit itself doesn't kill; execute branch does.
+    g.dealAuxDamage(ae, 1, '#fff');
+    out.auxExecute = !wasDead && ae.dead;
+  }
+
+  // === 10. Aux control: enemy survives aux hit when no execute item (threshold 0). ===
+  const auxCtrlEnemies = spawnEnemies(null);
+  const auxCtrlThreshold = g.playerStats.getExecuteThreshold();
+  if (auxCtrlEnemies.length === 0) {
+    out.auxControl = 'skipped-no-enemies';
+  } else if (auxCtrlThreshold > 0) {
+    out.auxControl = 'skipped-threshold-leaked';
+  } else if (!g.dealAuxDamage) {
+    out.auxControl = 'skipped-dealAuxDamage-not-accessible';
+  } else {
+    const ac = auxCtrlEnemies[0];
+    ac.health = ac.maxHealth * 0.05;  // 5% — would trigger execute if threshold > 0
+    g.dealAuxDamage(ac, 1, '#fff');   // minimal damage, no execute item
+    out.auxControl = !ac.dead;         // should survive — threshold is 0
+  }
+
   return out;
 });
 
@@ -174,6 +209,8 @@ const checks = [
   ['burstCallable',    'spawnExecuteBurst callable without error',        result.burstCallable],
   ['meleeExecute',     'Melee execute: enemy at 5% HP dies when melee hits (item held)', result.meleeExecute],
   ['meleeControl',     'Melee control: execute threshold 0 when no item', result.meleeControl],
+  ['auxExecute',       'Aux execute: enemy at 5% HP dies after dealAuxDamage (item held)', result.auxExecute],
+  ['auxControl',       'Aux control: enemy survives aux hit when no execute item', result.auxControl],
 ];
 
 if (result.fatal) { console.error('FATAL:', result.fatal); process.exit(1); }
