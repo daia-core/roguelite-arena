@@ -2942,7 +2942,24 @@ export class Game {
         const distSq = (otherEnemy.x - enemy.x) ** 2 + (otherEnemy.y - enemy.y) ** 2;
 
         if (distSq < explosionRadiusSq) {
-          otherEnemy.takeDamage(this.playerStats.getDamage() * 2);
+          // Status-effect amplifiers: Fragility (+%all dmg), Exposed (+%direct-hit),
+          // Brittle (+flat), Condemned — same pattern as explosion-on-hit + chain lightning.
+          let killSplashDmg = this.playerStats.getDamage() * 2;
+          killSplashDmg = killSplashDmg
+            * otherEnemy.statusFX.getIncomingDamageMult()
+            * otherEnemy.statusFX.getDirectHitMult()
+            + otherEnemy.statusFX.getFlatHitBonus();
+          const condKill = otherEnemy.statusFX.checkCondemned(false);
+          killSplashDmg += condKill;
+          const killSplits = otherEnemy.takeDamage(killSplashDmg);
+          if (killSplits && killSplits.length > 0) this.enemies.push(...killSplits);
+          // Execute: kill-explosion should honour the execute threshold like other AoE sources.
+          if (!otherEnemy.dead && !otherEnemy.typeData.isBoss && !otherEnemy.isMiniboss) {
+            const execFracKill = this.playerStats.getExecuteThreshold();
+            if (execFracKill > 0 && otherEnemy.health <= otherEnemy.maxHealth * execFracKill) {
+              otherEnemy.takeDamage(otherEnemy.health + 1);
+            }
+          }
           // PERFORMANCE: Use pooled particles
           for (let i = 0; i < 8; i++) {
             const angle = (Math.PI * 2 * i) / 8;

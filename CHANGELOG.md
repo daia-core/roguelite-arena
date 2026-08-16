@@ -2,6 +2,30 @@
 
 ---
 
+## 2026-08-16 — fix(combat): explosion-on-kill now respects enemy debuff amplifiers · qa-kill-explosion-amps 4/4 PASS ✓
+
+**Player-visible**
+- **Kill explosions now benefit from debuffs on nearby enemies.** When an enemy dies and triggers
+  "Explosion on Kill," the splash damage was silently bypassing all debuff amplifiers — Fragility
+  stacks, Exposed, Brittle flat bonus, and Condemned — on the secondary targets it hit. Now the
+  kill explosion correctly amplifies off each splash target's own debuff state, matching how
+  Explosion on Hit, chain lightning, and direct weapons already work.
+- **Kill explosion now honours the execute threshold.** A low-HP enemy caught in a kill explosion
+  that was below the execute cutoff could survive the splash. Now the execute check fires correctly
+  after the kill-explosion hits each secondary target.
+
+**Under the hood**
+- `Game.ts` `handleEnemyKill()` — explosion-on-kill block: replaced bare `otherEnemy.takeDamage(raw)`
+  with the standard four-line amplifier pattern (`getIncomingDamageMult` × `getDirectHitMult` +
+  `getFlatHitBonus`; `checkCondemned(false)`); added execute threshold check + worm-chain split
+  handling (`killSplits`).
+- `qa-kill-explosion-amps.mjs`: 4 regression checks (Fragility×10 → 57.5, Brittle×5 → 55,
+  control → 50, execute fires at 19% HP). 4/4 PASS.
+
+**Live:** https://roguelite-game-blush.vercel.app
+
+---
+
 ## 2026-08-16 — fix(combat): chain lightning + explosion-on-hit now respect enemy debuffs · qa-chain-amps 6/6 PASS ✓
 
 **Player-visible**
