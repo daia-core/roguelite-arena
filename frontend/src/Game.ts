@@ -2217,7 +2217,13 @@ export class Game {
         this.spawnExecuteBurst(enemy.x, enemy.y);
       }
     }
-    if (enemy.dead) this.handleEnemyKill(enemy);
+    if (enemy.dead) {
+      this.handleEnemyKill(enemy);
+    } else {
+      // Aux weapons apply on-hit statuses too (chain/freeze/poison/burn/bleed/doom/wound/new-engine),
+      // so orb/wave/bomb hybrid builds actually proc their statuses — mirrors melee + projectile paths.
+      this.applyOnHitEffects(enemy, damage);
+    }
   }
 
   /**
