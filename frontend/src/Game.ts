@@ -1639,6 +1639,16 @@ export class Game {
           this.damageNumbers.push(this.createDamageNumber(enemy.x, enemy.y - 20, damage, isCrit));
           this.renderer.addImpactFlash(enemy.x, enemy.y);
 
+          // EXECUTE: melee swings should honour the execute threshold just like projectiles do.
+          // Without this, execute items (Executioner's Blade / Mark) are dead weight in melee builds.
+          if (!enemy.dead && !enemy.typeData.isBoss && !enemy.isMiniboss) {
+            const execFrac = this.playerStats.getExecuteThreshold();
+            if (execFrac > 0 && enemy.health <= enemy.maxHealth * execFrac) {
+              enemy.dead = true;
+              this.spawnExecuteBurst(enemy.x, enemy.y);
+            }
+          }
+
           if (enemy.dead) {
             this.handleEnemyKill(enemy);
           } else {
@@ -2198,6 +2208,14 @@ export class Game {
         lifetime: 300 + Math.random() * 200,
         gravity: 120
       }));
+    }
+    // EXECUTE: aux weapons should also honour the execute threshold.
+    if (!enemy.dead && !enemy.typeData.isBoss && !enemy.isMiniboss) {
+      const execFrac = this.playerStats.getExecuteThreshold();
+      if (execFrac > 0 && enemy.health <= enemy.maxHealth * execFrac) {
+        enemy.dead = true;
+        this.spawnExecuteBurst(enemy.x, enemy.y);
+      }
     }
     if (enemy.dead) this.handleEnemyKill(enemy);
   }
