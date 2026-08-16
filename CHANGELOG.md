@@ -2,6 +2,33 @@
 
 ---
 
+## 2026-08-16 — fix(combat): chain lightning + explosion-on-hit now respect enemy debuffs · qa-chain-amps 6/6 PASS ✓
+
+**Player-visible**
+- **Chain lightning arcs now benefit from the secondary target's debuffs.** Fragility stacks, Brittle
+  (flat bonus per hit), Exposed, and Condemned on the chained enemy were silently ignored — the arc
+  dealt raw base damage regardless of what debuffs you had applied to that target. Now every chain
+  arc correctly amplifies off the secondary target's own debuff state.
+- **Explosion-on-hit splash now respects each splash target's debuffs.** The 50% AoE splash from
+  explosion-on-hit items had the same gap: Fragility, Brittle, and Condemned on nearby enemies
+  were never consulted. Now each splash target's debuffs amplify the splash damage independently.
+- **Chain lightning and explosion splash now honour the execute threshold.** A low-HP enemy that
+  was below the execute cutoff could survive a chain arc or explosion splash that should have
+  insta-killed it. Both paths now check and fire the execute burst when appropriate.
+
+**Under the hood**
+- `Game.ts` `applyOnHitEffects()` — chain lightning block: replaced `const chainDmg` with `let`,
+  applied `nearest.statusFX.getIncomingDamageMult() × getDirectHitMult() + getFlatHitBonus()` +
+  `checkCondemned(false)`; added execute threshold check after `takeDamage()`.
+- `Game.ts` `applyOnHitEffects()` — explosion-on-hit block: same per-target amplifier pattern for
+  each `other` enemy within the 80-unit radius; added execute check per target.
+- `qa-chain-amps.mjs`: 6 regression checks (chain Fragility, Brittle, control, explosion Fragility,
+  Brittle, and execute-via-chain). 6/6 PASS.
+
+**Live:** https://roguelite-game-blush.vercel.app
+
+---
+
 ## 2026-08-16 — fix(combat): DoT and Doom now respect Fragility · qa-dot-fragility 5/5 PASS ✓
 
 **Player-visible**

@@ -3207,12 +3207,27 @@ export class Game {
         if (d < bd) { bd = d; nearest = other; }
       }
       if (nearest) {
-        const chainDmg = damage * 0.6 * elem;
+        // Apply the chain-target's own status-effect amplifiers — chain lightning deals
+        // player-sourced damage to `nearest`, so nearest's own debuffs should amplify it,
+        // mirroring the projectile / melee / aux paths.
+        let chainDmg = damage * 0.6 * elem;
+        chainDmg = chainDmg * nearest.statusFX.getIncomingDamageMult() * nearest.statusFX.getDirectHitMult()
+                   + nearest.statusFX.getFlatHitBonus();
+        const condemnedChain = nearest.statusFX.checkCondemned(false);
+        if (condemnedChain > 0) chainDmg *= condemnedChain;
         const splits = nearest.takeDamage(chainDmg);
         if (splits && splits.length > 0) this.enemies.push(...splits);
         this.damageNumbers.push(
           this.createDamageNumber(nearest.x, nearest.y - 20, chainDmg, false, '#ffd43b')
         );
+        // Execute: chain lightning should honour the execute threshold like primary weapons.
+        if (!nearest.dead && !nearest.typeData.isBoss && !nearest.isMiniboss) {
+          const execFrac = this.playerStats.getExecuteThreshold();
+          if (execFrac > 0 && nearest.health <= nearest.maxHealth * execFrac) {
+            nearest.dead = true;
+            this.spawnExecuteBurst(nearest.x, nearest.y);
+          }
+        }
         // Re-entrancy guard: propagate the dagger origin so a dagger's chain-kill
         // can't spawn a fresh generation of daggers (bounded to one generation).
         if (nearest.dead) this.handleEnemyKill(nearest, fromDagger);
@@ -3270,8 +3285,22 @@ export class Game {
       for (const other of this.enemies) {
         if (other === enemy || other.dead) continue;
         if ((other.x - enemy.x) ** 2 + (other.y - enemy.y) ** 2 < 80 * 80) {
-          const splits = other.takeDamage(damage * 0.5 * elem);
+          // Apply each splash target's own status-effect amplifiers — mirrors primary weapon paths.
+          let splashDmg = damage * 0.5 * elem;
+          splashDmg = splashDmg * other.statusFX.getIncomingDamageMult() * other.statusFX.getDirectHitMult()
+                      + other.statusFX.getFlatHitBonus();
+          const condSplash = other.statusFX.checkCondemned(false);
+          if (condSplash > 0) splashDmg *= condSplash;
+          const splits = other.takeDamage(splashDmg);
           if (splits && splits.length > 0) this.enemies.push(...splits);
+          // Execute: explosion splash should honour the execute threshold.
+          if (!other.dead && !other.typeData.isBoss && !other.isMiniboss) {
+            const execFrac = this.playerStats.getExecuteThreshold();
+            if (execFrac > 0 && other.health <= other.maxHealth * execFrac) {
+              other.dead = true;
+              this.spawnExecuteBurst(other.x, other.y);
+            }
+          }
           // Re-entrancy guard: a dagger's explosion-kill can't spawn more daggers.
           if (other.dead) this.handleEnemyKill(other, fromDagger);
         }
