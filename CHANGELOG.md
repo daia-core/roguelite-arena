@@ -2,6 +2,33 @@
 
 ---
 
+## 2026-08-16 — fix(combat): aux weapons now apply on-hit status effects · `abb656b` · qa-aux-onhit 6/6 PASS ✓
+
+**Player-visible**
+- **On-hit status effects now proc from orbs, waves, bombs, and damage zones.** Poison, freeze,
+  bleed, burn, wound, doom, chain lightning, and all new-engine status procs (Fragility, Exposed,
+  Brittle, Condemned, Dazed, Disoriented) were silently skipped for every auxiliary weapon hit —
+  the on-hit branch was simply missing from `dealAuxDamage()`. Items in these categories were dead
+  weight in any orb/wave/hybrid build.
+- **Orb builds (Orbiting Orbs, Arcane Orb, Satellite Orbs) can now chain-lightning, poison, freeze,
+  and burn enemies** just like a projectile or melee build with the same items.
+- **Nova/wave builds (Nova Pulse, ring skills) now apply bleed, doom, and wound stacks** on each
+  ring pass through an enemy group.
+- **Bomb drops and damage-zone skills (Circle of Power, Plague Bomb cloud) proc on-hit effects**
+  per tick — a bomb that detonates in a frozen cluster now also chains lightning and spreads burn.
+- Kill path unchanged: enemies killed by aux damage still trigger `handleEnemyKill` with all its
+  effects (vampiric lifesteal, kill-stack bonuses, wave progression).
+
+**Under the hood**
+- `Game.ts` `dealAuxDamage`: added `else { this.applyOnHitEffects(enemy, damage); }` — mirrors the
+  identical pattern already in the projectile hit path (line 1538) and melee path (line 1657).
+- `qa-aux-onhit.mjs`: 6 regression checks (poison applied, freeze probabilistic, control-no-item,
+  dead-enemy guard, both methods callable). 6/6 PASS.
+
+**Live:** https://roguelite-game-blush.vercel.app · sha `abb656b`
+
+---
+
 ## 2026-08-16 — fix(combat): execute threshold fires in melee + aux-weapon paths · `67d50f4` · qa-execute 9/9 PASS ✓
 
 **Player-visible**
