@@ -10,6 +10,19 @@ export class AudioManager {
   private _musicLoopTimeout: ReturnType<typeof setTimeout> | null = null;
   private readonly MUSIC_LOOP_SECS = 16; // seconds per atmospheric loop
 
+  // ── Sound throttle (prevent audio spam from high-proc-rate builds) ────────
+  // Maps a sound key → the last timestamp (ms) it actually played.
+  // High-frequency sounds (crit, explosion, lightning, freeze, poison) are
+  // rate-limited so they remain legible rather than blurring into noise.
+  private _lastPlayed = new Map<string, number>();
+  private _throttled(key: string, fn: () => void, cooldownMs: number): void {
+    if (!this.enabled) return;
+    const now = performance.now();
+    if ((this._lastPlayed.get(key) ?? 0) + cooldownMs > now) return;
+    this._lastPlayed.set(key, now);
+    fn();
+  }
+
   constructor() {
     this.ctx = new AudioContext();
     this.masterGain = this.ctx.createGain();
@@ -160,10 +173,12 @@ export class AudioManager {
     osc.stop(this.ctx.currentTime + 0.5);
   }
 
-  // NEW: Explosion sound
+  // NEW: Explosion sound — throttled 250ms so rapid on-hit explosions stay legible
   playExplosion(): void {
-    if (!this.enabled) return;
-
+    this._throttled('explosion', () => this._playExplosionImpl(), 250);
+  }
+  private _playExplosionImpl(): void {
+    this._ensureRunning();
     // Low boom
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
@@ -201,111 +216,103 @@ export class AudioManager {
     noise.start(this.ctx.currentTime);
   }
 
-  // NEW: Shield hit/block sound
+  // NEW: Shield hit/block sound — throttled 300ms (i-frames already space hits, but belt+braces)
   playShieldBlock(): void {
-    if (!this.enabled) return;
-
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-
-    osc.connect(gain);
-    gain.connect(this.masterGain);
-
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(800, this.ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(400, this.ctx.currentTime + 0.08);
-
-    gain.gain.value = 0.25;
-    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
-
-    osc.start(this.ctx.currentTime);
-    osc.stop(this.ctx.currentTime + 0.08);
+    this._throttled('shield', () => {
+      this._ensureRunning();
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(800, this.ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(400, this.ctx.currentTime + 0.08);
+      gain.gain.value = 0.25;
+      gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+      osc.start(this.ctx.currentTime);
+      osc.stop(this.ctx.currentTime + 0.08);
+    }, 300);
   }
 
-  // NEW: Heal sound
+  // NEW: Heal sound — throttled 300ms (orbs can spawn in groups on enemy death)
   playHeal(): void {
-    if (!this.enabled) return;
-
-    // Ascending shimmer
-    const notes = [523, 659, 784];
-    notes.forEach((freq, i) => {
-      setTimeout(() => this.playTone(freq, 0.15, 'sine', 0.15), i * 50);
-    });
+    this._throttled('heal', () => {
+      // Ascending shimmer — playTone already calls _ensureRunning()
+      const notes = [523, 659, 784];
+      notes.forEach((freq, i) => {
+        setTimeout(() => this.playTone(freq, 0.15, 'sine', 0.15), i * 50);
+      });
+    }, 300);
   }
 
-  // NEW: Freeze sound
+  // NEW: Freeze sound — throttled 400ms (a proc; rare enough without throttle, but builds
+  // with very high freeze chance could spray it rapidly — cap to stay musical)
   playFreeze(): void {
-    if (!this.enabled) return;
-
-    // High pitched crystalline sound
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-
-    osc.connect(gain);
-    gain.connect(this.masterGain);
-
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(2000, this.ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(1500, this.ctx.currentTime + 0.2);
-
-    gain.gain.value = 0.15;
-    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
-
-    osc.start(this.ctx.currentTime);
-    osc.stop(this.ctx.currentTime + 0.2);
+    this._throttled('freeze', () => {
+      this._ensureRunning();
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(2000, this.ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(1500, this.ctx.currentTime + 0.2);
+      gain.gain.value = 0.15;
+      gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+      osc.start(this.ctx.currentTime);
+      osc.stop(this.ctx.currentTime + 0.2);
+    }, 400);
   }
 
-  // NEW: Poison sound
+  // NEW: Poison sound — throttled 500ms; Game.ts only calls this on fresh application
+  // (enemy.poisonTimer <= 0), so the throttle is a second defence for rapid packs.
   playPoison(): void {
-    if (!this.enabled) return;
-
-    // Bubbling low tone
-    this.playTone(180, 0.15, 'square', 0.12);
+    this._throttled('poison', () => {
+      this._ensureRunning();
+      this.playTone(180, 0.15, 'square', 0.12);
+    }, 500);
   }
 
-  // NEW: Lightning/chain lightning sound
+  // NEW: Lightning/chain lightning sound — throttled 200ms; chain fires on every hit
+  // in an elemental build, which can exceed 10/s with multishot.
   playLightning(): void {
-    if (!this.enabled) return;
+    this._throttled('lightning', () => {
+      this._ensureRunning();
+      // Crackling high frequency
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
 
-    // Crackling high frequency
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
+      osc.connect(gain);
+      gain.connect(this.masterGain);
 
-    osc.connect(gain);
-    gain.connect(this.masterGain);
-
-    osc.type = 'square';
-    osc.frequency.setValueAtTime(1500, this.ctx.currentTime);
-    osc.frequency.linearRampToValueAtTime(2000, this.ctx.currentTime + 0.05);
-    osc.frequency.linearRampToValueAtTime(1800, this.ctx.currentTime + 0.1);
-
-    gain.gain.value = 0.2;
-    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
-
-    osc.start(this.ctx.currentTime);
-    osc.stop(this.ctx.currentTime + 0.1);
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(1500, this.ctx.currentTime);
+      osc.frequency.linearRampToValueAtTime(2000, this.ctx.currentTime + 0.05);
+      osc.frequency.linearRampToValueAtTime(1800, this.ctx.currentTime + 0.1);
+      gain.gain.value = 0.2;
+      gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+      osc.start(this.ctx.currentTime);
+      osc.stop(this.ctx.currentTime + 0.1);
+    }, 200);
   }
 
-  // NEW: Critical hit sound
+  // NEW: Critical hit sound — throttled 150ms; crit-heavy builds at 100% crit + multishot
+  // can fire 10-20+ crits/s; throttle keeps each individual crit legible in the mix.
   playCrit(): void {
-    if (!this.enabled) return;
-
-    // Sharp impactful tone
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-
-    osc.connect(gain);
-    gain.connect(this.masterGain);
-
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(600, this.ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(300, this.ctx.currentTime + 0.12);
-
-    gain.gain.value = 0.3;
-    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
-
-    osc.start(this.ctx.currentTime);
-    osc.stop(this.ctx.currentTime + 0.12);
+    this._throttled('crit', () => {
+      this._ensureRunning();
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(600, this.ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(300, this.ctx.currentTime + 0.12);
+      gain.gain.value = 0.3;
+      gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
+      osc.start(this.ctx.currentTime);
+      osc.stop(this.ctx.currentTime + 0.12);
+    }, 150);
   }
 
   // NEW: Transformation unlock sound

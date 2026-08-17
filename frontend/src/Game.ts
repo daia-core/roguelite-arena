@@ -1373,7 +1373,9 @@ export class Game {
       enemy.contactCooldown -= dt;
       if (enemy.contactCooldown <= 0 && enemy.collidesWith(this.player.x, this.player.y, this.player.radius)) {
         enemy.contactCooldown = 0.8;
+        const _hadShield = this.player.shield;
         const damaged = this.player.takeDamage(enemy.typeData.damage, Game.CONTACT_ARMOR_PEN);
+        if (!damaged && _hadShield && !this.player.shield) this.audio.playShieldBlock(); // GAME FEEL
         if (damaged) {
           this.applyThorns(enemy.typeData.damage, enemy);
           this.renderer.addHitFlash(0.5);
@@ -1469,6 +1471,7 @@ export class Game {
             let damage = isCrit ? this.player.getCritDamage(proj.damage) : PlayerStats.finalDamageKnee(proj.damage);
             // Disoriented debuff amplifies crit damage received
             if (isCrit) {
+              this.audio.playCrit(); // GAME FEEL: distinctive audio on crit hit
               const bonusCritDmg = enemy.statusFX.getBonusCritDamageReceived();
               if (bonusCritDmg > 0) damage *= (1 + bonusCritDmg);
             }
@@ -1548,7 +1551,9 @@ export class Game {
         // Enemy projectile hits player — use the reduced hurtbox so near-misses feel fair.
         // Contact damage (enemies touching the player) stays at full body radius.
         if (segmentCircleHit(px0, py0, proj.x, proj.y, this.player.x, this.player.y, this.player.radius * Game.PLAYER_PROJ_HURTBOX + proj.radius)) {
+          const _hadShieldP = this.player.shield;
           const damaged = this.player.takeDamage(proj.damage, Game.RANGED_ARMOR_PEN);
+          if (!damaged && _hadShieldP && !this.player.shield) this.audio.playShieldBlock(); // GAME FEEL
           if (damaged) {
             this.applyThorns(proj.damage);
             this.renderer.addHitFlash(0.4);
@@ -1595,6 +1600,7 @@ export class Game {
           const isCrit = this.rollCritWithTrophy() || (sfxBonusCritM > 0 && Math.random() < sfxBonusCritM);
           let damage = isCrit ? this.player.getCritDamage(melee.damage) : PlayerStats.finalDamageKnee(melee.damage);
           if (isCrit) {
+            this.audio.playCrit(); // GAME FEEL: distinctive audio on melee crit
             const bonusCritDmgM = enemy.statusFX.getBonusCritDamageReceived();
             if (bonusCritDmgM > 0) damage *= (1 + bonusCritDmgM);
           }
@@ -1899,6 +1905,7 @@ export class Game {
         const actualHeal = Math.min(orb.healAmount, this.player.maxHealth - this.player.health);
         this.player.heal(orb.healAmount);
         orb.dead = true;
+        if (actualHeal > 0) this.audio.playHeal(); // GAME FEEL: shimmer on health orb pickup
         // Green floating number so the player knows exactly how much HP they got.
         if (actualHeal > 0) {
           this.damageNumbers.push(this.createDamageNumber(
@@ -2195,6 +2202,7 @@ export class Game {
     let damage = isCrit ? this.player.getCritDamage(baseDamage) : PlayerStats.finalDamageKnee(baseDamage);
     // Disoriented debuff amplifies crit damage received
     if (isCrit) {
+      this.audio.playCrit(); // GAME FEEL: distinctive audio on aux crit
       const bonusCritDmg = enemy.statusFX.getBonusCritDamageReceived();
       if (bonusCritDmg > 0) damage *= (1 + bonusCritDmg);
     }
@@ -2934,6 +2942,7 @@ export class Game {
 
     // Explosion on kill - OPTIMIZATION: Use squared distance to avoid sqrt
     if (this.playerStats.hasExplosionOnKill()) {
+      this.audio.playExplosion(); // GAME FEEL: deep boom on kill explosion (throttled 250ms)
       const explosionRadius = 80;
       const explosionRadiusSq = explosionRadius * explosionRadius;
       for (const otherEnemy of this.enemies) {
@@ -3224,6 +3233,7 @@ export class Game {
         if (d < bd) { bd = d; nearest = other; }
       }
       if (nearest) {
+        this.audio.playLightning(); // GAME FEEL: arc crackle on chain lightning proc
         // Apply the chain-target's own status-effect amplifiers — chain lightning deals
         // player-sourced damage to `nearest`, so nearest's own debuffs should amplify it,
         // mirroring the projectile / melee / aux paths.
@@ -3254,6 +3264,7 @@ export class Game {
     // Freeze: halt movement for 1s
     if (this.playerStats.rollProc(this.playerStats.getFreezeChance())) {
       enemy.frozenTimer = 1.0;
+      this.audio.playFreeze(); // GAME FEEL: crystalline blip on freeze proc
     }
 
     // Chill/Slow: reduce movement for 2.5s. Unlike Freeze (a proc), Slow always applies while
@@ -3267,6 +3278,7 @@ export class Game {
 
     // Poison: DoT for 3s (ticked in the enemy loop)
     if (this.playerStats.hasPoison()) {
+      if (enemy.poisonTimer <= 0) this.audio.playPoison(); // GAME FEEL: bubbling blip on fresh poison application
       enemy.poisonTimer = 3.0;
       if (this.playerStats.hasPoisonSpread()) enemy.poisonSpreads = true;
       enemy.daggerDot = fromDagger;
@@ -3299,6 +3311,7 @@ export class Game {
 
     // Explosion on hit: AoE for 50% damage around the target
     if (this.playerStats.hasExplosionOnHit()) {
+      this.audio.playExplosion(); // GAME FEEL: deep boom on explosion-on-hit proc
       for (const other of this.enemies) {
         if (other === enemy || other.dead) continue;
         if ((other.x - enemy.x) ** 2 + (other.y - enemy.y) ** 2 < 80 * 80) {
