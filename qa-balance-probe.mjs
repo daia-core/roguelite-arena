@@ -125,36 +125,33 @@ const out = await page.evaluate(() => {
   critMultItems.slice(0, 4).forEach(it => { for (let k = 0; k < 4; k++) g.playerStats.addItem(clone(it)); });
   states.critHeavy = snap();
 
-  // Damage-vs-HP table for the CRIT-HEAVY build (the class Felix actually plays — the
-  // one that produced 2.3M/projectile). We compare enemy HP against the realized CRIT
-  // hit (ranged x critMult), because that is the number he sees delete the screen. The
-  // non-crit shot is shown alongside so the crit gap is explicit.
-  g.startNewGame();
-  dmgItems.forEach(it => g.playerStats.addItem(clone(it)));
-  rangedItems.forEach(it => g.playerStats.addItem(clone(it)));
-  dmgItems.slice(0, 4).forEach(it => { for (let k = 0; k < 4; k++) g.playerStats.addItem(clone(it)); });
-  critChanceItems.forEach(it => g.playerStats.addItem(clone(it)));
-  critMultItems.forEach(it => g.playerStats.addItem(clone(it)));
-  critMultItems.slice(0, 4).forEach(it => { for (let k = 0; k < 4; k++) g.playerStats.addItem(clone(it)); });
-  const shot = g.playerStats.getRangedDamage();
-  const critHit = g.player.getCritDamage(shot); // real hit path (final knee applied)
-  const table = [];
-  for (const w of [5, 7, 10, 13, 15, 20]) {
+  // Per-wave damage-vs-HP tables for medium, heavy, and crit-heavy builds.
+  // Uses each build's effective damage (blended crit/non-crit) as the hit metric —
+  // more representative than pure-crit for non-maxed builds, and exact for crit-heavy
+  // (which is already 100% crit so effective ≈ critHit).
+  const WAVES = [5, 7, 10, 13, 15, 20];
+  const buildTable = (s) => WAVES.map(w => {
     const fodder = enemyHP(60, w);
     const bruiser = enemyHP(250, w);
-    const boss = bossHP(3000, w); // rough boss base
-    table.push({
+    const boss = bossHP(3000, w);
+    const eff = s.effective;
+    return {
       wave: w,
-      shotDmg: Math.round(shot),
-      critDmg: Math.round(critHit),
+      effDmg: Math.round(eff),
       fodderHP: Math.round(fodder),
       bruiserHP: Math.round(bruiser),
       bossHP: Math.round(boss),
-      critHitsToKillFodder: +(fodder / critHit).toFixed(3),
-      critHitsToKillBruiser: +(bruiser / critHit).toFixed(3),
-      critHitsToKillBoss: +(boss / critHit).toFixed(3),
-    });
-  }
+      hitsToKillFodder: +(fodder / eff).toFixed(3),
+      hitsToKillBruiser: +(bruiser / eff).toFixed(3),
+      hitsToKillBoss: +(boss / eff).toFixed(3),
+    };
+  });
+
+  const tables = {
+    medium: buildTable(states.medium),
+    heavy: buildTable(states.heavy),
+    critHeavy: buildTable(states.critHeavy),
+  };
 
   return {
     dmgItemCount: dmgItems.length,
@@ -162,7 +159,7 @@ const out = await page.evaluate(() => {
     critChanceItemCount: critChanceItems.length,
     critMultItemCount: critMultItems.length,
     states,
-    table,
+    tables,
   };
 });
 
@@ -177,10 +174,18 @@ for (const [k, s] of Object.entries(out.states)) {
 const H = out.states.heavy, C = out.states.critHeavy;
 console.log(`\n  >> final knee (bounds the realized crit product all axes escaped):`);
 console.log(`     critHeavy pre-knee ${C.rawCritHit.toLocaleString()}  ->  realized ${C.critHit.toLocaleString()}  =  ${(C.rawCritHit / Math.max(1,C.critHit)).toFixed(0)}x compressed at the ceiling`);
-console.log('\nCrit-heavy build — realized CRIT vs enemy HP per wave (hits-to-kill; <1 = one-shot):');
-for (const r of out.table) {
-  console.log(`  wave ${String(r.wave).padStart(2)}: crit=${r.critDmg.toLocaleString()} (shot ${r.shotDmg.toLocaleString()}) | fodder ${r.fodderHP.toLocaleString()}HP (${r.critHitsToKillFodder}x) | bruiser ${r.bruiserHP.toLocaleString()}HP (${r.critHitsToKillBruiser}x) | boss ${r.bossHP.toLocaleString()}HP (${r.critHitsToKillBoss}x)`);
-}
+// Per-wave tables for medium, heavy, and crit-heavy (hits-to-kill; <1 = one-shot).
+// Uses blended effective damage for each build tier so the table reflects real
+// expected performance (not a best-case pure-crit number for sub-maxed builds).
+const printTable = (label, rows) => {
+  console.log(`\n${label} — effective hits-to-kill per wave (<1 = one-shot):`);
+  for (const r of rows) {
+    console.log(`  wave ${String(r.wave).padStart(2)}: eff=${r.effDmg.toLocaleString()} | fodder ${r.fodderHP.toLocaleString()}HP (${r.hitsToKillFodder}x) | bruiser ${r.bruiserHP.toLocaleString()}HP (${r.hitsToKillBruiser}x) | boss ${r.bossHP.toLocaleString()}HP (${r.hitsToKillBoss}x)`);
+  }
+};
+printTable('Medium build', out.tables.medium);
+printTable('Heavy build (no-crit)', out.tables.heavy);
+printTable('Crit-heavy build', out.tables.critHeavy);
 
 await browser.close();
 server.close();
