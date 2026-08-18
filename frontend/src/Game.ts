@@ -2614,8 +2614,9 @@ export class Game {
     if (this.hitPauseTimer > Game.HIT_PAUSE_MAX) this.hitPauseTimer = Game.HIT_PAUSE_MAX;
   }
 
-  /** Distinct crimson burst + impact flash so an execute reads as more than a normal kill. */
+  /** Distinct crimson burst + impact flash + audio so an execute reads as more than a normal kill. */
   private spawnExecuteBurst(x: number, y: number): void {
+    this.audio.playExecute(); // GAME FEEL: blade-ping + low thud on instant-kill threshold
     const count = this.getParticleCount(14);
     for (let i = 0; i < count; i++) {
       const angle = (Math.PI * 2 * i) / Math.max(1, count);

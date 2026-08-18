@@ -4,9 +4,10 @@
  * (crit, lightning, explosion, freeze, poison, shield block, heal) are now:
  *   (a) callable without throwing, and
  *   (b) throttled correctly (rapid successive calls don't double-play within the cooldown).
+ * Also checks the new playExecute() (execute-kill audio) added Aug 2026.
  *
  * Tests:
- *   methodsExist         — all 7 new methods are functions on window.__game.audio
+ *   methodsExist         — all 8 new methods are functions on window.__game.audio
  *   noThrowOnCall        — each method can be called without throwing an error
  *   throttleMapExists    — audio._lastPlayed is a Map (throttle infrastructure is present)
  *   critThrottles        — two immediate playCrit() calls ≤ 10ms apart: only 1 fires
@@ -14,6 +15,7 @@
  *   explosionThrottles   — two immediate playExplosion() calls: only 1 fires
  *   freezeThrottles      — two immediate playFreeze() calls: only 1 fires
  *   poisonThrottles      — two immediate playPoison() calls: only 1 fires
+ *   executeThrottles     — two immediate playExecute() calls: only 1 fires
  *   throttleResets       — after cooldown, playCrit() fires again
  *
  * Usage: CHROME_BIN=/usr/bin/chromium node qa-audio-wiring.mjs
@@ -66,9 +68,9 @@ const results = await page.evaluate(() => {
   const audio = g.audio;
   const out = {};
 
-  // methodsExist — all 7 previously-dead methods are now functions
+  // methodsExist — all 8 wired methods (7 from Aug-18 + playExecute Aug-2026) are functions
   const methods = ['playCrit', 'playLightning', 'playExplosion', 'playFreeze',
-                   'playPoison', 'playShieldBlock', 'playHeal'];
+                   'playPoison', 'playShieldBlock', 'playHeal', 'playExecute'];
   out.methodsExist = methods.every(m => typeof audio[m] === 'function');
 
   // noThrowOnCall — each method fires without throwing
@@ -112,6 +114,7 @@ const results = await page.evaluate(() => {
   out.explosionThrottles = countFires('playExplosion')  === 1;
   out.freezeThrottles    = countFires('playFreeze')     === 1;
   out.poisonThrottles    = countFires('playPoison')     === 1;
+  out.executeThrottles   = countFires('playExecute')    === 1;
 
   // throttleResets — after 200ms the crit throttle should allow another fire
   // (actual test: clear _lastPlayed manually and verify a fresh call fires)
@@ -135,7 +138,7 @@ server.close();
 const checks = [
   'methodsExist', 'noThrowOnCall', 'throttleMapExists',
   'critThrottles', 'lightningThrottles', 'explosionThrottles',
-  'freezeThrottles', 'poisonThrottles', 'throttleResets',
+  'freezeThrottles', 'poisonThrottles', 'executeThrottles', 'throttleResets',
 ];
 
 let allPass = true;
@@ -151,6 +154,8 @@ if (errs.length) {
   allPass = false;
 }
 
-console.log(`\n${checks.length}/${checks.length} checks${allPass ? ' PASS' : ' — FAILURES above'}`)
+let passCount = 0;
+for (const k of checks) { if (results[k] === true) passCount++; }
+console.log(`\n${passCount}/${checks.length} checks${allPass ? ' PASS' : ' — FAILURES above'}`)
 console.log(`RESULT: ${allPass ? 'PASS ✅' : 'FAIL ❌'}`);
 process.exit(allPass ? 0 : 1);

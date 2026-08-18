@@ -216,6 +216,38 @@ export class AudioManager {
     noise.start(this.ctx.currentTime);
   }
 
+  // Execute kill — a satisfying 2-layer "blade + thud" cue. Throttled 300ms so execute chains
+  // (high-threshold builds that chain-execute several wounded enemies at once) stay legible.
+  playExecute(): void {
+    this._throttled('execute', () => {
+      this._ensureRunning();
+      // Layer 1: metallic blade ping — high sine sweeping down (reads as "strike")
+      const osc1 = this.ctx.createOscillator();
+      const g1 = this.ctx.createGain();
+      osc1.connect(g1);
+      g1.connect(this.masterGain);
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(2800, this.ctx.currentTime);
+      osc1.frequency.exponentialRampToValueAtTime(1200, this.ctx.currentTime + 0.08);
+      g1.gain.value = 0.35;
+      g1.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+      osc1.start(this.ctx.currentTime);
+      osc1.stop(this.ctx.currentTime + 0.08);
+      // Layer 2: low resonant thud (reads as "impact weight")
+      const osc2 = this.ctx.createOscillator();
+      const g2 = this.ctx.createGain();
+      osc2.connect(g2);
+      g2.connect(this.masterGain);
+      osc2.type = 'sawtooth';
+      osc2.frequency.setValueAtTime(80, this.ctx.currentTime);
+      osc2.frequency.exponentialRampToValueAtTime(30, this.ctx.currentTime + 0.2);
+      g2.gain.value = 0.3;
+      g2.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+      osc2.start(this.ctx.currentTime);
+      osc2.stop(this.ctx.currentTime + 0.2);
+    }, 300);
+  }
+
   // NEW: Shield hit/block sound — throttled 300ms (i-frames already space hits, but belt+braces)
   playShieldBlock(): void {
     this._throttled('shield', () => {
