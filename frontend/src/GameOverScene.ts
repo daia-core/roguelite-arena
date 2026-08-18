@@ -12,7 +12,7 @@ import type { Scene } from './scenes/Scene';
 import type { Achievement } from './AchievementSystem';
 import { Input } from './Input';
 import { Renderer } from './Renderer';
-import { pointInRect } from './utils';
+import { pointInRect, formatShort } from './utils';
 
 // ─── GameOverStats ────────────────────────────────────────────────────────────
 
@@ -34,6 +34,8 @@ export interface GameOverStats {
   duosActive: Array<{ icon: string; name: string; glowColor: string }>;
   /** Active transformations unlocked this run (icon + name + color for display). */
   transformationsActive: Array<{ icon: string; name: string; glowColor: string }>;
+  /** Total enemy max-HP consumed this run — good proxy for damage dealt. */
+  totalDamageDealt: number;
 }
 
 // ─── Deps ─────────────────────────────────────────────────────────────────────
@@ -88,7 +90,7 @@ export class GameOverScene implements Scene {
     const updateStats = this.deps.getStats();
     const updateSynergies = [...(updateStats.transformationsActive ?? []), ...(updateStats.duosActive ?? [])];
     const updateSynRowH = updateSynergies.length > 0 ? (isMobile ? 42 : 38) : 0;
-    const updatePanelH = (isMobile ? 460 : 390) + updateSynRowH;
+    const updatePanelH = (isMobile ? 502 : 426) + updateSynRowH;
     const updatePanelY = isMobile ? 140 : 170;
     const panelBottom = updatePanelY + updatePanelH;
     // On mobile: anchor buttons just below the panel to eliminate dead-space gap.
@@ -171,9 +173,9 @@ export class GameOverScene implements Scene {
       });
     }
 
-    // Stats panel — taller to fit Bosses stat + personal best + optional synergy row
+    // Stats panel — taller to fit Bosses stat + personal best + damage + optional synergy row
     const panelWidth = isMobile ? Math.min(380, this.canvas.width - 40) : 500;
-    const panelHeight = (isMobile ? 460 : 390) + synRowH;
+    const panelHeight = (isMobile ? 502 : 426) + synRowH;
     const panelX = (this.canvas.width - panelWidth) / 2;
     const panelY = isMobile ? 140 : 170;
 
@@ -233,8 +235,16 @@ export class GameOverScene implements Scene {
       color: '#ffd700'
     });
 
+    // Total damage dealt — key build-validation stat
+    this.renderer.drawText(`Damage: ${formatShort(stats.totalDamageDealt)}`, this.canvas.width / 2, statsY + lineSpacing * 4, {
+      size: statSize,
+      bold: true,
+      align: 'center',
+      color: '#fb923c'
+    });
+
     // Items row — icon strip if items are available, text fallback if not
-    const itemRowY = statsY + lineSpacing * 4;
+    const itemRowY = statsY + lineSpacing * 5;
     const ownedItems = stats.itemsBought ?? [];
     if (ownedItems.length === 0) {
       // Fallback: plain text count (pre-patch save or empty run)
@@ -340,7 +350,7 @@ export class GameOverScene implements Scene {
     }
 
     // Souls earned (highlighted prominently) — pushed down when synergy row is present
-    const soulsY = statsY + lineSpacing * 5 + 20 + synRowH;
+    const soulsY = statsY + lineSpacing * 6 + 20 + synRowH;
     ctx.save();
     ctx.shadowBlur = 25;
     ctx.shadowColor = '#9370db';

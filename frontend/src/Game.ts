@@ -251,6 +251,8 @@ export class Game {
   // Stats
   kills: number = 0;
   bossKills: number = 0;
+  /** Sum of maxHealth of every killed enemy — proxy for total player damage dealt. */
+  totalDamageDealt: number = 0;
   soulsEarnedThisRun: number = 0;
   /** Timestamp (ms) when the current run started — used to compute runDurationMs for achievements. */
   private runStartTime: number = 0;
@@ -271,6 +273,7 @@ export class Game {
     itemsBought: [],
     duosActive: [],
     transformationsActive: [],
+    totalDamageDealt: 0,
   };
 
   // Wave modifier announcement
@@ -777,11 +780,12 @@ export class Game {
     this.coins = [];
     this.resetAuxWeapons();
     this.kills = 0;
+    this.bossKills = 0;
+    this.totalDamageDealt = 0;
     this.hitPauseTimer = 0;
     this.waveClearTimer = 0;
     this.waveClearPending = false;
     this.deathEffectFired = false;
-    this.bossKills = 0;
     this.soulsEarnedThisRun = 0;
     this.runStartTime = Date.now();
     // Reset conditional-item run state (fresh run = no ramp, no kill streak).
@@ -933,6 +937,7 @@ export class Game {
     this.coins = [];
     this.resetAuxWeapons();
     this.kills = 0;
+    this.totalDamageDealt = 0;
     this.hitPauseTimer = 0;
     this.waveClearTimer = 0;
     this.waveClearPending = false;
@@ -2661,6 +2666,7 @@ export class Game {
     if (!this.player) return;
 
     this.kills++;
+    this.totalDamageDealt += enemy.maxHealth;
 
     // Killing Spree: every kill adds a decaying damage stack and refreshes the grace
     // window. Only meaningful if a killStackDamage item is held, but the counter is
@@ -3978,6 +3984,7 @@ export class Game {
         .map(t => ({ icon: t.icon, name: t.name, glowColor: t.glowColor })),
       duosActive: this.playerStats.getActiveDuos()
         .map(d => ({ icon: d.icon, name: d.name, glowColor: d.glowColor ?? '#a855f7' })),
+      totalDamageDealt: this.totalDamageDealt,
     };
 
     // Evaluate achievements for this run — any newly earned unlock their reward item immediately

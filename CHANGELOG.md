@@ -2,6 +2,24 @@
 
 ---
 
+## 2026-08-18 — feat(gameover): total damage dealt stat
+
+**Player-visible**
+- **Game-over screen now shows total damage dealt.** A new orange "Damage: X.XM" row appears
+  between Gold and Items on the post-run stat panel — the build-validation stat every roguelite
+  player wants to see. Tracks total enemy max-HP consumed across the run (accurate proxy for
+  damage dealt; differences are only overkill). Uses the standard formatShort() notation:
+  "47K", "1.2M", "825" etc.
+
+**Under the hood**
+- `Game.ts`: `totalDamageDealt: number` field added; reset in both `startNewGame()` and
+  `loadFromSave()`; incremented by `enemy.maxHealth` in `handleEnemyKill()`.
+- `GameOverStats` interface: `totalDamageDealt` field added.
+- `GameOverScene.ts`: panel height bumped by one lineSpacing (36→426 desktop, 42→502 mobile);
+  Damage row at `statsY + lineSpacing * 4`; Items/Synergies/Souls shifted down one row.
+
+---
+
 ## 2026-08-18 — feel(hud): miniboss HP bar · qa-miniboss-hpbar 8/8 PASS ✓
 
 **Player-visible**
