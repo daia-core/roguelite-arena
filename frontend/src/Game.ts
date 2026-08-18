@@ -3467,6 +3467,11 @@ export class Game {
     this.hudRenderer.updateMobileSkillButtons(); // skill scrolls change which active ability is on Q/E
     this.itemsPurchasedThisWave++;
 
+    // GAME FEEL: purchase audio — play on every buy; duo/transformation fanfare overlays this
+    // if they fire (they call their own sounds in the blocks below, so the plain "ding" still
+    // lands first — giving the buy a beat before the bigger unlock sound plays on top).
+    this.audio.playPurchase(); // clean "ding" on item buy — was defined but never called
+
     // Duplicate buy → upgraded an owned instance. Tell the player (e.g. "Amulet +2").
     if (upgraded) {
       this.shopScene?.showToast(`${item.name} +${upgradeLevel - 1}`);
