@@ -201,6 +201,29 @@ export class HUDRenderer {
         ctx.fillRect(mx - 1, by - s(2), 2, bh + s(4));
         ctx.restore();
       }
+    } else {
+      // --- Miniboss health bar (bottom center, with name) — only when no main boss is alive ---
+      const miniboss = this.deps.getEnemies().find((e) => e.isMiniboss && !e.typeData.isBoss);
+      if (miniboss) {
+        const MINIBOSS_NAMES: Record<string, string> = {
+          troll: 'MOUNTAIN TROLL',
+          cyclops: 'CYCLOPS',
+          golem: 'STONE GOLEM',
+          necromancer: 'NECROMANCER',
+          banshee: 'BANSHEE',
+          summoner: 'SUMMONER',
+        };
+        const label = MINIBOSS_NAMES[miniboss.type] ?? miniboss.type.replace(/_/g, ' ').toUpperCase();
+        const bw = Math.min(s(320), canvas.width - s(60));
+        const bh = s(10);
+        const bx = Math.round((canvas.width - bw) / 2);
+        const by = canvas.height - s(44);
+        drawPanel(ctx, bx - s(12), by - s(24), bw + s(24), bh + s(34), DARK_WOOD_THEME, art, 7);
+        this.deps.renderer.drawText(label, canvas.width / 2, by - s(13), {
+          size: s(8), align: 'center', color: '#ffa94d'
+        });
+        drawBar(bx, by, bw, bh, miniboss.health / miniboss.maxHealth, '#e8731a', '#3c1500');
+      }
     }
 
     // --- Active Skill indicators (bottom-left, below the status panel) ---

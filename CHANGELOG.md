@@ -2,6 +2,29 @@
 
 ---
 
+## 2026-08-18 — feel(hud): miniboss HP bar · qa-miniboss-hpbar 8/8 PASS ✓
+
+**Player-visible**
+- **Miniboss waves now show an HP bar.** Waves 6, 12, 18, 24 … spawn a scaled miniboss
+  (Mountain Troll / Cyclops / Stone Golem / Necromancer / Banshee / Summoner). Previously
+  there was no HP indicator — the miniboss just died silently when it ran out of health.
+  Now an amber HP bar appears at the bottom of the screen, identical in position to the
+  boss bar used on boss waves (waves 10, 20, 30 …). The bar shows the miniboss's type name
+  and HP fraction; boss bar takes priority if a main boss is also alive (can't happen in
+  practice but guarded defensively).
+
+**Under the hood**
+- `HUDRenderer.ts` — added `else` branch after the boss HP bar block: finds
+  `enemies.find((e) => e.isMiniboss && !e.typeData.isBoss)`, renders a 320-px amber bar
+  (`#e8731a` fill, `#3c1500` bg) with the type-name label above it in orange (`#ffa94d`).
+  No phase tick marks (miniboss has no phase transitions).
+- `qa-miniboss-hpbar.mjs` — 8 checks: structural flags, both HUD filters (mini & boss),
+  priority (boss bar wins when both present), render safety (no JS errors). 8/8 PASS.
+
+**Live:** https://roguelite-game-blush.vercel.app
+
+---
+
 ## 2026-08-18 — feel(audio): execute-kill sound — blade-ping + low thud · qa-audio-wiring 10/10 PASS ✓
 
 **Player-visible**
