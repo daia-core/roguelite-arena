@@ -66,7 +66,7 @@ function getItemKinds(item) {
     || item.multishot !== undefined         || item.piercing !== undefined
     || item.homing === true                 || item.projectileSpeed !== undefined
     || item.multicast !== undefined;
-  const isActive = item.bombDrop === true || item.novaPulse === true;
+  const isActive = item.bombDrop === true || item.novaPulse === true || item.openingSalvo === true;
   const isPassive = !isWeapon && !isActive
     || item.damageMultiplier !== undefined  || item.fireRateMultiplier !== undefined
     || item.critChance !== undefined        || item.critDamageMultiplier !== undefined
@@ -89,7 +89,7 @@ const KNOWN_KINDS = new Set(['weapon', 'passive', 'active']);
 // ---------------------------------------------------------------------------
 function setDiff(a, b) { return [...a].filter(x => !b.has(x)); }
 const LOCAL_WEAPON  = new Set(['weaponType','swingDamageMult','swingRangeBonus','swingArcBonus','swingCooldownMult','swingAoe','meleeDamageMult','orbitOrbs','auxMelee','multishot','piercing','homing','projectileSpeed','multicast']);
-const LOCAL_ACTIVE  = new Set(['bombDrop','novaPulse']);
+const LOCAL_ACTIVE  = new Set(['bombDrop','novaPulse','openingSalvo']);
 // passive fields deliberately omitted from drift-check (large, rarely added)
 
 const driftW = [...setDiff(weaponFields, LOCAL_WEAPON), ...setDiff(LOCAL_WEAPON, weaponFields)];
