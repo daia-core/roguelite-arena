@@ -2,6 +2,30 @@
 
 ---
 
+## 2026-08-18 — feel(audio): execute-kill sound — blade-ping + low thud · qa-audio-wiring 10/10 PASS ✓
+
+**Player-visible**
+- **Execute kills now have a distinct, satisfying audio signature.** Instant-killing an enemy
+  at the execute threshold (Executioner's Blade, Siege Lance, etc.) previously played no different
+  audio than a normal kill — it read the same as any other death. Now a two-layer sound fires on
+  every execute: a metallic blade-ping sweep (2800 Hz → 1200 Hz, 80 ms) followed immediately by
+  a low resonant thud (80 Hz → 30 Hz, 200 ms). Combined with the existing crimson particle burst +
+  impact flash, execute kills now feel like the instant-kill threshold event they are.
+
+**Under the hood**
+- `AudioManager.ts` — new `playExecute()` method: two-oscillator design (sine layer + sawtooth
+  layer), throttled 300 ms so execute chains (high-threshold builds with many wounded enemies at
+  once) stay legible in the mix without muddying. Follows the same `_throttled()` pattern as
+  `playLightning()`, `playCrit()`, `playExplosion()`, etc.
+- `Game.ts` `spawnExecuteBurst()` — `this.audio.playExecute()` first, before particles, so audio
+  and visual land together (vs audio being deferred to `handleEnemyKill` → `playKill`).
+- `qa-audio-wiring.mjs` — extended: `methodsExist` now checks all 8 wired methods (incl.
+  `playExecute`); new `executeThrottles` assertion. 10/10 PASS.
+
+**Live:** https://roguelite-game-blush.vercel.app
+
+---
+
 ## 2026-08-16 — fix(combat): explosion-on-kill now respects enemy debuff amplifiers · qa-kill-explosion-amps 4/4 PASS ✓
 
 **Player-visible**
