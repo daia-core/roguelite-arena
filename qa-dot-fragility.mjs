@@ -71,6 +71,20 @@ const result = await page.evaluate(() => {
     e.woundMult = 1;
   };
 
+  // Helper: isolate two test enemies so ONLY DoT + Fragility affects their HP delta.
+  // Three contamination sources eliminated:
+  //   (a) In-flight player projectiles hitting one enemy but not the other.
+  //   (b) New player shots during g.update() (player auto-fires every frame).
+  //   (c) Explosion-on-kill AoE from other dying enemies (1ee49ad fix).
+  const isolateForDoT = (e1, e2) => {
+    g.projectiles.length = 0;                    // (a) clear in-flight projectiles
+    if (g.player) g.player.shootCooldown = 9999; // (b) suppress new shots this update
+    for (const e of g.enemies) {
+      if (e !== e1 && e !== e2) e.dead = true;   // (c) cull other enemies
+    }
+    g.enemies = g.enemies.filter(e => !e.dead);
+  };
+
   // === 1. Burn: Fragility×5 → more burn damage than no debuff. ===
   spawnFresh();
   let [eBase, eFrag] = getLiveNonBoss(2);
@@ -84,9 +98,9 @@ const result = await page.evaluate(() => {
     // Stop bleed/poison so only burn ticks.
     eBase.bleedTimer = 0; eFrag.bleedTimer = 0;
     eBase.poisonTimer = 0; eFrag.poisonTimer = 0;
+    isolateForDoT(eBase, eFrag);
     const hpBaseBefore = eBase.health;
     const hpFragBefore = eFrag.health;
-    // Freeze enemies so they don't move and can't die or trigger other systems.
     g.update(1.0);
     const dmgBase = hpBaseBefore - eBase.health;
     const dmgFrag = hpFragBefore - eFrag.health;
@@ -117,6 +131,7 @@ const result = await page.evaluate(() => {
     // Arm doom: store 1000 damage, timer near expiry.
     eDoomBase.doomStored = 1000; eDoomBase.doomTimer = 0.01;
     eDoomFrag.doomStored = 1000; eDoomFrag.doomTimer = 0.01;
+    isolateForDoT(eDoomBase, eDoomFrag);
     const hpDbBefore = eDoomBase.health;
     const hpDfBefore = eDoomFrag.health;
     g.update(0.1); // Trigger detonation.
@@ -138,16 +153,15 @@ const result = await page.evaluate(() => {
     eBleedBase.bleedTimer = 5.0; eBleedFrag.bleedTimer = 5.0;
     eBleedBase.burnTimer = 0; eBleedFrag.burnTimer = 0;
     eBleedBase.poisonTimer = 0; eBleedFrag.poisonTimer = 0;
-    // Pin lastX/lastY so movement = 0 at the start of the tick (bleed scales with movement).
+    // Equalise starting positions so both enemies travel the same distance during g.update().
+    // Bleed damage = (6 + min(18, moved×1.5))×dt — if the enemies spawn at different distances
+    // from the player, the one that moves further can out-damage the Fragility bonus (25%).
+    // Placing both at the same coordinates removes spawn randomness and isolates Fragility
+    // as the sole variable. Use a corner far from centre so movement is non-zero.
+    eBleedBase.x = eBleedFrag.x = 100; eBleedBase.y = eBleedFrag.y = 300;
     eBleedBase.lastX = eBleedBase.x; eBleedBase.lastY = eBleedBase.y;
     eBleedFrag.lastX = eBleedFrag.x; eBleedFrag.lastY = eBleedFrag.y;
-    // Cull all other enemies so no wave combat (projectiles, kill-explosions) contaminates
-    // the HP delta. The explosion-on-kill fix (1ee49ad) now dispatches AoE when other
-    // enemies die, which was adding stray damage to the test enemies during g.update().
-    for (const e of g.enemies) {
-      if (e !== eBleedBase && e !== eBleedFrag) e.dead = true;
-    }
-    g.enemies = g.enemies.filter(e => !e.dead);
+    isolateForDoT(eBleedBase, eBleedFrag);
     const hpBbBefore = eBleedBase.health;
     const hpBfBefore = eBleedFrag.health;
     g.update(1.0);
@@ -169,6 +183,7 @@ const result = await page.evaluate(() => {
     ePoisBase.poisonTimer = 5.0; ePoisFrag.poisonTimer = 5.0;
     ePoisBase.burnTimer = 0; ePoisFrag.burnTimer = 0;
     ePoisBase.bleedTimer = 0; ePoisFrag.bleedTimer = 0;
+    isolateForDoT(ePoisBase, ePoisFrag);
     const hpPbBefore = ePoisBase.health;
     const hpPfBefore = ePoisFrag.health;
     g.update(1.0);
