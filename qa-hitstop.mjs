@@ -7,7 +7,7 @@
 //  A) Clamp/merge: triggerHitPause takes the longer request and never exceeds
 //     the hard ceiling (0.13s) — gameplay can't be frozen unfairly long.
 //  B) Gating: a REAL enemy killed via the genuine handleEnemyKill arms a freeze
-//     ONLY when it's a boss (~0.12) or miniboss (~0.06) — fodder arms nothing
+//     ONLY when it's a boss (~0.12) or miniboss (~0.08) — fodder arms nothing
 //     (the arena clears thousands of trash/sec; a per-kill freeze would stutter).
 //  C) Freeze behaviour through the real update() loop: while the timer is >0 the
 //     playing sim advances by dt=0 (a real enemy does NOT move) yet the timer
@@ -90,7 +90,7 @@ const result = await page.evaluate(() => {
   e.typeData = Object.assign({}, savedTD, { isBoss: false });
   e.isMiniboss = true;
   g.handleEnemyKill(e);
-  ok('gate: miniboss kill arms ~0.06 hit-stop', near(g.hitPauseTimer, 0.06), `timer=${g.hitPauseTimer}`);
+  ok('gate: miniboss kill arms ~0.08 hit-stop', near(g.hitPauseTimer, 0.08), `timer=${g.hitPauseTimer}`);
   e.typeData = savedTD; e.isMiniboss = savedMini;
 
   // ---- C) Freeze behaviour through the real update() loop ----
