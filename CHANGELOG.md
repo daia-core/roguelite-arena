@@ -2,6 +2,33 @@
 
 ---
 
+## 2026-08-19 — fix(audio): wave-clear victory jingle now fires at banner moment · `4f9d07e` · qa 11/11 PASS ✓
+
+**Player-visible**
+- **Wave-clear audio now syncs with the celebration banner.** Previously the victory jingle
+  (`C5→E5→G5→C6`) was delayed by 0.8 s — it played when the shop opened, not when "WAVE X
+  CLEARED!" appeared with the green particle burst. The banner moment was completely silent.
+  Now the jingle fires the instant the banner appears, alongside the burst — so audio and
+  visual land together.
+- **Wave-clear jingle now plays on iOS Safari / Chrome mobile.** `playWaveComplete()` was
+  missing the `_ensureRunning()` call that resumes a suspended AudioContext after a user
+  gesture. The jingle silently dropped on mobile. Fixed.
+- **Wave-clear jingle respects the mute toggle.** The method was also missing the
+  `if (!this.enabled) return` guard. Fixed.
+
+**Under the hood**
+- `Game.ts` — `this.audio.playWaveComplete()` moved from `enterShop()` to `spawnWaveClearBurst()`
+  (fires at banner moment, not shop-open). Comment added at the old site explaining the move.
+- `AudioManager.ts` — `playWaveComplete()` fully modernized: added `if (!this.enabled) return`
+  + `this._ensureRunning()` guards; replaced `setTimeout`-based note scheduling with Web Audio
+  API timing (`ctx.currentTime + offset`) — avoids timer drift and correctly handles suspended
+  AudioContext on iOS.
+
+**Commit** `4f9d07e`
+**Live:** https://roguelite-game-blush.vercel.app
+
+---
+
 ## 2026-08-19 — fix(audio): missing enabled guard + _ensureRunning in playKill/playGameOver
 
 **Player-visible**
