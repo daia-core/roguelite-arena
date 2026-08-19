@@ -2,6 +2,29 @@
 
 ---
 
+## 2026-08-19 — fix(audio): missing enabled guard + _ensureRunning in playKill/playGameOver
+
+**Player-visible**
+- **Kill sounds now respect the mute toggle.** `playKill()` previously created and connected
+  Web Audio oscillators even when audio was disabled — wasted CPU on every enemy death (high
+  frequency in late waves). Now properly exits early when `enabled=false`.
+- **Game-over sound now plays on iOS Safari / Chrome mobile.** `playGameOver()` was missing
+  the `_ensureRunning()` call that resumes a suspended AudioContext after the first user
+  gesture. The death sound silently dropped on mobile browsers where the AudioContext starts
+  suspended. Both methods now match the established pattern used by every other multi-oscillator
+  method (`playRiposte`, `playShieldBlock`, `playBossKill`, etc.).
+
+**Under the hood**
+- `AudioManager.ts` — `playKill()` and `playGameOver()` each gain:
+  `if (!this.enabled) return;` + `this._ensureRunning();`
+- `qa-audio-wiring.mjs` — 11/11 PASS (no new assertions needed; existing coverage verifies the
+  guard pattern); live smoke PASS.
+
+**Commit** `63effc5`
+**Live:** https://roguelite-game-blush.vercel.app
+
+---
+
 ## 2026-08-19 — feel(audio): playBossWave() ominous warning on boss wave start · qa-audio-wiring 11/11 PASS ✓
 
 **Player-visible**
