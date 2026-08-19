@@ -4,7 +4,8 @@
  * (crit, lightning, explosion, freeze, poison, shield block, heal) are now:
  *   (a) callable without throwing, and
  *   (b) throttled correctly (rapid successive calls don't double-play within the cooldown).
- * Also checks playExecute() (execute-kill audio) and playSecondWind() (near-death rescue) added Aug 2026.
+ * Also checks playExecute() (execute-kill audio), playSecondWind() (near-death rescue), and
+ * playWavePhase() (mid-wave sub-phase escalation stinger) added Aug 2026.
  *
  * Tests:
  *   methodsExist         — all 9 new methods are functions on window.__game.audio
@@ -68,9 +69,10 @@ const results = await page.evaluate(() => {
   const audio = g.audio;
   const out = {};
 
-  // methodsExist — all 10 wired methods (7 from Aug-18 + playExecute + playDoom + playSecondWind Aug-2026) are functions
+  // methodsExist — all 11 wired methods (7 from Aug-18 + playExecute + playDoom + playSecondWind + playWavePhase Aug-2026) are functions
   const methods = ['playCrit', 'playLightning', 'playExplosion', 'playFreeze',
-                   'playPoison', 'playShieldBlock', 'playHeal', 'playExecute', 'playDoom', 'playSecondWind'];
+                   'playPoison', 'playShieldBlock', 'playHeal', 'playExecute', 'playDoom', 'playSecondWind',
+                   'playWavePhase'];
   out.methodsExist = methods.every(m => typeof audio[m] === 'function');
 
   // noThrowOnCall — each method fires without throwing

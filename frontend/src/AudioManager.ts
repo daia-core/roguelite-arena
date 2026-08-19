@@ -150,6 +150,40 @@ export class AudioManager {
     });
   }
 
+  // Mid-wave phase escalation stinger — fires when a new enemy sub-phase begins
+  // (e.g. "WORMS!", "eggs erupts", "Reinforcements flank you!"). Short two-layer
+  // downward sweep so the player knows the combat pattern just shifted, without
+  // interrupting the flow. Not throttled — phase transitions are naturally rare.
+  playWavePhase(): void {
+    if (!this.enabled) return;
+    this._ensureRunning();
+    const t = this.ctx.currentTime;
+    // Layer 1: sharp square sweep — reads as "alert / incoming"
+    const osc1 = this.ctx.createOscillator();
+    const g1   = this.ctx.createGain();
+    osc1.connect(g1);
+    g1.connect(this.masterGain);
+    osc1.type = 'square';
+    osc1.frequency.setValueAtTime(480, t);
+    osc1.frequency.exponentialRampToValueAtTime(180, t + 0.12);
+    g1.gain.setValueAtTime(0.20, t);
+    g1.gain.exponentialRampToValueAtTime(0.01, t + 0.12);
+    osc1.start(t);
+    osc1.stop(t + 0.12);
+    // Layer 2: heavier sawtooth body delayed 50ms — adds ominous weight
+    const osc2 = this.ctx.createOscillator();
+    const g2   = this.ctx.createGain();
+    osc2.connect(g2);
+    g2.connect(this.masterGain);
+    osc2.type = 'sawtooth';
+    osc2.frequency.setValueAtTime(220, t + 0.05);
+    osc2.frequency.exponentialRampToValueAtTime(80, t + 0.23);
+    g2.gain.setValueAtTime(0.15, t + 0.05);
+    g2.gain.exponentialRampToValueAtTime(0.01, t + 0.23);
+    osc2.start(t + 0.05);
+    osc2.stop(t + 0.23);
+  }
+
   playPurchase(): void {
     this.playTone(800, 0.15, 'sine', 0.2);
   }

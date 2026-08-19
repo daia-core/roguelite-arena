@@ -1846,6 +1846,7 @@ export class Game {
     if (this.waveManager.phaseJustChanged) {
       this.phaseBannerText = this.waveManager.phaseText;
       this.phaseBannerTimer = 2.4;
+      this.audio.playWavePhase(); // GAME FEEL: ominous stinger when sub-phase escalates
     }
   }
 
