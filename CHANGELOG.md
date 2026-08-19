@@ -2,6 +2,60 @@
 
 ---
 
+## 2026-08-19 — feel(audio): playBossWave() ominous warning on boss wave start · qa-audio-wiring 11/11 PASS ✓
+
+**Player-visible**
+- **Boss waves now open with a distinct ominous stinger.** Waves 10, 20, 30 … already showed a
+  red "BOSS WAVE — BOSS APPROACHING" banner for 3 seconds, but the announcement was completely
+  silent. Now a three-layer warning fires the moment a boss wave starts — before the boss has
+  even spawned — signalling danger through audio alone: deep bass rumble (sawtooth 35→18 Hz,
+  800 ms), descending tension stab (triangle 600→200 Hz, 400 ms), high dissonant shimmer
+  (sine 1800→900 Hz, 600 ms). Deliberately opposite of `playBossKill()` (triumphant) — reads
+  as dread and warning, not victory.
+
+**Under the hood**
+- `AudioManager.ts` — new `playBossWave()` (three-layer; no throttle — gated by wave scarcity).
+- `Game.ts` — `if (this.waveManager.isBossWave) this.audio.playBossWave()` at wave start.
+- `qa-audio-wiring.mjs` — `methodsExist` extended to 13 methods. 11/11 PASS.
+
+**Live:** commit `DEPLOYED` · https://roguelite-game-blush.vercel.app
+
+---
+
+## 2026-08-19 — feel(audio): playBossKill() triumphant fanfare on boss death · qa-audio-wiring 11/11 PASS ✓
+
+**Player-visible**
+- **Boss kills now have a triumphant four-layer fanfare** (previously played generic `playKill()`).
+  Deep sawtooth boom (55→18 Hz, 500 ms) + ascending horn trio (triangle 440→660→880 Hz) + bright
+  crown shimmer (sine 2200→440 Hz, 600 ms). Miniboss/fodder kills unchanged.
+
+**Under the hood**
+- `AudioManager.ts` — new `playBossKill()`. `Game.ts` — boss kills branch to `playBossKill()`.
+- `qa-audio-wiring.mjs` — 12 methods checked. 11/11 PASS. Commit `6a275ac`.
+
+---
+
+## 2026-08-19 — feel(audio): playWavePhase() stinger on mid-wave phase escalation
+
+**Player-visible**
+- **Mid-wave sub-phase escalations now have an ominous audio stinger.** Low drone
+  (square 80→40 Hz) + mid stab (triangle 400→200 Hz) fires with each phase banner.
+
+**Under the hood** — `AudioManager.ts` new `playWavePhase()`. `Game.ts` wired at phase-banner path.
+`qa-audio-wiring.mjs` 11 methods. 11/11 PASS. Commit `1cf1d15`.
+
+---
+
+## 2026-08-19 — feel(audio): playSecondWind() on near-death rescue
+
+**Player-visible**
+- **Second Wind rescues now have a dramatic three-layer sound**: boom → surge → relief chime.
+
+**Under the hood** — `AudioManager.ts` new `playSecondWind()`. `Game.ts` wired at `spawnSecondWindBurst()`.
+11/11 PASS. Commit `0044618`.
+
+---
+
 ## 2026-08-19 — feel(audio): playDoom() on doom detonation · qa-audio-wiring 11/11 PASS ✓
 
 **Player-visible**

@@ -555,6 +555,54 @@ export class AudioManager {
     osc4.stop(t + 0.6);
   }
 
+  // Boss wave entrance — ominous warning, the opposite of playBossKill (triumphant).
+  // Fires at wave start when isBossWave, before the boss spawns. Reads as
+  // "something terrible is coming." No throttle — naturally gated by wave scarcity.
+  // Three layers: deep bass rumble + descending tension stab + high dissonant shimmer.
+  playBossWave(): void {
+    if (!this.enabled) return;
+    this._ensureRunning();
+    const t = this.ctx.currentTime;
+    // Layer 1: deep bass rumble — "the ground shakes" (dread / weight)
+    const osc1 = this.ctx.createOscillator();
+    const g1 = this.ctx.createGain();
+    osc1.connect(g1);
+    g1.connect(this.masterGain);
+    osc1.type = 'sawtooth';
+    osc1.frequency.setValueAtTime(35, t);
+    osc1.frequency.exponentialRampToValueAtTime(18, t + 0.8);
+    g1.gain.setValueAtTime(0.35, t);
+    g1.gain.exponentialRampToValueAtTime(0.01, t + 0.8);
+    osc1.start(t);
+    osc1.stop(t + 0.8);
+    // Layer 2: descending tension stab — triangle 600→200 Hz (ominous signal)
+    const osc2 = this.ctx.createOscillator();
+    const g2 = this.ctx.createGain();
+    osc2.connect(g2);
+    g2.connect(this.masterGain);
+    osc2.type = 'triangle';
+    osc2.frequency.setValueAtTime(600, t + 0.05);
+    osc2.frequency.exponentialRampToValueAtTime(200, t + 0.45);
+    g2.gain.setValueAtTime(0.0, t);
+    g2.gain.linearRampToValueAtTime(0.28, t + 0.08);
+    g2.gain.exponentialRampToValueAtTime(0.01, t + 0.45);
+    osc2.start(t + 0.05);
+    osc2.stop(t + 0.45);
+    // Layer 3: high dissonant shimmer — sine 1800→900 Hz (alarm / warning)
+    const osc3 = this.ctx.createOscillator();
+    const g3 = this.ctx.createGain();
+    osc3.connect(g3);
+    g3.connect(this.masterGain);
+    osc3.type = 'sine';
+    osc3.frequency.setValueAtTime(1800, t + 0.1);
+    osc3.frequency.exponentialRampToValueAtTime(900, t + 0.7);
+    g3.gain.setValueAtTime(0.0, t);
+    g3.gain.linearRampToValueAtTime(0.12, t + 0.15);
+    g3.gain.exponentialRampToValueAtTime(0.01, t + 0.7);
+    osc3.start(t + 0.1);
+    osc3.stop(t + 0.7);
+  }
+
   // ── Background music API ─────────────────────────────────────────────────
 
   /** Start the atmospheric combat loop. No-op if already playing. */

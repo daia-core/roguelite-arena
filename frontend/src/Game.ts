@@ -3620,6 +3620,7 @@ export class Game {
     this.phaseBannerText = this.waveManager.phaseText;
     this.phaseBannerTimer = 2.6;
     this.audio.startMusic(); // idempotent: no-op if music is already playing
+    if (this.waveManager.isBossWave) this.audio.playBossWave(); // GAME FEEL: ominous warning stinger when boss wave starts
     this.state = 'playing';
 
     // Opening Salvo: fire a massive nova + freeze all hit enemies at wave start.

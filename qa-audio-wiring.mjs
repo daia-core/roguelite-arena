@@ -8,7 +8,7 @@
  * playWavePhase() (mid-wave sub-phase escalation stinger) added Aug 2026.
  *
  * Tests:
- *   methodsExist         — all 9 new methods are functions on window.__game.audio
+ *   methodsExist         — all 13 new methods are functions on window.__game.audio
  *   noThrowOnCall        — each method can be called without throwing an error
  *   throttleMapExists    — audio._lastPlayed is a Map (throttle infrastructure is present)
  *   critThrottles        — two immediate playCrit() calls ≤ 10ms apart: only 1 fires
@@ -69,10 +69,10 @@ const results = await page.evaluate(() => {
   const audio = g.audio;
   const out = {};
 
-  // methodsExist — all 12 wired methods (7 from Aug-18 + playExecute + playDoom + playSecondWind + playWavePhase + playBossKill Aug-2026) are functions
+  // methodsExist — all 13 wired methods (7 Aug-18 + playExecute + playDoom + playSecondWind + playWavePhase + playBossKill + playBossWave Aug-2026) are functions
   const methods = ['playCrit', 'playLightning', 'playExplosion', 'playFreeze',
                    'playPoison', 'playShieldBlock', 'playHeal', 'playExecute', 'playDoom', 'playSecondWind',
-                   'playWavePhase', 'playBossKill'];
+                   'playWavePhase', 'playBossKill', 'playBossWave'];
   out.methodsExist = methods.every(m => typeof audio[m] === 'function');
 
   // noThrowOnCall — each method fires without throwing
