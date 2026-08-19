@@ -501,6 +501,60 @@ export class AudioManager {
     osc3.stop(t + 0.5);
   }
 
+  // Boss kill triumphant fanfare — fires at most once per boss wave (naturally gated by
+  // boss scarcity), so no throttle key needed. Four layers: deep boom + ascending horn trio
+  // + crown shimmer, total ~700ms. Matches the visual weight: freeze-frame + white flash
+  // + "👑 BOSS SLAIN!" damage label.
+  playBossKill(): void {
+    if (!this.enabled) return;
+    this._ensureRunning();
+    const t = this.ctx.currentTime;
+    // Layer 1: deep resonant boom — "the boss has fallen" (authority / finality)
+    const osc1 = this.ctx.createOscillator();
+    const g1 = this.ctx.createGain();
+    osc1.connect(g1);
+    g1.connect(this.masterGain);
+    osc1.type = 'sawtooth';
+    osc1.frequency.setValueAtTime(55, t);
+    osc1.frequency.exponentialRampToValueAtTime(18, t + 0.5);
+    g1.gain.setValueAtTime(0.45, t);
+    g1.gain.exponentialRampToValueAtTime(0.01, t + 0.5);
+    osc1.start(t);
+    osc1.stop(t + 0.5);
+    // Layer 2: ascending horn trio — three triangle beats reading as a triumphant fanfare
+    const hornNotes = [
+      { freq: 440, delay: 0.0,  dur: 0.2  },
+      { freq: 660, delay: 0.18, dur: 0.22 },
+      { freq: 880, delay: 0.36, dur: 0.35 }, // crown note — highest, sustained
+    ];
+    for (const { freq, delay, dur } of hornNotes) {
+      const osc = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      osc.connect(g);
+      g.connect(this.masterGain);
+      osc.type = 'triangle';
+      osc.frequency.value = freq;
+      g.gain.setValueAtTime(0.0, t + delay);
+      g.gain.linearRampToValueAtTime(0.22, t + delay + 0.05);
+      g.gain.exponentialRampToValueAtTime(0.01, t + delay + dur);
+      osc.start(t + delay);
+      osc.stop(t + delay + dur);
+    }
+    // Layer 3: bright crown shimmer — high-to-mid sine sweep (reads as "the gold burst")
+    const osc4 = this.ctx.createOscillator();
+    const g4 = this.ctx.createGain();
+    osc4.connect(g4);
+    g4.connect(this.masterGain);
+    osc4.type = 'sine';
+    osc4.frequency.setValueAtTime(2200, t + 0.05);
+    osc4.frequency.exponentialRampToValueAtTime(440, t + 0.6);
+    g4.gain.setValueAtTime(0, t);
+    g4.gain.linearRampToValueAtTime(0.15, t + 0.09);
+    g4.gain.exponentialRampToValueAtTime(0.01, t + 0.6);
+    osc4.start(t + 0.05);
+    osc4.stop(t + 0.6);
+  }
+
   // ── Background music API ─────────────────────────────────────────────────
 
   /** Start the atmospheric combat loop. No-op if already playing. */

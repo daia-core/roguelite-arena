@@ -2734,7 +2734,11 @@ export class Game {
       );
     }
 
-    this.audio.playKill();
+    if (enemy.typeData.isBoss) {
+      this.audio.playBossKill(); // GAME FEEL: triumphant fanfare on boss kill (boom + horn trio + crown shimmer)
+    } else {
+      this.audio.playKill();
+    }
     // PERFORMANCE: Use pooled particles for kill effect (quality-adjusted)
     const killParticleCount = this.getParticleCount(20);
     for (let i = 0; i < killParticleCount; i++) {
