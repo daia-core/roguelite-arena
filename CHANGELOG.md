@@ -2,6 +2,29 @@
 
 ---
 
+## 2026-08-19 — feel(audio): playDoom() on doom detonation · qa-audio-wiring 11/11 PASS ✓
+
+**Player-visible**
+- **Doom detonations now have a three-layer audio signature.** When the 2.5-second Doom fuse
+  expires and the stored damage detonates, the game previously showed a purple explosion, screen
+  flash, and particles — but played no sound. Now a three-layer boom fires on every detonation:
+  a deep resonant sawtooth boom (60→20 Hz, 400 ms), a sharp mid crack (300→80 Hz, square,
+  120 ms), and a high arcane shimmer (900→200 Hz, sine, 180 ms). Throttled at 400 ms so
+  fast doom chain detonations stay legible rather than piling up.
+
+**Under the hood**
+- `AudioManager.ts` — new `playDoom()` method: three-oscillator design, throttled 400 ms via
+  the standard `_throttled()` pattern.
+- `Game.ts` — `this.audio.playDoom()` wired at both doom-detonation paths: the legacy
+  `enemy.doomTimer`/`enemy.doomStored` path (line ~1116) AND the `fxResult.doomDetonation`
+  path from the StatusEffectEngine (line ~1154). Both paths now play the sound.
+- `qa-audio-wiring.mjs` — updated: `methodsExist` now checks all 9 methods (incl. `playDoom`);
+  new `doomThrottles` assertion added. 11/11 PASS.
+
+**Live:** commit `e69f8a6` · https://roguelite-game-blush.vercel.app
+
+---
+
 ## 2026-08-18 — feat(gameover): total damage dealt stat
 
 **Player-visible**
