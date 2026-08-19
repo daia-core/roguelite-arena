@@ -145,10 +145,24 @@ export class AudioManager {
   }
 
   playWaveComplete(): void {
-    // Victory jingle
-    const notes = [523, 659, 784, 1047];
+    if (!this.enabled) return;
+    this._ensureRunning();
+    // Victory jingle: C5→E5→G5→C6 major arpeggio, Web Audio scheduled (no setTimeout drift;
+    // AudioContext timing stays accurate on iOS Safari where setTimeout can lag).
+    const t = this.ctx.currentTime;
+    const notes = [523, 659, 784, 1047]; // C5, E5, G5, C6
     notes.forEach((freq, i) => {
-      setTimeout(() => this.playTone(freq, 0.25, 'sine', 0.2), i * 150);
+      const osc  = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      const noteStart = t + i * 0.15;
+      gain.gain.setValueAtTime(0.2, noteStart);
+      gain.gain.exponentialRampToValueAtTime(0.01, noteStart + 0.25);
+      osc.start(noteStart);
+      osc.stop(noteStart + 0.25);
     });
   }
 

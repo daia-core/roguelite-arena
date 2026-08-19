@@ -2520,6 +2520,7 @@ export class Game {
    *  just a confetti pop to make the clear feel satisfying before the banner fades. */
   private spawnWaveClearBurst(): void {
     if (!this.player) return;
+    this.audio.playWaveComplete(); // GAME FEEL: victory jingle fires with the banner (not delayed to shop-open)
     const colors = ['#4ade80', '#22c55e', '#a3e635', '#fbbf24', '#86efac', '#ffffff'];
     const count = this.getParticleCount(22);
     for (let i = 0; i < count; i++) {
@@ -3169,7 +3170,7 @@ export class Game {
     // Let ShopScene reset its UI state (selectedShopItem, combos/stats overlays, etc.).
     this.shopScene?.enter?.('shop');
     this.state = 'shop';
-    this.audio.playWaveComplete();
+    // playWaveComplete() now fires in spawnWaveClearBurst() at the banner moment — not here.
 
     // GAME FEEL: Wave complete effects
     this.screenEffects.flash('#00ff00', 0.2); // Green flash for wave complete
