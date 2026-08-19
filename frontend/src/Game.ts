@@ -2542,6 +2542,7 @@ export class Game {
    *  never double-fires even if two damage sources land the same frame. */
   private spawnSecondWindBurst(): void {
     if (!this.player) return;
+    this.audio.playSecondWind(); // GAME FEEL: low boom → rising surge → relief chime on near-death rescue
     // Dramatic gold flash — brighter than level-up (this is literally life-or-death)
     this.screenEffects.flash('#ffd700', 0.45);
     // Floating "SECOND WIND" label above the player

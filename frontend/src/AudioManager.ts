@@ -421,6 +421,52 @@ export class AudioManager {
     }, 400);
   }
 
+  // Second Wind near-death rescue — fires at most once per wave (naturally gated by the
+  // arm/disarm pattern in Game.ts), so no throttle key needed. Three layers to match the
+  // visual drama: low impact → rising surge → resolution chime ("you barely made it").
+  playSecondWind(): void {
+    if (!this.enabled) return;
+    this._ensureRunning();
+    const t = this.ctx.currentTime;
+    // Layer 1: low impact boom (reads as "moment of near-death" — the hit that nearly killed)
+    const osc1 = this.ctx.createOscillator();
+    const g1 = this.ctx.createGain();
+    osc1.connect(g1);
+    g1.connect(this.masterGain);
+    osc1.type = 'sawtooth';
+    osc1.frequency.setValueAtTime(80, t);
+    osc1.frequency.exponentialRampToValueAtTime(35, t + 0.3);
+    g1.gain.setValueAtTime(0.4, t);
+    g1.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
+    osc1.start(t);
+    osc1.stop(t + 0.3);
+    // Layer 2: rising energy surge (reads as "rescue / life force surging back")
+    const osc2 = this.ctx.createOscillator();
+    const g2 = this.ctx.createGain();
+    osc2.connect(g2);
+    g2.connect(this.masterGain);
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(320, t);
+    osc2.frequency.exponentialRampToValueAtTime(1800, t + 0.38);
+    g2.gain.setValueAtTime(0.08, t);
+    g2.gain.linearRampToValueAtTime(0.28, t + 0.2);
+    g2.gain.exponentialRampToValueAtTime(0.01, t + 0.38);
+    osc2.start(t);
+    osc2.stop(t + 0.38);
+    // Layer 3: bright relief chime delayed 220ms (reads as "still alive — you made it")
+    const osc3 = this.ctx.createOscillator();
+    const g3 = this.ctx.createGain();
+    osc3.connect(g3);
+    g3.connect(this.masterGain);
+    osc3.type = 'sine';
+    osc3.frequency.value = 1320;
+    g3.gain.setValueAtTime(0, t + 0.22);
+    g3.gain.linearRampToValueAtTime(0.22, t + 0.25);
+    g3.gain.exponentialRampToValueAtTime(0.01, t + 0.5);
+    osc3.start(t + 0.22);
+    osc3.stop(t + 0.5);
+  }
+
   // ── Background music API ─────────────────────────────────────────────────
 
   /** Start the atmospheric combat loop. No-op if already playing. */
