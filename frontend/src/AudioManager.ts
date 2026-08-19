@@ -377,6 +377,50 @@ export class AudioManager {
     setTimeout(() => this.playTone(1047, 0.1, 'sine', 0.15), 60);
   }
 
+  // Doom detonation — throttled 400ms (doom chain detonations can fire in quick succession)
+  playDoom(): void {
+    this._throttled('doom', () => {
+      this._ensureRunning();
+      const t = this.ctx.currentTime;
+      // Layer 1: deep resonant boom — reads as "stored energy releasing"
+      const osc1 = this.ctx.createOscillator();
+      const g1 = this.ctx.createGain();
+      osc1.connect(g1);
+      g1.connect(this.masterGain);
+      osc1.type = 'sawtooth';
+      osc1.frequency.setValueAtTime(60, t);
+      osc1.frequency.exponentialRampToValueAtTime(20, t + 0.4);
+      g1.gain.setValueAtTime(0.4, t);
+      g1.gain.exponentialRampToValueAtTime(0.01, t + 0.4);
+      osc1.start(t);
+      osc1.stop(t + 0.4);
+      // Layer 2: sharp mid crack — reads as "burst" / "snap"
+      const osc2 = this.ctx.createOscillator();
+      const g2 = this.ctx.createGain();
+      osc2.connect(g2);
+      g2.connect(this.masterGain);
+      osc2.type = 'square';
+      osc2.frequency.setValueAtTime(300, t);
+      osc2.frequency.exponentialRampToValueAtTime(80, t + 0.12);
+      g2.gain.setValueAtTime(0.25, t);
+      g2.gain.exponentialRampToValueAtTime(0.01, t + 0.12);
+      osc2.start(t);
+      osc2.stop(t + 0.12);
+      // Layer 3: high-end shimmer — reads as "arcane energy"
+      const osc3 = this.ctx.createOscillator();
+      const g3 = this.ctx.createGain();
+      osc3.connect(g3);
+      g3.connect(this.masterGain);
+      osc3.type = 'sine';
+      osc3.frequency.setValueAtTime(900, t);
+      osc3.frequency.exponentialRampToValueAtTime(200, t + 0.18);
+      g3.gain.setValueAtTime(0.15, t);
+      g3.gain.exponentialRampToValueAtTime(0.01, t + 0.18);
+      osc3.start(t);
+      osc3.stop(t + 0.18);
+    }, 400);
+  }
+
   // ── Background music API ─────────────────────────────────────────────────
 
   /** Start the atmospheric combat loop. No-op if already playing. */

@@ -68,9 +68,9 @@ const results = await page.evaluate(() => {
   const audio = g.audio;
   const out = {};
 
-  // methodsExist — all 8 wired methods (7 from Aug-18 + playExecute Aug-2026) are functions
+  // methodsExist — all 9 wired methods (7 from Aug-18 + playExecute + playDoom Aug-2026) are functions
   const methods = ['playCrit', 'playLightning', 'playExplosion', 'playFreeze',
-                   'playPoison', 'playShieldBlock', 'playHeal', 'playExecute'];
+                   'playPoison', 'playShieldBlock', 'playHeal', 'playExecute', 'playDoom'];
   out.methodsExist = methods.every(m => typeof audio[m] === 'function');
 
   // noThrowOnCall — each method fires without throwing
@@ -115,6 +115,7 @@ const results = await page.evaluate(() => {
   out.freezeThrottles    = countFires('playFreeze')     === 1;
   out.poisonThrottles    = countFires('playPoison')     === 1;
   out.executeThrottles   = countFires('playExecute')    === 1;
+  out.doomThrottles      = countFires('playDoom')       === 1;
 
   // throttleResets — after 200ms the crit throttle should allow another fire
   // (actual test: clear _lastPlayed manually and verify a fresh call fires)
@@ -138,7 +139,7 @@ server.close();
 const checks = [
   'methodsExist', 'noThrowOnCall', 'throttleMapExists',
   'critThrottles', 'lightningThrottles', 'explosionThrottles',
-  'freezeThrottles', 'poisonThrottles', 'executeThrottles', 'throttleResets',
+  'freezeThrottles', 'poisonThrottles', 'executeThrottles', 'doomThrottles', 'throttleResets',
 ];
 
 let allPass = true;

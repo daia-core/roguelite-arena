@@ -1114,6 +1114,7 @@ export class Game {
           const payload = enemy.doomStored * enemy.woundMult * enemy.statusFX.getIncomingDamageMult();
           enemy.doomStored = 0;
           this.renderer.addImpactFlash(enemy.x, enemy.y);
+          this.audio.playDoom(); // GAME FEEL: deep boom + arcane shimmer on doom detonation
           // GAME FEEL: Doom detonation — purple explosion burst + screen flash
           this.screenEffects.flash('#9040d0', 0.22);
           const _doomPCount = this.getParticleCount(18);
@@ -1151,6 +1152,7 @@ export class Game {
         if (fxResult.doomDetonation && !enemy.dead) {
           const { payload } = fxResult.doomDetonation;
           this.renderer.addImpactFlash(enemy.x, enemy.y);
+          this.audio.playDoom(); // GAME FEEL: deep boom + arcane shimmer on doom detonation
           // GAME FEEL: Doom detonation burst
           this.screenEffects.flash('#9040d0', 0.22);
           const _doomPCount2 = this.getParticleCount(18);
