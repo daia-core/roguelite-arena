@@ -70,6 +70,8 @@ export class AudioManager {
   }
 
   playKill(): void {
+    if (!this.enabled) return;
+    this._ensureRunning();
     // Quick ascending tone
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
@@ -189,6 +191,8 @@ export class AudioManager {
   }
 
   playGameOver(): void {
+    if (!this.enabled) return;
+    this._ensureRunning();
     // Descending sad tone
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
