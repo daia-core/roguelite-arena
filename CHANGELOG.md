@@ -2,6 +2,29 @@
 
 ---
 
+## 2026-08-20 — fix(audio): convert setTimeout note scheduling to Web Audio API in 4 methods · `8a4185a` · qa 11/11 PASS ✓
+
+**Player-visible**
+- **Level-up, transformation, item-pickup, and heal arpeggios now play with correct timing on
+  iOS Safari / Chrome mobile.** `playLevelUp()`, `playTransformation()`, `playItemPickup()`,
+  and `playHeal()` all used `setTimeout` to sequence multi-note arpeggio sounds. On iOS Safari,
+  `setTimeout` drifts when the tab is backgrounded or under CPU load, causing the melody to
+  sound wrong (notes too close together, or out of order). Converted to Web Audio API
+  `ctx.currentTime`-based scheduling — the same fix applied to `playWaveComplete()` in `4f9d07e`.
+
+**Under the hood**
+- `AudioManager.ts` — four methods converted from `setTimeout(() => playTone(...), ms)` to
+  pre-scheduled oscillator chains using `ctx.currentTime + offset`. Each now also has
+  `_ensureRunning()` guard (was missing on `playTransformation()` and `playItemPickup()`).
+- `playHeal()` preserves its 300ms throttle wrapper — only the internal note scheduling changed.
+- No change to audible pitch, duration, or volume; only timing delivery mechanism changed.
+- `qa-audio-wiring.mjs` — 11/11 PASS unchanged.
+
+**Commit** `8a4185a`
+**Live:** https://roguelite-game-blush.vercel.app
+
+---
+
 ## 2026-08-19 — fix(audio): wave-clear victory jingle now fires at banner moment · `4f9d07e` · qa 11/11 PASS ✓
 
 **Player-visible**
