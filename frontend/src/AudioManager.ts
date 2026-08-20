@@ -91,10 +91,24 @@ export class AudioManager {
   }
 
   playLevelUp(): void {
-    // Ascending arpeggio
-    const notes = [440, 554, 659, 880];
+    if (!this.enabled) return;
+    this._ensureRunning();
+    // Ascending arpeggio — Web Audio scheduled so timing stays accurate on iOS Safari
+    // (setTimeout drifts under heavy load or when the tab is backgrounded).
+    const t = this.ctx.currentTime;
+    const notes = [440, 554, 659, 880]; // A4, C#5, E5, A5 — A major
     notes.forEach((freq, i) => {
-      setTimeout(() => this.playTone(freq, 0.2, 'sine', 0.2), i * 100);
+      const osc  = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      const noteStart = t + i * 0.1;
+      gain.gain.setValueAtTime(0.2, noteStart);
+      gain.gain.exponentialRampToValueAtTime(0.01, noteStart + 0.2);
+      osc.start(noteStart);
+      osc.stop(noteStart + 0.2);
     });
   }
 
@@ -321,10 +335,22 @@ export class AudioManager {
   // NEW: Heal sound — throttled 300ms (orbs can spawn in groups on enemy death)
   playHeal(): void {
     this._throttled('heal', () => {
-      // Ascending shimmer — playTone already calls _ensureRunning()
-      const notes = [523, 659, 784];
+      this._ensureRunning();
+      // Ascending shimmer — Web Audio scheduled for accurate iOS timing
+      const t = this.ctx.currentTime;
+      const notes = [523, 659, 784]; // C5, E5, G5 — bright C major
       notes.forEach((freq, i) => {
-        setTimeout(() => this.playTone(freq, 0.15, 'sine', 0.15), i * 50);
+        const osc  = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        const noteStart = t + i * 0.05;
+        gain.gain.setValueAtTime(0.15, noteStart);
+        gain.gain.exponentialRampToValueAtTime(0.01, noteStart + 0.15);
+        osc.start(noteStart);
+        osc.stop(noteStart + 0.15);
       });
     }, 300);
   }
@@ -402,11 +428,22 @@ export class AudioManager {
   // NEW: Transformation unlock sound
   playTransformation(): void {
     if (!this.enabled) return;
-
-    // Epic ascending fanfare
-    const notes = [261, 329, 392, 523, 659];
+    this._ensureRunning();
+    // Epic ascending fanfare — Web Audio scheduled for accurate iOS timing
+    const t = this.ctx.currentTime;
+    const notes = [261, 329, 392, 523, 659]; // C4, E4, G4, C5, E5 — C major spread
     notes.forEach((freq, i) => {
-      setTimeout(() => this.playTone(freq, 0.3, 'sine', 0.25), i * 80);
+      const osc  = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      const noteStart = t + i * 0.08;
+      gain.gain.setValueAtTime(0.25, noteStart);
+      gain.gain.exponentialRampToValueAtTime(0.01, noteStart + 0.3);
+      osc.start(noteStart);
+      osc.stop(noteStart + 0.3);
     });
   }
 
@@ -424,9 +461,25 @@ export class AudioManager {
   // NEW: Item pickup sound
   playItemPickup(): void {
     if (!this.enabled) return;
-
-    this.playTone(880, 0.1, 'sine', 0.18);
-    setTimeout(() => this.playTone(1047, 0.1, 'sine', 0.15), 60);
+    this._ensureRunning();
+    // Two-note pickup jingle — Web Audio scheduled for accurate iOS timing
+    const t = this.ctx.currentTime;
+    const notes = [
+      { freq: 880,  vol: 0.18, delay: 0 },
+      { freq: 1047, vol: 0.15, delay: 0.06 },
+    ];
+    for (const { freq, vol, delay } of notes) {
+      const osc  = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(vol, t + delay);
+      gain.gain.exponentialRampToValueAtTime(0.01, t + delay + 0.1);
+      osc.start(t + delay);
+      osc.stop(t + delay + 0.1);
+    }
   }
 
   // Doom detonation — throttled 400ms (doom chain detonations can fire in quick succession)
