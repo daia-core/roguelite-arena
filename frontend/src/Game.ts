@@ -3498,7 +3498,6 @@ export class Game {
     if (newDuos.length > 0) {
       this.audio.playDuoUnlock();
       for (const duo of newDuos) {
-        console.log(`🎉 DUO UNLOCKED: ${duo.name} - ${duo.description}`);
         this.screenEffects.flash(duo.glowColor || '#ff00ff', 0.3);
       }
     }
@@ -3511,7 +3510,6 @@ export class Game {
         if (xf) {
           this.screenEffects.flash(xf.glowColor, 0.5); // stronger than a duo unlock
           this.shopScene?.showToast(`${xf.icon} ${xf.name}!`);
-          console.log(`🌟 TRANSFORMATION: ${xf.name} — ${xf.description}`);
         }
       }
     }
