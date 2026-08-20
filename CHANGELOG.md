@@ -2,6 +2,31 @@
 
 ---
 
+## 2026-08-20 — fix(audio): burn + bleed now play sounds on fresh DoT application · `1861c25` · qa 13/13 PASS ✓
+
+**Player-visible**
+- **Ignite (Burn) now plays a fire-sizzle "fwip" when it first lands on an enemy.**
+  Previously, burn was the only common proc'd status effect with no audio feedback —
+  freeze, poison, lightning, and explosion all play distinctive sounds, but burn was silent.
+  A two-layer sound (sawtooth crackle + high-square tail) fires on the first proc per
+  enemy; refresh applications are silent to avoid noise spam on AoE ignite builds.
+- **Bleed now plays a sharp metallic-slice "snik" on fresh application.** Same pattern:
+  a two-layer percussive cue (triangle ping + sawtooth scrape) on first application only.
+  Bleed is throttled 400 ms as a second defence for dagger builds with 100% proc rate.
+
+**Under the hood**
+- `AudioManager.ts` — `playBurn()` (throttled 350 ms) and `playBleed()` (throttled 400 ms),
+  both two-layer oscillator sounds following the established throttle pattern.
+- `Game.ts` — wired at the fresh-apply guards in `applyOnHitEffects`:
+  `if (enemy.burnTimer <= 0) this.audio.playBurn()` and
+  `if (enemy.bleedTimer <= 0) this.audio.playBleed()` — same guard pattern as poison.
+- `qa-audio-wiring.mjs` — extended from 11 to 13 checks: `burnThrottles` + `bleedThrottles`.
+
+**Commit** `1861c25`
+**Live:** https://roguelite-game-blush.vercel.app
+
+---
+
 ## 2026-08-20 — fix(audio): convert setTimeout note scheduling to Web Audio API in 4 methods · `8a4185a` · qa 11/11 PASS ✓
 
 **Player-visible**
