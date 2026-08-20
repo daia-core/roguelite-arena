@@ -3302,6 +3302,7 @@ export class Game {
 
     // Burn (Ignite): short, fast fire DoT.
     if (this.playerStats.rollProc(this.playerStats.getBurnChance())) {
+      if (enemy.burnTimer <= 0) this.audio.playBurn(); // GAME FEEL: fire-sizzle "fwip" on fresh ignite
       enemy.burnTimer = Math.max(enemy.burnTimer, 2.0);
       if (this.playerStats.hasBurnSpread()) enemy.burnSpreads = true;
       enemy.daggerDot = fromDagger;
@@ -3309,6 +3310,7 @@ export class Game {
 
     // Bleed: DoT that scales with the enemy's movement (punishes rushers).
     if (this.playerStats.rollProc(this.playerStats.getBleedChance())) {
+      if (enemy.bleedTimer <= 0) this.audio.playBleed(); // GAME FEEL: sharp metallic-slice on fresh bleed
       enemy.bleedTimer = Math.max(enemy.bleedTimer, 4.0);
       enemy.daggerDot = fromDagger;
     }

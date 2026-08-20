@@ -674,6 +674,76 @@ export class AudioManager {
     osc3.stop(t + 0.7);
   }
 
+  // NEW: Burn (Ignite) sound — throttled 350ms; fires on FRESH application only
+  // (Game.ts guards with `if (enemy.burnTimer <= 0)`), throttle is second defence
+  // for AoE builds that ignite many enemies per frame. A sharp "whoosh-sizzle"
+  // reads as fire without competing with the explosion or lightning sounds.
+  playBurn(): void {
+    this._throttled('burn', () => {
+      this._ensureRunning();
+      const t = this.ctx.currentTime;
+      // Layer 1: mid-frequency crackle — fire ignition "fwip"
+      const osc1 = this.ctx.createOscillator();
+      const g1 = this.ctx.createGain();
+      osc1.connect(g1);
+      g1.connect(this.masterGain);
+      osc1.type = 'sawtooth';
+      osc1.frequency.setValueAtTime(500, t);
+      osc1.frequency.exponentialRampToValueAtTime(200, t + 0.12);
+      g1.gain.setValueAtTime(0.18, t);
+      g1.gain.exponentialRampToValueAtTime(0.01, t + 0.12);
+      osc1.start(t);
+      osc1.stop(t + 0.12);
+      // Layer 2: high-frequency sizzle — the "burning" tail
+      const osc2 = this.ctx.createOscillator();
+      const g2 = this.ctx.createGain();
+      osc2.connect(g2);
+      g2.connect(this.masterGain);
+      osc2.type = 'square';
+      osc2.frequency.setValueAtTime(1800, t + 0.02);
+      osc2.frequency.exponentialRampToValueAtTime(900, t + 0.18);
+      g2.gain.setValueAtTime(0.0, t);
+      g2.gain.linearRampToValueAtTime(0.1, t + 0.04);
+      g2.gain.exponentialRampToValueAtTime(0.01, t + 0.18);
+      osc2.start(t + 0.02);
+      osc2.stop(t + 0.18);
+    }, 350);
+  }
+
+  // NEW: Bleed sound — throttled 400ms; fires on FRESH application only
+  // (Game.ts guards with `if (enemy.bleedTimer <= 0)`). A sharp metallic-slice
+  // "snik" — short and percussive so it reads as "cut" without muddying the mix.
+  playBleed(): void {
+    this._throttled('bleed', () => {
+      this._ensureRunning();
+      const t = this.ctx.currentTime;
+      // Layer 1: sharp high ping — the blade
+      const osc1 = this.ctx.createOscillator();
+      const g1 = this.ctx.createGain();
+      osc1.connect(g1);
+      g1.connect(this.masterGain);
+      osc1.type = 'triangle';
+      osc1.frequency.setValueAtTime(2400, t);
+      osc1.frequency.exponentialRampToValueAtTime(1000, t + 0.07);
+      g1.gain.setValueAtTime(0.22, t);
+      g1.gain.exponentialRampToValueAtTime(0.01, t + 0.07);
+      osc1.start(t);
+      osc1.stop(t + 0.07);
+      // Layer 2: brief low scrape — weight of the cut
+      const osc2 = this.ctx.createOscillator();
+      const g2 = this.ctx.createGain();
+      osc2.connect(g2);
+      g2.connect(this.masterGain);
+      osc2.type = 'sawtooth';
+      osc2.frequency.setValueAtTime(320, t);
+      osc2.frequency.exponentialRampToValueAtTime(120, t + 0.09);
+      g2.gain.setValueAtTime(0.14, t);
+      g2.gain.exponentialRampToValueAtTime(0.01, t + 0.09);
+      osc2.start(t);
+      osc2.stop(t + 0.09);
+    }, 400);
+  }
+
   // ── Background music API ─────────────────────────────────────────────────
 
   /** Start the atmospheric combat loop. No-op if already playing. */
