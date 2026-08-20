@@ -3711,6 +3711,7 @@ export class Game {
     this.refreshMaxHealth();
     this.syncArtifactStatic();
     if (this.player) this.player.secondWindArmed = this.artifacts.hasSecondWind();
+    this.audio.playArtifactPickup(); // GAME FEEL — magical shimmer for a rare find
   }
 
   /** Push constant (non-per-frame) artifact hooks onto the player. */

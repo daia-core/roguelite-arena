@@ -862,6 +862,56 @@ export class AudioManager {
     }
   }
 
+  // Artifact pickup — the "you found something rare" moment.
+  // Distinctly grander than playItemPickup() (2-note quick jingle) and
+  // different from playLevelUp() (4-note A-major fanfare).
+  // Two layers:
+  //   1. Ascending 5-note E-pentatonic shimmer (sine, overlapping, long tails)
+  //      — reads as "magical discovery"
+  //   2. Resonant bell root (E4 sine, long sustain)
+  //      — gives the sound weight and duration under the shimmer
+  // Total duration: ~0.9 s. No throttle needed (artifact screens are infrequent).
+  playArtifactPickup(): void {
+    if (!this.enabled) return;
+    this._ensureRunning();
+    const t = this.ctx.currentTime;
+
+    // Layer 1: Ascending E-pentatonic shimmer — 5 sine notes with gentle overlap
+    const shimmerNotes = [
+      { freq: 659.3,  delay: 0.00, vol: 0.14 }, // E5
+      { freq: 783.9,  delay: 0.12, vol: 0.13 }, // G5
+      { freq: 987.8,  delay: 0.24, vol: 0.12 }, // B5
+      { freq: 1174.7, delay: 0.36, vol: 0.11 }, // D6
+      { freq: 1318.5, delay: 0.48, vol: 0.13 }, // E6 — crown note, slightly louder
+    ];
+    for (const { freq, delay, vol } of shimmerNotes) {
+      const osc  = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, t + delay);
+      gain.gain.linearRampToValueAtTime(vol, t + delay + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + delay + 0.35);
+      osc.start(t + delay);
+      osc.stop(t + delay + 0.35);
+    }
+
+    // Layer 2: Resonant bell root — E4 sine, long sustain gives the sound weight
+    const bell     = this.ctx.createOscillator();
+    const bellGain = this.ctx.createGain();
+    bell.connect(bellGain);
+    bellGain.connect(this.masterGain);
+    bell.type = 'sine';
+    bell.frequency.value = 329.6; // E4
+    bellGain.gain.setValueAtTime(0, t);
+    bellGain.gain.linearRampToValueAtTime(0.10, t + 0.02);
+    bellGain.gain.exponentialRampToValueAtTime(0.001, t + 0.85);
+    bell.start(t);
+    bell.stop(t + 0.85);
+  }
+
   toggle(): void {
     this.enabled = !this.enabled;
     if (!this.enabled) this.stopMusic();
