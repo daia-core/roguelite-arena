@@ -2,6 +2,30 @@
 
 ---
 
+## 2026-08-20 — feel(audio): playArtifactPickup — magical shimmer for artifact selection · `5481d05` · qa-audio-wiring 13/13 PASS ✓
+
+**Player-visible**
+- **Artifact pickup now has a layered magical shimmer sound.** Selecting a permanent passive
+  from the reward screen (boss spoils, elite drops, treasure rooms, events) was the only major
+  game moment with no audio feedback — it was completely silent. Now plays a two-layer cue:
+  - **Layer 1: ascending E-pentatonic shimmer** — 5 sine notes (E5→G5→B5→D6→E6) with 120ms
+    spacing and 350ms tails, overlapping slightly. Reads as "magical discovery."
+  - **Layer 2: resonant bell root** — sustained E4 sine (329.6 Hz, 850ms decay) underneath,
+    giving the sound weight and duration.
+- Distinct from `playItemPickup()` (2-note quick jingle) and `playLevelUp()` (A-major fanfare);
+  longer and more shimmering, appropriate to an artifact's rarity and permanence.
+
+**Under the hood**
+- `AudioManager.ts` — new `playArtifactPickup()` method.
+- `Game.ts` — wired in `grantArtifact()` via `this.audio.playArtifactPickup()`. Fires on every
+  artifact grant: reward screen picks, event grants, curse grants, and auto-grants.
+- `qa-audio-wiring.mjs` — `playArtifactPickup` added (16 methods verified). 13/13 PASS.
+
+**Commit** `5481d05`
+**Live:** https://roguelite-game-blush.vercel.app
+
+---
+
 ## 2026-08-20 — fix(visual): shattered shard chip size + QA color spec · `0f3ed35` · qa PASS ✓
 
 **Under the hood**
