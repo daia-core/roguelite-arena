@@ -2,6 +2,20 @@
 
 ---
 
+## 2026-08-20 — fix(visual): shattered shard chip size + QA color spec · `0f3ed35` · qa PASS ✓
+
+**Under the hood**
+- Shattered status effect showed 0 px in `qa-status-visuals` despite effect being active.
+  Two bugs found and fixed:
+  1. QA pixel color filter was `#7a7070` (gray) — stale from day the effect was authored.
+     Actual rendered color is `#b0d8f8` (ice-blue) from `StatusEffectDefs.shattered.color`.
+  2. Shard chip was `4×3` world px → `2×1.5` canvas px at WORLD_SCALE=2; the fractional
+     height created 50%-coverage rows that were harder to detect. Changed to `4×4` world px
+     → guaranteed `2×2` canvas px, always a full pixel in both dimensions.
+- Shattered pixel count: 0 → 5 (expected 3–6 range). QA still PASS on state registration.
+
+---
+
 ## 2026-08-20 — fix(audio): burn + bleed now play sounds on fresh DoT application · `1861c25` · qa 13/13 PASS ✓
 
 **Player-visible**
