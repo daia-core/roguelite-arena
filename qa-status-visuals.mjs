@@ -226,7 +226,7 @@ if (newFxSetup.found) {
       const rr = img[i], gg = img[i+1], b = img[i+2], a = img[i+3];
       if (a < 20) continue;
       if (rr > 210 && gg > 210 && b > 210) stun++;                                                // #ffffff white sparks
-      if (rr > 95 && rr < 150 && gg > 85 && gg < 140 && b > 85 && b < 140 && gg < rr) shattered++;  // #7a7070 gray
+      if (rr > 150 && rr < 200 && gg > 195 && gg < 235 && b > 225 && b > gg && gg > rr) shattered++;  // #b0d8f8 ice-blue
       if (rr > 90 && gg < 85 && b < 65 && rr > gg + 30 && rr > b + 30) debilitated++;            // #cc3333 + blends
       if (rr > 95 && rr < 150 && gg > 65 && gg < 120 && b > 18 && b < 72 && rr > gg && gg > b && rr - b > 55) crippled++;  // #7a5c2a brown
     }

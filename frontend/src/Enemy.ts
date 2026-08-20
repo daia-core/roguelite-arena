@@ -2035,7 +2035,7 @@ export class Enemy {
         const fall = ph % 1;
         const sx4 = Math.floor(this.x + (i - count * 0.5 + 0.5) * r * 0.45);
         const sy4 = Math.floor(this.y - r * 0.8 + fall * r * 2.5);  // start at top, fall through body
-        ctx.fillRect(sx4 - 2, sy4 - 1, 4, 3);  // shard chip
+        ctx.fillRect(sx4 - 2, sy4 - 2, 4, 4);  // 4×4 world → 2×2 canvas px, always a full pixel
       }
     }
 
