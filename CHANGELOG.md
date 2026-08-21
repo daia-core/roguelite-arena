@@ -2,6 +2,33 @@
 
 ---
 
+## 2026-08-21 — feat(content): two new weapon evolutions — Obliterating Glaive + Sanguine Spear · `019b899` · qa-evolution 30/30 PASS ✓
+
+**Player-visible**
+- **Obliterating Glaive (new evolution):** War Glaive + Impact Gauntlet (wave 8+). An arc-style
+  melee weapon with a near-semicircle cleave that **explodes on every hit**, fires off massive
+  knockback (420), 45% bleed chance, and swings faster than the base War Glaive. The Brawler and
+  Aegis-build players now have a signature weapon evolution to drive toward — previously these two
+  archetypes had no evolution path at all.
+- **Sanguine Spear (new evolution):** Siege Lance + Blood Chalice (wave 8+). A thrust-style melee
+  weapon that **pierces every enemy in the lane** (999 pierce), drains 18% lifesteal on each hit,
+  50% bleed chance, and executes enemies below 22% HP. The Reaver / Vitality-build payoff —
+  delivering on the "wade in and sustain" fantasy.
+- Both evolved weapons are evolution-only (unlocked:false) — they never roll in the shop.
+  Both can be assembled by any class that picks up the base weapon in the shop.
+
+**Under the hood**
+- `frontend/src/items/catalog.ts` — added `glaive_evolved` and `siege_lance_evolved` item entries
+  (both `weaponType:'melee'`, correct `meleeStyle`, `unlocked:false`, `cost:0`).
+- `frontend/src/EvolutionSystem.ts` — added `glaive_evolution` and `siege_lance_evolution`
+  records. Both use existing unlocked T3 shop items as base and catalyst:
+  `melee_glaive_t3` + `knockback_t3` → glaive; `melee_siege_lance_t3` + `lifesteal_t3` → spear.
+
+**Commit** `019b899`
+**Live:** https://roguelite-game-blush.vercel.app · deploy `dpl_EjyjduwFF5Aoah8MNaoVYcD1nNmo` · sha `019b899` ✓
+
+---
+
 ## 2026-08-21 — feel(audio): campfire rest/train now has audio · `1e78d40` · qa 13/13 PASS ✓
 
 **Player-visible**
