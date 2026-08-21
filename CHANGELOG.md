@@ -2,6 +2,34 @@
 
 ---
 
+## 2026-08-22 — feat(content): Grim Verdict — Death Rifle evolution, completes all-class evo coverage · `cb3be19` · qa-evolution 30/30 PASS ✓
+
+**Player-visible**
+- **Grim Verdict (new evolution):** Death Rifle + Doom Sigil (wave 8+). The doom-build's
+  signature weapon — a cursed auto-aim rifle that marks nearly every target for doom (70%)
+  and executes the condemned below 20% HP. Shots pierce 2 enemies and carry +70% ranged
+  damage, with a deliberate cadence (82% fire rate). The payoff is a self-reinforcing loop:
+  doom marks the pack, doom detonations soften them, and Grim Verdict's execute threshold
+  finishes the survivors before they can fight back.
+- **All 7 classes now have a weapon evolution.** Gunner was the only archetype without a
+  dedicated evolution path — Grim Verdict closes that gap. Full coverage:
+  Gunner → Grim Verdict, Ranger → Hellfire Barrage, Arcanist → Arc Lance,
+  Prospector → Orbital Halo, Berserker → Molten Warhammer, Brawler → Obliterating Glaive,
+  Reaver → Sanguine Spear.
+
+**Under the hood**
+- `frontend/src/items/catalog.ts` — added `death_rifle_evolved` item (Legendary, auto-aim,
+  `unlocked:false`, `cost:0`). Properties: `rangedDamageMult:1.70`, `doom:0.70`,
+  `executeThreshold:0.20`, `piercing:2`, `fireRateMultiplier:0.82`.
+- `frontend/src/EvolutionSystem.ts` — added `death_rifle_evolution` record:
+  `weapon_death_rifle` (Death Rifle, Rare shop item) + `doom_sigil_t3` (Doom Sigil, Epic) →
+  `death_rifle_evolved`. Available from wave 8 (same as all other evolutions).
+
+**Commit** `cb3be19`
+**Live:** https://roguelite-game-blush.vercel.app · https://frontend-daiacore.vercel.app · hash `index-BYG4yNTt.js` ✓ (both projects)
+
+---
+
 ## 2026-08-21 — feat(content): two new weapon evolutions — Obliterating Glaive + Sanguine Spear · `019b899` · qa-evolution 30/30 PASS ✓
 
 **Player-visible**
