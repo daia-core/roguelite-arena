@@ -674,6 +674,43 @@ export class AudioManager {
     osc3.stop(t + 0.7);
   }
 
+  // Shop-phase boss-wave warning — lighter/shorter than playBossWave() (combat entrance).
+  // Fires once when the shop opens and the NEXT wave is a boss wave (wave % 10 === 0).
+  // Two layers: ominous descending triangle + subtle bass undertone. Reads as
+  // "heads up, something different is coming" rather than "IT'S HERE." No throttle —
+  // naturally gated by shop.enter() being called at most once per wave.
+  playBossWaveWarning(): void {
+    if (!this.enabled) return;
+    this._ensureRunning();
+    const t = this.ctx.currentTime;
+    // Layer 1: descending triangle — "ominous advisory" (distinct from the combat stinger)
+    const osc1 = this.ctx.createOscillator();
+    const g1 = this.ctx.createGain();
+    osc1.connect(g1);
+    g1.connect(this.masterGain);
+    osc1.type = 'triangle';
+    osc1.frequency.setValueAtTime(550, t);
+    osc1.frequency.exponentialRampToValueAtTime(200, t + 0.35);
+    g1.gain.setValueAtTime(0.0, t);
+    g1.gain.linearRampToValueAtTime(0.18, t + 0.05);
+    g1.gain.exponentialRampToValueAtTime(0.01, t + 0.35);
+    osc1.start(t);
+    osc1.stop(t + 0.35);
+    // Layer 2: deep bass undertone — adds subtle weight without the full dramatic rumble
+    const osc2 = this.ctx.createOscillator();
+    const g2 = this.ctx.createGain();
+    osc2.connect(g2);
+    g2.connect(this.masterGain);
+    osc2.type = 'sawtooth';
+    osc2.frequency.setValueAtTime(55, t + 0.05);
+    osc2.frequency.exponentialRampToValueAtTime(30, t + 0.45);
+    g2.gain.setValueAtTime(0.0, t + 0.05);
+    g2.gain.linearRampToValueAtTime(0.12, t + 0.12);
+    g2.gain.exponentialRampToValueAtTime(0.01, t + 0.45);
+    osc2.start(t + 0.05);
+    osc2.stop(t + 0.45);
+  }
+
   // NEW: Burn (Ignite) sound — throttled 350ms; fires on FRESH application only
   // (Game.ts guards with `if (enemy.burnTimer <= 0)`), throttle is second defence
   // for AoE builds that ignite many enemies per frame. A sharp "whoosh-sizzle"

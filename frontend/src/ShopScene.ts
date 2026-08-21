@@ -105,6 +105,11 @@ export class ShopScene implements Scene {
     this.showStatsPopup = false;
     this.inspectedEquipKey = null;
     this.deps.input.mouseDown = false;
+    // GAME FEEL: advisory audio cue when the NEXT wave is a boss wave.
+    // Distinct from playBossWave() which fires at combat start — this is the
+    // "spend wisely" heads-up, one shop phase early.
+    const nextWave = this.deps.getWave() + 1;
+    if (nextWave % 10 === 0) this.deps.audio.playBossWaveWarning();
   }
 
   /** Show a one-line toast (equip/bench/sell feedback). Also called by Game.ts
