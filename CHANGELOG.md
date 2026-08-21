@@ -2,6 +2,27 @@
 
 ---
 
+## 2026-08-21 — feel(audio): playBossWaveWarning — shop advisory cue before boss wave · `b885324` · qa-audio-wiring 13/13 PASS ✓
+
+**Player-visible**
+- **The "⚠ BOSS WAVE N INCOMING — spend wisely!" shop warning now plays a subtle audio cue.**
+  The panel already existed visually, but players received no audio signal that the next combat
+  would be a boss fight. Now when the shop opens before a boss wave, a short 2-layer advisory
+  sound plays — a descending triangle sweep with a bass undertone (~0.45 s) — distinct from the
+  dramatic 3-layer entrance stinger that fires at combat start.
+
+**Under the hood**
+- `AudioManager.ts` — added `playBossWaveWarning()`: descending triangle 550→200 Hz (0.35 s,
+  vol 0.18) + sawtooth bass undertone 55→30 Hz (0.4 s, vol 0.12). Lighter/shorter than
+  `playBossWave()` (the combat entrance); reads as advisory rather than arrival.
+- `ShopScene.ts` — `enter()` now calls `playBossWaveWarning()` when `(getWave() + 1) % 10 === 0`.
+  Fires once per shop entry; naturally gated by shop.enter() being called at most once per wave.
+- `qa-audio-wiring.mjs` — `playBossWaveWarning` added to the 17-method coverage list.
+
+**Live:** https://roguelite-game-blush.vercel.app
+
+---
+
 ## 2026-08-21 — fix(visual): add missing '%' glyph — temporal hourglass label now renders fully · `2314315`
 
 **Player-visible**
