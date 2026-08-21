@@ -3945,12 +3945,15 @@ export class Game {
   private applyRestChoice(choice: 'rest' | 'train'): string {
     if (choice === 'rest') {
       if (this.player) {
+        const before = this.player.health;
         this.player.health = Math.min(this.player.maxHealth, this.player.health + Math.round(0.4 * this.player.maxHealth));
+        if (this.player.health > before) this.audio.playHeal(); // GAME FEEL: shimmer on campfire heal
       }
       return 'You rest by the fire and recover your strength.';
     } else {
       this.playerStats.baseMaxHealth += 15;
       this.refreshMaxHealth();
+      this.audio.playLevelUp(); // GAME FEEL: fanfare on permanent max-HP increase
       return 'You train through the night. You feel permanently hardier.';
     }
   }
