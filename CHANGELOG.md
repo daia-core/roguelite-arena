@@ -2,6 +2,22 @@
 
 ---
 
+## 2026-08-21 — fix(visual): add missing '%' glyph — temporal hourglass label now renders fully · `2314315`
+
+**Player-visible**
+- **The temporal hourglass label "⏳+N%" now shows the percent sign.** The `%` glyph was
+  claimed in the prior commit's CHANGELOG but was never added to `digitPatterns` — so the
+  label rendered as "⏳+N" with a blank where the `%` should be. Fixed.
+
+**Under the hood**
+- `Particle.ts` — added `'%': [[1,0,1],[0,0,1],[0,1,0],[1,0,0],[1,0,1]]` (two corner marks +
+  a diagonal stroke — the classic 3×5 pixel percent sign).
+
+**Commit** `2314315`
+**Live:** https://roguelite-game-blush.vercel.app · JS hash `index-Dtj3ZxPp.js` · deploy `dpl_ZsX3qrWuVdYGGkZYTopEMyPtK2UK`
+
+---
+
 ## 2026-08-21 — fix(visual): text labels now render — DODGE / COUNTER! / BOSS SLAIN! were invisible · qa PASS ✓
 
 **Player-visible**
