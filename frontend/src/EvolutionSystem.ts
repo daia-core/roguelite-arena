@@ -77,6 +77,28 @@ export const EVOLUTIONS: Evolution[] = [
     requiredWave: DEFAULT_EVOLUTION_WAVE,
     name: 'Molten Warhammer',
     description: 'Thunder Hammer + Wildfire Torch — a faster, wider, burning quake'
+  },
+
+  // WAR GLAIVE → OBLITERATING GLAIVE (with Impact Gauntlet)
+  {
+    id: 'glaive_evolution',
+    baseWeaponId: 'melee_glaive_t3',
+    catalystItemId: 'knockback_t3',
+    evolvedWeaponId: 'glaive_evolved',
+    requiredWave: DEFAULT_EVOLUTION_WAVE,
+    name: 'Obliterating Glaive',
+    description: 'War Glaive + Impact Gauntlet — an exploding semi-circle cleave that flings enemies off their feet'
+  },
+
+  // SIEGE LANCE → SANGUINE SPEAR (with Blood Chalice)
+  {
+    id: 'siege_lance_evolution',
+    baseWeaponId: 'melee_siege_lance_t3',
+    catalystItemId: 'lifesteal_t3',
+    evolvedWeaponId: 'siege_lance_evolved',
+    requiredWave: DEFAULT_EVOLUTION_WAVE,
+    name: 'Sanguine Spear',
+    description: 'Siege Lance + Blood Chalice — a vampiric lance that drinks life from every enemy it skewers'
   }
 ];
 

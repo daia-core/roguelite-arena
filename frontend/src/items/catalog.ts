@@ -886,6 +886,47 @@ export const ITEM_CATALOG: Item[] = [
       swingCooldownMult: 1.1, // faster than the base hammer's 1.6
       knockback: 450
     },
+    {
+      id: 'glaive_evolved', // War Glaive + Impact Gauntlet
+      name: 'Obliterating Glaive',
+      description: 'EVOLVED: a screaming semi-circular cleave that explodes on every hit',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 0,
+      icon: '🌪️',
+      unlocked: false,
+      tags: ['melee'],
+      weaponType: 'melee',
+      meleeStyle: 'arc',
+      meleeDamageMult: 5.5,
+      swingArcBonus: Math.PI * 0.65, // very wide — nearly a full semicircle
+      swingCooldownMult: 0.62,        // fast — faster than War Glaive's 0.78
+      swingRangeBonus: 40,
+      knockback: 420,
+      explosionOnHit: true,
+      bleed: 0.45,
+    },
+    {
+      id: 'siege_lance_evolved', // Siege Lance + Blood Chalice
+      name: 'Sanguine Spear',
+      description: 'EVOLVED: a life-drinking lance that skewers the entire field and bleeds every foe',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 0,
+      icon: '🩸',
+      unlocked: false,
+      tags: ['melee'],
+      weaponType: 'melee',
+      meleeStyle: 'thrust',
+      meleeDamageMult: 6.5,
+      swingRangeBonus: 140,        // enormous reach — even longer than Siege Lance's 110
+      swingCooldownMult: 1.05,     // same deliberate pace as the lance
+      piercing: 999,               // passes through ALL enemies in the thrust lane
+      lifesteal: 0.18,             // 18% lifesteal on each hit
+      executeThreshold: 0.22,      // execute enemies below 22% HP
+      knockback: 200,
+      bleed: 0.50,                 // 50% chance to apply bleed per hit
+    },
 
     // ==================== MELEE SWING BUILDS ====================
     // Each shapes the always-on default swing into a distinct melee playstyle. They
