@@ -3656,6 +3656,7 @@ export class Game {
   private onMapNodePicked(nodeId: string): void {
     const node = this.mapSystem.pick(nodeId);
     if (!node) return;
+    this.audio.playMapNavigate(); // GAME FEEL: forward-momentum cue on every map pick
     this.input.mouseDown = false;
     switch (node.type) {
       case 'battle':

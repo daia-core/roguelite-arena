@@ -949,6 +949,43 @@ export class AudioManager {
     bell.stop(t + 0.85);
   }
 
+  // Short forward-momentum cue for selecting a map node — the "I'm moving forward"
+  // sound that fires on every node pick. Reads as decisive but lightweight:
+  //   1. Ascending two-tone sweep (triangle, 300→520 Hz, 0.12 s) — direction / movement
+  //   2. Light sine tick (880 Hz, 0.06 s) — confirms the tap landed
+  // Total: ~0.14 s. Throttled to 80 ms (rapid double-taps only fire once).
+  playMapNavigate(): void {
+    this._throttled('mapNavigate', () => {
+      this._ensureRunning();
+      const t = this.ctx.currentTime;
+
+      // Layer 1: ascending sweep — reads as "moving forward"
+      const sweep = this.ctx.createOscillator();
+      const sweepGain = this.ctx.createGain();
+      sweep.connect(sweepGain);
+      sweepGain.connect(this.masterGain);
+      sweep.type = 'triangle';
+      sweep.frequency.setValueAtTime(300, t);
+      sweep.frequency.exponentialRampToValueAtTime(520, t + 0.12);
+      sweepGain.gain.setValueAtTime(0.14, t);
+      sweepGain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+      sweep.start(t);
+      sweep.stop(t + 0.12);
+
+      // Layer 2: light confirmation tick
+      const tick = this.ctx.createOscillator();
+      const tickGain = this.ctx.createGain();
+      tick.connect(tickGain);
+      tickGain.connect(this.masterGain);
+      tick.type = 'sine';
+      tick.frequency.value = 880;
+      tickGain.gain.setValueAtTime(0.08, t + 0.04);
+      tickGain.gain.exponentialRampToValueAtTime(0.001, t + 0.10);
+      tick.start(t + 0.04);
+      tick.stop(t + 0.10);
+    }, 80);
+  }
+
   toggle(): void {
     this.enabled = !this.enabled;
     if (!this.enabled) this.stopMusic();

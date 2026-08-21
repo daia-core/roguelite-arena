@@ -69,11 +69,11 @@ const results = await page.evaluate(() => {
   const audio = g.audio;
   const out = {};
 
-  // methodsExist — all 17 wired methods (7 Aug-18 + playExecute + playDoom + playSecondWind + playWavePhase + playBossKill + playBossWave + playBurn + playBleed + playArtifactPickup + playBossWaveWarning Aug-2026) are functions
+  // methodsExist — all 18 wired methods (7 Aug-18 + playExecute + playDoom + playSecondWind + playWavePhase + playBossKill + playBossWave + playBurn + playBleed + playArtifactPickup + playBossWaveWarning + playMapNavigate Aug-2026) are functions
   const methods = ['playCrit', 'playLightning', 'playExplosion', 'playFreeze',
                    'playPoison', 'playShieldBlock', 'playHeal', 'playExecute', 'playDoom', 'playSecondWind',
                    'playWavePhase', 'playBossKill', 'playBossWave', 'playBurn', 'playBleed',
-                   'playArtifactPickup', 'playBossWaveWarning'];
+                   'playArtifactPickup', 'playBossWaveWarning', 'playMapNavigate'];
   out.methodsExist = methods.every(m => typeof audio[m] === 'function');
 
   // noThrowOnCall — each method fires without throwing
