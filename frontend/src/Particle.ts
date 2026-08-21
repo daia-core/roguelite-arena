@@ -241,6 +241,8 @@ export class DamageNumber {
       '!': [[0,1,0],[0,1,0],[0,1,0],[0,0,0],[0,1,0]],
       '-': [[0,0,0],[0,0,0],[1,1,1],[0,0,0],[0,0,0]],
       '+': [[0,1,0],[0,1,0],[1,1,1],[0,1,0],[0,1,0]],
+      // '%' used in temporal-hourglass label "⏳+N%" — two diagonal corners + centre bar.
+      '%': [[1,0,1],[0,0,1],[0,1,0],[1,0,0],[1,0,1]],
     };
 
     const digitWidth = 3 * pixelScaleFinal;
