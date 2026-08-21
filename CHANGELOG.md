@@ -2,6 +2,45 @@
 
 ---
 
+## 2026-08-21 — feel(audio): campfire rest/train now has audio · `1e78d40` · qa 13/13 PASS ✓
+
+**Player-visible**
+- **Campfire rest site now gives audio feedback.** When you choose "Rest" and actually heal HP,
+  the heal shimmer plays. When you choose "Train" (+15 max HP permanently), the level-up fanfare
+  fires. Previously the campfire was completely silent for both choices — a jarring absence of
+  feedback during a deliberate decision moment.
+
+**Under the hood**
+- `Game.ts` — `applyRestChoice()`: rest path calls `this.audio.playHeal()` when HP actually
+  increased (guard: skip if already full). Train path calls `this.audio.playLevelUp()` — the
+  fanfare matches the permanent-improvement feel of training.
+
+**Commit** `1e78d40`
+**Live:** https://roguelite-game-blush.vercel.app · JS hash `index-7_wM6Xn3.js` · deploy `dpl_4EhaYmZRsrkmdnXGxUtKimFjBxKV`
+
+---
+
+## 2026-08-21 — feel(audio): playMapNavigate — forward-momentum cue on map node selection · `6f2f96a` · qa-audio-wiring 13/13 PASS ✓
+
+**Player-visible**
+- **Map node selection now has audio feedback.** Every time a player picks a map node (combat,
+  shop, elite, rest, event), a short ascending cue plays — a triangle sweep (300→520 Hz, 0.12 s)
+  layered with a sine tick (880 Hz, 0.06 s). It reads as "moving forward" and breaks the silence
+  that previously made map navigation feel dead. Throttled at 80 ms to stay clean on rapid taps.
+
+**Under the hood**
+- `AudioManager.ts` — added `playMapNavigate()`: 2-layer ascending cue via `_throttled()`. Layer 1
+  triangle sweep 300→520 Hz (gain 0.14→0.001 in 0.12 s); Layer 2 sine tick at 880 Hz (gain
+  0.08→0.001, starts at t+0.04 s). Total audible duration ≈ 0.14 s. Cooldown 80 ms.
+- `Game.ts` — `onMapNodePicked()` now calls `this.audio.playMapNavigate()` immediately on pick,
+  before the node-type switch. Fires on every valid map selection.
+- `qa-audio-wiring.mjs` — `playMapNavigate` added to the 18-method coverage list.
+
+**Commit** `6f2f96a`
+**Live:** https://roguelite-game-blush.vercel.app · JS hash `index-Hkvh-b8z.js` · deploy `dpl_CRTvDAvXxWnpJXUhsR7VjoPv2jqg`
+
+---
+
 ## 2026-08-21 — feel(audio): playBossWaveWarning — shop advisory cue before boss wave · `b885324` · qa-audio-wiring 13/13 PASS ✓
 
 **Player-visible**
