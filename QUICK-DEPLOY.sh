@@ -1,117 +1,89 @@
 #!/bin/bash
-# Quick deploy script for Roguelite Arena
-# Run this from the Mac Mini where the code lives
+# Roguelite Arena — quick deploy to both Vercel projects
+# Run from the repo root: /workspace/work/roguelite-game/
+#
+# Deploys the same Vite bundle to two projects:
+#   roguelite-game  → roguelite-game-blush.vercel.app
+#   roguelite-arena → frontend-daiacore.vercel.app
+#
+# See DEPLOY.md for the full explanation of why this approach is needed
+# (root vercel.json "services" layout breaks the normal vercel CLI flow).
 
 set -e
 
-echo "🎮 Roguelite Arena - Quick Deploy"
-echo "=================================="
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+# Project IDs (both in the daiacore team)
+ROGUELITE_GAME_PROJECT="prj_aZFbLQqU1lYrNu9tsTupMSza9ELx"
+ROGUELITE_ARENA_PROJECT="prj_Bk6tRzPhLaNGtw2tlIwnUmouKTX0"
+ORG_ID="team_h89iwY4NEasSnctSAppewGet"
+
+echo "=== Roguelite Arena — quick deploy ==="
 echo ""
 
-# Check if we're in the right directory
-if [ ! -f "README.md" ] || [ ! -d "frontend" ] || [ ! -d "api" ]; then
-  echo "❌ Error: Please run this script from /workspace/work/roguelite-game/"
-  exit 1
-fi
-
-echo "📦 Step 1: Push to GitHub"
+# ── 1. Build ──────────────────────────────────────────────────────────────────
+echo "Step 1/4: Vite build (frontend/)"
+cd frontend
+npm run build
+cd "$SCRIPT_DIR"
+echo "  ✓ Build complete → frontend/dist/"
 echo ""
 
-# Check if git remote exists
-if ! git remote | grep -q origin; then
-  echo "Adding GitHub remote..."
-  git remote add origin https://github.com/daia-core/roguelite-arena.git
-fi
+# ── 2. Construct Vercel prebuilt output ──────────────────────────────────────
+echo "Step 2/4: Packaging Vercel output"
+rm -rf .vercel/output
+mkdir -p .vercel/output/static
+cp -r frontend/dist/. .vercel/output/static/
+printf '{"version":3}' > .vercel/output/config.json
+echo "  ✓ .vercel/output/ ready"
+echo ""
 
-# Push to GitHub
-echo "Pushing to GitHub..."
-git branch -M main
-git push -u origin main || {
-  echo ""
-  echo "⚠️  Git push failed. You may need to authenticate."
-  echo "   Run: gh auth login"
-  echo "   Then try again."
-  exit 1
+# ── 3. Deploy helper (swaps project.json, deploys, returns deployment URL) ───
+deploy_project() {
+  local name="$1"
+  local project_id="$2"
+
+  # Write the project config that tells vercel CLI which project to target
+  cat > .vercel/project.json << EOF
+{"projectId":"${project_id}","orgId":"${ORG_ID}","projectName":"${name}"}
+EOF
+
+  echo "  Deploying to ${name}…"
+  # VERCEL_TOKEN must be in the environment (not argv) — host redacts argv secrets
+  VERCEL_TOKEN="$VERCEL_API_TOKEN" \
+    npx vercel deploy --prebuilt --prod --yes --scope daiacore 2>&1 | tail -5
 }
 
-echo "✅ Code pushed to GitHub"
+# ── 4. Deploy both projects ───────────────────────────────────────────────────
+echo "Step 3/4: Deploy to roguelite-game"
+deploy_project "roguelite-game" "$ROGUELITE_GAME_PROJECT"
+echo "  ✓ roguelite-game deployed"
 echo ""
 
-echo "🚀 Step 2: Deploy Frontend to Vercel"
+echo "Step 4/4: Deploy to roguelite-arena"
+deploy_project "roguelite-arena" "$ROGUELITE_ARENA_PROJECT"
+echo "  ✓ roguelite-arena deployed"
 echo ""
 
-cd frontend
+# ── 5. Verify both point to the same bundle ──────────────────────────────────
+echo "Verifying bundle hash parity…"
+HASH_GAME=$(curl -s https://roguelite-game-blush.vercel.app | grep -o 'index-[A-Za-z0-9_-]*\.js' | head -1)
+HASH_ARENA=$(curl -s https://frontend-daiacore.vercel.app   | grep -o 'index-[A-Za-z0-9_-]*\.js' | head -1)
 
-# Check if vercel CLI is installed
-if ! command -v vercel &> /dev/null; then
-  echo "Installing Vercel CLI..."
-  npm install -g vercel
+echo "  roguelite-game  → $HASH_GAME"
+echo "  roguelite-arena → $HASH_ARENA"
+
+if [ "$HASH_GAME" = "$HASH_ARENA" ] && [ -n "$HASH_GAME" ]; then
+  echo "  ✓ Both projects live at $HASH_GAME"
+else
+  echo "  ⚠ Hash mismatch — one project may not have updated yet"
+  echo "    Check: https://vercel.com/daiacore"
 fi
 
-# Deploy to Vercel
-echo "Deploying to Vercel..."
-vercel --prod --yes
-
-cd ..
-
+# ── 6. Cleanup ───────────────────────────────────────────────────────────────
+rm -rf .vercel/
 echo ""
-echo "✅ Frontend deployed!"
-echo ""
-
-echo "🔧 Step 3: Deploy Backend"
-echo ""
-echo "Choose your backend deployment method:"
-echo "  1) Railway (recommended)"
-echo "  2) Render"
-echo "  3) Manual (run locally)"
-echo ""
-read -p "Enter choice [1-3]: " choice
-
-case $choice in
-  1)
-    echo "Deploying to Railway..."
-    cd api
-    if ! command -v railway &> /dev/null; then
-      echo "Installing Railway CLI..."
-      npm install -g @railway/cli
-    fi
-    railway login
-    railway init
-    railway up
-    cd ..
-    echo "✅ Backend deployed to Railway!"
-    echo "   Get your Railway URL and update frontend/src/main.ts API_URL"
-    ;;
-  2)
-    echo "📝 To deploy to Render:"
-    echo "   1. Go to https://render.com/new"
-    echo "   2. Connect your GitHub repo"
-    echo "   3. Select 'api' directory"
-    echo "   4. Set environment variables:"
-    echo "      - JWT_SECRET=your-secret-key"
-    echo "      - PORT=3000"
-    echo "   5. Deploy!"
-    ;;
-  3)
-    echo "Running backend locally..."
-    cd api
-    JWT_SECRET="dev-secret-$(date +%s)" node server.js &
-    cd ..
-    echo "✅ Backend running on localhost:3000"
-    echo "   Note: This won't be accessible from Vercel deployment"
-    ;;
-esac
-
-echo ""
-echo "🎉 Deployment Complete!"
-echo ""
-echo "📋 Next Steps:"
-echo "   1. Get your Vercel URL from the deployment output"
-echo "   2. Get your backend URL (Railway/Render)"
-echo "   3. Update frontend/src/main.ts with backend URL"
-echo "   4. Redeploy frontend: cd frontend && vercel --prod"
-echo ""
-echo "🎮 Demo Login:"
-echo "   Username: demo"
-echo "   Password: demo123"
-echo ""
+echo "Done. Live URLs:"
+echo "  https://roguelite-game-blush.vercel.app"
+echo "  https://frontend-daiacore.vercel.app"
