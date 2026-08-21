@@ -9,6 +9,7 @@ import type { Scene } from './scenes/Scene';
 import { STARTING_CLASSES, type StartingClass } from './Classes';
 import { Input } from './Input';
 import { Renderer } from './Renderer';
+import { AudioManager } from './AudioManager';
 import { pointInRect } from './utils';
 import { drawPanel, DARK_WOOD_THEME } from './pixel/panel';
 
@@ -18,6 +19,7 @@ export interface ClassSelectSceneDeps {
   canvas: HTMLCanvasElement;
   renderer: Renderer;
   input: Input;
+  audio: AudioManager;
 
   /** Called when the player taps a class card; Game.ts runs beginRun(). */
   onSelectClass(cls: StartingClass): void;
@@ -29,12 +31,14 @@ export class ClassSelectScene implements Scene {
   private readonly canvas: HTMLCanvasElement;
   private readonly renderer: Renderer;
   private readonly input: Input;
+  private readonly audio: AudioManager;
   private readonly deps: ClassSelectSceneDeps;
 
   constructor(deps: ClassSelectSceneDeps) {
     this.canvas = deps.canvas;
     this.renderer = deps.renderer;
     this.input = deps.input;
+    this.audio = deps.audio;
     this.deps = deps;
   }
 
@@ -46,6 +50,7 @@ export class ClassSelectScene implements Scene {
       const y = topY + i * (cardH + gap);
       if (pointInRect(mx, my, { x: x0, y, width: cardW, height: cardH })) {
         this.input.mouseDown = false;
+        this.audio.playTransformation(); // GAME FEEL: epic ascending fanfare on class pick
         this.deps.onSelectClass(STARTING_CLASSES[i]);
         return;
       }

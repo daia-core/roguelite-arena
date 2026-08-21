@@ -467,6 +467,7 @@ export class Game {
       canvas: this.canvas,
       renderer: this.renderer,
       input: this.input,
+      audio: this.audio,
       onSelectClass: (cls) => this.beginRun(cls),
     });
 
