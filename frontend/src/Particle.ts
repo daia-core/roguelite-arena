@@ -195,7 +195,8 @@ export class DamageNumber {
     const pixelScale = isMobile ? 6 : 4; // How big each pixel is
     const pixelScaleFinal = this.isCrit ? pixelScale * 1.5 : pixelScale;
 
-    // Simple pixel font (3x5 per digit)
+    // Simple pixel font (3x5 per character) — digits, suffix glyphs, and a full uppercase
+    // alphabet so text labels like DODGE / COUNTER! / BOSS SLAIN! actually render.
     const digitPatterns: Record<string, number[][]> = {
       '0': [[1,1,1],[1,0,1],[1,0,1],[1,0,1],[1,1,1]],
       '1': [[0,1,0],[1,1,0],[0,1,0],[0,1,0],[1,1,1]],
@@ -213,17 +214,48 @@ export class DamageNumber {
       'B': [[1,1,0],[1,0,1],[1,1,0],[1,0,1],[1,1,0]],
       'T': [[1,1,1],[0,1,0],[0,1,0],[0,1,0],[0,1,0]],
       '.': [[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,1,0]],
+      // Uppercase alphabet — so text labels (DODGE, COUNTER!, BOSS SLAIN!, etc.) render.
+      'A': [[0,1,0],[1,0,1],[1,1,1],[1,0,1],[1,0,1]],
+      'C': [[0,1,1],[1,0,0],[1,0,0],[1,0,0],[0,1,1]],
+      'D': [[1,1,0],[1,0,1],[1,0,1],[1,0,1],[1,1,0]],
+      'E': [[1,1,1],[1,0,0],[1,1,0],[1,0,0],[1,1,1]],
+      'F': [[1,1,1],[1,0,0],[1,1,0],[1,0,0],[1,0,0]],
+      'G': [[0,1,1],[1,0,0],[1,0,1],[1,0,1],[0,1,1]],
+      'H': [[1,0,1],[1,0,1],[1,1,1],[1,0,1],[1,0,1]],
+      'I': [[1,1,1],[0,1,0],[0,1,0],[0,1,0],[1,1,1]],
+      'J': [[1,1,1],[0,0,1],[0,0,1],[1,0,1],[0,1,0]],
+      'L': [[1,0,0],[1,0,0],[1,0,0],[1,0,0],[1,1,1]],
+      'N': [[1,0,1],[1,1,1],[1,1,1],[1,0,1],[1,0,1]],
+      'O': [[0,1,0],[1,0,1],[1,0,1],[1,0,1],[0,1,0]],
+      'P': [[1,1,0],[1,0,1],[1,1,0],[1,0,0],[1,0,0]],
+      'Q': [[0,1,0],[1,0,1],[1,0,1],[1,1,0],[0,1,1]],
+      'R': [[1,1,0],[1,0,1],[1,1,0],[1,1,0],[1,0,1]],
+      'S': [[1,1,1],[1,0,0],[1,1,1],[0,0,1],[1,1,1]],
+      'U': [[1,0,1],[1,0,1],[1,0,1],[1,0,1],[0,1,0]],
+      'V': [[1,0,1],[1,0,1],[1,0,1],[0,1,0],[0,1,0]],
+      'W': [[1,0,1],[1,0,1],[1,1,1],[1,1,1],[1,0,1]],
+      'X': [[1,0,1],[1,0,1],[0,1,0],[1,0,1],[1,0,1]],
+      'Y': [[1,0,1],[1,0,1],[0,1,0],[0,1,0],[0,1,0]],
+      'Z': [[1,1,1],[0,0,1],[0,1,0],[1,0,0],[1,1,1]],
+      // Punctuation used in labels.
+      '!': [[0,1,0],[0,1,0],[0,1,0],[0,0,0],[0,1,0]],
+      '-': [[0,0,0],[0,0,0],[1,1,1],[0,0,0],[0,0,0]],
+      '+': [[0,1,0],[0,1,0],[1,1,1],[0,1,0],[0,1,0]],
     };
 
     const digitWidth = 3 * pixelScaleFinal;
     const digitSpacing = 1 * pixelScaleFinal;
-    const totalWidth = this.text.length * (digitWidth + digitSpacing) - digitSpacing;
+    // Use spread-iteration to count Unicode code points (not UTF-16 units) so emoji in
+    // text labels (e.g. '👑') count as 1 character, not 2, giving correct centering.
+    const totalWidth = [...this.text].length * (digitWidth + digitSpacing) - digitSpacing;
 
     // Draw each digit
     let xOffset = this.x - totalWidth / 2;
     for (const char of this.text) {
       const pattern = digitPatterns[char];
-      if (!pattern) continue;
+      // Unknown characters (space, emoji) render as a blank gap — advance xOffset so
+      // words don't run together and centering stays correct.
+      if (!pattern) { xOffset += digitWidth + digitSpacing; continue; }
 
       // Draw black outline first
       ctx.fillStyle = '#000000';

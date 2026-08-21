@@ -2,6 +2,34 @@
 
 ---
 
+## 2026-08-21 — fix(visual): text labels now render — DODGE / COUNTER! / BOSS SLAIN! were invisible · qa PASS ✓
+
+**Player-visible**
+- **"DODGE", "COUNTER!", "SECOND WIND", "LEVEL UP", "BOSS SLAIN!", "MINIBOSS SLAIN!" now
+  render as visible pixel-art labels in the game world.** These floating text labels have
+  existed in the code since they were added, but the pixel-art damage number renderer
+  (`DamageNumber.draw()`) only had patterns for digits (0–9) and the numeric suffix glyphs
+  (K, M, B, T) — every letter was silently skipped, so the labels drew nothing. Players
+  never saw "DODGE" flash when they dodged, or "BOSS SLAIN!" when they killed a boss.
+- All six affected labels are now readable pixel-art text, matching the same style as
+  damage numbers (same scale, same outline, same arc trajectory).
+
+**Under the hood**
+- `Particle.ts` — extended `digitPatterns` with a full 3×5 uppercase pixel-art alphabet
+  (A, C–J, L, N–V, W–Z) plus common punctuation (!, -, +, %); existing B/K/M/T entries
+  (shared with numeric suffix glyphs) are reused for the letters B, K, M, T.
+- Fixed the `continue` short-circuit for unknown characters: previously, space and emoji
+  skipped the `xOffset` advance — words ran together ("BOSSSLAIN!"). Now unknown characters
+  render as a blank gap of exactly one character width, so "BOSS SLAIN!" has the space.
+- Fixed `totalWidth` to use `[...this.text].length` (Unicode code-point count) instead of
+  `this.text.length` (UTF-16 unit count) — emoji like '👑' no longer double-count their
+  width, keeping text labels correctly centred.
+
+**Commit** (committed this session)
+**Live:** https://roguelite-game-blush.vercel.app
+
+---
+
 ## 2026-08-20 — feel(audio): playArtifactPickup — magical shimmer for artifact selection · `5481d05` · qa-audio-wiring 13/13 PASS ✓
 
 **Player-visible**
