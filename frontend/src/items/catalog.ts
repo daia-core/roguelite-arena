@@ -927,6 +927,23 @@ export const ITEM_CATALOG: Item[] = [
       knockback: 200,
       bleed: 0.50,                 // 50% chance to apply bleed per hit
     },
+    {
+      id: 'death_rifle_evolved', // Death Rifle + Doom Sigil
+      name: 'Grim Verdict',
+      description: 'EVOLVED: a cursed rifle that marks every target for doom and executes the condemned',
+      rarity: 'legendary',
+      tier: ItemTier.Legendary,
+      cost: 0,
+      icon: '💀',
+      unlocked: false,
+      tags: ['ranged', 'elemental'],
+      weaponType: 'auto-aim',
+      rangedDamageMult: 1.70,     // +70% ranged damage over base Death Rifle
+      doom: 0.70,                 // 70% doom chance — nearly every shot marks a target
+      executeThreshold: 0.20,     // execute enemies below 20% HP (death sentence for the doomed)
+      piercing: 2,                // shots pass through 2 enemies — tag the whole pack
+      fireRateMultiplier: 0.82,   // deliberate cadence — each shot is a verdict
+    },
 
     // ==================== MELEE SWING BUILDS ====================
     // Each shapes the always-on default swing into a distinct melee playstyle. They

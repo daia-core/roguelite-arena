@@ -99,6 +99,17 @@ export const EVOLUTIONS: Evolution[] = [
     requiredWave: DEFAULT_EVOLUTION_WAVE,
     name: 'Sanguine Spear',
     description: 'Siege Lance + Blood Chalice — a vampiric lance that drinks life from every enemy it skewers'
+  },
+
+  // DEATH RIFLE → GRIM VERDICT (with Doom Sigil) — completes auto-aim/Gunner evolution path
+  {
+    id: 'death_rifle_evolution',
+    baseWeaponId: 'weapon_death_rifle',
+    catalystItemId: 'doom_sigil_t3',
+    evolvedWeaponId: 'death_rifle_evolved',
+    requiredWave: DEFAULT_EVOLUTION_WAVE,
+    name: 'Grim Verdict',
+    description: 'Death Rifle + Doom Sigil — a cursed rifle that marks the condemned and executes them on sight'
   }
 ];
 
