@@ -1,8 +1,11 @@
 // One-off: verify every character in the affected damage-number labels has a
 // glyph pattern in DamageNumber.digitPatterns (the 03:17 + 03:52 visual fixes).
 import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 
-const src = fs.readFileSync('src/Particle.ts', 'utf8');
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const src = fs.readFileSync(path.join(__dirname, 'src/Particle.ts'), 'utf8');
 const start = src.indexOf('digitPatterns: Record');
 const block = src.slice(start, src.indexOf('};', start));
 const keys = new Set([...block.matchAll(/^\s*'(.)':/gm)].map(m => m[1]));
