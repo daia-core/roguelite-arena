@@ -3888,6 +3888,7 @@ export class Game {
         return null;
       case 'heal':
         this.player.health = Math.min(this.player.maxHealth, this.player.health + Math.round(effect.frac * this.player.maxHealth));
+        this.audio.playHeal(); // GAME FEEL: shimmer on event heal (mirrors rest-scene heal)
         return null;
       case 'hurt': {
         const dmg = Math.round(effect.frac * this.player.maxHealth);
@@ -3897,6 +3898,7 @@ export class Game {
       case 'maxHp':
         this.playerStats.baseMaxHealth += effect.amount;
         this.refreshMaxHealth();
+        this.audio.playLevelUp(); // GAME FEEL: fanfare on permanent max-HP increase (mirrors rest-scene)
         return null;
       case 'artifact': {
         const RARITY_RANK: Record<string, number> = { rare: 1, epic: 2, legendary: 3 };
@@ -3907,6 +3909,7 @@ export class Game {
         if (pool.length) {
           const picked = pool[Math.floor(Math.random() * pool.length)];
           this.grantArtifact(picked);
+          this.audio.playItemPickup(); // GAME FEEL: chime on artifact grant from event
           return { name: picked.name, rarity: picked.rarity, desc: picked.desc, icon: picked.icon, artifactId: picked.id };
         }
         return null;
@@ -3915,7 +3918,10 @@ export class Game {
         // Devil-deal price: grant a SPECIFIC named curse artifact. Idempotent — if the
         // player already carries it, grantArtifact's dedupe simply no-ops.
         const curse = getArtifactById(effect.id);
-        if (curse) this.grantArtifact(curse);
+        if (curse) {
+          this.grantArtifact(curse);
+          this.audio.playDoom(); // GAME FEEL: deep boom on devil-deal curse — the price you pay
+        }
         return null;
       }
       case 'item': {
@@ -3923,6 +3929,7 @@ export class Game {
         if (items[0]) {
           this.playerStats.addItem(items[0]);
           this.refreshMaxHealth();
+          this.audio.playItemPickup(); // GAME FEEL: chime on item grant from event
           return { name: items[0].name, rarity: items[0].rarity, desc: items[0].description, icon: items[0].icon };
         }
         return null;
