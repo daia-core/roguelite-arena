@@ -30,7 +30,7 @@ const { getItemKinds } = await import(path.join(TMP, 'types.js'));
 const { ITEM_CATALOG }  = await import(path.join(TMP, 'catalog.js'));
 
 const VALID_KINDS = new Set(['weapon', 'passive', 'active']);
-const EXPECTED_COUNT = 1910;  // update deliberately when catalog grows
+const EXPECTED_COUNT = 1918;  // update deliberately when catalog grows
 
 let pass = 0, fail = 0;
 const ok  = (cond, msg) => { if (cond) { pass++; } else { fail++; console.error('  ✗ FAIL:', msg); } };

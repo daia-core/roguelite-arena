@@ -1,17 +1,20 @@
 #!/usr/bin/env node
-// Headless QA for the 2026-07-05 equipment/slot rework (Felix's ask: gear is a
-// limited build decision — 2 weapons OR 1 two-hand + offhand + amulet, everything
-// else a freely-stacking trinket, displaced gear goes to a capped stash).
+// Headless QA for the equipment slot system (8-slot v2, 2026-07-05).
+// Updated 2026-08-22 to match the current single-weapon-slot API:
+//   weapon (1h OR 2h), offhand, head, amulet, torso, legs, feet, ring — each ≤ 1
+//   two-hand weapon blocks the offhand (not a second weapon slot)
+//   trinkets: unlimited stacking; same-ID adds trigger the upgrade path (upgradeLevel++)
 //
 // Proves the admission-control layer over PlayerStats.items[]:
-//   1. slot limits           — weapons never exceed 2 hands, offhand/amulet ≤ 1
-//   2. two-hand              — fills weaponA, blocks weaponB, displaces both 1h weapons
-//   3. auto-swap → stash     — a displaced occupant lands in the stash (not destroyed)
-//   4. stash overflow → sell — past STASH_CAP, addItem returns `overflow` to refund
-//   5. trinket stacking      — unlimited copies, all active
-//   6. aggregation parity    — items[] == equipped-nonnull + trinkets, and a clean
-//                              additive stat (getMaxHealth) exactly tracks the active set
-//   7. duo fanfare           — completing a duo returns newDuos (the double-updateDuos bug)
+//   1. slot limits           — one weapon max, offhand/amulet/gear slots ≤ 1 each
+//   2. two-hand              — fills weapon slot, nulls offhand, displaces prior weapon+offhand
+//   3. offhand vs 2h         — adding a shield while 2h equipped displaces the 2h first
+//   4. auto-swap → stash     — a displaced occupant lands in the stash (not destroyed)
+//   5. stash overflow → sell — past STASH_CAP, addItem returns `overflow` to refund
+//   6. trinket unique-ID     — unique-ID trinkets all stack as separate active items
+//   7. trinket upgrade path  — same-ID add → upgradeLevel++ on the existing instance
+//   8. aggregation parity    — items[] == all non-null equip slots + trinkets
+//   9. duo fanfare           — completing a duo returns newDuos (the double-updateDuos bug)
 import path from 'node:path';
 import fs from 'node:fs';
 import * as esbuild from 'esbuild';
@@ -46,11 +49,13 @@ const shield   = (mh) => mk({ shield: true, maxHealthBonus: mh });            //
 const amulet   = (mh) => mk({ slot: 'amulet', maxHealthBonus: mh });          // → amulet
 const trinket  = (id, mh) => mk({ id, maxHealthBonus: mh });                  // → trinket
 
-// Invariant checked after every mutation: items[] is EXACTLY the non-null equipped
-// slots followed by the trinkets (the single aggregation source of truth).
+// Invariant: items[] must exactly equal all non-null equip-slot occupants + trinkets.
+// This is the 8-slot v2 version (weapon, offhand, head, amulet, torso, legs, feet, ring).
 const activeInvariant = (ps) => {
   const eq = ps.getEquipment();
-  const expected = [eq.weaponA, eq.weaponB, eq.offhand, eq.amulet].filter(x => x).concat(ps.trinkets);
+  const equipSlots = [eq.weapon, eq.offhand, eq.head, eq.amulet,
+                      eq.torso, eq.legs, eq.feet, eq.ring].filter(x => x);
+  const expected = equipSlots.concat(ps.trinkets);
   const a = ps.items.map(i => i.id).sort();
   const b = expected.map(i => i.id).sort();
   return a.length === b.length && a.every((v, i) => v === b[i]);
@@ -63,7 +68,7 @@ ok(classifyItemSlot(shield(0))   === 'offhand',   'shield → offhand');
 ok(classifyItemSlot(amulet(0))   === 'amulet',    'slot:amulet → amulet');
 ok(classifyItemSlot(trinket('t', 5)) === 'trinket', 'plain stat item → trinket');
 
-// ---- 1 & 3 & 6: fill slots, no displacement, parity ----
+// ---- 1 & 8: fill slots, parity, aggregation ----
 {
   const ps = new PlayerStats();
   const W = weapon1h(10), O = shield(20), A = amulet(30);
@@ -72,41 +77,63 @@ ok(classifyItemSlot(trinket('t', 5)) === 'trinket', 'plain stat item → trinket
   ok(activeInvariant(ps), 'invariant holds after equipping W/O/A + 3 trinkets');
   // base 100 + 10+20+30 + 5*3 = 175
   ok(ps.getMaxHealth() === 175, `parity maxHealth == 175 (got ${ps.getMaxHealth()})`);
-  ok(ps.getEquipment().weaponA?.id === W.id && ps.getEquipment().weaponB === null, 'one 1h weapon → weaponA only');
+  ok(ps.getEquipment().weapon?.id === W.id, '1h weapon → weapon slot');
+  ok(ps.getEquipment().offhand?.id === O.id, 'shield → offhand slot');
+  ok(ps.getEquipment().amulet?.id === A.id, 'amulet → amulet slot');
+}
 
-  // second 1h weapon fills weaponB
+// ---- 3 & 4: single weapon slot — swap/stash on second weapon ----
+{
+  const ps = new PlayerStats();
+  const W = weapon1h(10), O = shield(20), A = amulet(30);
+  ps.addItem(W); ps.addItem(O); ps.addItem(A);
+  // Second 1h weapon: displaces W to stash, takes the weapon slot
   const W2 = weapon1h(100);
-  ps.addItem(W2);
-  ok(ps.getEquipment().weaponB?.id === W2.id, 'second 1h weapon → weaponB');
-  ok(ps.getMaxHealth() === 275, `maxHealth 275 with 2 weapons (got ${ps.getMaxHealth()})`);
-  ok(activeInvariant(ps), 'invariant holds with 2 weapons');
-
-  // 1: third 1h weapon — both hands full → weaponA displaced to stash, still only 2 weapons active
-  const W3 = weapon1h(1000);
-  const r = ps.addItem(W3);
-  ok(ps.getEquipment().weaponA?.id === W3.id, 'third 1h weapon swaps into weaponA');
-  ok(r.displaced.some(d => d.id === W.id), 'displaced item is the old weaponA (W)');
-  ok(ps.getStash().some(s => s.id === W.id), 'displaced W landed in the stash (not destroyed)');
-  const weaponCount = [ps.getEquipment().weaponA, ps.getEquipment().weaponB].filter(x => x).length;
-  ok(weaponCount === 2, `never more than 2 weapons equipped (got ${weaponCount})`);
-  // active lost W(10), gained W3(1000): 275 - 10 + 1000 = 1265
-  ok(ps.getMaxHealth() === 1265, `maxHealth 1265 after swap (got ${ps.getMaxHealth()})`);
+  const r = ps.addItem(W2);
+  ok(ps.getEquipment().weapon?.id === W2.id, 'second 1h weapon displaces first → weapon slot');
+  ok(r.displaced.some(d => d.id === W.id), 'displaced item is the old weapon (W)');
+  ok(ps.getStash().some(s => s.id === W.id), 'displaced W landed in stash (not destroyed)');
+  // lost W(10), gained W2(100): base 100 + 100 + 20 + 30 = 250
+  ok(ps.getMaxHealth() === 250, `maxHealth 250 after weapon swap (got ${ps.getMaxHealth()})`);
   ok(activeInvariant(ps), 'invariant holds after weapon swap');
+}
 
-  // ---- 2: two-hand fills A, blocks B, displaces BOTH one-hand weapons ----
+// ---- 2: two-hand fills weapon slot, blocks offhand, displaces prior weapon ----
+{
+  const ps = new PlayerStats();
+  const W = weapon1h(10), O = shield(20);
+  ps.addItem(W); ps.addItem(O);
+  // Equip a two-hand weapon: displaces W to stash, nulls offhand
   const TH = weapon2h(7);
-  const r2 = ps.addItem(TH);
-  ok(ps.getEquipment().weaponA?.id === TH.id, 'two-hand → weaponA');
-  ok(ps.getEquipment().weaponB === null, 'two-hand blocks weaponB (null)');
+  const r = ps.addItem(TH);
+  ok(ps.getEquipment().weapon?.id === TH.id, 'two-hand → weapon slot');
   ok(ps.hasTwoHandEquipped() === true, 'hasTwoHandEquipped true');
-  ok(r2.displaced.some(d => d.id === W3.id) && r2.displaced.some(d => d.id === W2.id),
-     'two-hand displaced both prior 1h weapons to stash');
-  // lost W3(1000)+W2(100), gained TH(7): 1265 - 1100 + 7 = 172
-  ok(ps.getMaxHealth() === 172, `maxHealth 172 after two-hand (got ${ps.getMaxHealth()})`);
+  ok(ps.getEquipment().offhand === null, 'two-hand blocks offhand (null)');
+  ok(r.displaced.some(d => d.id === W.id), 'two-hand displaced prior 1h weapon to stash');
+  ok(ps.getStash().some(s => s.id === O.id), 'two-hand displaced offhand to stash');
+  // lost W(10)+O(20), gained TH(7): base 100 + 7 = 107
+  ok(ps.getMaxHealth() === 107, `maxHealth 107 after two-hand (got ${ps.getMaxHealth()})`);
   ok(activeInvariant(ps), 'invariant holds after two-hand');
 }
 
-// ---- 4: stash overflow → overflow returned for refund ----
+// ---- offhand vs two-hand: adding shield while 2h equipped displaces the 2h ----
+{
+  const ps = new PlayerStats();
+  const TH = weapon2h(7);
+  ps.addItem(TH);
+  ok(ps.getEquipment().offhand === null, 'offhand blocked while 2h equipped');
+  // Now add a shield: should displace TH to stash, shield goes to offhand
+  const O = shield(15);
+  const r = ps.addItem(O);
+  ok(ps.getEquipment().weapon === null, 'weapon slot cleared when 2h displaced by shield add');
+  ok(ps.getEquipment().offhand?.id === O.id, 'shield goes to offhand after displacing 2h');
+  ok(r.displaced.some(d => d.id === TH.id), 'adding shield displaced 2h weapon to stash');
+  // base 100 + 15 = 115
+  ok(ps.getMaxHealth() === 115, `maxHealth 115 after shield displaces 2h (got ${ps.getMaxHealth()})`);
+  ok(activeInvariant(ps), 'invariant holds after shield-displaces-2h');
+}
+
+// ---- 5: stash overflow → overflow returned for refund ----
 {
   const ps = new PlayerStats();
   let overflowSeen = null;
@@ -121,16 +148,28 @@ ok(classifyItemSlot(trinket('t', 5)) === 'trinket', 'plain stat item → trinket
   ok(activeInvariant(ps), 'invariant holds with full stash');
 }
 
-// ---- 5: trinket unlimited stacking ----
+// ---- 6: trinket unique-ID stacking — each unique-ID trinket is a separate active item ----
 {
   const ps = new PlayerStats();
-  for (let i = 0; i < 50; i++) ps.addItem(trinket('stack_me', 2));
-  ok(ps.trinkets.length === 50, `50 trinket copies stack (got ${ps.trinkets.length})`);
-  ok(ps.items.filter(i => i.id === 'stack_me').length === 50, 'all 50 trinket copies are active in items[]');
-  ok(ps.getMaxHealth() === 100 + 50 * 2, `trinket stack aggregates (got ${ps.getMaxHealth()})`);
+  for (let i = 0; i < 50; i++) ps.addItem(trinket('tri_' + i, 2));
+  ok(ps.trinkets.length === 50, `50 unique-ID trinkets all active (got ${ps.trinkets.length})`);
+  ok(ps.items.filter(i => i.id.startsWith('tri_')).length === 50, 'all 50 unique-ID trinkets in items[]');
+  ok(ps.getMaxHealth() === 100 + 50 * 2, `unique-ID trinket stack aggregates: 200 (got ${ps.getMaxHealth()})`);
+  ok(activeInvariant(ps), 'invariant holds with 50 unique trinkets');
 }
 
-// ---- 7: duo fanfare fires on the completing purchase (regression: double updateDuos) ----
+// ---- 7: trinket upgrade path — same-ID add bumps upgradeLevel, still contributes correctly ----
+{
+  const ps = new PlayerStats();
+  for (let i = 0; i < 50; i++) ps.addItem(trinket('same_id', 2));
+  // Upgrade path: 1 instance at level 50, contributing mh*50
+  ok(ps.trinkets.length === 1, `50 same-ID adds → 1 upgraded instance (got ${ps.trinkets.length})`);
+  ok(ps.trinkets[0].upgradeLevel === 50, `upgrade level === 50 (got ${ps.trinkets[0].upgradeLevel})`);
+  ok(ps.getMaxHealth() === 100 + 2 * 50, `upgraded trinket scales by upgradeLevel: 200 (got ${ps.getMaxHealth()})`);
+  ok(activeInvariant(ps), 'invariant holds with upgraded trinket');
+}
+
+// ---- 9: duo fanfare fires on the completing purchase (regression: double updateDuos) ----
 {
   const combo = DUO_COMBOS.find(d => ItemDatabase.getItemById(d.item1Id) && ItemDatabase.getItemById(d.item2Id));
   if (!combo) { console.error('  ! no resolvable duo in catalog — skipping duo test'); }
