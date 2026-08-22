@@ -1412,6 +1412,7 @@ export class ShopScene implements Scene {
         ['Swing AOE', `${num(ps.getSwingAoe())}px`, ps.getSwingAoe() > 0],
         ['Swing Range', `${Math.round(ps.getSwingRange())}px`, ps.getSwingRange() > 70.5],
         ['Swing Arc', `${Math.round(ps.getSwingArc() * 180 / Math.PI)}°`, ps.getSwingArc() > Math.PI * 0.701 && (ps.getSwingRange() > 70.5 || ps.getMeleeDamageMult() > 1.001 || ps.getSwingAoe() > 0)],
+        ['Swing Knockback', num(ps.getSwingKnockback()), ps.getKnockback() > 0],
         ['Loaded Shot', '1-in-10 = 3× + pierce', ps.hasLoadedShot()],
         ['Status Luck', 'TWICE', ps.hasFourleafCharm()],
         ['Counter Dmg', num(Math.round(ps.getDamage() * ps.getRipostePower() * ps.getRiposteDamageMult())), ps.getRipostePower() > 0],

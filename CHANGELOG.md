@@ -2,6 +2,19 @@
 
 ---
 
+## 2026-08-22 — fix(stats): Swing Knockback now visible in stats popup for knockback builds
+
+**Player-visible**
+- **Swing Knockback** row added to SPECIAL (after Swing Arc). Shows the swing's actual knockback
+  value (base 40 + item knockback) for builds with knockback items. Previously the popup showed
+  only the item-derived `Knockback` under OFFENSE (ranged shots) with no indication the swing
+  deals a higher value. Now a melee knockback build (e.g. 250-knockback hammer) sees both:
+  `Knockback: 250` (ranged) and `Swing Knockback: 290` (swing). Row hidden for builds with no
+  knockback items (show condition: `getKnockback() > 0`). qa-stats-parity 2193/2193 PASS,
+  qa-stats-popup 68/77 mobile / 77 desktop — no overflow.
+
+---
+
 ## 2026-08-22 — feat(content): Grim Verdict — Death Rifle evolution, completes all-class evo coverage · `cb3be19` · qa-evolution 30/30 PASS ✓
 
 **Player-visible**
