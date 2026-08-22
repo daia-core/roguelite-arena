@@ -90,6 +90,58 @@ export class AudioManager {
     osc.stop(this.ctx.currentTime + 0.15);
   }
 
+  // Mid-tier milestone: heavier than playKill (fodder) but shorter than playBossKill.
+  // Reads as "something tough fell" — matches the orange flash + ⚔️ MINIBOSS SLAIN! visual.
+  // Three layers: medium thud + two sword-clash stabs + brief fire-spark shimmer.
+  playMinibossKill(): void {
+    if (!this.enabled) return;
+    this._ensureRunning();
+    const t = this.ctx.currentTime;
+    // Layer 1: medium thud — weighty but not as low as the boss boom
+    const osc1 = this.ctx.createOscillator();
+    const g1 = this.ctx.createGain();
+    osc1.connect(g1);
+    g1.connect(this.masterGain);
+    osc1.type = 'sawtooth';
+    osc1.frequency.setValueAtTime(80, t);
+    osc1.frequency.exponentialRampToValueAtTime(28, t + 0.28);
+    g1.gain.setValueAtTime(0.30, t);
+    g1.gain.exponentialRampToValueAtTime(0.01, t + 0.28);
+    osc1.start(t);
+    osc1.stop(t + 0.28);
+    // Layer 2: two sword-clash stabs — orange/fire pitch range (lower than boss horns)
+    const stabNotes = [
+      { freq: 330, delay: 0.0,  dur: 0.18 },
+      { freq: 530, delay: 0.15, dur: 0.20 },
+    ];
+    for (const { freq, delay, dur } of stabNotes) {
+      const osc = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      osc.connect(g);
+      g.connect(this.masterGain);
+      osc.type = 'triangle';
+      osc.frequency.value = freq;
+      g.gain.setValueAtTime(0.0, t + delay);
+      g.gain.linearRampToValueAtTime(0.18, t + delay + 0.04);
+      g.gain.exponentialRampToValueAtTime(0.01, t + delay + dur);
+      osc.start(t + delay);
+      osc.stop(t + delay + dur);
+    }
+    // Layer 3: brief fire-spark shimmer — mid-range sweep (orange feel, not crown gold)
+    const osc4 = this.ctx.createOscillator();
+    const g4 = this.ctx.createGain();
+    osc4.connect(g4);
+    g4.connect(this.masterGain);
+    osc4.type = 'sine';
+    osc4.frequency.setValueAtTime(1400, t + 0.03);
+    osc4.frequency.exponentialRampToValueAtTime(440, t + 0.32);
+    g4.gain.setValueAtTime(0, t);
+    g4.gain.linearRampToValueAtTime(0.10, t + 0.07);
+    g4.gain.exponentialRampToValueAtTime(0.01, t + 0.32);
+    osc4.start(t + 0.03);
+    osc4.stop(t + 0.32);
+  }
+
   playLevelUp(): void {
     if (!this.enabled) return;
     this._ensureRunning();

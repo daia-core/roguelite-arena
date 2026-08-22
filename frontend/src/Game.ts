@@ -2738,6 +2738,8 @@ export class Game {
 
     if (enemy.typeData.isBoss) {
       this.audio.playBossKill(); // GAME FEEL: triumphant fanfare on boss kill (boom + horn trio + crown shimmer)
+    } else if (enemy.isMiniboss) {
+      this.audio.playMinibossKill(); // GAME FEEL: medium thud + stabs + spark on miniboss kill
     } else {
       this.audio.playKill();
     }
