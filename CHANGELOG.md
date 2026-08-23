@@ -2,6 +2,19 @@
 
 ---
 
+## 2026-08-23 — fix(stats): Shot Element, Two-Hand flag, Melee Style now visible in stats popup
+
+**Player-visible**
+- **Shot Element** row added to OFFENSE (after Elemental Dmg). Shows dominant element of
+  projectiles (`Fire`, `Ice`, `Lightning`, `Poison`) — hidden when build is physical. Elemental
+  builds now see at a glance which element type their shots deal.
+- **Two-Hand** row added to OFFENSE (after Spec Bonus). Shows `YES (no offhand)` when a two-hand
+  weapon is equipped; the offhand-locked constraint was previously invisible in the popup.
+- **Melee Style** row added to SPECIAL (after Swing Dmg). Shows `Spin` or `Arc` for active melee
+  builds — tells the player which attack pattern their build uses.
+
+---
+
 ## 2026-08-22 — fix(stats): Swing Knockback now visible in stats popup for knockback builds
 
 **Player-visible**
