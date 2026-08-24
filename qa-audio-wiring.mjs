@@ -19,6 +19,12 @@
  *   freezeThrottles      — two immediate playFreeze() calls: only 1 fires
  *   poisonThrottles      — two immediate playPoison() calls: only 1 fires
  *   executeThrottles     — two immediate playExecute() calls: only 1 fires
+ *   doomThrottles        — playDoom throttles correctly
+ *   burnThrottles        — playBurn throttles correctly
+ *   bleedThrottles       — playBleed throttles correctly
+ *   healThrottles        — playHeal throttles correctly (key: 'heal')
+ *   shieldThrottles      — playShieldBlock throttles correctly (key: 'shield', not 'shieldblock')
+ *   mapNavThrottles      — playMapNavigate throttles correctly (key: 'mapNavigate', case-sensitive)
  *   throttleResets       — after cooldown, playCrit() fires again
  *
  * Usage: CHROME_BIN=/usr/bin/chromium node qa-audio-wiring.mjs
@@ -103,10 +109,15 @@ const results = await page.evaluate(() => {
   // (use Object.getOwnPropertyDescriptor since it's private — we access via the instance)
   out.throttleMapExists = audio['_lastPlayed'] instanceof Map;
 
-  // Helper: spy on _lastPlayed to count actual fires
-  const countFires = (method, cooldownMs = 0) => {
+  // Helper: spy on _lastPlayed to count actual fires.
+  // NOTE: some AudioManager methods use a throttle key that does NOT match
+  // method.replace('play','').toLowerCase() — pass explicitKey for those.
+  // Known mismatches:
+  //   playShieldBlock → _throttled('shield', ...)   — explicitKey = 'shield'
+  //   playMapNavigate → _throttled('mapNavigate', ...) — explicitKey = 'mapNavigate'
+  const countFires = (method, explicitKey = null) => {
     // Clear _lastPlayed for the key we're testing so we start fresh
-    const key = method.replace('play', '').toLowerCase();
+    const key = explicitKey ?? method.replace('play', '').toLowerCase();
     audio['_lastPlayed'].delete(key);
 
     let fires = 0;
@@ -124,15 +135,18 @@ const results = await page.evaluate(() => {
     return fires;
   };
 
-  out.critThrottles      = countFires('playCrit')      === 1;
-  out.lightningThrottles = countFires('playLightning')  === 1;
-  out.explosionThrottles = countFires('playExplosion')  === 1;
-  out.freezeThrottles    = countFires('playFreeze')     === 1;
-  out.poisonThrottles    = countFires('playPoison')     === 1;
-  out.executeThrottles   = countFires('playExecute')    === 1;
-  out.doomThrottles      = countFires('playDoom')       === 1;
-  out.burnThrottles      = countFires('playBurn')       === 1;
-  out.bleedThrottles     = countFires('playBleed')      === 1;
+  out.critThrottles      = countFires('playCrit')                       === 1;
+  out.lightningThrottles = countFires('playLightning')                  === 1;
+  out.explosionThrottles = countFires('playExplosion')                  === 1;
+  out.freezeThrottles    = countFires('playFreeze')                     === 1;
+  out.poisonThrottles    = countFires('playPoison')                     === 1;
+  out.executeThrottles   = countFires('playExecute')                    === 1;
+  out.doomThrottles      = countFires('playDoom')                       === 1;
+  out.burnThrottles      = countFires('playBurn')                       === 1;
+  out.bleedThrottles     = countFires('playBleed')                      === 1;
+  out.healThrottles      = countFires('playHeal')                       === 1;
+  out.shieldThrottles    = countFires('playShieldBlock', 'shield')      === 1;
+  out.mapNavThrottles    = countFires('playMapNavigate', 'mapNavigate') === 1;
 
   // throttleResets — after 200ms the crit throttle should allow another fire
   // (actual test: clear _lastPlayed manually and verify a fresh call fires)
@@ -157,7 +171,9 @@ const checks = [
   'methodsExist', 'noThrowOnCall', 'throttleMapExists',
   'critThrottles', 'lightningThrottles', 'explosionThrottles',
   'freezeThrottles', 'poisonThrottles', 'executeThrottles', 'doomThrottles',
-  'burnThrottles', 'bleedThrottles', 'throttleResets',
+  'burnThrottles', 'bleedThrottles',
+  'healThrottles', 'shieldThrottles', 'mapNavThrottles',
+  'throttleResets',
 ];
 
 let allPass = true;
