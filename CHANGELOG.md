@@ -2,6 +2,17 @@
 
 ---
 
+## 2026-08-24 — qa(audio): expand qa-audio-wiring to cover all 26 play* methods
+
+**Internal only**
+- `qa-audio-wiring.mjs` now covers all 26 `play*` methods in AudioManager — up from 18.
+  The 8 additions (`playTransformation`, `playWaveComplete`, `playLevelUp`, `playMinibossKill`,
+  `playGameOver`, `playDuoUnlock`, `playItemPickup`, `playBlast`) were implemented and wired
+  in Game.ts but absent from the QA harness. All 26 verified callable without throwing; the 9
+  throttled methods still tested for correct deduplication. 13/13 checks PASS ✅.
+
+---
+
 ## 2026-08-23 — fix(stats): Shot Element, Two-Hand flag, Melee Style now visible in stats popup
 
 **Player-visible**

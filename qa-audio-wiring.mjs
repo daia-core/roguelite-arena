@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 /**
- * qa-audio-wiring.mjs — verify that the previously-unconnected AudioManager methods
- * (crit, lightning, explosion, freeze, poison, shield block, heal) are now:
- *   (a) callable without throwing, and
- *   (b) throttled correctly (rapid successive calls don't double-play within the cooldown).
- * Also checks playExecute() (execute-kill audio), playSecondWind() (near-death rescue), and
- * playWavePhase() (mid-wave sub-phase escalation stinger) added Aug 2026.
+ * qa-audio-wiring.mjs — verify that AudioManager methods are wired, callable, and
+ * throttled correctly. Covers all 26 play* methods (originally: crit, lightning,
+ * explosion, freeze, poison, shield block, heal; later: execute, doom, secondWind,
+ * wavePhase, bossKill, bossWave, burn, bleed, artifactPickup, bossWaveWarning,
+ * mapNavigate; Aug-2026: transformation, duoUnlock, itemPickup, waveComplete, levelUp,
+ * minibossKill, gameOver, blast).
  *
  * Tests:
- *   methodsExist         — all 13 new methods are functions on window.__game.audio
+ *   methodsExist         — all 26 play* methods are functions on window.__game.audio
  *   noThrowOnCall        — each method can be called without throwing an error
  *   throttleMapExists    — audio._lastPlayed is a Map (throttle infrastructure is present)
  *   critThrottles        — two immediate playCrit() calls ≤ 10ms apart: only 1 fires
@@ -69,11 +69,15 @@ const results = await page.evaluate(() => {
   const audio = g.audio;
   const out = {};
 
-  // methodsExist — all 18 wired methods (7 Aug-18 + playExecute + playDoom + playSecondWind + playWavePhase + playBossKill + playBossWave + playBurn + playBleed + playArtifactPickup + playBossWaveWarning + playMapNavigate Aug-2026) are functions
+  // methodsExist — all 26 wired methods (7 Aug-18 + playExecute + playDoom + playSecondWind + playWavePhase + playBossKill + playBossWave + playBurn + playBleed + playArtifactPickup + playBossWaveWarning + playMapNavigate + playTransformation + playDuoUnlock + playItemPickup + playWaveComplete + playLevelUp + playMinibossKill + playGameOver + playBlast Aug-2026) are functions
   const methods = ['playCrit', 'playLightning', 'playExplosion', 'playFreeze',
                    'playPoison', 'playShieldBlock', 'playHeal', 'playExecute', 'playDoom', 'playSecondWind',
                    'playWavePhase', 'playBossKill', 'playBossWave', 'playBurn', 'playBleed',
-                   'playArtifactPickup', 'playBossWaveWarning', 'playMapNavigate'];
+                   'playArtifactPickup', 'playBossWaveWarning', 'playMapNavigate',
+                   // Aug-2026 additions: evolution, duo unlock, item pickup, wave complete, level up,
+                   // miniboss kill, game over, blast
+                   'playTransformation', 'playDuoUnlock', 'playItemPickup', 'playWaveComplete',
+                   'playLevelUp', 'playMinibossKill', 'playGameOver', 'playBlast'];
   out.methodsExist = methods.every(m => typeof audio[m] === 'function');
 
   // noThrowOnCall — each method fires without throwing
