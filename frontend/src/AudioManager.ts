@@ -1038,6 +1038,52 @@ export class AudioManager {
     }, 80);
   }
 
+  // Active skill cast confirmation — fires when the player triggers any active skill (Q/E).
+  // Three layers: rising sawtooth sweep (energy building), square snap (release), sine shimmer
+  // (arcane). Short 0.18s so it punches through without lingering into the effect sounds
+  // (lightning procs, explosions) that follow. Not throttled — cooldown system gates frequency.
+  playActiveSkill(): void {
+    if (!this.enabled) return;
+    this._ensureRunning();
+    const t = this.ctx.currentTime;
+    // Layer 1: fast rising sawtooth — reads as "power burst / ability cast"
+    const osc1 = this.ctx.createOscillator();
+    const g1 = this.ctx.createGain();
+    osc1.connect(g1);
+    g1.connect(this.masterGain);
+    osc1.type = 'sawtooth';
+    osc1.frequency.setValueAtTime(200, t);
+    osc1.frequency.exponentialRampToValueAtTime(600, t + 0.1);
+    g1.gain.setValueAtTime(0.25, t);
+    g1.gain.exponentialRampToValueAtTime(0.01, t + 0.18);
+    osc1.start(t);
+    osc1.stop(t + 0.18);
+    // Layer 2: sharp mid crack — tactile "release snap"
+    const osc2 = this.ctx.createOscillator();
+    const g2 = this.ctx.createGain();
+    osc2.connect(g2);
+    g2.connect(this.masterGain);
+    osc2.type = 'square';
+    osc2.frequency.setValueAtTime(350, t);
+    osc2.frequency.exponentialRampToValueAtTime(120, t + 0.07);
+    g2.gain.setValueAtTime(0.18, t);
+    g2.gain.exponentialRampToValueAtTime(0.01, t + 0.09);
+    osc2.start(t);
+    osc2.stop(t + 0.09);
+    // Layer 3: high sine shimmer — reads as "arcane / magic activated"
+    const osc3 = this.ctx.createOscillator();
+    const g3 = this.ctx.createGain();
+    osc3.connect(g3);
+    g3.connect(this.masterGain);
+    osc3.type = 'sine';
+    osc3.frequency.setValueAtTime(1200, t + 0.05);
+    osc3.frequency.exponentialRampToValueAtTime(700, t + 0.18);
+    g3.gain.setValueAtTime(0.12, t + 0.05);
+    g3.gain.exponentialRampToValueAtTime(0.01, t + 0.18);
+    osc3.start(t + 0.05);
+    osc3.stop(t + 0.18);
+  }
+
   toggle(): void {
     this.enabled = !this.enabled;
     if (!this.enabled) this.stopMusic();

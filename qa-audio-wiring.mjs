@@ -1,16 +1,17 @@
 #!/usr/bin/env node
 /**
  * qa-audio-wiring.mjs — verify that AudioManager methods are wired, callable, and
- * throttled correctly. Covers all 33 play* methods:
+ * throttled correctly. Covers all 34 play* methods:
  *   basic 7 (always-on, unthrottled): shoot, hit, kill, dash, dodge, riposte, purchase
  *   complex/throttled batch 1: crit, lightning, explosion, freeze, poison, shieldBlock, heal
  *   batch 2: execute, doom, secondWind, wavePhase, bossKill, bossWave, burn, bleed,
  *             artifactPickup, bossWaveWarning, mapNavigate
  *   Aug-2026 batch: transformation, duoUnlock, itemPickup, waveComplete, levelUp,
  *                   minibossKill, gameOver, blast
+ *   Aug-25-2026: activeSkill (Q/E ability cast confirmation — gap was total silence on activation)
  *
  * Tests:
- *   methodsExist         — all 33 play* methods are functions on window.__game.audio
+ *   methodsExist         — all 34 play* methods are functions on window.__game.audio
  *   noThrowOnCall        — each method can be called without throwing an error
  *   throttleMapExists    — audio._lastPlayed is a Map (throttle infrastructure is present)
  *   critThrottles        — two immediate playCrit() calls ≤ 10ms apart: only 1 fires
@@ -77,7 +78,7 @@ const results = await page.evaluate(() => {
   const audio = g.audio;
   const out = {};
 
-  // methodsExist — all 33 play* methods on window.__game.audio are functions
+  // methodsExist — all 34 play* methods on window.__game.audio are functions
   const methods = [
     // Basic 7 — always-on, unthrottled; wired at game start
     'playShoot', 'playHit', 'playKill', 'playDash', 'playDodge', 'playRiposte', 'playPurchase',
@@ -91,6 +92,8 @@ const results = await page.evaluate(() => {
     // miniboss kill, game over, blast
     'playTransformation', 'playDuoUnlock', 'playItemPickup', 'playWaveComplete',
     'playLevelUp', 'playMinibossKill', 'playGameOver', 'playBlast',
+    // Aug-25-2026: active skill cast confirmation (Q/E activation was completely silent)
+    'playActiveSkill',
   ];
   out.methodsExist = methods.every(m => typeof audio[m] === 'function');
 

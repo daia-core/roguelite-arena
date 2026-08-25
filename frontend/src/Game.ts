@@ -2273,6 +2273,7 @@ export class Game {
       ? this.playerStats.getEquippedSkillIdQ()
       : this.playerStats.getEquippedSkillId();
     if (!skillId) return;
+    this.audio.playActiveSkill(); // GAME FEEL: ability cast confirmation — Q/E activation had no audio
     const player = this.player;
     executeSkill(skillId, slot, {
       enemies: this.enemies,
