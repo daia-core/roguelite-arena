@@ -28,13 +28,10 @@ catalogue of stats, weapons and status-effect mechanics as a design reference).
 
 ## Remaining work — ordered
 
-**1. Item tags — the weapon / passive / active axis (small, do first).**
-The game *already* tags items by role (`melee`, `ranged`, `elemental`, `defensive`, `economic`,
-`utility`, with multi-tags). What's missing is your *function* axis — does the item **grant an
-attack** (weapon), **passively modify stats** (passive), or **fire a triggered effect** (active) —
-and, critically, those tags aren't shown in the shop yet. Plan: add a `kind` set to every item
-(an item can be several — "+move speed *and* a spear" = passive + weapon), then render colored tag
-chips on each shop/owned card so a build reads at a glance. Keep the existing role tags.
+~~**1. Item tags — the weapon / passive / active axis (small, do first). ✅ SHIPPED**~~
+~~`getItemKinds()` auto-derives weapon/passive/active from item fields; colored kind chips render~~
+~~in every shop card (ShopScene.ts:1117–1142) with distinct pill colors. qa-shop-chips.mjs verifies~~
+~~all 1918 catalog items have valid kinds. Done — no hand-tagging needed.~~
 
 **2. Full item review for uniqueness/impact (the big creative pass).**
 Walk every shop item and push the bland ones toward a distinct mechanical identity, using the wiki
