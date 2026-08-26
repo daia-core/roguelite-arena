@@ -960,6 +960,64 @@ export class AudioManager {
   //   2. Resonant bell root (E4 sine, long sustain)
   //      — gives the sound weight and duration under the shimmer
   // Total duration: ~0.9 s. No throttle needed (artifact screens are infrequent).
+  /** Achievement unlocked — milestone-reached fanfare at the game-over screen.
+   *  Three ascending notes (A4→C#5→E5) each with a sine sub-root + a high shimmer crown.
+   *  Softer than playBossKill (post-run context, not in-combat), golden and triumphant.
+   */
+  playAchievementUnlock(): void {
+    if (!this.enabled) return;
+    this._ensureRunning();
+    const t = this.ctx.currentTime;
+
+    // Layer 1: ascending triangle arpeggio — A4, C#5, E5 — rising fanfare
+    const arpNotes = [
+      { freq: 440.0,  delay: 0.00, dur: 0.18, vol: 0.20 }, // A4
+      { freq: 554.4,  delay: 0.15, dur: 0.18, vol: 0.19 }, // C#5
+      { freq: 659.3,  delay: 0.30, dur: 0.25, vol: 0.21 }, // E5 — crown, slightly louder
+    ];
+    for (const { freq, delay, dur, vol } of arpNotes) {
+      const osc  = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+      osc.type = 'triangle';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, t + delay);
+      gain.gain.linearRampToValueAtTime(vol, t + delay + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + delay + dur);
+      osc.start(t + delay);
+      osc.stop(t + delay + dur);
+    }
+
+    // Layer 2: sustaining root chord — A3 sine, adds warmth and body under the arpeggio
+    const root  = this.ctx.createOscillator();
+    const rootG = this.ctx.createGain();
+    root.connect(rootG);
+    rootG.connect(this.masterGain);
+    root.type = 'sine';
+    root.frequency.value = 220; // A3
+    rootG.gain.setValueAtTime(0, t);
+    rootG.gain.linearRampToValueAtTime(0.10, t + 0.04);
+    rootG.gain.exponentialRampToValueAtTime(0.001, t + 0.65);
+    root.start(t);
+    root.stop(t + 0.65);
+
+    // Layer 3: gold shimmer crown — high sine sweep E6→A5 at the peak (t+0.28)
+    // Reads as "the star moment" — the achievement is in your hands.
+    const shimmer  = this.ctx.createOscillator();
+    const shimmerG = this.ctx.createGain();
+    shimmer.connect(shimmerG);
+    shimmerG.connect(this.masterGain);
+    shimmer.type = 'sine';
+    shimmer.frequency.setValueAtTime(1318.5, t + 0.28); // E6
+    shimmer.frequency.exponentialRampToValueAtTime(880.0, t + 0.72); // A5
+    shimmerG.gain.setValueAtTime(0, t + 0.28);
+    shimmerG.gain.linearRampToValueAtTime(0.10, t + 0.34);
+    shimmerG.gain.exponentialRampToValueAtTime(0.001, t + 0.72);
+    shimmer.start(t + 0.28);
+    shimmer.stop(t + 0.72);
+  }
+
   playArtifactPickup(): void {
     if (!this.enabled) return;
     this._ensureRunning();

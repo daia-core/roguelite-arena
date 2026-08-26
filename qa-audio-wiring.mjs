@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * qa-audio-wiring.mjs — verify that AudioManager methods are wired, callable, and
- * throttled correctly. Covers all 34 play* methods:
+ * throttled correctly. Covers all 35 play* methods:
  *   basic 7 (always-on, unthrottled): shoot, hit, kill, dash, dodge, riposte, purchase
  *   complex/throttled batch 1: crit, lightning, explosion, freeze, poison, shieldBlock, heal
  *   batch 2: execute, doom, secondWind, wavePhase, bossKill, bossWave, burn, bleed,
@@ -9,9 +9,10 @@
  *   Aug-2026 batch: transformation, duoUnlock, itemPickup, waveComplete, levelUp,
  *                   minibossKill, gameOver, blast
  *   Aug-25-2026: activeSkill (Q/E ability cast confirmation — gap was total silence on activation)
+ *   Aug-27-2026: achievementUnlock (gap: achievements earned silently at game-over screen)
  *
  * Tests:
- *   methodsExist         — all 34 play* methods are functions on window.__game.audio
+ *   methodsExist         — all 35 play* methods are functions on window.__game.audio
  *   noThrowOnCall        — each method can be called without throwing an error
  *   throttleMapExists    — audio._lastPlayed is a Map (throttle infrastructure is present)
  *   critThrottles        — two immediate playCrit() calls ≤ 10ms apart: only 1 fires
@@ -94,6 +95,8 @@ const results = await page.evaluate(() => {
     'playLevelUp', 'playMinibossKill', 'playGameOver', 'playBlast',
     // Aug-25-2026: active skill cast confirmation (Q/E activation was completely silent)
     'playActiveSkill',
+    // Aug-27-2026: achievement unlock fanfare (gap: achievements earned silently at game-over)
+    'playAchievementUnlock',
   ];
   out.methodsExist = methods.every(m => typeof audio[m] === 'function');
 

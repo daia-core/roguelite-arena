@@ -4031,6 +4031,11 @@ export class Game {
       goldEarned: this.gameOverStats.goldEarned,
     };
     this.newAchievementsThisRun = AchievementSystem.checkRunFull(runStats);
+    // GAME FEEL — triumphant fanfare when an achievement is earned this run.
+    // Delayed 0.8 s so it plays *after* the game-over sting, not over it.
+    if (this.newAchievementsThisRun.length > 0) {
+      setTimeout(() => this.audio.playAchievementUnlock(), 800);
+    }
 
     // Update meta stats
     SaveManager.updateMetaAfterRun(this.waveManager.currentWave, this.kills);
