@@ -2,6 +2,23 @@
 
 ---
 
+## 2026-08-28 — fix(input): mobile skill buttons Q/E now fire on mouse + pen + touch
+
+**Player-visible**
+- Q (blast) and E (skill) buttons on mobile now respond to mouse clicks and stylus/pen input,
+  not just touch. Hybrid-device users (iPad, Surface Pro, touch-laptop) were getting no response
+  from those two buttons when using mouse or stylus — only DASH worked universally.
+
+**Under the hood**
+- `blastBtn` and `skillEBtn` event listeners changed from `touchstart` to `pointerdown`.
+  `dashBtn` already used `pointerdown` (with a comment explaining why) — Q/E are now consistent.
+- tsc: clean. build: `index-17eC4OCf.js`. deploy: `dpl_3hpXK757tVL3ctP5xotYrBqAuRtM` ✓
+
+**Commit** `5faf111`
+**Live:** https://roguelite-game-blush.vercel.app · hash `index-17eC4OCf.js` ✓
+
+---
+
 ## 2026-08-28 — feel(audio): game-over + achievements buttons were completely silent
 
 **Player-visible**

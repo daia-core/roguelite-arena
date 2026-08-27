@@ -64,18 +64,22 @@ export class PauseScene implements Scene {
     const my = this.input.mouseY;
 
     if (pointInRect(mx, my, rects[0])) {          // Resume
+      this.audio.playMapNavigate();               // GAME FEEL: re-entering the arena
       this.input.mouseDown = false;
       this.deps.onResume();
     } else if (pointInRect(mx, my, rects[1])) {   // Sound toggle
       this.audio.toggle();
       this.input.mouseDown = false;
     } else if (pointInRect(mx, my, rects[2])) {   // End Run — cash out souls now
+      this.audio.playMapNavigate();               // GAME FEEL: confirming end of run
       this.input.mouseDown = false;
       this.deps.onEndRun();
     } else if (pointInRect(mx, my, rects[3])) {   // Restart Run
+      this.audio.playMapNavigate();               // GAME FEEL: starting fresh
       this.input.mouseDown = false;
       this.deps.onRestartRun();
     } else if (pointInRect(mx, my, rects[4])) {   // Main Menu (abandons the run)
+      this.audio.playMapNavigate();               // GAME FEEL: navigating to menu
       this.input.mouseDown = false;
       this.deps.onMainMenu();
     }
