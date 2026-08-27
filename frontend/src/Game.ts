@@ -1196,6 +1196,7 @@ export class Game {
         if (distSq < stompRadius * stompRadius) {
           const damaged = this.player.takeDamage(enemy.typeData.damage * 1.5, Game.RANGED_ARMOR_PEN);
           if (damaged) {
+            this.audio.playPlayerHurt(); // GAME FEEL: thud on real HP loss (throttled 200ms)
             this.renderer.addHitFlash(0.6);
             // PERFORMANCE: Use pooled particles (quality-adjusted)
             const particleCount = this.getParticleCount(15);
@@ -1271,6 +1272,7 @@ export class Game {
         if (distSq < 80 * 80) {
           const damaged = this.player.takeDamage(enemy.typeData.damage * 0.5, Game.RANGED_ARMOR_PEN);
           if (damaged) {
+            this.audio.playPlayerHurt(); // GAME FEEL: thud on real HP loss (throttled 200ms)
             this.renderer.addHitFlash(0.3);
           }
         }
@@ -1385,6 +1387,7 @@ export class Game {
         const damaged = this.player.takeDamage(enemy.typeData.damage, Game.CONTACT_ARMOR_PEN);
         if (!damaged && _hadShield && !this.player.shield) this.audio.playShieldBlock(); // GAME FEEL
         if (damaged) {
+          this.audio.playPlayerHurt(); // GAME FEEL: thud on real HP loss (throttled 200ms)
           this.applyThorns(enemy.typeData.damage, enemy);
           this.renderer.addHitFlash(0.5);
           // PERFORMANCE: Use pooled particles
@@ -1563,6 +1566,7 @@ export class Game {
           const damaged = this.player.takeDamage(proj.damage, Game.RANGED_ARMOR_PEN);
           if (!damaged && _hadShieldP && !this.player.shield) this.audio.playShieldBlock(); // GAME FEEL
           if (damaged) {
+            this.audio.playPlayerHurt(); // GAME FEEL: thud on real HP loss (throttled 200ms)
             this.applyThorns(proj.damage);
             this.renderer.addHitFlash(0.4);
             // PERFORMANCE: Use pooled particles
@@ -2435,6 +2439,7 @@ export class Game {
       if (dmg > 0) {
         const damaged = this.player.takeDamage(dmg, Game.RANGED_ARMOR_PEN);
         if (damaged) {
+          this.audio.playPlayerHurt(); // GAME FEEL: thud on real HP loss (throttled 200ms)
           this.applyThorns(dmg);
           this.renderer.addHitFlash(0.5);
         }
@@ -2899,6 +2904,7 @@ export class Game {
       if (distSq < 120 * 120) {
         const damaged = this.player.takeDamage(enemy.typeData.damage * 0.8, Game.RANGED_ARMOR_PEN);
         if (damaged) {
+          this.audio.playPlayerHurt(); // GAME FEEL: thud on real HP loss (throttled 200ms)
           this.renderer.addHitFlash(0.4);
         }
       }
@@ -2931,6 +2937,7 @@ export class Game {
       if (distSqToPlayer < explodeRadiusSq) {
         const damaged = this.player.takeDamage(enemy.typeData.damage * 1.5, Game.RANGED_ARMOR_PEN);
         if (damaged) {
+          this.audio.playPlayerHurt(); // GAME FEEL: thud on real HP loss (throttled 200ms)
           this.renderer.addHitFlash(0.6);
         }
       }

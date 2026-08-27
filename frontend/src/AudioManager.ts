@@ -384,6 +384,38 @@ export class AudioManager {
     }, 300);
   }
 
+  // Player takes real HP damage — descending thud to signal you're being hurt (not just shield-blocked).
+  // Throttled 200ms so rapid multi-hits don't spam. Sawtooth descend 350→180 Hz + sub-bass layer.
+  playPlayerHurt(): void {
+    this._throttled('playerHurt', () => {
+      this._ensureRunning();
+      const t = this.ctx.currentTime;
+      // Main descend: sawtooth 350→180 Hz, 130ms — "impact" shape
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(350, t);
+      osc.frequency.exponentialRampToValueAtTime(180, t + 0.13);
+      gain.gain.setValueAtTime(0.22, t);
+      gain.gain.exponentialRampToValueAtTime(0.01, t + 0.13);
+      osc.start(t);
+      osc.stop(t + 0.13);
+      // Sub-bass thud: sine 80 Hz, 60ms — body
+      const sub = this.ctx.createOscillator();
+      const subGain = this.ctx.createGain();
+      sub.connect(subGain);
+      subGain.connect(this.masterGain);
+      sub.type = 'sine';
+      sub.frequency.value = 80;
+      subGain.gain.setValueAtTime(0.18, t);
+      subGain.gain.exponentialRampToValueAtTime(0.01, t + 0.06);
+      sub.start(t);
+      sub.stop(t + 0.06);
+    }, 200);
+  }
+
   // NEW: Heal sound — throttled 300ms (orbs can spawn in groups on enemy death)
   playHeal(): void {
     this._throttled('heal', () => {

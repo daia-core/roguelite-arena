@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * qa-audio-wiring.mjs — verify that AudioManager methods are wired, callable, and
- * throttled correctly. Covers all 36 play* methods:
+ * throttled correctly. Covers all 37 play* methods:
  *   basic 7 (always-on, unthrottled): shoot, hit, kill, dash, dodge, riposte, purchase
  *   complex/throttled batch 1: crit, lightning, explosion, freeze, poison, shieldBlock, heal
  *   batch 2: execute, doom, secondWind, wavePhase, bossKill, bossWave, burn, bleed,
@@ -13,7 +13,7 @@
  *   Aug-27-2026: xpPickup (gap: XP orb collection was completely silent)
  *
  * Tests:
- *   methodsExist         — all 36 play* methods are functions on window.__game.audio
+ *   methodsExist         — all 37 play* methods are functions on window.__game.audio
  *   noThrowOnCall        — each method can be called without throwing an error
  *   throttleMapExists    — audio._lastPlayed is a Map (throttle infrastructure is present)
  *   critThrottles        — two immediate playCrit() calls ≤ 10ms apart: only 1 fires
@@ -80,7 +80,7 @@ const results = await page.evaluate(() => {
   const audio = g.audio;
   const out = {};
 
-  // methodsExist — all 34 play* methods on window.__game.audio are functions
+  // methodsExist — all 37 play* methods on window.__game.audio are functions
   const methods = [
     // Basic 7 — always-on, unthrottled; wired at game start
     'playShoot', 'playHit', 'playKill', 'playDash', 'playDodge', 'playRiposte', 'playPurchase',
@@ -100,6 +100,8 @@ const results = await page.evaluate(() => {
     'playAchievementUnlock',
     // Aug-27-2026: XP orb pickup tick (gap: XP collection was completely silent)
     'playXPPickup',
+    // Aug-27-2026: player hurt thud (gap: taking real HP damage was completely silent)
+    'playPlayerHurt',
   ];
   out.methodsExist = methods.every(m => typeof audio[m] === 'function');
 
@@ -156,7 +158,8 @@ const results = await page.evaluate(() => {
   out.healThrottles      = countFires('playHeal')                       === 1;
   out.shieldThrottles    = countFires('playShieldBlock', 'shield')      === 1;
   out.mapNavThrottles    = countFires('playMapNavigate', 'mapNavigate') === 1;
-  out.xpPickupThrottles  = countFires('playXPPickup',   'xpPickup')    === 1;
+  out.xpPickupThrottles       = countFires('playXPPickup',    'xpPickup')     === 1;
+  out.playerHurtThrottles     = countFires('playPlayerHurt',  'playerHurt')   === 1;
 
   // throttleResets — after 200ms the crit throttle should allow another fire
   // (actual test: clear _lastPlayed manually and verify a fresh call fires)
@@ -183,6 +186,7 @@ const checks = [
   'freezeThrottles', 'poisonThrottles', 'executeThrottles', 'doomThrottles',
   'burnThrottles', 'bleedThrottles',
   'healThrottles', 'shieldThrottles', 'mapNavThrottles', 'xpPickupThrottles',
+  'playerHurtThrottles',
   'throttleResets',
 ];
 
