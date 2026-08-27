@@ -11,6 +11,7 @@ import { AchievementSystem, ACHIEVEMENTS } from './AchievementSystem';
 import { ItemDatabase } from './ItemSystem';
 import { Input } from './Input';
 import { Renderer } from './Renderer';
+import { AudioManager } from './AudioManager';
 import { pointInRect } from './utils';
 import { drawPanel, DARK_WOOD_THEME } from './pixel/panel';
 
@@ -20,6 +21,7 @@ export interface AchievementsSceneDeps {
   canvas: HTMLCanvasElement;
   renderer: Renderer;
   input: Input;
+  audio: AudioManager;
 
   /** Navigate back to the previous screen (usually 'menu' or 'gameover'). */
   onBack(): void;
@@ -31,12 +33,14 @@ export class AchievementsScene implements Scene {
   private readonly canvas: HTMLCanvasElement;
   private readonly renderer: Renderer;
   private readonly input: Input;
+  private readonly audio: AudioManager;
   private readonly deps: AchievementsSceneDeps;
 
   constructor(deps: AchievementsSceneDeps) {
     this.canvas = deps.canvas;
     this.renderer = deps.renderer;
     this.input = deps.input;
+    this.audio = deps.audio;
     this.deps = deps;
   }
 
@@ -48,6 +52,7 @@ export class AchievementsScene implements Scene {
     // Back button.
     if (pointInRect(mx, my, back)) {
       this.input.mouseDown = false;
+      this.audio.playMapNavigate(); // GAME FEEL: nav cue on back → previous screen
       this.deps.onBack();
       return;
     }
@@ -59,6 +64,7 @@ export class AchievementsScene implements Scene {
         this.input.mouseDown = false;
         const ach = ACHIEVEMENTS[i];
         if (AchievementSystem.isEarned(ach.id)) {
+          this.audio.playItemPickup(); // GAME FEEL: chime on achievement reward toggle
           AchievementSystem.toggleItemDisabled(ach.unlocksItemId);
         }
         return;

@@ -12,6 +12,7 @@ import type { Scene } from './scenes/Scene';
 import type { Achievement } from './AchievementSystem';
 import { Input } from './Input';
 import { Renderer } from './Renderer';
+import { AudioManager } from './AudioManager';
 import { pointInRect, formatShort } from './utils';
 
 // ─── GameOverStats ────────────────────────────────────────────────────────────
@@ -44,6 +45,7 @@ export interface GameOverSceneDeps {
   canvas: HTMLCanvasElement;
   renderer: Renderer;
   input: Input;
+  audio: AudioManager;
 
   /** Live read of game-over stats owned by Game.ts — populated in gameOver(). */
   getStats(): GameOverStats;
@@ -66,12 +68,14 @@ export class GameOverScene implements Scene {
   private readonly canvas: HTMLCanvasElement;
   private readonly renderer: Renderer;
   private readonly input: Input;
+  private readonly audio: AudioManager;
   private readonly deps: GameOverSceneDeps;
 
   constructor(deps: GameOverSceneDeps) {
     this.canvas = deps.canvas;
     this.renderer = deps.renderer;
     this.input = deps.input;
+    this.audio = deps.audio;
     this.deps = deps;
   }
 
@@ -109,17 +113,21 @@ export class GameOverScene implements Scene {
     const achBtn      = { x: bx, y: startY + (buttonHeight + spacing) * 3, width: buttonWidth, height: buttonHeight };
 
     if (pointInRect(mouseX, mouseY, retryBtn) && this.input.mouseDown) {
+      this.input.mouseDown = false;
+      this.audio.playMapNavigate(); // GAME FEEL: forward cue on retry — starting fresh
       this.deps.onRetry();
-      this.input.mouseDown = false;
     } else if (pointInRect(mouseX, mouseY, upgradesBtn) && this.input.mouseDown) {
+      this.input.mouseDown = false;
+      this.audio.playMapNavigate(); // GAME FEEL: nav cue into village upgrades
       this.deps.onViewUpgrades();
-      this.input.mouseDown = false;
     } else if (pointInRect(mouseX, mouseY, menuBtn) && this.input.mouseDown) {
+      this.input.mouseDown = false;
+      this.audio.playMapNavigate(); // GAME FEEL: nav cue back to main menu
       this.deps.onMenu();
-      this.input.mouseDown = false;
     } else if (!isMobile && hasNewAch && pointInRect(mouseX, mouseY, achBtn) && this.input.mouseDown) {
-      this.deps.onViewAchievements();
       this.input.mouseDown = false;
+      this.audio.playMapNavigate(); // GAME FEEL: nav cue into achievements screen
+      this.deps.onViewAchievements();
     }
   }
 

@@ -452,6 +452,7 @@ export class Game {
       canvas: this.canvas,
       renderer: this.renderer,
       input: this.input,
+      audio: this.audio,
       getStats: () => this.gameOverStats,
       getNewAchievements: () => this.newAchievementsThisRun,
       onRetry: () => this.openClassSelect(),
@@ -463,6 +464,7 @@ export class Game {
       canvas: this.canvas,
       renderer: this.renderer,
       input: this.input,
+      audio: this.audio,
       onBack: () => { this.state = 'menu'; },
     });
     this.scenes.classselect = new ClassSelectScene({
