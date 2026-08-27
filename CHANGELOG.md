@@ -2,6 +2,21 @@
 
 ---
 
+## 2026-08-27 — feel(audio): hit/coin sound for event hurt/gold effects
+
+**Player-visible**
+- Risky event choices that cost HP (e.g. "Bleed onto the altar") now play a hit sting — you
+  paid with blood and the game acknowledges it. Previously these were completely silent.
+- Event options that grant gold now play the shop coin chime — consistent with the shop's
+  same-sound feedback and makes the reward feel tangible.
+- `heal`, `maxHp`, `artifact`, `curse`, `item` event effects already had sounds. `nothing`
+  (walk-away options) stays silent intentionally — declining has no drama to reinforce.
+
+**Commit** `8ef9298`
+**Live:** https://roguelite-game-blush.vercel.app · https://frontend-daiacore.vercel.app · hash `index-Bs0UZ9WL.js` ✓ (both projects)
+
+---
+
 ## 2026-08-24 — qa(audio): expand qa-audio-wiring to cover all 26 play* methods
 
 **Internal only**
