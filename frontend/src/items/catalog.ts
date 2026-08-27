@@ -690,6 +690,29 @@ export const ITEM_CATALOG: Item[] = [
       knockback: 200
     },
     {
+      // SPINNING GLAIVE: T2 spin — the only dedicated 360° whirl in the melee ladder.
+      // meleeStyle:'spin' explicitly routes through the full-circle hit zone regardless
+      // of swingAoe (the thunder-hammer fallback path). Weapontype:'melee' silences the
+      // gun; the spinning whirl IS the attack. Slow rhythm, moderate damage — the pay-off
+      // is hitting every enemy in reach simultaneously. Fills the gap in the T2 ladder
+      // (arc/thrust/slam all existed; spin was the only missing style at this tier).
+      id: 'melee_whirl_t2',
+      name: 'Spinning Glaive',
+      description: 'Melee only: a full 360° whirl — cuts every enemy in reach, slow rhythm',
+      rarity: 'rare',
+      tier: ItemTier.Uncommon,
+      cost: 34,
+      icon: '🌀',
+      unlocked: true,
+      tags: ['melee'],
+      weaponType: 'melee',
+      meleeStyle: 'spin',
+      meleeDamageMult: 2.5,
+      swingRangeBonus: 25,
+      swingCooldownMult: 1.35,  // spinning a full circle is slower than a directional arc
+      knockback: 90
+    },
+    {
       id: 'melee_sword_t2',
       name: 'Crescent Blade',
       description: 'Wider, faster, harder-hitting swing',
@@ -768,6 +791,28 @@ export const ITEM_CATALOG: Item[] = [
       burn: 0.28,
       swingCooldownMult: 1.7,
       knockback: 280
+    },
+    {
+      // MAELSTROM BLADE: T3 spin — upgrade from Spinning Glaive. Enormous reach,
+      // the spinning storm poisons everything caught inside it. meleeStyle:'spin' =
+      // full 360° whirl; huge swingRangeBonus turns it into a wide hurricane.
+      // Melee-only (suppresses gun). Slow but the AoE radius compensates.
+      id: 'melee_maelstrom_t3',
+      name: 'Maelstrom Blade',
+      description: 'Melee only: a hurricane spin — enormous reach, poisons everything in the storm',
+      rarity: 'epic',
+      tier: ItemTier.Rare,
+      cost: 70,
+      icon: '🌀',
+      unlocked: true,
+      tags: ['melee', 'elemental'],
+      weaponType: 'melee',
+      meleeStyle: 'spin',
+      meleeDamageMult: 3.8,
+      swingRangeBonus: 50,
+      swingCooldownMult: 1.5,   // slow rhythm — a hurricane takes time to build
+      knockback: 140,
+      poison: 0.22             // the spinning storm poisons enemies caught in the whirl
     },
     {
       id: 'orbital_weapon_t3',
