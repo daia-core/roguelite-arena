@@ -2,6 +2,50 @@
 
 ---
 
+## 2026-08-28 — feel(audio): game-over + achievements buttons were completely silent
+
+**Player-visible**
+- All four game-over screen buttons (Retry / View Upgrades / Menu / View Achievements) now
+  play a navigation cue on click — they were completely silent.
+- AchievementsScene: BACK button now plays navigation cue; tapping an earned achievement row
+  to toggle its reward item in/out of the shop pool now plays an item-chime.
+
+**Under the hood**
+- `AudioManager` wired into `AchievementsSceneDeps` and `GameOverSceneDeps` (both scenes
+  previously had no audio field at all).
+- Game.ts passes `audio: this.audio` to both constructors.
+- tsc: clean. build: `index-DRcS_IwW.js`. deploy: `dpl_7pX7oW8eBLkqPFNt9x17RiLEUwoH` ✓
+
+**Commit** `08a5292`
+**Live:** https://roguelite-game-blush.vercel.app · hash `index-DRcS_IwW.js` ✓
+
+---
+
+## 2026-08-27 — feat(content): Spinning Glaive + Maelstrom Blade — spin melee ladder complete
+
+**Player-visible**
+- **Spinning Glaive** (Rare, melee-only): a full 360° whirl that cuts every enemy in reach
+  simultaneously. Slower rhythm than directional weapons — spinning a full circle takes time —
+  but the pay-off is AoE coverage without aiming. `meleeStyle: 'spin'`, 2.5× swing damage,
+  +25 range, 1.35× cooldown.
+- **Maelstrom Blade** (Epic, melee-only): a hurricane spin at massive radius that poisons
+  everything caught inside. Upgrade path from Spinning Glaive. `meleeStyle: 'spin'`, 3.8×
+  swing damage, +50 range, 1.5× cooldown, 22% poison on every spin.
+- These two items fill the only missing style in the melee weapon ladder. All four `MeleeStyle`
+  variants (`arc`, `thrust`, `slam`, `spin`) now have dedicated T2 + T3 melee-only weapons.
+
+**Under the hood**
+- `meleeStyle: 'spin'` was implemented in `MeleeAttack.ts` and fully routed in `Game.ts`
+  (full 360° arc, correct hit geometry) but no item explicitly set it — only Thunder Hammer
+  reached spin as a side-effect of `swingAoe > 0` with no `meleeStyle`. The new items use the
+  explicit field so the style is unambiguous regardless of build composition.
+- Catalog: 1920 items. Integrity QA: no duplicates, no invalid fields. tsc + vite build clean.
+
+**Commit** `4c5f8db`
+**Live:** https://roguelite-game-blush.vercel.app · hash `index-BmlTl8Vh.js` ✓
+
+---
+
 ## 2026-08-27 — feel(audio): hit/coin sound for event hurt/gold effects
 
 **Player-visible**
