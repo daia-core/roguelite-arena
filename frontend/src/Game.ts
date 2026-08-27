@@ -3888,6 +3888,7 @@ export class Game {
     switch (effect.kind) {
       case 'gold':
         this.player.gold = Math.max(0, this.player.gold + effect.amount);
+        this.audio.playPurchase(); // GAME FEEL: coin chime on gold gain from event
         return null;
       case 'heal':
         this.player.health = Math.min(this.player.maxHealth, this.player.health + Math.round(effect.frac * this.player.maxHealth));
@@ -3896,6 +3897,7 @@ export class Game {
       case 'hurt': {
         const dmg = Math.round(effect.frac * this.player.maxHealth);
         this.player.health = Math.max(1, this.player.health - dmg); // event damage never kills
+        this.audio.playHit(); // GAME FEEL: impact sting — you paid with blood, the player hears it
         return null;
       }
       case 'maxHp':
