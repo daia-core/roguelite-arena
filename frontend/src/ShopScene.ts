@@ -280,6 +280,7 @@ export class ShopScene implements Scene {
     }
     if (pointInRect(mouseX, mouseY, combosBtn) && this.deps.input.mouseDown) {
       this.showCombosOverlay = true;
+      this.deps.audio.playMapNavigate();
       this.deps.input.mouseDown = false;
       return;
     }
@@ -287,6 +288,7 @@ export class ShopScene implements Scene {
     // SKILLS button — open skill tree from the shop.
     if (pointInRect(mouseX, mouseY, this.getSkillsButtonRect()) && this.deps.input.mouseDown) {
       this.deps.input.mouseDown = false;
+      this.deps.audio.playMapNavigate();
       this.deps.onOpenSkillTree();
       return;
     }
@@ -301,6 +303,7 @@ export class ShopScene implements Scene {
     }
     if (pointInRect(mouseX, mouseY, this.statsPanelRect) && this.deps.input.mouseDown) {
       this.showStatsPopup = true;
+      this.deps.audio.playMapNavigate();
       this.deps.input.mouseDown = false;
       return;
     }
@@ -355,6 +358,7 @@ export class ShopScene implements Scene {
       height: buttonHeight,
     };
     if (pointInRect(mouseX, mouseY, continueBtn) && this.deps.input.mouseDown) {
+      this.deps.audio.playWaveComplete(); // GAME FEEL: Next Wave tap had no audio feedback
       this.deps.onContinue();
       this.deps.input.mouseDown = false;
     }
