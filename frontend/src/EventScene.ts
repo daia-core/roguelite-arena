@@ -2,6 +2,7 @@ import type { Scene } from './scenes/Scene';
 import type { GameState } from './Game';
 import type { Renderer } from './Renderer';
 import type { Input } from './Input';
+import { AudioManager } from './AudioManager';
 import { randomEvent, type GameEvent, type EventOption, type EventRequirement } from './EventSystem';
 import { drawPanel, DARK_WOOD_THEME } from './pixel/panel';
 import { pointInRect } from './utils';
@@ -22,6 +23,7 @@ export interface EventSceneDeps {
   canvas: HTMLCanvasElement;
   renderer: Renderer;
   input: Input;
+  audio: AudioManager;
   /**
    * Apply the chosen option's game effects and return the outcome text + optional reward card.
    * Game.ts owns all the player/artifact mutation; EventScene owns only the screen state.
@@ -53,6 +55,7 @@ export class EventScene implements Scene {
   private readonly canvas: HTMLCanvasElement;
   private readonly renderer: Renderer;
   private readonly input: Input;
+  private readonly audio: AudioManager;
   private readonly onOptionPicked: (opt: EventOption) => { resultText: string; reward: EventReward | null };
   private readonly onDone: () => void;
   private readonly meetsRequirement: (req: EventRequirement) => boolean;
@@ -72,6 +75,7 @@ export class EventScene implements Scene {
     this.canvas = deps.canvas;
     this.renderer = deps.renderer;
     this.input = deps.input;
+    this.audio = deps.audio;
     this.onOptionPicked = deps.onOptionPicked;
     this.onDone = deps.onDone;
     this.meetsRequirement = deps.meetsRequirement;
@@ -153,6 +157,7 @@ export class EventScene implements Scene {
         this.currentEvent = null;
         this.eventResultText = null;
         this.eventReward = null;
+        this.audio.playMapNavigate(); // GAME FEEL: soft nav cue on Continue → map
         this.onDone();
       }
     }

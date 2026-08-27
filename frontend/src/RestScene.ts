@@ -2,6 +2,7 @@ import type { Scene } from './scenes/Scene';
 import type { GameState } from './Game';
 import type { Renderer } from './Renderer';
 import type { Input } from './Input';
+import { AudioManager } from './AudioManager';
 import { drawPanel, DARK_WOOD_THEME } from './pixel/panel';
 import { pointInRect } from './utils';
 
@@ -9,6 +10,7 @@ export interface RestSceneDeps {
   canvas: HTMLCanvasElement;
   renderer: Renderer;
   input: Input;
+  audio: AudioManager;
   /**
    * Apply the chosen option's game effects (heal or train) and return the
    * outcome text to display. Game.ts owns all player/stat mutation;
@@ -35,6 +37,7 @@ export class RestScene implements Scene {
   private readonly canvas: HTMLCanvasElement;
   private readonly renderer: Renderer;
   private readonly input: Input;
+  private readonly audio: AudioManager;
   private readonly onChoose: (choice: 'rest' | 'train') => string;
   private readonly onDone: () => void;
   private readonly getWave?: () => number;
@@ -47,6 +50,7 @@ export class RestScene implements Scene {
     this.canvas = deps.canvas;
     this.renderer = deps.renderer;
     this.input = deps.input;
+    this.audio = deps.audio;
     this.onChoose = deps.onChoose;
     this.onDone = deps.onDone;
     this.getWave = deps.getWave;
@@ -102,6 +106,7 @@ export class RestScene implements Scene {
       const r = this.columnRects(1, y, s, W, isMobile)[0];
       if (pointInRect(mx, my, r)) {
         this.input.mouseDown = false;
+        this.audio.playMapNavigate(); // GAME FEEL: soft nav cue on Continue → map
         this.onDone();
       }
     }
