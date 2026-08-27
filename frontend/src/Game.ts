@@ -1946,6 +1946,7 @@ export class Game {
     for (const orb of this.xpOrbs) {
       if (orb.update(dt, this.player.x, this.player.y, xpMagnetRadius)) {
         this.grantXP(orb.xpAmount);
+        this.audio.playXPPickup(); // GAME FEEL: soft tick on XP orb collection — silent before this
         orb.dead = true;
       }
     }

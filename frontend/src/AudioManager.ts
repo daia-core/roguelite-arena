@@ -534,6 +534,26 @@ export class AudioManager {
     }
   }
 
+  // XP orb pickup — throttled 80ms so rapid vacuum sweeps play a satisfying
+  // staccato rather than a blur. Soft, high triangle "tick" — lighter than
+  // the item-pickup jingle (coins) and clearly distinct from it.
+  playXPPickup(): void {
+    this._throttled('xpPickup', () => {
+      this._ensureRunning();
+      const t = this.ctx.currentTime;
+      const osc  = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+      osc.type = 'triangle';
+      osc.frequency.value = 1400; // bright, high — clearly XP, not an item
+      gain.gain.setValueAtTime(0.09, t);
+      gain.gain.exponentialRampToValueAtTime(0.01, t + 0.055);
+      osc.start(t);
+      osc.stop(t + 0.055);
+    }, 80);
+  }
+
   // Doom detonation — throttled 400ms (doom chain detonations can fire in quick succession)
   playDoom(): void {
     this._throttled('doom', () => {
