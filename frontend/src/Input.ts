@@ -236,14 +236,16 @@ export class Input {
     }
 
     if (this.blastButton) {
-      this.blastButton.addEventListener('touchstart', (e) => {
+      // pointerdown covers touch, pen AND mouse — same as dashBtn above.
+      this.blastButton.addEventListener('pointerdown', (e) => {
         e.preventDefault();
         this.blastPressed = true;
       });
     }
 
     if (this.skillEButton) {
-      this.skillEButton.addEventListener('touchstart', (e) => {
+      // pointerdown covers touch, pen AND mouse — same as dashBtn above.
+      this.skillEButton.addEventListener('pointerdown', (e) => {
         e.preventDefault();
         this.skillEPressed = true;
       });
