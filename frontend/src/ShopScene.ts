@@ -345,6 +345,10 @@ export class ShopScene implements Scene {
           if (this.deps.onPurchase(i)) {
             this.deps.audio.playPurchase();
             this.deps.input.mouseDown = false;
+          } else {
+            this.deps.audio.playMapNavigate();
+            this.showToast("Not enough gold");
+            this.deps.input.mouseDown = false;
           }
         }
       }
@@ -373,6 +377,10 @@ export class ShopScene implements Scene {
     if (pointInRect(mouseX, mouseY, rerollBtn) && this.deps.input.mouseDown) {
       if (this.deps.onReroll()) {
         this.deps.audio.playPurchase();
+        this.deps.input.mouseDown = false;
+      } else {
+        this.deps.audio.playMapNavigate();
+        this.showToast("Not enough gold to reroll");
         this.deps.input.mouseDown = false;
       }
     }
@@ -576,6 +584,9 @@ export class ShopScene implements Scene {
           this.deps.onSyncMaxHealth();
           this.deps.audio.playPurchase();
           this.showToast(`Equipped ${item.name}`);
+        } else if (item) {
+          this.deps.audio.playMapNavigate();
+          this.showToast('No open slot for that item');
         }
         return true;
       }
