@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-08-28 — balance(item): Traveler Boots — no longer dominated by Worn Boots (222e3e5 live)
+
+**Player-visible**
+- **Traveler Boots** (Common feet, 10g): boosted from +10% to **+12% move speed**. Previously identical to Worn Boots (7g, +10%) — zero reason to ever choose the pricier pair. Now there's a clear Common speed ladder: Worn Boots 7g (+10%), Traveler Boots 10g (+12%), Swift Boots 11g (+15%). Each pair justifies its price.
+- **Worn Boots** icon updated (👟→👞) to remove conflict with Swift Boots, which also used 👟.
+
+---
+
 ## 2026-08-28 — balance(item): Scout Trousers — no longer a dominated stat-stick
 
 **Player-visible**
