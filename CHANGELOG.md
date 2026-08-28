@@ -2,6 +2,22 @@
 
 ---
 
+## 2026-08-28 — balance(item): Dodge Kicks — melee/dodge hybrid, no longer a plain stat-stick
+
+**Player-visible**
+- **Dodge Kicks** (Uncommon feet, 26g): now grants +10% dodge **and +15% swing damage**. Previously it was just +10% dodge at 24g — a weak value proposition outclassed by higher-tier boots with no identity of its own. The 'kick' mechanic now lives on the item: light footwork that helps you dodge *and* hit harder when your swing lands.
+- Fits dodge/melee hybrid builds — pairs naturally with melee weapons, the riposte chain (Counter Band → Voidstep Cloak for burst-on-dodge), or any build that wants its feet slot to pull double duty.
+- Cost: 24g → 26g (two meaningful stats warrant a small premium over pure single-stat Uncommon boots).
+
+**Under the hood**
+- `swingDamageMult: 1.15` added; tags expanded to `['utility', 'melee']`; cost bumped to 26g.
+- Catalog integrity: 1920 items, no duplicates. Stats-parity: 2196 checks, 0 mismatches.
+
+**Commit** `b05a453`
+**Live:** https://roguelite-game-blush.vercel.app · hash `index-wL2xF6HV.js` ✓
+
+---
+
 ## 2026-08-28 — fix(stats): active skills (Q/E) now visible in ALL STATS popup
 
 **Player-visible**
