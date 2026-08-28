@@ -536,6 +536,7 @@ export class Game {
       canvas: this.canvas,
       renderer: this.renderer,
       input: this.input,
+      audio: this.audio,
       getSkillTree: () => this.skillTree,
       getPlayerStats: () => this.playerStats,
       onNodeAllocated: (armColor: string) => {

@@ -282,11 +282,13 @@ export class VillageScene implements Scene {
     const mx = input.mouseX, my = input.mouseY;
     if (input.mouseDown && this.pointIn(mx, my, this.backRect)) {
       input.mouseDown = false;
+      this.d.audio.playMapNavigate();               // GAME FEEL: leaving the village
       this.d.onBack();
       return;
     }
     if (input.mouseDown && this.pointIn(mx, my, this.embarkRect)) {
       input.mouseDown = false;
+      this.d.audio.playMapNavigate();               // GAME FEEL: launching a run from top bar
       this.d.onEmbark();
       return;
     }
@@ -295,6 +297,7 @@ export class VillageScene implements Scene {
     if (input.mouseDown && this.nearId && this.nearId !== this.suppressId) {
       input.mouseDown = false;
       if (this.nearId === 'shrine') {
+        this.d.audio.playMapNavigate();             // GAME FEEL: shrine embark → entering a run
         this.d.onEmbark();
       } else {
         this.openId = this.nearId;
@@ -326,6 +329,7 @@ export class VillageScene implements Scene {
       input.mouseDown = false;
       this.suppressId = this.openId; // block instant re-open until we leave its reach
       this.openId = null;
+      this.d.audio.playMapNavigate();               // GAME FEEL: closing a building panel
       return;
     }
     for (const b of this.buyRects) {

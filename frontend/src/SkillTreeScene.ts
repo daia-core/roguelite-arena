@@ -11,6 +11,7 @@ import { SkillTree, SKILL_NODES, SKILL_EDGES, ARM_COLOR, getNode, type SkillNode
 import { PlayerStats } from './ItemSystem';
 import { Input } from './Input';
 import { Renderer } from './Renderer';
+import type { AudioManager } from './AudioManager';
 import { pointInRect } from './utils';
 import { drawPanel, DARK_WOOD_THEME } from './pixel/panel';
 import type { Scene } from './scenes/Scene';
@@ -21,6 +22,7 @@ export interface SkillTreeSceneDeps {
   canvas: HTMLCanvasElement;
   renderer: Renderer;
   input: Input;
+  audio: AudioManager;
 
   /** The live SkillTree instance (shared with Game — allocations take effect immediately). */
   getSkillTree(): SkillTree;
@@ -292,14 +294,15 @@ export class SkillTreeScene implements Scene {
   private handleTap(x: number, y: number): void {
     const V = this.stView();
     if (pointInRect(x, y, { x: V.btnX, y: V.btnY, width: V.btnW, height: V.btnH })) {
+      this.deps.audio.playMapNavigate();              // GAME FEEL: exiting the skill tree
       this.deps.onFinish(this.returnToShop);
       this.returnToShop = false;
       return;
     }
     const B = this.stButtons();
-    if (pointInRect(x, y, B.zoomIn))   { this.applyZoom(1.25); return; }
-    if (pointInRect(x, y, B.zoomOut))  { this.applyZoom(0.8);  return; }
-    if (pointInRect(x, y, B.recenter)) { this.centerOnStart();  return; }
+    if (pointInRect(x, y, B.zoomIn))   { this.deps.audio.playMapNavigate(); this.applyZoom(1.25); return; }
+    if (pointInRect(x, y, B.zoomOut))  { this.deps.audio.playMapNavigate(); this.applyZoom(0.8);  return; }
+    if (pointInRect(x, y, B.recenter)) { this.deps.audio.playMapNavigate(); this.centerOnStart();  return; }
 
     const Z = this.zoom * this.stView().zoom;
     let hit: SkillNode | null = null;
