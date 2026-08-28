@@ -142,6 +142,7 @@ export const ITEM_CATALOG: Item[] = [
     },
     {
       id: 'movement_speed_t2',
+      slot: 'feet',
       name: 'Running Shoes',
       description: '+20% move speed, +10% dodge',
       rarity: 'rare',

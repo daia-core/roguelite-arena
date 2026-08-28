@@ -1,7 +1,7 @@
 # Item classification & balance audit — trinket vs equip
 
 **Date:** 2026-07-06 (night) · **Trigger:** Felix — *"review all existing items to see if they should stay as trinkets or be equip items, and review the balance of the game in multiple ways."*
-**Status:** R1 COMPLETE (2026-07-12) — all 18 gear-named trinkets correctly slotted (ring/amulet/feet/torso); 4 gloves/gauntlets intentionally held pending `hands` slot decision from Felix. R2/R4 await Felix's build-feel call.
+**Status:** R1 COMPLETE (2026-07-12, Running Shoes gap patched 2026-08-28) — all 19 gear-named trinkets correctly slotted (ring/amulet/feet/torso); 4 gloves/gauntlets intentionally held pending `hands` slot decision from Felix. R2/R4 await Felix's build-feel call.
 
 **One-line verdict:** The trinket/equip split is not just cosmetic — it *is* the missing structural balance lever. Today **~80% of items are unlimited-stacking trinkets**, and the build-defining *offense multipliers* live almost entirely on them, so the multiplicative-offense runaway (Felix's 2.3M/projectile) is fed by design. Promoting the multiplier items into the 8 equip slots bounds the stack by slot count instead of by wallet — the honest complement to the post-hoc damage soft-knee.
 

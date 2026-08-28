@@ -132,6 +132,10 @@ const result = await page.evaluate(() => {
     // Create a melee attack at the enemy's position with huge range (full-screen)
     // so it definitely hits — angle 0, arc = 2π (full circle), range = 5000.
     const melee = new MA(t2.x, t2.y, 0, Math.PI * 2, 5000, 1 /* minimal damage */);
+    // Clear any stale aux-melee attacks left over from the game loop (updateAuxWeapons
+    // runs inside updatePickupsAndCleanup — AFTER updateMeleeCollisions — so its attacks
+    // survive the frame and would make this check non-deterministic).
+    g.meleeAttacks = [];
     g.meleeAttacks.push(melee);
     const wasDead = t2.dead;
     g.updateMeleeCollisions(0.05);
@@ -151,6 +155,7 @@ const result = await page.evaluate(() => {
     const ctrl = controlEnemies[0];
     ctrl.health = ctrl.maxHealth * 0.05;
     const melee = new MA(ctrl.x, ctrl.y, 0, Math.PI * 2, 5000, 1 /* minimal damage */);
+    g.meleeAttacks = [];  // clear stale aux-melee attacks (same reason as check 7)
     g.meleeAttacks.push(melee);
     g.updateMeleeCollisions(0.05);
     // With threshold=0 the execute block never fires — correct control behaviour.
