@@ -2,6 +2,23 @@
 
 ---
 
+## 2026-08-28 — fix(stats): Swing Interval now visible for slower-swing items (7d319fb live)
+
+**Player-visible**
+- The **ALL STATS popup** now shows your **Swing Interval** whenever it differs meaningfully from the base 0.85 s — whether your swing is faster *or* slower. Previously the row only appeared for faster swings, hiding penalties from items like Fracture Rune, Thornmail Band, and Cleaving Edge.
+- If you equip Fracture Rune (+8% cooldown) you now see "Swing Interval: 0.92 s" — the trade-off that was always there is now legible.
+- Melee weapons (Crescent Blade, Maelstrom Blade, etc.) also now always show their interval regardless of direction.
+
+**Under the hood**
+- `ShopScene.ts:1436` — condition `< 0.849` → `Math.abs(interval - 0.85) > 0.001`.
+- Logic verified for all 4 slower-swing passive items and all faster-swing weapon paths.
+- Stats-parity: 2196/0. Melee-styles: 19/19. Catalog: 1920 clean.
+
+**Commit** `7d319fb`
+**Live:** https://roguelite-game-blush.vercel.app · hash `index-BYFnIX9m.js` ✓
+
+---
+
 ## 2026-08-28 — balance(item): Traveler Boots — no longer dominated by Worn Boots (222e3e5 live)
 
 **Player-visible**
