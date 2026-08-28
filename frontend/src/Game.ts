@@ -423,6 +423,7 @@ export class Game {
       canvas: this.canvas,
       renderer: this.renderer,
       input: this.input,
+      audio: this.audio,
       mapSystem: this.mapSystem,
       onNodePicked: (id) => this.onMapNodePicked(id),
     });
@@ -510,6 +511,7 @@ export class Game {
       canvas: this.canvas,
       renderer: this.renderer,
       input: this.input,
+      audio: this.audio,
       getRewardChoices: () => this.rewardChoices,
       getRewardTitle: () => this.rewardTitle,
       isRewardSkippable: () => this.rewardSkippable,

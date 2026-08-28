@@ -3,6 +3,7 @@ import type { GameState } from './Game';
 import type { Renderer } from './Renderer';
 import type { Input } from './Input';
 import { MapSystem, nodeIcon, nodeLabel, type NodeType } from './MapSystem';
+import { AudioManager } from './AudioManager';
 
 /**
  * MapScene — the Slay-the-Spire-style node-routing screen shown between encounters.
@@ -19,6 +20,7 @@ export interface MapSceneDeps {
   canvas: HTMLCanvasElement;
   renderer: Renderer;
   input: Input;
+  audio: AudioManager;
   mapSystem: MapSystem;
   /** Called when the player picks a reachable node; Game.ts resolves it to the right state. */
   onNodePicked: (nodeId: string) => void;
@@ -28,6 +30,7 @@ export class MapScene implements Scene {
   private readonly canvas: HTMLCanvasElement;
   private readonly renderer: Renderer;
   private readonly input: Input;
+  private readonly audio: AudioManager;
   private readonly mapSystem: MapSystem;
   private readonly onNodePicked: (nodeId: string) => void;
 
@@ -35,6 +38,7 @@ export class MapScene implements Scene {
     this.canvas = deps.canvas;
     this.renderer = deps.renderer;
     this.input = deps.input;
+    this.audio = deps.audio;
     this.mapSystem = deps.mapSystem;
     this.onNodePicked = deps.onNodePicked;
   }
@@ -58,6 +62,7 @@ export class MapScene implements Scene {
       const dy = my - p.y;
       const hit = p.r * 1.6; // generous tap target for mobile
       if (dx * dx + dy * dy <= hit * hit) {
+        this.audio.playMapNavigate(); // GAME FEEL: advancing along the path
         this.input.mouseDown = false;
         this.onNodePicked(id);
         return;

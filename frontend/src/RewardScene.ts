@@ -11,6 +11,7 @@ import type { Scene } from './scenes/Scene';
 import type { Artifact } from './ArtifactSystem';
 import { Input } from './Input';
 import { Renderer } from './Renderer';
+import { AudioManager } from './AudioManager';
 import { pointInRect } from './utils';
 import { drawPanel, DARK_WOOD_THEME } from './pixel/panel';
 
@@ -20,6 +21,7 @@ export interface RewardSceneDeps {
   canvas: HTMLCanvasElement;
   renderer: Renderer;
   input: Input;
+  audio: AudioManager;
 
   /** The 1-of-3 artifact choices currently on offer (empty until offerArtifactReward). */
   getRewardChoices(): Artifact[];
@@ -40,12 +42,14 @@ export class RewardScene implements Scene {
   private readonly canvas: HTMLCanvasElement;
   private readonly renderer: Renderer;
   private readonly input: Input;
+  private readonly audio: AudioManager;
   private readonly deps: RewardSceneDeps;
 
   constructor(deps: RewardSceneDeps) {
     this.canvas = deps.canvas;
     this.renderer = deps.renderer;
     this.input = deps.input;
+    this.audio = deps.audio;
     this.deps = deps;
   }
 
@@ -66,6 +70,7 @@ export class RewardScene implements Scene {
     for (let i = 0; i < choices.length; i++) {
       const y = topY + i * (cardH + gap);
       if (pointInRect(mx, my, { x: x0, y, width: cardW, height: cardH })) {
+        this.audio.playArtifactPickup(); // GAME FEEL: acquiring a permanent power
         this.input.mouseDown = false;
         this.deps.onSelectArtifact(choices[i]);
         return;
@@ -77,6 +82,7 @@ export class RewardScene implements Scene {
       const skipY = topY + choices.length * (cardH + gap) + s(4);
       const r = this.columnRects(1, skipY, s, W, isMobile)[0];
       if (pointInRect(mx, my, r)) {
+        this.audio.playMapNavigate(); // GAME FEEL: declining the reward
         this.input.mouseDown = false;
         this.deps.onSkip();
       }
