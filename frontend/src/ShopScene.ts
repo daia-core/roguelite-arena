@@ -23,6 +23,7 @@ import { DUO_COMBOS } from './DuoSystem';
 import { TRANSFORMATIONS } from './TransformationSystem';
 import { SkillTree } from './SkillTree';
 import type { Evolution } from './EvolutionSystem';
+import { getActiveSkillById } from './ActiveSkillSystem';
 
 // ─── Deps ────────────────────────────────────────────────────────────────────
 
@@ -1350,6 +1351,10 @@ export class ShopScene implements Scene {
     const growingMaliceStacks = this.deps.getGrowingMaliceStacks();
     const wavesSurvived = this.deps.getWavesSurvived();
     const playerGold = this.deps.getPlayerGold();
+    const skillQId = ps.getEquippedSkillIdQ();
+    const skillEId = ps.getEquippedSkillId();
+    const skillQName = skillQId !== undefined ? (getActiveSkillById(skillQId)?.name ?? skillQId) : undefined;
+    const skillEName = skillEId !== undefined ? (getActiveSkillById(skillEId)?.name ?? skillEId) : undefined;
     type Row = [string, string, boolean];
     const groups: Array<[string, string, Row[]]> = [
       ['OFFENSE', '#ffa94d', [
@@ -1391,6 +1396,8 @@ export class ShopScene implements Scene {
         ['War Chest', `+${num(ps.getWarChest())}g × wave`, ps.getWarChest() > 0],
       ]],
       ['SPECIAL', '#e599f7', [
+        ['Skill (Q)', skillQName ?? '—', skillQName !== undefined],
+        ['Skill (E)', skillEName ?? '—', skillEName !== undefined],
         ['Trophy Rack Crit', `+${pct(trophyBonus)} (${trophyCount} types)`, trophyBonusPerType > 0],
         ['Kill Stack Dmg', `+${pct(ps.getKillStackDamage())}/stack`, ps.getKillStackDamage() > 0],
         ['Soul Tithe Stacks', `${soulTitheStacks} (+${pct(soulTitheStacks * 0.01)} dmg)`, soulTitheStacks > 0],
