@@ -2,6 +2,25 @@
 
 ---
 
+## 2026-08-28 — fix(stats): active skills (Q/E) now visible in ALL STATS popup
+
+**Player-visible**
+- If you've equipped skill scrolls (e.g. Meteor Strike on Q, Frost Nova on E), those skill names
+  now appear in the ALL STATS & BONUSES popup under the SPECIAL group.
+- Previously the popup had zero rows for active skills — a player with two scrolls equipped had
+  no way to see which abilities they had from the stats screen.
+- Rows only show when skills are equipped; no-skill builds see no extra noise.
+
+**Under the hood**
+- Imported `getActiveSkillById` from `ActiveSkillSystem.ts` into `ShopScene.ts`.
+- Two new conditional rows at the top of SPECIAL: `Skill (Q)` and `Skill (E)`.
+- `qa-stats-parity`: 2196 checks, 0 mismatches. `qa-stats-popup`: pass at both viewports.
+
+**Commit** `ec80306`
+**Live:** https://roguelite-game-blush.vercel.app · hash `index-Bpl7XJsc.js` ✓
+
+---
+
 ## 2026-08-28 — fix(input): mobile skill buttons Q/E now fire on mouse + pen + touch
 
 **Player-visible**
