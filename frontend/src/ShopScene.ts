@@ -1433,7 +1433,7 @@ export class ShopScene implements Scene {
         ['Aux Melee Dmg', num(ps.getAuxMeleeDamage()), ps.hasAuxMelee()],
         ['Swing Dmg', num(ps.getSwingDamage()), ps.getMeleeDamageMult() > 1.001 || ps.hasAuxMelee() || ps.getSwingAoe() > 0],
         ['Melee Style', ps.getMeleeStyle().charAt(0).toUpperCase() + ps.getMeleeStyle().slice(1), ps.getMeleeDamageMult() > 1.001 || ps.getSwingAoe() > 0],
-        ['Swing Interval', rate(ps.getSwingInterval(), 2, 's'), ps.getSwingInterval() < 0.849],
+        ['Swing Interval', rate(ps.getSwingInterval(), 2, 's'), Math.abs(ps.getSwingInterval() - 0.85) > 0.001],
         ['Swing AOE', `${num(ps.getSwingAoe())}px`, ps.getSwingAoe() > 0],
         ['Swing Range', `${Math.round(ps.getSwingRange())}px`, ps.getSwingRange() > 70.5],
         ['Swing Arc', `${Math.round(ps.getSwingArc() * 180 / Math.PI)}°`, ps.getSwingArc() > Math.PI * 0.701 && (ps.getSwingRange() > 70.5 || ps.getMeleeDamageMult() > 1.001 || ps.getSwingAoe() > 0)],
