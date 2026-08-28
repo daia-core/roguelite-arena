@@ -2,6 +2,21 @@
 
 ---
 
+## 2026-08-28 — balance(item): Scout Trousers — no longer a dominated stat-stick
+
+**Player-visible**
+- **Scout Trousers** (Common legs, 11g): reworked from +9% move speed to **+8% move speed and +5% dodge**. Previously it was strictly worse than Travel Pants (+10% speed at the same 10g cost) — a dead item no rational build would ever choose. Now it occupies its own niche: the speed/evasion hybrid, for players who want nimble footwork and a better chance to sidestep incoming hits. The "scout" name finally matches the mechanical identity.
+- Clear three-way choice in the Common legs tier: **Travel Pants** (pure speed), **Padded Breeches** (pure HP), **Scout Trousers** (speed + dodge). Quick Kilt remains the pure-dodge option at 11g.
+
+**Under the hood**
+- `speedMultiplier` 1.09 → 1.08; `dodge: 0.05` added; cost 10 → 11g.
+- Catalog integrity: 1920 items, no duplicates. Stats-parity: 2196/0 mismatches. Audio: 18/18.
+
+**Commit** `1f9521d`
+**Live:** https://roguelite-game-blush.vercel.app · hash `index-B1FZQ5sC.js` ✓
+
+---
+
 ## 2026-08-28 — balance(items): Sturdy Boots + Iron Signet — distinct identities, no more stat-stick twins
 
 **Player-visible**
