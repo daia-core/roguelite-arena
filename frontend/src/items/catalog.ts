@@ -3402,7 +3402,7 @@ export const ITEM_CATALOG: Item[] = [
     { id: 'legs_warmarch_plates', name: 'War-March Plates', description: 'Permanent +damage for each wave survived; +20 max health', rarity: 'legendary', tier: ItemTier.Legendary, cost: 72, icon: '🥁', unlocked: true, tags: ['defensive'], slot: 'legs', waveRampDamage: 0.06, maxHealthBonus: 20 },
 
     // ---- FEET (boots): move speed, dodge, pickup range ----
-    { id: 'feet_sturdy_boots', name: 'Sturdy Boots', description: '+8% move speed', rarity: 'common', tier: ItemTier.Common, cost: 9, icon: '🥾', unlocked: true, tags: ['utility'], slot: 'feet', speedMultiplier: 1.08 },
+    { id: 'feet_sturdy_boots', name: 'Sturdy Boots', description: '+7% move speed and +1 armor — tough-soled for the long march', rarity: 'common', tier: ItemTier.Common, cost: 10, icon: '🥾', unlocked: true, tags: ['utility', 'defensive'], slot: 'feet', speedMultiplier: 1.07, armor: 1 },
     { id: 'feet_swift_sandals', name: 'Swift Sandals', description: '+14% move speed', rarity: 'rare', tier: ItemTier.Uncommon, cost: 20, icon: '🩴', unlocked: true, tags: ['utility'], slot: 'feet', speedMultiplier: 1.14 },
     { id: 'feet_magnet_boots', name: 'Magnet Boots', description: '+40% pickup range', rarity: 'rare', tier: ItemTier.Uncommon, cost: 22, icon: '🧲', unlocked: true, tags: ['utility'], slot: 'feet', xpMagnet: 1.4 },
     { id: 'feet_dodge_kicks', name: 'Dodge Kicks', description: '+10% dodge, +15% swing damage — stay light on your feet and hit harder for it', rarity: 'rare', tier: ItemTier.Uncommon, cost: 26, icon: '👟', unlocked: true, tags: ['utility', 'melee'], slot: 'feet', dodge: 0.1, swingDamageMult: 1.15 },
@@ -3428,7 +3428,7 @@ export const ITEM_CATALOG: Item[] = [
     { id: 'ring_gilded_band', name: 'Gilded Band', description: '+20% gold earned', rarity: 'rare', tier: ItemTier.Uncommon, cost: 26, icon: '💛', unlocked: true, tags: ['economic'], slot: 'ring', goldBonus: 1.2 },
     { id: 'ring_serpent_coil', name: 'Serpent Coil', description: '+10% bleed chance', rarity: 'epic', tier: ItemTier.Rare, cost: 44, icon: '🐍', unlocked: true, tags: ['elemental'], slot: 'ring', bleed: 0.1 },
     { id: 'ring_conquerors_seal', name: "Conqueror's Seal", description: '+20% damage and +10% fire rate', rarity: 'legendary', tier: ItemTier.Legendary, cost: 74, icon: '🏵️', unlocked: true, tags: ['melee'], slot: 'ring', damageMultiplier: 1.2, fireRateMultiplier: 1.1 },
-    { id: 'ring_iron_signet', name: 'Iron Signet', description: '+10% damage', rarity: 'common', tier: ItemTier.Common, cost: 10, icon: '⚙️', unlocked: true, tags: ['melee'], slot: 'ring', damageMultiplier: 1.1 },
+    { id: 'ring_iron_signet', name: 'Iron Signet', description: '+18% swing damage — forged for fighters who live by the blade', rarity: 'common', tier: ItemTier.Common, cost: 11, icon: '⚙️', unlocked: true, tags: ['melee'], slot: 'ring', swingDamageMult: 1.18 },
     { id: 'ring_spark_ring', name: 'Spark Ring', description: '+8% fire rate', rarity: 'common', tier: ItemTier.Common, cost: 11, icon: '⚡', unlocked: true, tags: ['ranged'], slot: 'ring', fireRateMultiplier: 1.08 },
     { id: 'ring_ember_ring', name: 'Ember Ring', description: '+11% chance to ignite', rarity: 'rare', tier: ItemTier.Uncommon, cost: 22, icon: '🔥', unlocked: true, tags: ['elemental'], slot: 'ring', burn: 0.11 },
     { id: 'ring_frost_ring', name: 'Frost Ring', description: '+13% chance to freeze', rarity: 'rare', tier: ItemTier.Uncommon, cost: 22, icon: '❄️', unlocked: true, tags: ['elemental'], slot: 'ring', freeze: 0.13 },
