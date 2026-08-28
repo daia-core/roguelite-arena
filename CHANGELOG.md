@@ -2,6 +2,24 @@
 
 ---
 
+## 2026-08-28 — balance(items): Sturdy Boots + Iron Signet — distinct identities, no more stat-stick twins
+
+**Player-visible**
+- **Sturdy Boots** (Common feet, 10g): now grants +7% move speed **and +1 armor** instead of just +8% move speed. The name always implied toughness; now it delivers — a speed/tankiness hybrid that creates a real choice vs Traveler Boots' pure speed.
+- **Iron Signet** (Common ring, 11g): reworked from +10% global damage to **+18% swing damage**. As a melee-specialist ring it now offers a real trade-off vs Copper Band (+12% universal damage): Iron Signet is worse for ranged/hybrid builds but better for fighters who live by the melee swing.
+
+Both items were previously near-duplicates of neighboring items at slightly lower values — buying them felt like a consolation prize rather than a build choice. They now occupy distinct niches.
+
+**Under the hood**
+- `feet_sturdy_boots`: `speedMultiplier` 1.08 → 1.07; `armor: 1` added; cost 9 → 10; tags `['utility']` → `['utility', 'defensive']`.
+- `ring_iron_signet`: `damageMultiplier: 1.1` replaced with `swingDamageMult: 1.18`; cost 10 → 11.
+- Catalog integrity: 1920 items, no duplicates. Stats-parity: PASS. Audio: 18/18.
+
+**Commit** `014a0e9`
+**Live:** https://roguelite-game-blush.vercel.app · hash `index-BwiKhp3k.js` ✓
+
+---
+
 ## 2026-08-28 — balance(item): Dodge Kicks — melee/dodge hybrid, no longer a plain stat-stick
 
 **Player-visible**
