@@ -217,6 +217,13 @@ export class Game {
   private static readonly SOUL_TITHE_ORB_EVERY = 10;   // drop a health orb every Nth kill
   private static readonly SOUL_TITHE_DMG_EVERY = 50;    // bank a permanent stack every Nth kill
   private static readonly SOUL_TITHE_DMG_PER = 0.01;    // +1% damage per banked stack (uncapped)
+  // Harvest Momentum: each kill grants a timed fire-rate stack that refreshes on kill.
+  // All stacks share a single 3s timer — miss a kill and everything resets together.
+  // Rewards sustained, rhythmic killing ("flow state"); falls off hard when you stop.
+  private harvestMomentumStacks: number = 0;             // active stacks
+  private harvestMomentumTimer: number = 0;              // seconds remaining on current window
+  private static readonly HARVEST_MOMENTUM_DURATION = 3.0;   // seconds per kill refresh
+  private static readonly HARVEST_MOMENTUM_STACKS_MAX = 8;   // stack ceiling
   // Trophy Rack: unique enemy TYPE set — drives the dynamic crit bonus. Always tracked
   // so the stat is live the moment the item is purchased mid-run. Set is cleared on reset.
   private killedEnemyTypes = new Set<string>();
@@ -805,6 +812,8 @@ export class Game {
     this.soulTitheKills = 0;
     this.soulTitheStacks = 0;
     this.killedEnemyTypes.clear();
+    this.harvestMomentumStacks = 0;
+    this.harvestMomentumTimer = 0;
     this.shotsFired = 0;
     this.overchargeShotCount = 0;
     this.activeSkillCooldown = 0;
@@ -2715,6 +2724,18 @@ export class Game {
       }
     }
 
+    // Harvest Momentum: each kill refreshes the 3s window and pushes one more stack
+    // (capped at HARVEST_MOMENTUM_STACKS_MAX). Only increment when the item is held
+    // so the stack can't be "saved up" before purchase; the timer and the bonus are
+    // both read in updateRuntimeModifiers each frame.
+    if (this.playerStats.getHarvestMomentum() > 0) {
+      this.harvestMomentumStacks = Math.min(
+        Game.HARVEST_MOMENTUM_STACKS_MAX,
+        this.harvestMomentumStacks + 1
+      );
+      this.harvestMomentumTimer = Game.HARVEST_MOMENTUM_DURATION;
+    }
+
     // Trophy Rack: track unique enemy types killed — always maintained so the crit bonus
     // is live the instant the item is purchased mid-run. Set is cleared in resetRun().
     this.killedEnemyTypes.add(enemy.type);
@@ -3793,6 +3814,20 @@ export class Game {
     const killStack = this.playerStats.getKillStackDamage();
     if (killStack > 0 && this.killStackCount > 0) {
       dmg *= 1 + killStack * this.killStackCount;
+    }
+    // Harvest Momentum: kill-refreshed fire-rate stacks. The timer counts down each
+    // frame; when it hits zero all stacks drop together (no partial decay — flow or stop).
+    if (this.harvestMomentumStacks > 0) {
+      this.harvestMomentumTimer -= dt;
+      if (this.harvestMomentumTimer <= 0) {
+        this.harvestMomentumStacks = 0;
+        this.harvestMomentumTimer = 0;
+      } else {
+        const harvestBonus = this.playerStats.getHarvestMomentum();
+        if (harvestBonus > 0) {
+          fr *= 1 + harvestBonus * this.harvestMomentumStacks;
+        }
+      }
     }
     // Juggernaut: while at/over the high-HP threshold (staying unhurt), +dmg. The
     // glass-cannon inverse of Last Stand — rewards clean, no-hit play.

@@ -243,7 +243,7 @@ interface ItemAgg {
   brittleChance: number; dazedChance: number; disorientedChance: number;
   // conditional/triggered (additive rates; paid out at runtime by Game when the condition holds)
   waveRampDamage: number; lowHpPower: number; killStackDamage: number;
-  highHpPower: number; highHpFireRate: number; goldScaleDamage: number; timeRampDamage: number;
+  highHpPower: number; highHpFireRate: number; goldScaleDamage: number; timeRampDamage: number; harvestMomentum: number;
   // execute: highest threshold wins (max, not sum)
   executeThreshold: number;
   // on-kill proc: daggers spawned per kill (additive across copies)
@@ -277,7 +277,7 @@ function freshAgg(): ItemAgg {
     fragileChance: 0, exposedChance: 0, condemnedChance: 0,
     brittleChance: 0, dazedChance: 0, disorientedChance: 0,
     waveRampDamage: 0, lowHpPower: 0, killStackDamage: 0,
-    highHpPower: 0, highHpFireRate: 0, goldScaleDamage: 0, timeRampDamage: 0,
+    highHpPower: 0, highHpFireRate: 0, goldScaleDamage: 0, timeRampDamage: 0, harvestMomentum: 0,
     executeThreshold: 0,
     daggerCount: 0,
     warChest: 0,
@@ -576,6 +576,7 @@ export class PlayerStats {
       if (item.highHpFireRate) a.highHpFireRate += item.highHpFireRate * lv;
       if (item.goldScaleDamage) a.goldScaleDamage += item.goldScaleDamage * lv;
       if (item.timeRampDamage) a.timeRampDamage += item.timeRampDamage * lv;
+      if (item.harvestMomentum) a.harvestMomentum += item.harvestMomentum * lv;
       // Execute: take the strongest threshold, never sum (no compounding to full-HP kills)
       if (item.executeThreshold) a.executeThreshold = Math.max(a.executeThreshold, item.executeThreshold);
       // On-kill daggers: additive count across copies (× level)
@@ -1279,6 +1280,7 @@ export class PlayerStats {
   getHighHpFireRate(): number { return this.ensureAgg().highHpFireRate; }
   getGoldScaleDamage(): number { return this.ensureAgg().goldScaleDamage; }
   getTimeRampDamage(): number { return this.ensureAgg().timeRampDamage; }
+  getHarvestMomentum(): number { return this.ensureAgg().harvestMomentum; }
   getExecuteThreshold(): number {
     // SKILL TREE contribution (Cull the Weak keystone) — max-stacks with items.
     return Math.max(this.ensureAgg().executeThreshold, this.skillExecuteAdd);

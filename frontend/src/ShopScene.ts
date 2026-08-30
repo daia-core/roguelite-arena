@@ -1400,6 +1400,7 @@ export class ShopScene implements Scene {
         ['Skill (E)', skillEName ?? '—', skillEName !== undefined],
         ['Trophy Rack Crit', `+${pct(trophyBonus)} (${trophyCount} types)`, trophyBonusPerType > 0],
         ['Kill Stack Dmg', `+${pct(ps.getKillStackDamage())}/stack`, ps.getKillStackDamage() > 0],
+        ['Harvest Fr', `+${pct(ps.getHarvestMomentum())}/kill-stack`, ps.getHarvestMomentum() > 0],
         ['Soul Tithe Stacks', `${soulTitheStacks} (+${pct(soulTitheStacks * 0.01)} dmg)`, soulTitheStacks > 0],
         ['Daggers/Kill', num(ps.getDaggerCount()), ps.getDaggerCount() > 0],
         ['Execute at', `<${pct(ps.getExecuteThreshold())} HP`, ps.getExecuteThreshold() > 0],
