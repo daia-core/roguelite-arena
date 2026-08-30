@@ -2734,6 +2734,7 @@ export class Game {
         this.harvestMomentumStacks + 1
       );
       this.harvestMomentumTimer = Game.HARVEST_MOMENTUM_DURATION;
+      this.audio.playHarvestStack(this.harvestMomentumStacks); // GAME FEEL: rising chime on each harvest kill
     }
 
     // Trophy Rack: track unique enemy types killed — always maintained so the crit bonus
@@ -3822,6 +3823,7 @@ export class Game {
       if (this.harvestMomentumTimer <= 0) {
         this.harvestMomentumStacks = 0;
         this.harvestMomentumTimer = 0;
+        this.audio.playHarvestExpiry(); // GAME FEEL: descending drop when flow chain breaks
       } else {
         const harvestBonus = this.playerStats.getHarvestMomentum();
         if (harvestBonus > 0) {

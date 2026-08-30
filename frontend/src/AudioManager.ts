@@ -1194,6 +1194,68 @@ export class AudioManager {
     osc3.stop(t + 0.18);
   }
 
+  // Harvest Momentum — on-kill fire-rate stack cue. Fires each time a kill banks a
+  // new stack while Blood Rush / Blood Frenzy is held. Pitch climbs with stack count
+  // so the player hears momentum building; max-stack (8) gets a brief harmony chord.
+  // Throttled 120ms: area-clear builds kill dozens/s — cap keeps the cue legible.
+  playHarvestStack(stacks: number = 1): void {
+    this._throttled('harvestStack', () => {
+      this._ensureRunning();
+      const t = this.ctx.currentTime;
+      const s = Math.min(Math.max(stacks, 1), 8);
+      // Frequency climbs from ~650 Hz (stack 1) to ~1210 Hz (stack 8)
+      const baseFreq = 650 + (s - 1) * 80;
+      // Main chime — triangle: clean "count" timbre without muddying the mix
+      const osc = this.ctx.createOscillator();
+      const g   = this.ctx.createGain();
+      osc.connect(g);
+      g.connect(this.masterGain);
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(baseFreq, t);
+      osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.25, t + 0.09);
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.11 + (s - 1) * 0.01, t + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.01, t + 0.11);
+      osc.start(t);
+      osc.stop(t + 0.11);
+      // Max-stack bonus: harmonic fifth marks "flow state" (stack 8)
+      if (s >= 8) {
+        const osc2 = this.ctx.createOscillator();
+        const g2   = this.ctx.createGain();
+        osc2.connect(g2);
+        g2.connect(this.masterGain);
+        osc2.type = 'sine';
+        osc2.frequency.value = baseFreq * 1.5; // perfect fifth above
+        g2.gain.setValueAtTime(0, t);
+        g2.gain.linearRampToValueAtTime(0.09, t + 0.015);
+        g2.gain.exponentialRampToValueAtTime(0.01, t + 0.20);
+        osc2.start(t);
+        osc2.stop(t + 0.20);
+      }
+    }, 120);
+  }
+
+  // Harvest Momentum — chain break: fires when the 3-second timer expires and all
+  // stacks reset. A brief descending drop tells the player they missed the rhythm.
+  // No throttle — naturally gated: the 3s timer can only expire once per 3s window.
+  playHarvestExpiry(): void {
+    if (!this.enabled) return;
+    this._ensureRunning();
+    const t = this.ctx.currentTime;
+    // Descending sawtooth sweep — "falling away / losing the chain"
+    const osc = this.ctx.createOscillator();
+    const g   = this.ctx.createGain();
+    osc.connect(g);
+    g.connect(this.masterGain);
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(580, t);
+    osc.frequency.exponentialRampToValueAtTime(200, t + 0.18);
+    g.gain.setValueAtTime(0.08, t);
+    g.gain.exponentialRampToValueAtTime(0.01, t + 0.18);
+    osc.start(t);
+    osc.stop(t + 0.18);
+  }
+
   toggle(): void {
     this.enabled = !this.enabled;
     if (!this.enabled) this.stopMusic();
