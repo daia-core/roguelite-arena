@@ -209,14 +209,14 @@ export const ITEM_CATALOG: Item[] = [
       id: 'dodge_t2',
       slot: 'torso',
       name: 'Evasion Cloak',
-      description: '8% dodge chance',
+      description: '15% dodge chance — a specialist torso for builds that live by not getting hit',
       rarity: 'rare',
       tier: ItemTier.Uncommon,
       cost: 30,
       icon: '💨',
       unlocked: true,
       tags: ['defensive', 'utility'],
-      dodge: 0.08
+      dodge: 0.15
     },
     {
       id: 'thorns_t2',
