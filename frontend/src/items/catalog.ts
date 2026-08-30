@@ -222,14 +222,15 @@ export const ITEM_CATALOG: Item[] = [
       id: 'thorns_t2',
       slot: 'torso',
       name: 'Spiked Armor',
-      description: 'Reflect 15% damage',
+      description: 'Reflect 15% damage, +5 armor',
       rarity: 'rare',
       tier: ItemTier.Uncommon,
       cost: 26,
       icon: '🌵',
       unlocked: true,
       tags: ['defensive'],
-      thorns: 0.15
+      thorns: 0.15,
+      armor: 5
     },
     {
       id: 'armor_t2',

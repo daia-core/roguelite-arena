@@ -2,6 +2,17 @@
 
 ---
 
+## 2026-08-30 — balance(item): Spiked Armor — no longer dominated (thorns_t2 fix)
+
+**Player-visible**
+- **Spiked Armor** (Uncommon, 26g, torso) gains a secondary **+5 armor** stat. Previously strictly dominated by Spiked Cuirass (same cost, +25% thorns vs +15% thorns, no upside). Now a distinct thorns+armor hybrid niche.
+
+**Under the hood**
+- `catalog.ts`: `thorns_t2` adds `armor: 5`; description updated.
+- Catalog integrity: 1922 items CLEAN.
+
+---
+
 ## 2026-08-30 — feat(mechanic): Harvest Momentum — on-kill fire-rate stacks (1d765fa live)
 
 **Player-visible**
