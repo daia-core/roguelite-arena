@@ -2,6 +2,26 @@
 
 ---
 
+## 2026-08-30 — feat(mechanic): Harvest Momentum — on-kill fire-rate stacks (1d765fa live)
+
+**Player-visible**
+- **Harvest Momentum** is a new kill-ramp mechanic available on two items. Each kill pushes one stack and refreshes a shared 3-second window. While stacks are live, fire rate scales by `(1 + bonus × stacks)`. When the window lapses — no kill within 3s — all stacks collapse simultaneously. Stack cap: 8.
+- **Blood Rush** (Uncommon, 34g): +10% fire rate per stack. At peak (8 stacks): +80% fire rate.
+- **Blood Frenzy** (Rare, 64g): +15% fire rate per stack. At peak (8 stacks): +120% fire rate.
+- This creates a clear "flow state" feel: stay in the fight and your fire rate surges; break the chain and it drops. Pairs naturally with Ceremonial Daggers and Kill Frenzy for a kill-snowball archetype.
+- The current Harvest Fr bonus is now visible in the **ALL STATS popup** ("Harvest Fr" row, shown when any Harvest Momentum item is held).
+
+**Under the hood**
+- `types.ts`: `harvestMomentum?` field.
+- `ItemSystem.ts`: `ItemAgg.harvestMomentum`, `freshAgg`, accumulation, `getHarvestMomentum()` getter.
+- `Game.ts`: `HARVEST_MOMENTUM_DURATION = 3.0`, `HARVEST_MOMENTUM_STACKS_MAX = 8`, `harvestMomentumStacks`, `harvestMomentumTimer` — incremented in `handleEnemyKill`, decayed + applied in `updateRuntimeModifiers`.
+- `qa-harvest.mjs`: 9/9 checks — catalog presence, getter aggregation, live-stacks fr boost, timer expiry/stack clear, control (no item held).
+- Catalog: 1922 items clean. Stats parity: 2198/0 mismatches.
+
+**Commit** `1d765fa`
+
+---
+
 ## 2026-08-30 — balance(item): Evasion Cloak — no longer dominated by cheaper Uncommon dodge items (4a97d69 live)
 
 **Player-visible**
