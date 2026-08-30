@@ -2,6 +2,20 @@
 
 ---
 
+## 2026-08-30 — balance(item): Evasion Cloak — no longer dominated by cheaper Uncommon dodge items (4a97d69 live)
+
+**Player-visible**
+- **Evasion Cloak** (Uncommon torso, 30g): dodge raised from **8% → 15%**. It was the only dedicated dodge torso at Uncommon tier but provided *less* dodge than both hybrid alternatives — Running Shoes (feet, 26g: 10% dodge + 20% speed) and Dancer's Leggings (legs, 26g: 12% dodge) — at higher cost. No build would ever choose it.
+- At 15% it now earns its slot: the specialist torso for evasion builds. You pay 30g for the best raw dodge at Uncommon tier and keep your legs and feet slots for other options. Clear ladder: **Leather Jerkin** (Common, 11g: 4% + HP), **Evasion Cloak** (Uncommon, 30g: 15%), **Shadow Step** (Rare, 65g: 18% + speed, -10 HP).
+
+**Under the hood**
+- `catalog.ts`: `dodge_t2` dodge 0.08 → 0.15; description updated.
+- All `verify-*.mjs` pass.
+
+**Commit** `4a97d69`
+
+---
+
 ## 2026-08-28 — fix(stats): Swing Interval now visible for slower-swing items (7d319fb live)
 
 **Player-visible**
