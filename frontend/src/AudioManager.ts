@@ -270,6 +270,29 @@ export class AudioManager {
     this.playTone(800, 0.15, 'sine', 0.2);
   }
 
+  /** Distinct descending "coins leaving" cue so selling feels different from buying. */
+  playSell(): void {
+    if (!this.enabled) return;
+    this._ensureRunning();
+    const now = this.ctx.currentTime;
+    // Two-tone descending sweep: high coin-clink → lower thud
+    [
+      { freq: 600, start: 0,    dur: 0.08, vol: 0.18 },
+      { freq: 320, start: 0.07, dur: 0.10, vol: 0.14 },
+    ].forEach(({ freq, start, dur, vol }) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+      osc.type = 'triangle';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(vol, now + start);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + start + dur);
+      osc.start(now + start);
+      osc.stop(now + start + dur + 0.01);
+    });
+  }
+
   playGameOver(): void {
     if (!this.enabled) return;
     this._ensureRunning();

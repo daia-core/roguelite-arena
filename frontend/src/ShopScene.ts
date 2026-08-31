@@ -570,7 +570,7 @@ export class ShopScene implements Scene {
           player.gold += refund;
           this.deps.onSyncMaxHealth();
           this.deps.onUpdateMobileSkills();
-          this.deps.audio.playPurchase();
+          this.deps.audio.playSell();
           this.showToast(`Sold ${item.name} · +${refund}g`);
         }
         return true;
@@ -639,7 +639,7 @@ export class ShopScene implements Scene {
       player.gold += refund;
       this.deps.onSyncMaxHealth();
       this.deps.onUpdateMobileSkills();
-      this.deps.audio.playPurchase();
+      this.deps.audio.playSell();
       this.showToast(`Sold ${occupant.name} · +${refund}g`);
       this.inspectedEquipKey = null;
       return true;
