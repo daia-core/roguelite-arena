@@ -2,6 +2,30 @@
 
 ---
 
+## 2026-09-01 — fix(shop): 22 previously-invisible item stats now appear as shop chips (53dad5b live)
+
+**Player-visible**
+- Across the full catalog, **22 item stat fields** that were wired and working in gameplay had zero representation in the shop card stat chips — players couldn't see them when deciding whether to buy. All are now shown. Affected categories:
+  - **Conditional offense:** Last Stand (low-HP power), Grindstone (wave ramp), Killing Spree (kill stack), Miser's Hoard (gold scale), Growing Malice (time ramp), Harvest Momentum (kill fire rate), Execute threshold, Trophy Rack (crit per enemy type), Ceremonial Daggers (daggers/kill)
+  - **Melee/AOE modifiers:** Swing Dmg, Blade Dmg (aux melee), Orbit Dmg, Bomb Dmg, Nova Dmg, AOE Size, Swing Range
+  - **Economy:** Wave Gold (War Chest), Shop Disc, Reroll Disc, Interest
+  - **Capability flags:** Loaded Shot, Soul Tithe, Proc Luck, Plague Spread, Fire Spread
+- QA: catalog-integrity 1922 CLEAN, stats-parity 2198/0 PASS, shop-chips PASS.
+
+---
+
+## 2026-09-01 — fix(shop): highHpPower / highHpFireRate now visible as stat chips (54e3acb live)
+
+**Player-visible**
+- **35 juggernaut-series items** that grant a conditional damage bonus above 90% HP now show it explicitly in the shop card as a green stat chip — e.g. **"+12% Power (>90% HP)"** — instead of only a flavor description with no numbers. Players can now make informed decisions about these items.
+- Items with the bonus already stated in their description (Juggernaut Core, Overflow Battery, Pristine Engine, Titan Ring, Juggernaut's Will) now display the stat chip and suppress the redundant description text.
+
+**Under the hood**
+- `types.ts` `itemStatSegments()`: added `frac(item.highHpPower, 'Power (>90% HP)')` and `frac(item.highHpFireRate, 'Fr Rate (>90% HP)')` in the Offense section. Both fields accumulate additively — `frac()` is correct.
+- QA: stats-parity 2198/0, catalog-integrity 1922 clean, shop-chips all 1922 valid.
+
+---
+
 ## 2026-08-30 — balance(item): Spiked Armor — no longer dominated (thorns_t2 fix)
 
 **Player-visible**
