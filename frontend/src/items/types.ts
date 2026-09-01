@@ -160,6 +160,8 @@ export function itemStatSegments(item: Item, level: number = 1): ItemStatSegment
   mul(item.rangedDamageMult, 'Ranged Dmg');
   mul(item.elementalDamageMult, 'Elemental Dmg');
   mul(item.fireRateMultiplier, 'Fire Rate');
+  frac(item.highHpPower, 'Power (>90% HP)');
+  frac(item.highHpFireRate, 'Fr Rate (>90% HP)');
   frac(item.critChance, 'Crit');
   mul(item.critDamageMultiplier, 'Crit Dmg');
   flat(item.multishot, 'Multishot');
