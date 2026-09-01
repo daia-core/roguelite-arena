@@ -167,7 +167,7 @@ export function itemStatSegments(item: Item, level: number = 1): ItemStatSegment
   flat(item.multishot, 'Multishot');
   flat(item.piercing, 'Pierce');
   // Conditional / triggered offense
-  frac(item.lowHpPower, 'Power (<25% HP)');
+  frac(item.lowHpPower, 'Power (<35% HP)');
   frac(item.waveRampDamage, 'Dmg/Wave');
   frac(item.killStackDamage, 'Kill Stack');
   frac(item.goldScaleDamage, 'Gold Dmg');
