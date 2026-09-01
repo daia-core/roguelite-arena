@@ -166,6 +166,24 @@ export function itemStatSegments(item: Item, level: number = 1): ItemStatSegment
   mul(item.critDamageMultiplier, 'Crit Dmg');
   flat(item.multishot, 'Multishot');
   flat(item.piercing, 'Pierce');
+  // Conditional / triggered offense
+  frac(item.lowHpPower, 'Power (<25% HP)');
+  frac(item.waveRampDamage, 'Dmg/Wave');
+  frac(item.killStackDamage, 'Kill Stack');
+  frac(item.goldScaleDamage, 'Gold Dmg');
+  frac(item.timeRampDamage, 'Dmg/15s');
+  frac(item.harvestMomentum, 'Fr Rate/Kill');
+  frac(item.executeThreshold, 'Execute');
+  frac(item.trophyRack, 'Crit/Type');
+  flat(item.ceremonialDaggers, 'Daggers/Kill');
+  // Melee / AOE modifiers
+  mul(item.swingDamageMult, 'Swing Dmg');
+  mul(item.auxMeleeDamageMult, 'Blade Dmg');
+  mul(item.orbitDamageMult, 'Orbit Dmg');
+  mul(item.bombDamageMult, 'Bomb Dmg');
+  mul(item.novaDamageMult, 'Nova Dmg');
+  mul(item.aoeRadiusMult, 'AOE Size');
+  flat(item.swingRangeBonus, 'Swing Range');
   // Defense / survival
   flat(item.maxHealthBonus, 'Max HP');
   flat(item.healthRegen, 'HP/s');
@@ -178,6 +196,10 @@ export function itemStatSegments(item: Item, level: number = 1): ItemStatSegment
   mul(item.xpMagnet, 'XP Range');
   mul(item.goldBonus, 'Gold');
   frac(item.luck, 'Luck');
+  flat(item.warChest, 'Wave Gold');
+  frac(item.shopDiscount, 'Shop Disc');
+  frac(item.rerollDiscount, 'Reroll Disc');
+  frac(item.interestBonus, 'Interest');
   // On-hit / status chances
   frac(item.chainLightning, 'Chain');
   frac(item.freeze, 'Freeze');
@@ -205,6 +227,11 @@ export function itemStatSegments(item: Item, level: number = 1): ItemStatSegment
   flag(item.openingSalvo, 'Wave-Start Nova');
   flag(item.auxMelee, 'Orbit Blade');
   flat(item.orbitOrbs, 'Orbit Orbs');
+  flag(item.loadedShot, 'Loaded Shot');
+  flag(item.soulTithe, 'Soul Tithe');
+  flag(item.fourleafCharm, 'Proc Luck');
+  flag(item.poisonSpread, 'Plague Spread');
+  flag(item.burnSpread, 'Fire Spread');
   return segs;
 }
 
