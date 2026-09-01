@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-09-01 — fix(shop): Last Stand chip now shows correct <35% HP threshold (0c2b12f live)
+
+**Player-visible**
+- The **Last Stand / Berserker family** shop stat chip previously read **"Power (<25% HP)"** — but the actual low-HP threshold in the game engine is **35% HP**, not 25%. The chip was misinforming players about when the bonus activates. It now reads **"Power (<35% HP)"**, matching the HUD tick mark, the ALL STATS popup, and the item description on the main Last Stand card.
+- QA: catalog-integrity 1922 CLEAN, stats-parity 2198/0 PASS.
+
+---
+
 ## 2026-09-01 — fix(shop): 22 previously-invisible item stats now appear as shop chips (53dad5b live)
 
 **Player-visible**
