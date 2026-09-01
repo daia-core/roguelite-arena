@@ -2,6 +2,18 @@
 
 ---
 
+## 2026-09-02 — balance(item): fix 2 dominated ring items (ecaff89 live)
+
+**Player-visible**
+- **Copper Band** (ring, Common) was strictly dominated by Iron Ring (+15% dmg, 8g vs +12% dmg, 10g — worse and more expensive). Fixed: Copper Band now adds **+5 max HP** as a secondary stat (cost 10g → 12g). Clear split: Iron Ring = pure damage efficiency, Copper Band = damage/survivability hybrid.
+- **Conqueror's Seal** (ring, Legendary) was near-dominated by Sovereign Ring (+20% dmg +10% FR, 74g vs Sovereign's +22% dmg +12% FR +8% crit, 76g — more of everything for only 2g more). Fixed: Conqueror's Seal cost **74g → 62g**. Now 14g cheaper — a real trade-off between saving gold for other slots vs. paying the premium for the triple-stat package.
+
+**QA:** catalog-integrity 1922 CLEAN, stats-parity 2198/0 PASS.
+
+**Live:** https://roguelite-game-blush.vercel.app · hash `index-8D_nA-Pp.js` ✓
+
+---
+
 ## 2026-09-01 — fix(shop): Last Stand chip now shows correct <35% HP threshold (0c2b12f live)
 
 **Player-visible**
