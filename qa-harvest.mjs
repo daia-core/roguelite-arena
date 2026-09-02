@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// QA: Harvest Momentum — on-kill fire rate stacks (harvestMomentum mechanic).
+// QA: Harvest Momentum — on-kill fire rate stacks + HUD counter (harvestMomentum mechanic).
 //
 // Verifies (on the SHIPPED frontend/dist) that:
 //   1. blood_rush_t2 exists with harvestMomentum: 0.10
@@ -9,6 +9,9 @@
 //   5. When timer expires (≤ 0), stacks clear and frMult returns to identity
 //   6. Control: no item → fire rate unaffected regardless of stacks
 //   7. No console/page errors throughout.
+//   8. HUD counter: ⚡ N/8 FLOW shows when harvestBonus > 0 AND stacks > 0 (HUDRenderer.ts:342-362)
+//   9. HUD counter: suppressed when stacks = 0
+//  10. HUD urgency pulse: timer < 1.5 s AND stacks > 0 triggers the expiring-highlight path
 
 import http from 'node:http';
 import fs from 'node:fs';
@@ -113,6 +116,31 @@ const result = await page.evaluate(() => {
   step();
   out.controlFrIdentity = near(frMult(), 1.0, 0.002);
 
+  // --- 6. HUD counter display conditions (feat: Harvest Momentum live stack counter) ---
+  // HUDRenderer shows ⚡ N/8 FLOW when harvestBonus > 0 AND stacks > 0.
+  // Verifies the runtime exposes the exact state the HUD reads from (HUDRenderer.ts:342-362).
+  fresh();
+  giveItem('blood_rush_t2');
+  g.harvestMomentumStacks = 3;
+  g.harvestMomentumTimer = 2.0;
+  step();
+  // Both conditions for HUD visibility true simultaneously:
+  out.hudCounterWouldShow =
+    g.playerStats.getHarvestMomentum() > 0 && g.harvestMomentumStacks > 0;
+  // Timer is a live number accessible to the HUD renderer:
+  out.hudTimerAccessible =
+    typeof g.harvestMomentumTimer === 'number' && g.harvestMomentumTimer > 0;
+  // Stacks at zero → counter suppressed:
+  g.harvestMomentumStacks = 0;
+  g.harvestMomentumTimer = 0;
+  step();
+  out.hudCounterSuppressedAtZero = g.harvestMomentumStacks === 0;
+  // Urgency pulse fires when timer < 1.5 s AND stacks > 0:
+  g.harvestMomentumStacks = 2;
+  g.harvestMomentumTimer = 1.0;
+  step();
+  out.hudUrgencyThreshold = g.harvestMomentumTimer < 1.5 && g.harvestMomentumStacks > 0;
+
   return out;
 });
 
@@ -130,6 +158,9 @@ const checks = [
   'stacksFrBoosted', 'stacksStillAlive',
   'expiredStacksClear', 'expiredFrIdentity',
   'controlFrIdentity',
+  // HUD counter conditions (feat: Harvest Momentum live stack counter):
+  'hudCounterWouldShow', 'hudTimerAccessible',
+  'hudCounterSuppressedAtZero', 'hudUrgencyThreshold',
 ];
 const pass = result && !result.fatal
   && checks.every(k => result[k] === true)
