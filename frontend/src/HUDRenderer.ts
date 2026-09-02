@@ -147,8 +147,21 @@ export class HUDRenderer {
     const waveManager = this.deps.getWaveManager();
     let waveText = `WAVE ${waveManager.currentWave}`;
     let waveColor = '#9ecbff';
-    if (waveManager.isBossWave) { waveText += ' BOSS'; waveColor = '#ff6b6b'; }
-    else if (waveManager.isHordeWave) { waveText += ' HORDE'; waveColor = '#ffa94d'; }
+    if (waveManager.isBossWave) {
+      waveText += ' BOSS'; waveColor = '#ff6b6b';
+    } else {
+      // Show all wave modifiers in the persistent HUD so players always know
+      // what type of wave they're in, even if they missed the start banner.
+      const mod = waveManager.waveModifier;
+      if (mod === 'horde')     { waveText += ' HORDE';  waveColor = '#ffa94d'; }
+      else if (mod === 'elite')     { waveText += ' ELITE';  waveColor = '#ffd43b'; }
+      else if (mod === 'miniboss')  { waveText += ' MINI';   waveColor = '#cc88ff'; }
+      else if (mod === 'reward')    { waveText += ' LOOT';   waveColor = '#69db7c'; }
+      else if (mod === 'speed')     { waveText += ' FAST';   waveColor = '#74c0fc'; }
+      else if (mod === 'tank')      { waveText += ' TANK';   waveColor = '#c9a870'; }
+      else if (mod === 'chaos')     { waveText += ' CHAOS';  waveColor = '#ff79a8'; }
+      else if (mod === 'challenge') { waveText += ' CHAL';   waveColor = '#ff9f43'; }
+    }
 
     const rPanelW = pad * 2 + s(isPortrait ? 118 : 150);
     const rPanelH = pad * 2 + s(34);
