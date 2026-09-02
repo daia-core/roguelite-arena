@@ -584,6 +584,8 @@ export class Game {
       getSafeAreaTop: (zoom) => this.safeAreaTop(zoom),
       getSkillTreePoints: () => this.skillTree.availablePoints,
       getKilledEnemyTypesCount: () => this.killedEnemyTypes.size,
+      getHarvestMomentumStacks: () => this.harvestMomentumStacks,
+      getHarvestMomentumTimer: () => this.harvestMomentumTimer,
     });
 
     this.playingRenderer = new PlayingRenderer({

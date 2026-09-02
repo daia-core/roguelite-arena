@@ -26,6 +26,10 @@ export interface HUDRendererDeps {
   getSkillTreePoints(): number;
   /** Number of unique enemy types killed this run — for Trophy Rack HUD counter. */
   getKilledEnemyTypesCount(): number;
+  /** Active Harvest Momentum stack count (0 when no stacks / item not held). */
+  getHarvestMomentumStacks(): number;
+  /** Seconds remaining on the current Harvest Momentum kill window (0 when inactive). */
+  getHarvestMomentumTimer(): number;
 }
 
 export class HUDRenderer {
@@ -329,6 +333,32 @@ export class HUDRenderer {
         `\uD83C\uDFC6 ${typeCount}/${capThreshold}`,
         s(10), statusY, { size: s(8), color: '#ffd24d' }
       );
+      statusY += s(14);
+    }
+
+    // Harvest Momentum stack counter — only when the player holds Blood Rush / Blood Frenzy
+    // and has at least one active stack. Shows current stacks/max + urgency pulse when the
+    // 3-second kill window is about to expire, so the player can prioritise the next kill.
+    const harvestBonus = playerStats.getHarvestMomentum();
+    if (harvestBonus > 0) {
+      const stacks = this.deps.getHarvestMomentumStacks();
+      const timer  = this.deps.getHarvestMomentumTimer();
+      if (stacks > 0) {
+        const HARVEST_MAX = 8;
+        const expiring = timer < 1.5; // last 1.5 s — urgent
+        const pulse = expiring
+          ? 0.45 + 0.55 * Math.abs(Math.sin(Date.now() / 120))
+          : 1.0;
+        // Colour: bright green at high stacks, warm yellow at mid, orange at low.
+        const stackColor = stacks >= 6 ? '#00e676' : stacks >= 3 ? '#ffd43b' : '#ff8c42';
+        ctx.save();
+        ctx.globalAlpha = pulse;
+        this.deps.renderer.drawText(
+          `\u26A1 ${stacks}/${HARVEST_MAX} FLOW`,
+          s(10), statusY, { size: s(8), color: stackColor }
+        );
+        ctx.restore();
+      }
     }
   }
 
