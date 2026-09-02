@@ -6316,3 +6316,21 @@ purchase confirmed end-to-end via headless touch QA.
 - Batch rendering, distance-culled updates, quadtree spatial partitioning.
 
 **Commit** `5356ce0`
+
+---
+
+## 2026-09-02 — feat(hud): Harvest Momentum live stack counter (54fefe8 live)
+
+**Player-visible**
+- When holding **Blood Rush** or **Blood Frenzy** (the Harvest Momentum items), a live stack counter now appears in the HUD status callout area: **⚡ N/8 FLOW**.
+- Colour shifts to reflect urgency: **green** (6-8 stacks, in full flow), **yellow** (3-5 stacks, maintaining), **orange** (1-2 stacks, barely alive).
+- When the 3-second kill window has less than 1.5 s remaining, the callout **pulses rapidly** — a visual cue to prioritise the next kill before the chain breaks.
+- No display when stacks = 0 (inactive between chains). Non-harvest builds see nothing — no HUD noise.
+
+**Under the hood**
+- `HUDRendererDeps` interface gains `getHarvestMomentumStacks()` and `getHarvestMomentumTimer()` — passed via private-field lambdas in `Game.ts` (no field visibility change needed).
+- Callout renders in the `statusY` flow below the Trophy Rack counter, consistent with existing HUD callout patterns.
+
+**QA:** harvest 9/9, catalog 1922 CLEAN, audio 19/19.
+
+**Live:** https://frontend-daiacore.vercel.app · hash `index-BGImeDbc.js` ✓
