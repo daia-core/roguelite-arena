@@ -2,6 +2,19 @@
 
 ---
 
+## 2026-09-02 — balance: full dominated-pair audit — all 37 pairs fixed across all gear slots (c00eb95 live)
+
+**Player-visible**
+- **Fleet archetype (feet slot):** All speed+melee-penalty variants now have unique secondaries. Fleetfoot Band I-VI: added `dodge: 0.04–0.12`. Windrunner Charm I-V: added `dodge: 0.04–0.14`. Dasher Sigil I-II: added `dodge: 0.06–0.12`. Sprint Token I-II: added `critChance: 0.06–0.10`. Full tier ladder repriced to eliminate cost inversions (Band V was cheaper than Band III — fixed).
+- **Head/Torso/Ring/Amulet/Legs/Offhand:** 20+ additional items gained secondary stats (maxHealthBonus, healthRegen, rangedDamageMult, wound, burn, freeze, armor, critChance, dodge) to carve distinct niches. Notable: Focus Hood (+8 max HP), Phantom Cloak (+2 HP regen), Keen Goggles (+8% ranged dmg), Mystic Charm (+6% freeze), Dasher Sigil (+5% crit), Tactician's Sigil (+10% wound), Arcane Band (+6% burn), Energy Barrier (+3 HP regen).
+- **Tool built:** `tools/roguelite-dominated-pairs.py` — exhaustive dominated-pair scanner (1324 items, 14762 unique-profile pairs, runs in <1s). Now CLEAN.
+
+**QA:** catalog-integrity 1922 CLEAN, stats-parity 2198/0 PASS, audio 19/19, tsc CLEAN.
+
+**Live:** https://roguelite-arena-jrt1nlhug-daiacore.vercel.app (aliased frontend-daiacore.vercel.app) · hash `index-DVQ7XH3f.js` ✓
+
+---
+
 ## 2026-09-02 — balance(chip): Demolition Kit — add +30% AOE radius, no longer dominated (1faa76f live)
 
 **Player-visible**
