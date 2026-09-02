@@ -2,6 +2,18 @@
 
 ---
 
+## 2026-09-02 — balance(chip): Demolition Kit — add +30% AOE radius, no longer dominated (1faa76f live)
+
+**Player-visible**
+- **Demolition Kit** (chip, Epic, 75g) was strictly dominated by **Impact Gauntlet** (chip, Epic, 55g) — Impact Gauntlet had higher damage multiplier (+20% vs −10%), same `explosionOnHit` proc, AND cost 20g less. Demolition Kit was never worth buying. Fixed: Demolition Kit now adds **+30% blast radius** (`aoeRadiusMult: 1.30`) as a core identity stat. Clear split: Impact Gauntlet = melee bruiser (knockback + better damage); Demolition Kit = wide-blast ranged/elemental AoE specialist (larger explosion coverage, accepts the damage penalty).
+- Description updated to: *"Explosions on hit with +30% blast radius; -10% damage — wide area for elemental builds"*
+
+**QA:** catalog-integrity 1922 CLEAN, stats-parity 2198/0 PASS, audio 19/19, tsc CLEAN.
+
+**Live:** both hosts synced — https://roguelite-game-blush.vercel.app + https://frontend-daiacore.vercel.app · hash `index-CHqWBmpb.js` ✓
+
+---
+
 ## 2026-09-02 — balance(item): fix 2 dominated ring items (ecaff89 live)
 
 **Player-visible**
