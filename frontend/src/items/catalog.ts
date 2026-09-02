@@ -353,7 +353,7 @@ export const ITEM_CATALOG: Item[] = [
     {
       id: 'explosive_t3',
       name: 'Demolition Kit',
-      description: 'Explosions on hit, -10% damage (spray and pray)',
+      description: 'Explosions on hit with +30% blast radius; -10% damage — wide area for elemental builds',
       rarity: 'epic',
       tier: ItemTier.Rare,
       cost: 75,
@@ -361,6 +361,7 @@ export const ITEM_CATALOG: Item[] = [
       unlocked: true,
       tags: ['ranged', 'elemental'],
       explosionOnHit: true,
+      aoeRadiusMult: 1.30,
       damageMultiplier: 0.9
     },
     {
