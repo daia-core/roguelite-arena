@@ -30,6 +30,8 @@ export interface HUDRendererDeps {
   getHarvestMomentumStacks(): number;
   /** Seconds remaining on the current Harvest Momentum kill window (0 when inactive). */
   getHarvestMomentumTimer(): number;
+  /** Waves survived this run — for Grindstone wave-ramp counter. */
+  getWavesSurvived(): number;
 }
 
 export class HUDRenderer {
@@ -371,6 +373,25 @@ export class HUDRenderer {
           s(10), statusY, { size: s(8), color: stackColor }
         );
         ctx.restore();
+        statusY += s(14);
+      }
+    }
+
+    // Grindstone wave-ramp counter — only when the player holds at least one Grindstone-
+    // family item AND has accumulated a bonus (wave 2+). Shows the permanent damage gain
+    // so players can see the ramp paying off without doing the maths themselves.
+    // Formula: bonus = waveRampDamage × max(0, wavesSurvived − 1).
+    const waveRamp = playerStats.getWaveRampDamage();
+    if (waveRamp > 0) {
+      const waves = this.deps.getWavesSurvived();
+      const bonusFrac = waveRamp * Math.max(0, waves - 1);
+      if (bonusFrac > 0) {
+        const bonusPct = Math.round(bonusFrac * 100);
+        this.deps.renderer.drawText(
+          `\u2699 +${bonusPct}% DMG`,
+          s(10), statusY, { size: s(8), color: '#c8c8c8' }
+        );
+        statusY += s(14);
       }
     }
   }

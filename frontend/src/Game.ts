@@ -586,6 +586,7 @@ export class Game {
       getKilledEnemyTypesCount: () => this.killedEnemyTypes.size,
       getHarvestMomentumStacks: () => this.harvestMomentumStacks,
       getHarvestMomentumTimer: () => this.harvestMomentumTimer,
+      getWavesSurvived: () => this.wavesSurvived,
     });
 
     this.playingRenderer = new PlayingRenderer({
