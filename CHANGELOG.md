@@ -2,6 +2,18 @@
 
 ---
 
+## 2026-09-03 — fix(stats): Melee Eff Dmg and Ranged Eff Dmg now visible in ALL STATS popup
+
+**Player-visible**
+- **Melee Eff Dmg** row added to OFFENSE group in the ALL STATS popup — shows `getDamage() × getMeleeDamageMult()` as a single number when running a melee build (getMeleeDamageMult > 1). Players no longer need to multiply the base damage and multiplier in their head.
+- **Ranged Eff Dmg** row added similarly — shows `getDamage() × getRangedDamageMult()` for ranged builds. Both rows appear/hide together with their corresponding multiplier rows.
+
+**Why it matters:** At late game when base damage reaches millions, reading "Damage: 2.8M, Ranged Dmg: 2.50×" without seeing the product (7M) was a real readability gap. Now pure melee and ranged builds see their effective projectile/swing damage baseline at a glance.
+
+**QA:** tsc CLEAN · stats-parity 2198/0 PASS · stats-popup renders (no overflow) at 390px mobile and 1280px desktop.
+
+---
+
 ## 2026-09-02 — balance: full dominated-pair audit — all 37 pairs fixed across all gear slots (c00eb95 live)
 
 **Player-visible**
