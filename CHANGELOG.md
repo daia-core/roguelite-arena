@@ -2,6 +2,23 @@
 
 ---
 
+## 2026-09-04 — fix(hud): Grindstone wave-ramp counter — ⚙ +N% DMG now shown mid-combat
+
+**Player-visible**
+- **Grindstone builds now show their accumulated damage bonus in the HUD.** While you're fighting, a new ⚙ +N% DMG counter appears in the left panel whenever you hold a Grindstone-family item and have survived at least 2 waves. At wave 5 with a t3 Grindstone (+6%/wave), you'll see "⚙ +24% DMG" — the permanent ramp is now legible, not a hidden stat.
+- The counter is suppressed at wave 1 (no bonus yet, so no clutter) and appears automatically once any ramp has accrued.
+- Follows the same pattern as Trophy Rack (🏆 enemy types) and Harvest Momentum (⚡ kill stacks) — all three ramping mechanics are now visible at a glance.
+
+**Why it matters:** Grindstone gives +3–6% permanent damage per wave survived — by wave 10 that's 27–54% extra damage. Without a counter, players couldn't see this compounding until they checked the ALL STATS popup mid-shop. Grindstone builds now get real-time feedback on why they're doing damage.
+
+**Also fixed:** Harvest Momentum status line spacing — the ⚡ FLOW counter previously didn't advance `statusY`, so Grindstone lines (and any future callout) would have overlapped it.
+
+**QA:** tsc CLEAN · qa-grindstone-hud 15/15 PASS · qa-harvest 13/13 PASS · stats-parity 2198/0 PASS.
+
+**Live:** https://roguelite-game-blush.vercel.app + https://frontend-daiacore.vercel.app · hash `index--chBkLeg.js` · commit `e46cd87` ✓
+
+---
+
 ## 2026-09-03 — fix(stats): Melee Eff Dmg and Ranged Eff Dmg now visible in ALL STATS popup
 
 **Player-visible**
@@ -11,6 +28,8 @@
 **Why it matters:** At late game when base damage reaches millions, reading "Damage: 2.8M, Ranged Dmg: 2.50×" without seeing the product (7M) was a real readability gap. Now pure melee and ranged builds see their effective projectile/swing damage baseline at a glance.
 
 **QA:** tsc CLEAN · stats-parity 2198/0 PASS · stats-popup renders (no overflow) at 390px mobile and 1280px desktop.
+
+**Live:** https://roguelite-game-blush.vercel.app · hash `index-C9YEDq2s.js` · commit `d019f4a` ✓
 
 ---
 
