@@ -83,12 +83,25 @@ const result = await page.evaluate(() => {
   // A minimal enemy sufficient for the explosion/chain/DoT loops + handleEnemyKill.
   // xp/gold 0 => the kill skips every death-branch special-case; health huge on the
   // directly-"hit" enemy so it survives (only the neighbor / the DoT resolves to a kill).
+  // Neutral statusFX stub — StatusEffectManager was added to Enemy after this QA was written.
+  // All methods return the neutral / no-op values so the chain/explosion damage paths proceed
+  // without any amplification, matching a fresh enemy with zero active status effects.
+  const neutralStatusFX = () => ({
+    getIncomingDamageMult: () => 1,
+    getDirectHitMult: () => 1,
+    getFlatHitBonus: () => 0,
+    checkCondemned: () => 0,
+    apply: () => [],
+    applySynergyChain: () => {},
+    has: () => false,
+  });
   const mkEnemy = (x, y, health = 1) => ({
     type: 'slime', isMiniboss: false, x, y, dead: false,
     health, maxHealth: health,
     poisonTimer: 0, burnTimer: 0, bleedTimer: 0, poisonSpreads: false,
     woundMult: 1, doomTimer: 0, doomStored: 0, daggerDot: false,
     lastX: x, lastY: y,
+    statusFX: neutralStatusFX(),
     typeData: { isBoss: false, xpValue: 0, goldValue: 0, damage: 0, radius: 10 },
     takeDamage(d) { this.health -= d; if (this.health <= 0) this.dead = true; return null; },
   });
