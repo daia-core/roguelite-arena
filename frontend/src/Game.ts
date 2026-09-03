@@ -587,6 +587,9 @@ export class Game {
       getHarvestMomentumStacks: () => this.harvestMomentumStacks,
       getHarvestMomentumTimer: () => this.harvestMomentumTimer,
       getWavesSurvived: () => this.wavesSurvived,
+      getKillStackCount: () => this.killStackCount,
+      getKillStackTimer: () => this.killStackTimer,
+      getGrowingMaliceStacks: () => Math.floor(this.runPlaySeconds / Game.TIME_RAMP_INTERVAL),
     });
 
     this.playingRenderer = new PlayingRenderer({

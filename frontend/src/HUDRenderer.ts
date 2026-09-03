@@ -32,6 +32,12 @@ export interface HUDRendererDeps {
   getHarvestMomentumTimer(): number;
   /** Waves survived this run — for Grindstone wave-ramp counter. */
   getWavesSurvived(): number;
+  /** Current kill-stack count (0–20 float; decays after the 2s grace window). */
+  getKillStackCount(): number;
+  /** Seconds elapsed since the last kill (drives drain-urgency feedback). */
+  getKillStackTimer(): number;
+  /** Growing Malice stack count — floor(runPlaySeconds / 15). */
+  getGrowingMaliceStacks(): number;
 }
 
 export class HUDRenderer {
@@ -390,6 +396,48 @@ export class HUDRenderer {
         this.deps.renderer.drawText(
           `\u2699 +${bonusPct}% DMG`,
           s(10), statusY, { size: s(8), color: '#c8c8c8' }
+        );
+        statusY += s(14);
+      }
+    }
+
+    // Kill-stack counter — only when the player holds a Killing Spree / Kill Frenzy / Kill
+    // Reactor family item. Shows the current stack count (caps at 20, decays 12/s after a
+    // 2s grace window). Pulses when draining so the player can prioritise the next kill.
+    const killStackBonus = playerStats.getKillStackDamage();
+    if (killStackBonus > 0) {
+      const ks = this.deps.getKillStackCount();
+      const ksFloor = Math.floor(ks);
+      if (ksFloor >= 1) {
+        const KILL_STACK_MAX = 20;
+        const draining = this.deps.getKillStackTimer() > 2.0; // grace window passed
+        const pulse = draining
+          ? 0.45 + 0.55 * Math.abs(Math.sin(Date.now() / 150))
+          : 1.0;
+        const ksColor = ksFloor >= 15 ? '#ff4444' : ksFloor >= 8 ? '#ff8c42' : '#ffd700';
+        ctx.save();
+        ctx.globalAlpha = pulse;
+        this.deps.renderer.drawText(
+          `\uD83D\uDC80 \u00D7${ksFloor}/${KILL_STACK_MAX}`,
+          s(10), statusY, { size: s(8), color: ksColor }
+        );
+        ctx.restore();
+        statusY += s(14);
+      }
+    }
+
+    // Growing Malice time-ramp counter — only when the player holds a Growing Malice /
+    // Malice Engine / Patience Charm item. Shows the cumulative permanent damage bonus so
+    // the player can see the time investment paying off without opening the stats popup.
+    // Formula: bonus = timeRampDamage × floor(runPlaySeconds / 15).
+    const timeRamp = playerStats.getTimeRampDamage();
+    if (timeRamp > 0) {
+      const maliceStacks = this.deps.getGrowingMaliceStacks();
+      if (maliceStacks > 0) {
+        const bonusPct = Math.round(timeRamp * maliceStacks * 100);
+        this.deps.renderer.drawText(
+          `\uD83D\uDD25 +${bonusPct}% DMG`,
+          s(10), statusY, { size: s(8), color: '#ff6b35' }
         );
         statusY += s(14);
       }

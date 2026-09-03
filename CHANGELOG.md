@@ -2,6 +2,17 @@
 
 ---
 
+## 2026-09-04 — fix(hud): Kill Stack + Growing Malice HUD counters — 💀 ×N/20 and 🔥 +N% DMG now shown mid-combat
+
+**Player-visible**
+- **Kill-stack builds now show their current stack count in the HUD.** While you're fighting, a 💀 ×N/20 counter appears whenever you hold a Killing Spree / Kill Frenzy / Kill Reactor item and have active stacks. The counter pulses orange when your stacks are draining (2s grace window passed), giving you a clear cue to prioritise the next kill before the streak collapses.
+- **Growing Malice / Malice Engine / Patience Charm builds now show their accumulated bonus in the HUD.** A 🔥 +N% DMG counter appears after your first 15 seconds of play, updating every 15 seconds as permanent stacks accumulate.
+- Both counters follow the same established pattern as ⚙ Grindstone, ⚡ Harvest Momentum, and 🏆 Trophy Rack — all ramping mechanics are now legible in-combat without opening the stats popup.
+
+**Why it matters:** At 10 kill stacks with a Kill Reactor (+8%/stack), you're doing +80% extra damage — but players had no way to see that mid-fight. And a Malice Engine after a 5-minute run is giving +25% damage — equally invisible. Both are now first-class readouts.
+
+**QA:** tsc CLEAN · qa-killstack-malice-hud 23/23 PASS · qa-grindstone-hud 15/15 PASS · qa-harvest 13/13 PASS · stats-parity 2198/0 PASS · 0 console errors.
+
 ## 2026-09-04 — fix(hud): Grindstone wave-ramp counter — ⚙ +N% DMG now shown mid-combat
 
 **Player-visible**
