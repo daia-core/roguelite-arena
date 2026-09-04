@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-09-04 — balance(legs): Phase Trousers dodge-specialist identity
+
+**Player-visible**
+- **Phase Trousers buffed to a clear dodge-specialist.** Was 50g, +18% dodge, +8% speed — barely better dodge than Windrunner Leggings (40g, +18% speed, +8% dodge, +2 HP/s regen) while costing 10g more and having no regen. Paying a premium for strictly less overall value.
+- **New stats:** +24% dodge, +8% speed. Now a clean dodge-specialist: you trade speed and regen for maximum evasion. Archetypes: Windrunner = speed-specialist (18% spd, 8% dodge, 2 HP/s, 40g); Phase Trousers = dodge-specialist (24% dodge, 8% spd, 50g); Assassin Leggings = premium combo (25% dodge, 15% spd, 68g).
+
+**QA:** tsc CLEAN · catalog-integrity 1922/CLEAN · domination PASS
+
+---
+
 ## 2026-09-04 — balance(ring): Copper Band HP fix + Hawkeye Ring crit-specialist niche
 
 **Player-visible**
