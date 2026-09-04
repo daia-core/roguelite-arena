@@ -2,6 +2,17 @@
 
 ---
 
+## 2026-09-04 — balance(ring): Copper Band HP fix + Hawkeye Ring crit-specialist niche
+
+**Player-visible**
+- **Copper Band buffed to a real hybrid ring.** Was 12g, +12% damage, +5 HP — the 5 HP was too small to justify paying more than Iron Ring (8g, +15% damage) for less damage. Now 16g, +12% damage, **+15 HP**. Clear build choice: Iron Ring = cheap pure damage; Copper Band = damage+tank tradeoff.
+- **Hawkeye Ring gains crit-damage amp.** Was 26g, +7% crit, +8% ranged — nearly dominated by Keen Loop (18g, +6% crit, +8% ranged) since +1% crit at 44% higher cost is terrible value. Now 28g, **+8% crit, +8% ranged, +18% crit damage** — the "all-in crit build" ring vs Keen Loop's "crit proc + ranged" role. Distinct build archetypes; zero dominated pairs.
+- Full ring slot now clean: 0 dominated pairs across all rarity tiers.
+
+**QA:** tsc CLEAN · catalog-integrity 1922/CLEAN · stats-parity PASS
+
+---
+
 ## 2026-09-04 — balance(feet): Blinkstep Boots — fixed Legendary dominated by Rare
 
 **Player-visible**
