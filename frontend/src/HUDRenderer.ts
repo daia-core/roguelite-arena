@@ -38,6 +38,12 @@ export interface HUDRendererDeps {
   getKillStackTimer(): number;
   /** Growing Malice stack count — floor(runPlaySeconds / 15). */
   getGrowingMaliceStacks(): number;
+  /**
+   * Shots fired in the current Pen Nib cycle (0–9).
+   * Returns `shotsFired % LOADED_SHOT_EVERY`; 0 when item not held or no shots fired yet.
+   * At 9/10 the NEXT shot is a loaded shot — show urgency pulse.
+   */
+  getShotsFiredMod(): number;
 }
 
 export class HUDRenderer {
@@ -441,6 +447,28 @@ export class HUDRenderer {
         );
         statusY += s(14);
       }
+    }
+
+    // Pen Nib loaded-shot counter — only when the player holds a Pen Nib / Ink Reservoir /
+    // Overloaded Nib item. Shows how many shots have been fired in the current 10-shot cycle
+    // so the player can line up the loaded shot without counting manually.
+    // Pulses gold when at 9/10 — the NEXT shot is a loaded shot (3× damage + pierce).
+    if (playerStats.hasLoadedShot()) {
+      const LOADED_EVERY = 10;
+      const mod = this.deps.getShotsFiredMod(); // 0–9
+      const readyNext = mod === LOADED_EVERY - 1; // 9/10 → next shot is loaded
+      const pulse = readyNext
+        ? 0.55 + 0.45 * Math.abs(Math.sin(Date.now() / 160))
+        : 1.0;
+      const penColor = readyNext ? '#ffe066' : '#b0c4de'; // gold when ready, steel-blue otherwise
+      ctx.save();
+      ctx.globalAlpha = pulse;
+      this.deps.renderer.drawText(
+        `\uD83C\uDFAF ${mod}/${LOADED_EVERY}`,
+        s(10), statusY, { size: s(8), color: penColor }
+      );
+      ctx.restore();
+      statusY += s(14);
     }
   }
 

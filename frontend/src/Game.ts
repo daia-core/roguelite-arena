@@ -590,6 +590,7 @@ export class Game {
       getKillStackCount: () => this.killStackCount,
       getKillStackTimer: () => this.killStackTimer,
       getGrowingMaliceStacks: () => Math.floor(this.runPlaySeconds / Game.TIME_RAMP_INTERVAL),
+      getShotsFiredMod: () => this.shotsFired % Game.LOADED_SHOT_EVERY,
     });
 
     this.playingRenderer = new PlayingRenderer({
