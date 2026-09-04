@@ -2,6 +2,17 @@
 
 ---
 
+## 2026-09-04 — balance(feet): Blinkstep Boots — fixed Legendary dominated by Rare
+
+**Player-visible**
+- **Blinkstep Boots buffed to genuine Legendary tier.** Previously: 66g, +16% dodge, +12% speed — weaker on the primary dodge stat AND more expensive than Shadowstep Boots (48g Rare, +18% dodge, +10% speed). A Legendary item that no rational build ever chose over a cheaper Rare.
+- **New stats:** +20% dodge, +20% speed — now clearly above Shadowstep on both core stats, with a 18g price gap that reflects real value. Distinct from Assassin Boots (68g, +25% dodge / +15% speed): Blinkstep is the balanced speed+dodge option; Assassin is the dodge-specialist.
+- Full dodge+speed ladder now clean: 0 dominated pairs from budget Hunter Boots through Legendary Void Boots.
+
+**QA:** tsc CLEAN · catalog-integrity 1922/CLEAN · stats-parity PASS · audio 19/19 · live @ roguelite-game-blush.vercel.app · sha 6c2ee5b ✓
+
+---
+
 ## 2026-09-04 — fix(hud): Kill Stack + Growing Malice HUD counters — 💀 ×N/20 and 🔥 +N% DMG now shown mid-combat
 
 **Player-visible**
