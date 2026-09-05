@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// QA: Momentum Engine HUD counter (🚀 XX%).
+// QA: Momentum Engine HUD counter (🚀 XX%) + peak audio feel.
 //
 // Verifies (on the SHIPPED frontend/dist) that:
 //   1.  'momentum' artifact exists in ArtifactSystem.ts with momentumBonus: 0.5
@@ -13,6 +13,8 @@
 //   9.  Juggernaut Core provides 0.65 bonus via getMomentumMax()
 //  10.  momentumBonus() picks first momentum artifact only (not additive with two)
 //  11.  No console/page errors throughout.
+//  12.  AudioManager.playMomentumPeak() method defined (audio feel cue).
+//  13.  Game.ts wires playMomentumPeak on the prevMomentum<3 → momentumTime>=3 crossing.
 
 import http from 'node:http';
 import fs from 'node:fs';
@@ -23,6 +25,16 @@ import puppeteer from 'puppeteer-core';
 const FRONTEND = '/workspace/work/roguelite-game/frontend';
 const ROOT = path.join(FRONTEND, 'dist');
 const ARTIFACT_SRC = path.join(FRONTEND, 'src/ArtifactSystem.ts');
+const AUDIO_SRC = path.join(FRONTEND, 'src/AudioManager.ts');
+const GAME_SRC = path.join(FRONTEND, 'src/Game.ts');
+
+// --- 12 & 13. Audio wiring source checks ---
+const audioSrc = fs.readFileSync(AUDIO_SRC, 'utf8');
+const gameSrc = fs.readFileSync(GAME_SRC, 'utf8');
+const audioMethodCheck = audioSrc.includes('playMomentumPeak');
+const audioWiringCheck = gameSrc.includes('playMomentumPeak');
+console.log(`[source] AudioManager.playMomentumPeak defined → ${audioMethodCheck ? 'OK' : 'FAIL'}`);
+console.log(`[source] Game.ts wires playMomentumPeak on full-ramp crossing → ${audioWiringCheck ? 'OK' : 'FAIL'}`);
 
 // --- 1 & 2. Source-level checks ---
 const artSrc = fs.readFileSync(ARTIFACT_SRC, 'utf8');
@@ -199,16 +211,18 @@ console.log(JSON.stringify(result, null, 2));
 if (errMsg) console.error('Console/page errors:\n', errMsg);
 else console.log('Console/page errors: 0');
 
-const sourcePass = sourceCheckME && sourceCheckJC;
+const sourcePass = sourceCheckME && sourceCheckJC && audioMethodCheck && audioWiringCheck;
 const browserPass = !fatal && !errMsg && checks.every(k => !!result[k]);
 const passCount = checks.filter(k => !!result[k]).length;
-const sourceCount = [sourceCheckME, sourceCheckJC].filter(Boolean).length;
-const total = checks.length + 2; // +2 for source checks
+const sourceCount = [sourceCheckME, sourceCheckJC, audioMethodCheck, audioWiringCheck].filter(Boolean).length;
+const total = checks.length + 4; // +4 for source checks (2 original + 2 audio wiring)
 const allPass = sourcePass && browserPass;
 
 console.log(`\n${sourceCount + passCount}/${total} checks passed`);
 console.log(`[source] Momentum Engine momentumBonus=0.5: ${sourceCheckME ? 'PASS' : 'FAIL'}`);
 console.log(`[source] Juggernaut Core momentumBonus=0.65: ${sourceCheckJC ? 'PASS' : 'FAIL'}`);
+console.log(`[source] AudioManager.playMomentumPeak defined: ${audioMethodCheck ? 'PASS' : 'FAIL'}`);
+console.log(`[source] Game.ts wires playMomentumPeak: ${audioWiringCheck ? 'PASS' : 'FAIL'}`);
 console.log(`RESULT: ${allPass ? 'PASS ✅' : 'FAIL ❌'}`);
 if (fatal) console.error('FATAL:', fatal);
 if (!allPass) process.exit(1);

@@ -1279,6 +1279,54 @@ export class AudioManager {
     osc.stop(t + 0.18);
   }
 
+  // Momentum Engine / Juggernaut Core — full-ramp peak cue. Fires the first frame
+  // momentumTime crosses from <3 to >=3 (i.e., 3s of continuous movement achieved).
+  // Three layers: rising energy sweep + bright peak ring + sub-bass punch.
+  // Throttled 1500ms as belt+braces (the crossing detector in Game.ts naturally gates it,
+  // but rapid stop/restart near the 3s boundary could otherwise re-trigger immediately).
+  playMomentumPeak(): void {
+    this._throttled('momentumPeak', () => {
+      this._ensureRunning();
+      const t = this.ctx.currentTime;
+      // Layer 1: rising energy sweep — sawtooth 200→800 Hz over 0.18s
+      // Reads as: "the ramp has completed / speed locked in"
+      const osc1 = this.ctx.createOscillator();
+      const g1 = this.ctx.createGain();
+      osc1.connect(g1);
+      g1.connect(this.masterGain);
+      osc1.type = 'sawtooth';
+      osc1.frequency.setValueAtTime(200, t);
+      osc1.frequency.exponentialRampToValueAtTime(800, t + 0.18);
+      g1.gain.setValueAtTime(0.22, t);
+      g1.gain.exponentialRampToValueAtTime(0.01, t + 0.18);
+      osc1.start(t);
+      osc1.stop(t + 0.18);
+      // Layer 2: bright peak ring — sine 1400 Hz, reads as "peak power activated"
+      const osc2 = this.ctx.createOscillator();
+      const g2 = this.ctx.createGain();
+      osc2.connect(g2);
+      g2.connect(this.masterGain);
+      osc2.type = 'sine';
+      osc2.frequency.value = 1400;
+      g2.gain.setValueAtTime(0, t + 0.05);
+      g2.gain.linearRampToValueAtTime(0.20, t + 0.09);
+      g2.gain.exponentialRampToValueAtTime(0.01, t + 0.30);
+      osc2.start(t + 0.05);
+      osc2.stop(t + 0.30);
+      // Layer 3: sub-bass punch — sine 70 Hz, 0.10s — grounds the moment
+      const osc3 = this.ctx.createOscillator();
+      const g3 = this.ctx.createGain();
+      osc3.connect(g3);
+      g3.connect(this.masterGain);
+      osc3.type = 'sine';
+      osc3.frequency.value = 70;
+      g3.gain.setValueAtTime(0.30, t);
+      g3.gain.exponentialRampToValueAtTime(0.01, t + 0.10);
+      osc3.start(t);
+      osc3.stop(t + 0.10);
+    }, 1500);
+  }
+
   toggle(): void {
     this.enabled = !this.enabled;
     if (!this.enabled) this.stopMusic();

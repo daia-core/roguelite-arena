@@ -3807,7 +3807,9 @@ export class Game {
     // Momentum: ramp up over ~3s of continuous movement, reset when standing still.
     const momentumMax = this.artifacts.momentumBonus();
     if (momentumMax > 0) {
+      const prevMomentum = this.momentumTime;
       this.momentumTime = moving ? Math.min(3, this.momentumTime + dt) : 0;
+      if (prevMomentum < 3 && this.momentumTime >= 3) this.audio.playMomentumPeak(); // GAME FEEL: peak cue fires once when full ramp achieved
       dmg *= 1 + momentumMax * (this.momentumTime / 3);
     }
     // Berserk: extra fire rate as HP drops (0 at full HP, full bonus near death).
