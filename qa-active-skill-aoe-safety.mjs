@@ -138,8 +138,24 @@ const results = await page.evaluate((SKILLS) => {
       hitFlashTimer: 0, contactCooldown: 0,
       knockbackVelocityX: 0, knockbackVelocityY: 0,
       typeData: { isBoss: false, radius: 30, damage: 10, shootRate: 0 },
-      // statusFX: stub; skills call statusFX.apply(type, opts)
-      statusFX: { apply: () => null, applySynergyChain: () => null },
+      // statusFX: stub; skills call various statusFX methods during execution
+      statusFX: {
+        apply: () => [],
+        applySynergyChain: () => null,
+        has: () => false,
+        get: () => null,
+        getIncomingDamageMult: () => 1,
+        getDirectHitMult: () => 1,
+        getFlatHitBonus: () => 0,
+        getBonusCritChanceReceived: () => 0,
+        getBonusCritDamageReceived: () => 0,
+        checkCondemned: () => 0,
+        setBurnTimer: () => null,
+        setBleedTimer: () => null,
+        setPoisonTimer: () => null,
+        setFreezeTimer: () => null,
+        tick: () => ({ dotDamage: 0, doomDetonation: null, poisonSpreads: false, daggerDot: false }),
+      },
       // takeDamage: stub returning [] (no kill procs)
       takeDamage: () => [],
       get radius() { return this.typeData.radius; },
