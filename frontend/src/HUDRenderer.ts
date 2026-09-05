@@ -578,6 +578,39 @@ export class HUDRenderer {
       ctx.restore();
       statusY += s(14);
     }
+
+    // Last Stand / Berserker family — damage+fire-rate bonus when HP is at/under 35%.
+    // Complements the HP-bar tick mark (which shows the threshold) by showing the
+    // exact bonus magnitude — important when several Last Stand items are stacked
+    // (e.g. Berserker Apex +80% + Berserker Crown +30% = +110% at low HP, completely
+    // invisible before this callout). Red to mirror the HP-bar danger colour.
+    const lowHpPower = ps.getLowHpPower();
+    if (lowHpPower > 0 && hpFrac <= 0.35) {
+      const bonusPct = Math.round(lowHpPower * 100);
+      this.deps.renderer.drawText(
+        `\u2694 +${bonusPct}% LS`,
+        s(10), statusY, { size: s(8), color: '#ef4444' }
+      );
+      statusY += s(14);
+    }
+
+    // Juggernaut / Overflow Battery / Pristine Engine — damage and/or fire-rate bonus
+    // when HP is at/over 90%. Green to mirror the gold tick mark but distinct in the
+    // status area. Shows combined bonus so the player knows the pristine-play payoff.
+    const highHpPower  = ps.getHighHpPower();
+    const highHpFr     = ps.getHighHpFireRate();
+    if ((highHpPower > 0 || highHpFr > 0) && hpFrac >= 0.90) {
+      const dmgPct = Math.round(highHpPower * 100);
+      const frPct  = Math.round(highHpFr  * 100);
+      let jugText: string;
+      if (dmgPct > 0 && frPct > 0) jugText = `\uD83D\uDEE1 +${dmgPct}% / +${frPct}% FR`;
+      else if (dmgPct > 0)          jugText = `\uD83D\uDEE1 +${dmgPct}% JUG`;
+      else                           jugText = `\uD83D\uDEE1 +${frPct}% FR JUG`;
+      this.deps.renderer.drawText(
+        jugText, s(10), statusY, { size: s(8), color: '#69db7c' }
+      );
+      statusY += s(14);
+    }
   }
 
   /**
