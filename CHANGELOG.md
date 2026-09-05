@@ -2,6 +2,20 @@
 
 ---
 
+## 2026-09-05 — fix(hud): Soul Tithe + Miser's Hoard live HUD counters
+
+**Player-visible**
+- **Soul Tithe builds now show their permanent kill-milestone stacks in the HUD.** While playing, a ✝ +N% DMG counter appears whenever you hold a Soul Tithe family item (Soul Tithe, Soul Bead, Soul Engine, Soul Apex, etc.) and have banked at least one stack. Each stack = +1% permanent damage, earned every 50th kill. Counter colour-scales from purple (1–4 stacks) through deeper purple (5–9) to red (10+) — a visual signal that the tithe is compounding.
+- **Miser's Hoard builds now show their live gold-hoarding bonus in the HUD.** A 💰 +X% DMG counter reflects the real-time damage bonus from unspent gold on hand (formula: `min(200%, goldScaleDamage × gold / 100)`). Caps at +200%. Disappears when you spend down to 0g — making the spend-vs-power tradeoff visible in combat, not just in the shop stats popup.
+
+**Why it matters:** Both mechanics are long-term investments that were completely invisible mid-run. A Soul Tithe build with 15 kill-milestone stacks is doing +15% permanent damage — players had no way to see that during combat. Similarly, a 500g hoard with Miser's Hoard is giving +40% damage — also invisible. Both now show as first-class HUD readouts alongside ⚙ Grindstone, 💀 Kill Stack, 🔥 Growing Malice, 🎯 Pen Nib, and others.
+
+**QA:** tsc CLEAN · catalog-integrity 1922/CLEAN · domination PASS · qa-tithe-miser-hud 23/23 PASS · 0 console errors.
+
+**Live:** https://roguelite-game-blush.vercel.app + https://frontend-daiacore.vercel.app · hash `index-BU6FF1d8.js` · commit `8fbe999` ✓
+
+---
+
 ## 2026-09-04 — balance(legs): Phase Trousers dodge-specialist identity
 
 **Player-visible**
