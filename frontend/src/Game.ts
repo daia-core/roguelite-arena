@@ -593,6 +593,11 @@ export class Game {
       getShotsFiredMod: () => this.shotsFired % Game.LOADED_SHOT_EVERY,
       getSoulTitheStackCount: () => this.soulTitheStacks,
       getPlayerGold: () => this.player?.gold ?? 0,
+      getOverchargeEvery: () => this.artifacts.overchargeEvery(),
+      getOverchargeShotMod: () => {
+        const ocEvery = this.artifacts.overchargeEvery();
+        return ocEvery > 0 ? this.overchargeShotCount % ocEvery : 0;
+      },
     });
 
     this.playingRenderer = new PlayingRenderer({

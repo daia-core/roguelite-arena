@@ -48,6 +48,17 @@ export interface HUDRendererDeps {
   getSoulTitheStackCount(): number;
   /** Player's current unspent gold (for Miser's Hoard live-bonus counter). */
   getPlayerGold(): number;
+  /**
+   * Shot interval for Overcharge Battery artifact (every Nth shot fires a free nova).
+   * Returns 0 when the artifact is not held — HUD counter is suppressed when 0.
+   */
+  getOverchargeEvery(): number;
+  /**
+   * Shots fired in the current Overcharge Battery cycle (0 to overchargeEvery-1).
+   * Returns `overchargeShotCount % overchargeEvery`; 0 when artifact not held.
+   * At (overchargeEvery-1), the NEXT shot fires the nova — show urgency pulse.
+   */
+  getOverchargeShotMod(): number;
 }
 
 export class HUDRenderer {
@@ -510,6 +521,28 @@ export class HUDRenderer {
         );
         statusY += s(14);
       }
+    }
+
+    // Overcharge Battery nova counter — only when the player holds the Overcharge Battery
+    // artifact. Shows how many shots have been fired in the current nova cycle so the
+    // player can anticipate the free nova burst without counting manually.
+    // Pulses gold when the NEXT shot fires the nova (mod === ocEvery - 1).
+    const ocEvery = this.deps.getOverchargeEvery();
+    if (ocEvery > 0) {
+      const mod = this.deps.getOverchargeShotMod(); // 0..(ocEvery-1)
+      const readyNext = mod === ocEvery - 1; // next shot is the nova
+      const pulse = readyNext
+        ? 0.55 + 0.45 * Math.abs(Math.sin(Date.now() / 160))
+        : 1.0;
+      const ocColor = readyNext ? '#ffe066' : '#7ecbff'; // gold when ready, sky-blue otherwise
+      ctx.save();
+      ctx.globalAlpha = pulse;
+      this.deps.renderer.drawText(
+        `\u26A1 ${mod}/${ocEvery}`,
+        s(10), statusY, { size: s(8), color: ocColor }
+      );
+      ctx.restore();
+      statusY += s(14);
     }
   }
 
