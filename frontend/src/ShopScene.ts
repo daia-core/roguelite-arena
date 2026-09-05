@@ -49,6 +49,8 @@ export interface ShopSceneDeps {
   getWavesSurvived(): number;
   /** Player's current gold on hand — for Miser's Hoard stats popup row. */
   getPlayerGold(): number;
+  /** Shot interval for Overcharge Battery artifact (every Nth shot fires a free nova). 0 if not held. */
+  getOverchargeEvery(): number;
 
   // Shared mutable shop inventory (owned by Game.ts — pass by reference).
   getShopItems(): (Item | null)[];
@@ -1351,6 +1353,7 @@ export class ShopScene implements Scene {
     const growingMaliceStacks = this.deps.getGrowingMaliceStacks();
     const wavesSurvived = this.deps.getWavesSurvived();
     const playerGold = this.deps.getPlayerGold();
+    const overchargeEvery = this.deps.getOverchargeEvery();
     const skillQId = ps.getEquippedSkillIdQ();
     const skillEId = ps.getEquippedSkillId();
     const skillQName = skillQId !== undefined ? (getActiveSkillById(skillQId)?.name ?? skillQId) : undefined;
@@ -1450,6 +1453,7 @@ export class ShopScene implements Scene {
         ['Overflow Batt.', `+${pct(ps.getHighHpFireRate())} rate if >90%`, ps.getHighHpFireRate() > 0],
         ['Last Stand', `+${pct(ps.getLowHpPower())} if <35% HP`, ps.getLowHpPower() > 0],
         ["Miser's Hoard", `+${pct(Math.min(2, ps.getGoldScaleDamage() * playerGold / 100))} now`, ps.getGoldScaleDamage() > 0],
+        ['Overcharge Batt.', `Every ${overchargeEvery}th shot: free nova`, overchargeEvery > 0],
       ]],
     ];
 

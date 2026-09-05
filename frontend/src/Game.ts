@@ -499,6 +499,7 @@ export class Game {
       getGrowingMaliceStacks: () => Math.floor(this.runPlaySeconds / Game.TIME_RAMP_INTERVAL),
       getWavesSurvived: () => this.wavesSurvived,
       getPlayerGold: () => this.player?.gold ?? 0,
+      getOverchargeEvery: () => this.artifacts.overchargeEvery(),
       getShopItems: () => this.shopItems,
       getLockedItems: () => this.lockedShopItems,
       getLastInterestGained: () => this.lastInterestGained,
