@@ -500,6 +500,7 @@ export class Game {
       getWavesSurvived: () => this.wavesSurvived,
       getPlayerGold: () => this.player?.gold ?? 0,
       getOverchargeEvery: () => this.artifacts.overchargeEvery(),
+      getMomentumMax: () => this.artifacts.momentumBonus(),
       getShopItems: () => this.shopItems,
       getLockedItems: () => this.lockedShopItems,
       getLastInterestGained: () => this.lastInterestGained,
@@ -599,6 +600,11 @@ export class Game {
         const ocEvery = this.artifacts.overchargeEvery();
         return ocEvery > 0 ? this.overchargeShotCount % ocEvery : 0;
       },
+      getMomentumFrac: () => {
+        const mMax = this.artifacts.momentumBonus();
+        return mMax > 0 ? this.momentumTime / 3 : 0;
+      },
+      getMomentumMax: () => this.artifacts.momentumBonus(),
     });
 
     this.playingRenderer = new PlayingRenderer({

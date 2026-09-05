@@ -51,6 +51,8 @@ export interface ShopSceneDeps {
   getPlayerGold(): number;
   /** Shot interval for Overcharge Battery artifact (every Nth shot fires a free nova). 0 if not held. */
   getOverchargeEvery(): number;
+  /** Maximum momentum damage bonus fraction (e.g. 0.5 = +50% at full ramp). 0 if not held. */
+  getMomentumMax(): number;
 
   // Shared mutable shop inventory (owned by Game.ts — pass by reference).
   getShopItems(): (Item | null)[];
@@ -1354,6 +1356,7 @@ export class ShopScene implements Scene {
     const wavesSurvived = this.deps.getWavesSurvived();
     const playerGold = this.deps.getPlayerGold();
     const overchargeEvery = this.deps.getOverchargeEvery();
+    const momentumMax = this.deps.getMomentumMax();
     const skillQId = ps.getEquippedSkillIdQ();
     const skillEId = ps.getEquippedSkillId();
     const skillQName = skillQId !== undefined ? (getActiveSkillById(skillQId)?.name ?? skillQId) : undefined;
@@ -1454,6 +1457,7 @@ export class ShopScene implements Scene {
         ['Last Stand', `+${pct(ps.getLowHpPower())} if <35% HP`, ps.getLowHpPower() > 0],
         ["Miser's Hoard", `+${pct(Math.min(2, ps.getGoldScaleDamage() * playerGold / 100))} now`, ps.getGoldScaleDamage() > 0],
         ['Overcharge Batt.', `Every ${overchargeEvery}th shot: free nova`, overchargeEvery > 0],
+        ['Momentum Max', `up to +${pct(momentumMax)} dmg`, momentumMax > 0],
       ]],
     ];
 

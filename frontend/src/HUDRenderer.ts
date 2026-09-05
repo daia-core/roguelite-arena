@@ -59,6 +59,17 @@ export interface HUDRendererDeps {
    * At (overchargeEvery-1), the NEXT shot fires the nova — show urgency pulse.
    */
   getOverchargeShotMod(): number;
+  /**
+   * Current momentum ramp as a fraction (0–1): `momentumTime / 3`.
+   * 0 when the player holds no momentum artifact or hasn't been moving.
+   * 1.0 = fully ramped (3 continuous seconds of movement).
+   */
+  getMomentumFrac(): number;
+  /**
+   * Maximum momentum damage bonus from held artifacts (e.g. 0.5 = +50% dmg at full ramp).
+   * Returns 0 when no momentum artifact is held — HUD counter is suppressed when 0.
+   */
+  getMomentumMax(): number;
 }
 
 export class HUDRenderer {
@@ -540,6 +551,29 @@ export class HUDRenderer {
       this.deps.renderer.drawText(
         `\u26A1 ${mod}/${ocEvery}`,
         s(10), statusY, { size: s(8), color: ocColor }
+      );
+      ctx.restore();
+      statusY += s(14);
+    }
+
+    // Momentum counter — only when the player holds a momentum artifact (Momentum Engine /
+    // Juggernaut Core). Shows the current damage-ramp percentage (0–100%) so the player
+    // can see exactly how much bonus damage they're getting from sustained movement.
+    // Pulses gold at full ramp (100%) to reward continuous movement.
+    const momentumMax = this.deps.getMomentumMax();
+    if (momentumMax > 0) {
+      const frac = this.deps.getMomentumFrac(); // 0-1
+      const pct = Math.round(frac * 100);
+      const atMax = frac >= 0.99;
+      const momColor = atMax ? '#ffe066' : '#7ecbff'; // gold at full ramp, sky-blue building
+      const pulse = atMax
+        ? 0.65 + 0.35 * Math.abs(Math.sin(Date.now() / 200))
+        : 1.0;
+      ctx.save();
+      ctx.globalAlpha = pulse;
+      this.deps.renderer.drawText(
+        `\uD83D\uDE80 ${pct}%`,
+        s(10), statusY, { size: s(8), color: momColor }
       );
       ctx.restore();
       statusY += s(14);
