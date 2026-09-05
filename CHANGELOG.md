@@ -2,6 +2,18 @@
 
 ---
 
+## 2026-09-05 — fix(stats): Overcharge Battery ALL STATS popup + HUD counter
+
+**Player-visible**
+- **Overcharge Battery now appears in the shop's ALL STATS popup.** A conditional row "Every 6th shot: free nova" appears in the SPECIAL group when the artifact is held — completing discoverability across both venues: mid-run HUD counter and between-wave stats popup.
+- **Overcharge Battery shows a live ⚡ N/6 HUD counter.** Tracks your position in the 6-shot nova cycle. Sky-blue during build-up; pulses gold at 5/6 (next shot fires the nova). Pattern mirrors Pen Nib and other tracked mechanics.
+
+**QA:** tsc CLEAN · catalog 1922/CLEAN · qa-overcharge-hud 17/17 PASS · qa-stats-parity 2198/0 PASS · qa-stats-popup PASS
+
+**Live:** hash `index-BQ0mgcUi.js` · commits `5288322` (HUD) + `9e63a8f` (stats popup) ✓
+
+---
+
 ## 2026-09-05 — fix(hud): Soul Tithe + Miser's Hoard live HUD counters
 
 **Player-visible**
