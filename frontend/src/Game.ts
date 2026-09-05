@@ -1819,7 +1819,9 @@ export class Game {
         spawnVolley(this.player.tryShoot(this.enemies, true));
         mc -= 0.15; // each extra volley is a little less likely, keeps it bounded
       }
-      this.audio.playShoot();
+      // GAME FEEL: loaded shot (Pen Nib) is a fat golden round — blast cue reads as
+      // "heavy/charged" vs the thin shoot for normal volleys.
+      if (loaded) { this.audio.playBlast(); } else { this.audio.playShoot(); }
 
       // Overcharge Battery: every Nth primary volley fires a free nova burst around the player.
       const ocEvery = this.artifacts.overchargeEvery();
@@ -1833,7 +1835,8 @@ export class Game {
             color: '#ffd43b', activeTime: 0.2, singleHit: true,
           }));
           this.pendingDmg.push({ x: this.player.x, y: this.player.y, r: 130, dmg: ocDmg, delay: 0, color: '#ffd43b' });
-          this.audio.playHit();
+          // GAME FEEL: nova is a 130-radius area burst — explosion cue (not playHit) reads as impact.
+          this.audio.playExplosion();
         }
       }
     }
