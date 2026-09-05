@@ -44,6 +44,10 @@ export interface HUDRendererDeps {
    * At 9/10 the NEXT shot is a loaded shot — show urgency pulse.
    */
   getShotsFiredMod(): number;
+  /** Permanent Soul Tithe damage stacks earned this run (each = +1% dmg, uncapped). */
+  getSoulTitheStackCount(): number;
+  /** Player's current unspent gold (for Miser's Hoard live-bonus counter). */
+  getPlayerGold(): number;
 }
 
 export class HUDRenderer {
@@ -469,6 +473,43 @@ export class HUDRenderer {
       );
       ctx.restore();
       statusY += s(14);
+    }
+
+    // Soul Tithe milestone counter — only when the player holds a Soul Tithe item and
+    // has banked at least one permanent stack (earned every 50th kill). Shows total
+    // accumulated permanent damage so the player can see the kill-volume investment paying
+    // off without opening the stats popup. Each stack = +1% DMG (uncapped).
+    if (playerStats.hasSoulTithe()) {
+      const titheStacks = this.deps.getSoulTitheStackCount();
+      if (titheStacks > 0) {
+        const titheColor = titheStacks >= 10 ? '#ff6b6b' : titheStacks >= 5 ? '#da8fff' : '#b8a0ff';
+        this.deps.renderer.drawText(
+          `\u271D +${titheStacks}% DMG`,
+          s(10), statusY, { size: s(8), color: titheColor }
+        );
+        statusY += s(14);
+      }
+    }
+
+    // Miser's Hoard live-bonus counter — only when the player holds a Miser's Hoard item
+    // and has gold on hand. Shows the current damage multiplier from hoarding so the
+    // player can see the real-time tradeoff: spending gold loses damage, hoarding gains it.
+    // Formula mirrors Game.ts: factor = min(2.0, goldScaleDamage × gold / 100).
+    const goldScale = playerStats.getGoldScaleDamage();
+    if (goldScale > 0) {
+      const gold = this.deps.getPlayerGold();
+      if (gold > 0) {
+        const GOLD_SCALE_PER = 100; // gold per +1 unit of goldScaleDamage (mirrors Game.ts)
+        const GOLD_SCALE_CAP = 2.0; // cap at +200% dmg (mirrors Game.ts)
+        const factor = Math.min(GOLD_SCALE_CAP, goldScale * (gold / GOLD_SCALE_PER));
+        const bonusPct = Math.round(factor * 100);
+        const goldColor = bonusPct >= 150 ? '#ffd700' : bonusPct >= 80 ? '#f5c842' : '#d4b04a';
+        this.deps.renderer.drawText(
+          `\uD83D\uDCB0 +${bonusPct}% DMG`,
+          s(10), statusY, { size: s(8), color: goldColor }
+        );
+        statusY += s(14);
+      }
     }
   }
 
