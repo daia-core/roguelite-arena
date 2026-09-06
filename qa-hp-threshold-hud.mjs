@@ -21,7 +21,10 @@
 // 17.  hpFrac >= 0.90 is true at exactly 90% HP (Juggernaut gate)
 // 18.  hpFrac at 40% HP is NOT in low-HP zone (counter suppressed)
 // 19.  hpFrac at 89% HP is NOT in high-HP zone (counter suppressed)
-// 20.  No console/page errors throughout.
+// 20.  AudioManager.ts defines playLastStandActivate()
+// 21.  Game.ts has prevHpFrac tracking member
+// 22.  Game.ts calls playLastStandActivate() on threshold crossing
+// 23.  No console/page errors throughout.
 
 import http from 'node:http';
 import fs from 'node:fs';
@@ -29,18 +32,20 @@ import path from 'node:path';
 import { execSync } from 'node:child_process';
 import puppeteer from 'puppeteer-core';
 
-const FRONTEND = '/workspace/work/roguelite-game/frontend';
-const ROOT     = path.join(FRONTEND, 'dist');
-const CATALOG  = path.join(FRONTEND, 'src/items/catalog.ts');
-const ITEM_SRC = path.join(FRONTEND, 'src/ItemSystem.ts');
-const GAME_SRC = path.join(FRONTEND, 'src/Game.ts');
-const HUD_SRC  = path.join(FRONTEND, 'src/HUDRenderer.ts');
+const FRONTEND  = '/workspace/work/roguelite-game/frontend';
+const ROOT      = path.join(FRONTEND, 'dist');
+const CATALOG   = path.join(FRONTEND, 'src/items/catalog.ts');
+const ITEM_SRC  = path.join(FRONTEND, 'src/ItemSystem.ts');
+const GAME_SRC  = path.join(FRONTEND, 'src/Game.ts');
+const HUD_SRC   = path.join(FRONTEND, 'src/HUDRenderer.ts');
+const AUDIO_SRC = path.join(FRONTEND, 'src/AudioManager.ts');
 
 // --- Source-level checks ---
-const catSrc  = fs.readFileSync(CATALOG, 'utf8');
-const itemSrc = fs.readFileSync(ITEM_SRC, 'utf8');
-const gameSrc = fs.readFileSync(GAME_SRC, 'utf8');
-const hudSrc  = fs.readFileSync(HUD_SRC, 'utf8');
+const catSrc   = fs.readFileSync(CATALOG, 'utf8');
+const itemSrc  = fs.readFileSync(ITEM_SRC, 'utf8');
+const gameSrc  = fs.readFileSync(GAME_SRC, 'utf8');
+const hudSrc   = fs.readFileSync(HUD_SRC, 'utf8');
+const audioSrc = fs.readFileSync(AUDIO_SRC, 'utf8');
 
 // 1-3. Items exist with these fields
 const catHasLowHp     = /lowHpPower:\s*[\d.]+/.test(catSrc);
@@ -73,6 +78,14 @@ console.log(`[source] HUDRenderer uses getLowHpPower() → ${hudHasLow ? 'OK' : 
 console.log(`[source] HUDRenderer uses getHighHpPower/FireRate → ${hudHasHigh ? 'OK' : 'FAIL'}`);
 console.log(`[source] HUDRenderer has LS callout text → ${hudHasLS ? 'OK' : 'FAIL'}`);
 console.log(`[source] HUDRenderer has JUG callout text → ${hudHasJUG ? 'OK' : 'FAIL'}`);
+
+// 10-12 (source). Last Stand activation audio cue + threshold tracking.
+const audioHasLastStandCue  = audioSrc.includes('playLastStandActivate()');
+const gamePrevHpFracExists  = gameSrc.includes('prevHpFrac');
+const gameHasLsActivateCall = gameSrc.includes('playLastStandActivate()');
+console.log(`[source] AudioManager.playLastStandActivate() defined → ${audioHasLastStandCue ? 'OK' : 'FAIL'}`);
+console.log(`[source] Game.ts prevHpFrac tracking member → ${gamePrevHpFracExists ? 'OK' : 'FAIL'}`);
+console.log(`[source] Game.ts calls playLastStandActivate() on threshold cross → ${gameHasLsActivateCall ? 'OK' : 'FAIL'}`);
 
 console.log('Building frontend (npm run build)...');
 execSync('npm run build', { cwd: FRONTEND, stdio: 'inherit' });
@@ -241,6 +254,8 @@ const SOURCE_CHECKS = [
   hasGetLow, hasGetHighP, hasGetHighFr,
   lowThreshOk, highThreshOk,
   hudHasLow, hudHasHigh, hudHasLS, hudHasJUG,
+  // Last Stand activation audio cue (added Sep 6 2026)
+  audioHasLastStandCue, gamePrevHpFracExists, gameHasLsActivateCall,
 ];
 const SOURCE_PASS = SOURCE_CHECKS.every(Boolean);
 

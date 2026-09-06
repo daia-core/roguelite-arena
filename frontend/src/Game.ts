@@ -191,6 +191,9 @@ export class Game {
   private pendingEliteCascade: boolean = false;   // elite/boss wave grants a free bonus item in the shop
   // Momentum artifact: seconds the player has been continuously moving.
   private momentumTime: number = 0;
+  // HP-threshold tracking: previous frame's HP fraction, used to detect one-shot crossing
+  // events (Last Stand activation) without querying health every other place.
+  private prevHpFrac: number = 1.0;
 
   // ---- Conditional-item run state (drives the triggered-damage items) ----
   // Grindstone: whole waves cleared this run (permanent per-wave ramp).
@@ -829,6 +832,7 @@ export class Game {
     this.killStackCount = 0;
     this.killStackTimer = 0;
     this.runPlaySeconds = 0;
+    this.prevHpFrac = 1.0;
     this.lastTimeRampNotifiedStacks = 0;
     this.soulTitheKills = 0;
     this.soulTitheStacks = 0;
@@ -3802,6 +3806,15 @@ export class Game {
     this.runPlaySeconds += dt;
 
     const hpFrac = this.player.health / Math.max(1, this.player.maxHealth);
+
+    // --- HP-THRESHOLD CROSSING EVENTS ---
+    // Detect frame-level threshold crossings for one-shot audio/feel events.
+    // Last Stand: player just dropped from >35% to ≤35% HP AND has the item equipped.
+    if (this.prevHpFrac > Game.LOW_HP_THRESHOLD && hpFrac <= Game.LOW_HP_THRESHOLD
+        && this.playerStats.getLowHpPower() > 0) {
+      this.audio.playLastStandActivate(); // GAME FEEL: "danger power just kicked in"
+    }
+    this.prevHpFrac = hpFrac;
 
     // --- ARTIFACTS ---
     // Momentum: ramp up over ~3s of continuous movement, reset when standing still.

@@ -1327,6 +1327,54 @@ export class AudioManager {
     }, 1500);
   }
 
+  // Last Stand activation — fires once when the player drops from >35% to ≤35% HP
+  // and has a Last Stand bonus equipped. Two-layer cue: low bass "engine" rising into a
+  // bright harmonic surge, reads as "danger power just kicked in." Throttled 3s so it
+  // can replay if HP yo-yos across the threshold, but won't spam rapid oscillations.
+  playLastStandActivate(): void {
+    this._throttled('lastStandActivate', () => {
+      this._ensureRunning();
+      const t = this.ctx.currentTime;
+      // Layer 1: low-bass power pulse — sawtooth 80→220 Hz, 0.20s — "engine surging"
+      const osc1 = this.ctx.createOscillator();
+      const g1 = this.ctx.createGain();
+      osc1.connect(g1);
+      g1.connect(this.masterGain);
+      osc1.type = 'sawtooth';
+      osc1.frequency.setValueAtTime(80, t);
+      osc1.frequency.exponentialRampToValueAtTime(220, t + 0.20);
+      g1.gain.setValueAtTime(0.28, t);
+      g1.gain.exponentialRampToValueAtTime(0.01, t + 0.20);
+      osc1.start(t);
+      osc1.stop(t + 0.20);
+      // Layer 2: harmonic surge — triangle 200→700 Hz, 0.25s — "power rising"
+      const osc2 = this.ctx.createOscillator();
+      const g2 = this.ctx.createGain();
+      osc2.connect(g2);
+      g2.connect(this.masterGain);
+      osc2.type = 'triangle';
+      osc2.frequency.setValueAtTime(200, t + 0.04);
+      osc2.frequency.exponentialRampToValueAtTime(700, t + 0.25);
+      g2.gain.setValueAtTime(0, t + 0.04);
+      g2.gain.linearRampToValueAtTime(0.18, t + 0.08);
+      g2.gain.exponentialRampToValueAtTime(0.01, t + 0.25);
+      osc2.start(t + 0.04);
+      osc2.stop(t + 0.25);
+      // Layer 3: sharp "activation zing" — sine 1800→900 Hz, 0.08s — "locked in"
+      const osc3 = this.ctx.createOscillator();
+      const g3 = this.ctx.createGain();
+      osc3.connect(g3);
+      g3.connect(this.masterGain);
+      osc3.type = 'sine';
+      osc3.frequency.setValueAtTime(1800, t + 0.12);
+      osc3.frequency.exponentialRampToValueAtTime(900, t + 0.20);
+      g3.gain.setValueAtTime(0.20, t + 0.12);
+      g3.gain.exponentialRampToValueAtTime(0.01, t + 0.20);
+      osc3.start(t + 0.12);
+      osc3.stop(t + 0.20);
+    }, 3000);
+  }
+
   toggle(): void {
     this.enabled = !this.enabled;
     if (!this.enabled) this.stopMusic();
